@@ -23,7 +23,7 @@ Steps 1-4 are pure design; step 5 is the first code commit.
 Briefs live at `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-<NNN>-<short-slug>.md`. Format and lifecycle documented in `m8trx-shared/twin/SISTER-PROJECT.md`. Status enum: `NOT YET FILED` → `FILED, AWAITING ABSORPTION` → `ABSORBED` (or `REJECTED` / `SUPERSEDED`).
 
 - **commerce_projection writer** — substrate (mig 112) exists; writer unfed. Blocks Scripts 1, 3, 5 commercial story. Status: NOT YET FILED (waiting for Bob's audit confirmation in core).
-- **`fitting_room` → `try_on_zone` generalization** — current `fitting_room` table is apparel-specific; demo needs footwear bench + watch demo station as try-on zones. Status: NOT YET FILED (Bob raised with Amy; pending discussion).
+- **`fitting_room` → `try_on_zone` generalization** — current `fitting_room` table is apparel-specific; demo needs footwear bench + watch demo station as try-on zones. Status: **FILED, AWAITING ABSORPTION** (2026-05-09). Brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-001-try-on-zone-generalization.md`. Execution contract: `~/IdeaProjects/m8trx-shared/status/cleanup/CONTRACT-FITTING-ROOM-RENAME-2026-05-09.md`. Twin's recommendation: Option E (atomic rename now, while window is open — 0 rows + pre-MVP + 24-hr-old code = uniquely cheap).
 - **`inventory:sell` capability split** — currently piggybacks `inventory:transfer`. Surfaces when demo authors cashier persona. Status: PRE-EXISTING (already tracked in core's CLEANUP-TASKS.md; brief unnecessary).
 
 ---
