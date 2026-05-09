@@ -1,8 +1,14 @@
 # Layer 4 — Scenario Configuration Schema
 
-> **Status: STRAWMAN.** This is a starting design for a focused 1-2 hr session. Finalize before any code below Layer 4 is written.
+**Status:** LOCKED 2026-05-10 (Step A complete). Q1–Q7 locked Sessions 1–2; Layer 2 Journey contract + DomainEvent v1 taxonomy + Persona schema + persistence-layer plan locked Session 2. Code below Layer 4 may proceed.
 
-The architectural commitment of m8trx-twin. The shape of a scenario config is the contract between authors (human or LLM) and the orchestrator. Lock it now; everything else is downstream.
+The architectural commitment of m8trx-twin. The shape of a scenario config is the contract between authors (human or LLM) and the orchestrator. Locked here; everything else is downstream.
+
+**Sibling docs:**
+
+- `PERSONA-SCHEMA.md` — Layer 2 actor templates (Shopper / Operator / Buyer kinds; Volere 2d/2e anchored)
+- `TWIN-DB-AND-GRAPH.md` — persistence layer (twin's own PG database; no standalone Hasura)
+- `SNAPSHOT-FORMAT.md` — `meta.openingState` JSON shape (one section per Layer 1 table)
 
 ---
 
@@ -67,29 +73,29 @@ meta:
 
 ```yaml
 population:
-  personas:
-    - id: weekend_runner
-      ageBand: "25-40"
+  personas:                        # see PERSONA-SCHEMA.md for the full field surface
+    - id: shopper.kr.sportinggoods.weekend_runner
+      type: shopper
+      market: KR
+      vertical: RETAIL
+      type: SPORTING_GOODS
       walkSpeedMps: 1.4
-      dwellTendency: medium                # low | medium | high
-      basketSizeDistUSD: { mean: 95, sigma: 30 }
-      paymentMix: { card: 0.7, mobile: 0.2, cash: 0.1 }
-    - id: family_browser
-      walkSpeedMps: 1.0                     # slower with kids
-      dwellTendency: high
-      kidsInTow: true
-    - id: serious_athlete
-      walkSpeedMps: 1.5
-      dwellTendency: low
-      basketSizeDistUSD: { mean: 180, sigma: 80 }
-    - id: shoplift_archetype
-      walkSpeedMps: 1.3
-      dwellTendency: low
-      glanceFrequency: high                 # behavioral marker
+      dwellTendency: medium
+      basketSizeDist: { mean: 95, sigma: 30, currency: KRW }
+      paymentMix: { CARD: 0.65, MOBILE: 0.30, CASH: 0.05 }
+
+    - id: operator.kr.sportinggoods.staff_associate     # populated from Volere 2e via twin's persona seed loader
+      type: operator
+      market: KR
+      vertical: RETAIL
+      type: SPORTING_GOODS
+      m8trxRole: STAFF
+      primaryInterface: HANDHELD_ANDROID
+      # subjectMatterExp / technologicalExp / biography pulled from PersonaLibrary at orchestrator boot
 
   journeys:
     - id: browse_and_leave_running
-      impl: BrowseAndLeave                  # Layer 2 class name
+      impl: BrowseAndLeave                # Layer 2 class name; see § "Layer 2 — Journey contract"
       params:
         interestZones: [running_shoes, gps_watches]
         dwellMinutesPerZone: { min: 2, max: 8 }
@@ -99,7 +105,7 @@ population:
       params:
         tryItemCount: { min: 2, max: 4 }
         keepItemRatio: { min: 0.3, max: 0.7 }
-        fittingZones: [apparel_fitting_room]
+        tryOnZones: [running_apparel_try_on]
     - id: shoplift_premium_watch
       impl: Shoplift
       params:
@@ -107,7 +113,7 @@ population:
         exitGate: gate_main
 ```
 
-Personas are reusable identity templates — they capture *who* and *how they act*. Journeys reference Layer 2 implementations by string name; params are forwarded to the journey constructor.
+Personas are reusable identity templates — they capture *who* and *how they act* (full schema at `PERSONA-SCHEMA.md`). Journeys reference Layer 2 `Journey` implementations by `impl` name; `params` is forwarded to `Journey.start(ctx, actor, params)` as untyped `JsonObject` and parsed inside the concrete journey.
 
 ---
 
@@ -578,17 +584,159 @@ class TransactionGenerator(private val params: Params) : Generator {
 
 ---
 
-## Open design questions (decide in focused session)
+### Layer 2 — Journey contract (LOCKED 2026-05-10)
 
-1. **Canonical config format** — YAML, JSON, or builder DSL (type-safe Kotlin/TypeScript)? YAML is human-friendliest, JSON is LLM-friendliest, builder DSL is correctness-friendliest. Pick one as canonical, support transforms to/from the others. [Bob] 💬- My read is  we go with JSON if LLM friendlist and put a  proper surface over it to make it human friendly.   
-2. **Generator implementation contract** — what interface do `TrafficGenerator`, `StaffShiftGenerator` etc. implement? Probably `interface Generator { start(clock, ctx); tick(scenarioTime); stop() }` or similar. Lock the shape now; downstream depends on it.  [Bob] 💬-  Let's brainstorm this one to lock,  **✅ LOCKED 2026-05-09 — see § Runtime model (Q2) above.**
-3. **Clock / event-bus** abstraction — does the orchestrator own a virtual clock that ticks generators and events, or do generators schedule themselves on a shared scheduler? Affects rate-control mechanics, especially for `rate=0` (manual step) mode. [Bob] 💬- what is your suggetion here.  I'm thinking genrators schedule themselves on s ahred schduler but open to the other as well.  **✅ LOCKED 2026-05-09 — see § Runtime model (Q3) above.**
-4. **Failure behavior** — `meta.failurePolicy` listed as `halt | skip-and-log | retry-3x`. Default? My read: `skip-and-log` for production demos (don't break the show), `halt` for dev (catch issues immediately). Should this be settable per-generator instead of scenario-wide? [Bob] -   ✅  Lock on your read
-5. **Live vs recorded mode** — is a "recording" of a scenario simply the seed+config (since deterministic), or do we capture the emitted event stream too? If just the seed, replays are perfect; storage is tiny. If we capture, scrubbing becomes possible (jump to minute 47 of a 4 h scenario without re-running everything).    [Bob] -   ✅-  Lock capture.  This makes demoing much easier.
-6. **Cross-generator correlation** — `correlateWith` is named in the strawman but not specified. Is it a pub-sub of "events I emitted" the dependent generator subscribes to? Lock the protocol now if generators will commonly depend on each other (almost certainly yes — transactions on traffic, fitting-room events on traffic, restock events on inventory state).  Bob] 💬 - thre for sure will depend on each other and in some cases significantly.  Let me know your suggestion on  the best way to go here so we can lock.  **✅ LOCKED 2026-05-09 — see § Runtime model (Q6) above. Note: the YAML `correlateWith` hint is replaced by explicit `bus.subscribe(...)` calls in generator code; the YAML field is now obsolete and should be removed from the strawman before code starts.**
-7. **Multi-site scenarios** — a scenario binds to one site in this strawman. Do we ever need multi-site scenarios (e.g., chain-wide Black Friday)? If yes, `meta.site` becomes `meta.sites: []` and routing logic appears. Probably defer; first deliverable is single-site.  [Bob] 💬-  the answer is yes we will need and also yes to defer and first deliver the single site,.
+Layer 2 holds **Journeys** — single-actor arcs with personality (e.g. `BrowseAndLeave`, `ShopAndBuy`, `TryOnAndBuy`, `Shoplift`, `StaffRestock`, `StocktakeWalk`). A journey is **assigned** to an `Actor` (a customer or operator instance) by a Layer 3 generator; the journey then schedules its actor's behavior over scenario time.
 
-These are the questions to answer in the design session before any code below Layer 4 is written.
+```kotlin
+interface Journey {
+  val id: String                    // matches the YAML config `impl` field, e.g. "BrowseAndLeave"
+
+  /**
+   * Invoked once when this journey is assigned to an actor.
+   * Schedule first action via ctx.scheduler; subsequent actions chain off scheduled callbacks.
+   * Return after scheduling — NOT after completion.
+   * Termination is implicit: no further callbacks scheduled and (typically) a terminal
+   * DomainEvent published (CustomerExited, RestockCompleted, etc.).
+   */
+  fun start(ctx: JourneyContext, actor: Actor, params: JsonObject)
+}
+
+data class JourneyContext(
+  val clock: Clock,                 // scenario-time read-only view
+  val scheduler: Scheduler,         // schedule callbacks at scenario time (same instance generators use)
+  val bus: EventBus,                // publish + subscribe to typed DomainEvents
+  val emit: AtomEmitters,           // Layer 0 atoms (REST / NATS / webhook)
+  val personas: PersonaLibrary,
+  val rng: Random,                  // forked deterministically from "<journeyId>:<actorId>" — replays stable
+  val log: Logger,
+)
+
+sealed interface Actor {
+  val id: String                    // stable id assigned by the spawning generator
+  val persona: Persona              // the persona this actor instantiates (see PERSONA-SCHEMA.md)
+}
+
+data class CustomerActor(
+  override val id: String,
+  override val persona: Persona,
+) : Actor
+
+data class OperatorActor(
+  override val id: String,
+  override val persona: Persona,
+  val handheldDeviceId: String? = null,    // set when the operator carries an Android handheld
+) : Actor
+```
+
+**Why `start()` only — no `tick()` or `stop()`:** journeys are scheduler-driven, identical to generators. The handler chain self-terminates when the actor's last scheduled callback fires; no explicit cleanup hook is needed. Same model as Q2 generators.
+
+**Why `params: JsonObject`:** journey params come from Layer 4 YAML/JSON config (`population.journeys[].params`), where the LLM authoring client (Client B) writes them as untyped JSON. Concrete journey implementations parse `params` into typed structures inside `start()`. This keeps the journey base contract stable across new journey kinds without recompiling the orchestrator.
+
+**Termination convention:** a journey publishes a terminal DomainEvent on its actor's last action so downstream generators can correlate (e.g., `TransactionGenerator` subscribes to `CustomerExited` to clean up basket state). Required terminal events per journey kind:
+
+| Journey kind | Terminal event |
+|---|---|
+| Customer browse/shop/try-on/shoplift | `CustomerExited` |
+| Operator restock / receiving | `RestockCompleted` or `ShipmentArrived` |
+| Operator stocktake | `StocktakeReconciled` |
+
+Concrete journeys ship under `com.m8trx.twin.journeys.*` (one class per kind):
+
+```
+BrowseAndLeave        — enter, walk N zones, dwell, exit (no purchase)
+ShopAndBuy            — enter, browse, pick items, pay at register, exit
+TryOnAndBuy           — enter, pick items, fitting room, partial keep, pay, exit
+Shoplift              — enter, target SKU, exit without paying (EAS may trigger)
+StaffRestock          — operator restocks fixture from receiving area
+StocktakeWalk         — operator walks zones with handheld, scanning RFID
+```
+
+These are v1 targets; new journey kinds drop in by implementing `Journey` and registering with `JourneyLibrary` at orchestrator boot. Adding a journey does NOT require schema changes — only a Layer 4 config entry under `population.journeys[]` referencing the new `impl` name.
+
+---
+
+### DomainEvent v1 taxonomy (LOCKED 2026-05-10)
+
+Concrete `DomainEvent` types for v1. **DomainEvents are simulator-internal** — they enable cross-generator and cross-journey correlation via the EventBus (Q6). They do NOT cross the Layer 0 boundary; outbound atoms to M8TRX are a separate emission step.
+
+15 events covering customer lifecycle, engagement, commerce, operations, and anomalies. Each carries `at: Instant` (Q6 marker requirement) plus typed payload fields.
+
+```kotlin
+sealed interface DomainEvent { val at: Instant }
+
+// — Customer lifecycle —
+data class CustomerEntered      (override val at: Instant, val customerId: String, val personaId: String, val gateZoneId: UUID) : DomainEvent
+data class CustomerEnteredZone  (override val at: Instant, val customerId: String, val zoneId: UUID, val prevZoneId: UUID? = null) : DomainEvent
+data class CustomerExited       (override val at: Instant, val customerId: String, val gateZoneId: UUID, val reason: ExitReason) : DomainEvent
+enum class ExitReason { LEFT_STORE, TIMEOUT, EAS_TRIGGERED }
+
+// — Engagement —
+data class ItemPickedUp         (override val at: Instant, val customerId: String, val itemIdentifierId: UUID, val fixtureId: UUID) : DomainEvent
+data class FittingRoomEntered   (override val at: Instant, val customerId: String, val tryOnZoneId: UUID, val itemsBrought: List<UUID>) : DomainEvent
+data class FittingRoomExited    (override val at: Instant, val customerId: String, val tryOnZoneId: UUID, val itemsKept: List<UUID>, val itemsLeft: List<UUID>) : DomainEvent
+
+// — Commerce —
+data class SaleCompleted        (override val at: Instant, val customerId: String, val itemIdentifiers: List<UUID>, val totalCents: Long, val payment: PaymentKind) : DomainEvent
+data class SaleAbandoned        (override val at: Instant, val customerId: String, val reason: AbandonReason) : DomainEvent
+enum class AbandonReason { BASKET_LEFT, PAYMENT_FAILED, LINE_TOO_LONG }
+data class ItemReturned         (override val at: Instant, val customerId: String, val itemIdentifierId: UUID, val reason: String?) : DomainEvent
+
+// — Operations —
+data class ShipmentArrived      (override val at: Instant, val manifestId: UUID, val expectedItemIdentifiers: List<UUID>) : DomainEvent
+data class RestockCompleted     (override val at: Instant, val operatorId: String, val fixtureId: UUID, val itemsAdded: List<UUID>) : DomainEvent
+data class StocktakeReconciled  (override val at: Instant, val operatorId: String, val zoneId: UUID, val discrepancyCount: Int) : DomainEvent
+
+// — Anomalies —
+data class ItemDisplaced              (override val at: Instant, val itemIdentifierId: UUID, val expectedFixtureId: UUID, val actualFixtureId: UUID, val detectedBy: DisplaceDetector) : DomainEvent
+enum class DisplaceDetector { GENERATOR, OBSERVATION }
+data class EasAlarmTriggered          (override val at: Instant, val gateZoneId: UUID, val itemIdentifierIds: List<UUID>, val falsePositive: Boolean) : DomainEvent
+data class PlanogramDeviationDetected (override val at: Instant, val fixtureId: UUID, val deviationKind: DeviationKind) : DomainEvent
+enum class DeviationKind { WRONG_SKU, WRONG_QTY, EMPTY }
+```
+
+**Notable v1 omissions** (deferred to v2 to keep the bus surface small):
+
+- `CustomerExitedZone` — derivable from successive `CustomerEnteredZone` events; not needed at this fidelity
+- `ItemPutDown` — pickup-without-purchase is captured by absence of `SaleCompleted` referencing the item; explicit put-down only matters for engagement-pattern analytics (post-MVP)
+- `RestockBegan` — `RestockCompleted` is sufficient for v1; begin-event matters only if downstream generators need to react during the restock
+- `CustomerDwellStarted` / `CustomerDwellEnded` — dwell is an observation derived from `CustomerEnteredZone` timestamps; first-class events would inflate the bus
+
+**Subscription discipline:** generators subscribe by event class via `bus.subscribe(SaleCompleted::class) { … }`. No wildcards in v1 (per Q6 lock). When a v2 event is added, existing subscribers are unaffected.
+
+---
+
+## Locked design decisions (Q1–Q7)
+
+All Q1–Q7 from the original strawman are now locked. Recap with land-points:
+
+| Q | Decision | Land-point |
+|---|---|---|
+| Q1 | **Canonical config format = JSON** (LLM-friendliest); human surface authored on top via templates / DSL | This doc § Top-level shape |
+| Q2 | **Generator interface = `Generator { start(ctx); stop(ctx) }`**; stateless except subscription closures; no `tick()` | § Runtime model § Q2 |
+| Q3 | **Shared scheduler owned by orchestrator**; priority queue keyed by `(scenarioTime, insertionOrder)`; rate modes >0 / 0 / +∞; events pre-loaded ahead of generator `start()` | § Runtime model § Q3 |
+| Q4 | **Failure policy default = `skip-and-log`** for production demos, `halt` for dev; settable per-scenario via `meta.failurePolicy`; per-generator override possible but not required at v1 | § Section: meta |
+| Q5 | **Capture-and-replay enabled by default for production demos.** When `meta.capture: true`, orchestrator writes `runs/<id>/atoms.log` + `bus.log`; replay reads these byte-for-byte | § Section: meta |
+| Q6 | **EventBus = `subscribe(KClass<T>, handler)` + `publish(event)`**; synchronous in-publish-order; re-entrant via queue-and-drain; no wildcards in v1; bus.log written when capture is on | § Runtime model § Q6 |
+| Q7 | **Multi-site scenarios deferred** — `meta.site` stays singular at v1; multi-site routing logic added when first chain-wide scenario is filed | § Section: meta |
+
+Plus three Step A locks added 2026-05-10:
+
+| Lock | Decision |
+|---|---|
+| Stack | **Kotlin** (matches m8trx-services / -edge / -android). See `status/STATUS.md` § Open Decisions |
+| Persona schema | **3 sealed kinds (Shopper / Operator / Buyer); 9 shared fields incl. `vertical` + `type`; PersonaBiography optional sub-record.** Full surface at `PERSONA-SCHEMA.md` |
+| Layer 2 Journey contract | `interface Journey { fun start(ctx, actor, params) }` — scheduler-driven, scheduler chains, terminal events. § Layer 2 above |
+| DomainEvent v1 taxonomy | 15 typed events covering customer lifecycle / engagement / commerce / operations / anomalies. § DomainEvent v1 above |
+| Persistence + graph layer | Twin owns dedicated PG database (separate db on mother instance); no standalone Hasura; embedded `graphql-kotlin` when graph layer earns its keep. Full plan at `TWIN-DB-AND-GRAPH.md` |
+
+---
+
+## Open design questions
+
+All Q1–Q7 closed. See § "Locked design decisions (Q1–Q7)" above for the recap and land-points.
+
+Future questions surface as scenarios push the schema. Append here as `Q8`, `Q9`, … with the same `LOCKED YYYY-MM-DD` pattern when answered.
 
 ---
 

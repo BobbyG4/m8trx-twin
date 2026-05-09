@@ -4,6 +4,34 @@
 
 ---
 
+## Session 2 — 2026-05-10 KST — Step A complete: persona + journey contract + DomainEvent taxonomy + snapshot format + persistence plan
+
+Layer 4 architectural commitment now stable enough to write code against. Step B (integration specs) is the next remaining doc work; Step C (content authoring) and Step D (first code) can run in parallel after that.
+
+**Shipped:**
+- Stack locked Kotlin (matches services / edge / android) — `STATUS.md` § Open Decisions
+- Persona schema — 3 sealed kinds (Shopper / Operator / Buyer), 9 shared fields incl. `market` + `vertical` + `type` axes, optional `PersonaBiography` bundle anchored to Volere 2d/2e — `reference/architecture/PERSONA-SCHEMA.md`
+- Layer 2 Journey contract — `Journey { start(ctx, actor, params) }`, scheduler-driven, 6 v1 kinds, terminal-event convention — `LAYER4-CONFIG-SCHEMA.md` § "Layer 2 — Journey contract"
+- DomainEvent v1 taxonomy — 15 typed events (customer lifecycle / engagement / commerce / operations / anomalies) — `LAYER4-CONFIG-SCHEMA.md` § "DomainEvent v1 taxonomy"
+- Snapshot file format — 8-section JSON for Layer 1 opening-state seeds + FK-chain / polygon validation — `reference/architecture/SNAPSHOT-FORMAT.md`
+- Persistence + graph plan — twin owns dedicated PG database (separate db on mother instance); no standalone Hasura; embedded `graphql-kotlin` when graph layer earns its keep; 4-stage progression — `reference/architecture/TWIN-DB-AND-GRAPH.md`
+- Layer 4 doc cleanup — STRAWMAN banner dropped, Q1–Q7 recap landed, sibling-doc cross-refs added
+- Twin insight filed in m8trx-shared — `twin/insights/2026-05-10-vertical-portability-ddl.md` (core DDL question: typed `tenant.vertical` column likely worth preparing soon)
+
+**Decisions:**
+- Two-layer industry model: top-level `Vertical` (RETAIL | HEALTHCARE | MANUFACTURING | LOGISTICS | HOSPITALITY) + `VerticalType` (RetailType.APPAREL | SPORTING_GOODS | …). MVP is RETAIL-only; structure ready for post-MVP industry expansion without retrofit.
+- Persona biography is a separate optional bundle reused across kinds — same human appearing as `OperatorPersona` and `BuyerPersona` shares biography by reference.
+- Twin gets its own DB instance for internal state (scenarios / runs / persona seeds / SKU catalog / LLM sessions). Co-located on mother PG instance as a separate database (cheapest isolation). Introduces in Stage 2 when cross-run queries become real need; Stage 1 first-code is in-memory + file capture.
+- No standalone Hasura for twin — embedded `graphql-kotlin` keeps twin deployable as a single Spring Boot jar. When twin graduates to product, persisted state folds into mother as a tenant-scoped domain.
+- Volere 2e named personas anchored as canonical via `agentPrompt` field on `BuyerPersona` (verbatim from 2e); not pre-extracted to seed files yet — defer until first scenario mechanically loads a named persona.
+
+**Carried forward:**
+- Step B integration specs (parallelizable, ~2–4 hr each): Layer 0 AtomEmitter surface (`reference/integration/M8TRX-API-SURFACE.md`); Tenant provisioning playbook (`reference/ops/TENANT-PROVISIONING.md`)
+- Step C content authoring (own session, half-day each): `STORE-LAYOUT.md`, `SKU-CURATION.md`
+- Step D first code: Layer 0 atoms + orchestrator + `TrafficGenerator` end-to-end against M8trxDemo (in-memory + file capture per `TWIN-DB-AND-GRAPH.md` Stage 1)
+
+---
+
 ## Session 1 — 2026-05-09 KST — Layer 4 schema lock + Trinity generator catalog
 
 First post-bootstrap working session. Focus: lock the Layer 4 architectural commitments before any code.
