@@ -10,3 +10,9 @@ dist/
 target/
 .gradle/
 *.iml
+
+# Obsidian vault working state (per Multi-Session Protocol § Lane #5)
+.obsidian/
+.space/
+.trash/
+.makemd/
