@@ -30,6 +30,24 @@ Layer 4 architectural commitment now stable enough to write code against. Step B
 - Step C content authoring (own session, half-day each): `STORE-LAYOUT.md`, `SKU-CURATION.md`
 - Step D first code: Layer 0 atoms + orchestrator + `TrafficGenerator` end-to-end against M8trxDemo (in-memory + file capture per `TWIN-DB-AND-GRAPH.md` Stage 1)
 
+**Deploy Verification (run at session close):**
+
+```
+=== m8trx-twin ===
+SKIP — twin is a fixture project, not in the verify-deploy.sh repo allowlist.
+       HEAD=dec0745 on origin/main (Session 2 close commit). Working tree clean.
+
+=== m8trx-shared (twin/insights/ only — surgical commit; other work in flight not touched) ===
+PASS @ working-tree: m8trx-shared: clean
+PASS @ push: m8trx-shared: HEAD=6a547f819d on origin/main (commit ts=1778368473)
+SKIP @ ci: m8trx-shared: no GH Actions runs visible
+INFO @ shared-artifact: m8trx-shared: docs vault. Commit + push IS the deploy.
+SKIP @ shared-live: m8trx-shared: no runtime deploy
+VERIFIED ✓
+```
+
+Lane: Twin (sister project, system-integrator posture). Other repos (`m8trx-services`, `-web`, `-android`, `-api`, `-edge`) NOT TOUCHED this session — twin lane only.
+
 ---
 
 ## Session 1 — 2026-05-09 KST — Layer 4 schema lock + Trinity generator catalog
