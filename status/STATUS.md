@@ -2,79 +2,91 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-05-10 — Session 2 close)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-05-11 — Session 3 close)
 
-**Session 2 closed all of Step A.** Stack locked Kotlin; persona schema (3 sealed kinds, Volere 2d/2e anchored, market+vertical+type axes) committed at `reference/architecture/PERSONA-SCHEMA.md`; Layer 2 Journey contract + DomainEvent v1 taxonomy (15 events) added as locked sections in LAYER4-CONFIG-SCHEMA.md; snapshot file format committed at `reference/architecture/SNAPSHOT-FORMAT.md`; Layer 4 doc cleanup pass done (STRAWMAN banner dropped, Q1–Q7 recap landed). Twin persistence + graph plan locked at `reference/architecture/TWIN-DB-AND-GRAPH.md` (dedicated PG database on mother instance; no standalone Hasura; embedded `graphql-kotlin` when graph layer earns its keep).
+**Session 3 was the first real-code session.** Kotlin project scaffolded, NATS wired end-to-end, store seeded (Decathlon Manhattan, 600 sqm, 160 zones), 920-SKU catalog curated from Korea data and loaded. Major side-effect: the twin exercise exposed serious gaps in the core MapCanvas rendering (all zones same color, no hierarchy, label collision at scale) — these are now contracted for a web session.
 
-**Architecture-side commitments are now stable enough to write code against.** Step B (integration specs) is the next remaining doc work; Step C (content authoring) and Step D (first code) can run in parallel after that.
+**Before next twin session:** check STATUS.md in m8trx-shared for MapCanvas contract delivery status. If canvas is still broken, twin data will still be invisible on VisionAI. Canvas fix is a hard prereq for meaningful demo.
 
-### Recommended entry order — next session
+### What's seeded in M8trxDemo (live on mother)
 
-**Step A — quick locks (~30 min, doc-only):** ✅ COMPLETE 2026-05-10
+| Asset | State |
+|---|---|
+| Tenant | Decathlon Manhattan (`decathlon-manhattan`), 620 6th Ave NY 10011, USD |
+| Site | Decathlon Manhattan - Flatiron |
+| Space | Main Floor, 24m × 25m (600 sqm), boundary updated |
+| Zones | 160 zones (8 area + 3 try_on + 149 fixture) — E-W gondola grammar from Florence CAD |
+| Products | 920 SKUs, English names, USD pricing, 40 high-value EAS-flagged items |
+| Items / EPCs | ❌ Not seeded — next session |
 
-| | Item | Land-point |
+### Immediate next steps (ranked)
+
+1. **`inventoryReceive` + item seeding** — create EPCs for each product on the floor. Needed before any RFID scenario runs. Use `POST /api/v2/inventory/items/receive` once service bearer auth is fixed, OR Hasura admin path as interim.
+2. **Service bearer auth fix** (backend session) — `InventoryActionController` uses JWT-only `extractAuthContext`. Add `ApiKeyService` injection + switch to 3-arg overload. Filed in `m8trx-shared/status/CLEANUP-TASKS.md` as `SERVICE-BEARER-INVENTORY`.
+3. **TrafficGenerator** — Layer 3 walking-actor loop: emit `objLocation` every 500ms along a random path through gondola zones + proper session lifecycle (`personSessionStart` → walk → `personSessionClose` → `objEviction`).
+4. **`personSessionStart` smoke** — test the REST atom end-to-end against M8trxDemo once service bearer is fixed.
+5. **Persona names** — English/American names for NYC demographic. Korean names don't translate well. Internationalize later.
+
+### Blocked on core
+
+- **Service bearer not wired to inventory endpoints** — `InventoryActionController`, and likely others, need `ApiKeyService` injected. Filed in `m8trx-shared/status/CLEANUP-TASKS.md`.
+- **Catalog import onboarding flow** — no product catalog import UI or REST path exists for tenants. Twin works around via Hasura admin. Real customers need this as part of tenant setup. Filed in CLEANUP-TASKS.md as `CATALOG-IMPORT-ONBOARDING`.
+- **MapCanvas rendering** — zones all render as the same green regardless of `zone_type`. Contract at `m8trx-shared/status/cleanup/MAPCANVAS-ZONE-RENDERING-CONTRACT-2026-05-11.md`. Canvas fix is a hard prereq for demo-quality VisionAI display.
+
+---
+
+## Store Concept (locked Session 3)
+
+**Decathlon Manhattan** — Decathlon City format, NOT running specialty.
+- Concept evolution: started as Bordeaux running specialty (160 sqm) → Florence CAD grammar showed the correct scale → 600 sqm Decathlon City format adopted
+- Address: 620 6th Avenue, New York, NY 10011 (Flatiron District)
+- Currency: USD
+- SKU mix: running (primary) + fitness + hiking + swim + cycling + accessories + GPS watches
+- LP scenario anchor: W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items
+
+---
+
+## Project Artifacts
+
+| Artifact | Path | Status |
 |---|---|---|
-| ✅ | Stack = Kotlin | STATUS.md § Open Decisions |
-| ✅ | Persona schema | `PERSONA-SCHEMA.md` |
-| ✅ | Journey base contract | `LAYER4-CONFIG-SCHEMA.md` § Layer 2 |
-| ✅ | DomainEvent v1 taxonomy | `LAYER4-CONFIG-SCHEMA.md` § DomainEvent v1 |
-| ✅ | Snapshot file format | `SNAPSHOT-FORMAT.md` |
-| ✅ | Layer 4 doc cleanup (banner removed, Q1–Q7 recap) | `LAYER4-CONFIG-SCHEMA.md` |
-| ✅ | Persistence + graph plan (bonus) | `TWIN-DB-AND-GRAPH.md` |
-
-**Step B — integration specs (~2–4 hr each, can run in parallel):**
-
-1. **Layer 0 AtomEmitter surface** — new doc `reference/integration/M8TRX-API-SURFACE.md`. ~10–15 method table mapping each emit call to M8TRX endpoint/subject + payload. Covers `objLocation`, `objEviction`, `rfidScan`, `saleWebhook`, `tryOnZoneEvent`, `custodyEvent`, `stocktakeBegin`, etc. **Hard blocker for all Layer 0 code.**
-2. **Tenant provisioning playbook** — new doc `reference/ops/TENANT-PROVISIONING.md`. Walk M8trxDemo creation via the same signup flow a real customer would; capture friction findings as we go (this is itself a real onboarding test). Output: signup steps, capability grants, `api_key` issuance with `principal_kind=service`. **Hard blocker for any code talking to mother.**
-
-**Step C — content authoring (own session, half-day each):**
-
-3. **Store layout** — `reference/data/STORE-LAYOUT.md`. Research-driven (Decathlon walkthroughs, public press kits, store concept renders) for ~30m × 50m running specialty footprint. Defines `space` + `zone` + `fixture` rows of the snapshot.
-4. **SKU curation** — `reference/data/SKU-CURATION.md`. Decathlon Korea catalog (~20k items) → ~2–3k curated SKUs by category, variant-expanded by size/color, anchored to fixtures.
-
-These two upstream-feed the snapshot artifact at `reference/data/snapshots/decathlon-running-small/day-start.json`.
-
-**Step D — first code:** Layer 0 atoms + orchestrator skeleton + `TrafficGenerator` end-to-end against M8trxDemo on mother. Initial deploy is in-memory + file capture (per `TWIN-DB-AND-GRAPH.md` Stage 1); twin's PG database introduces in Stage 2 once cross-run queries become a real need.
+| Kotlin project | `~/IdeaProjects/m8trx-twin/` | ✅ Compiles, NATS smoke passed |
+| NATS emitter | `src/main/kotlin/com/m8trx/twin/layer0/NatsEmitter.kt` | ✅ Dual-publishes legacy + new pattern |
+| REST emitter | `src/main/kotlin/com/m8trx/twin/layer0/RestEmitter.kt` | ✅ Written, untested (service bearer 401) |
+| Store layout doc | `reference/data/STORE-LAYOUT.md` | ✅ 600 sqm, full fixture spec |
+| Floor plan SVG | `reference/data/floor-plans/decathlon-running-medium.svg` | ✅ Generated |
+| Snapshot JSON | `reference/data/snapshots/decathlon-running-small/day-start.json` | ⚠ Outdated (300 sqm) — update to 600 sqm |
+| Seed script | `scripts/seed_store.py` | ✅ Live on mother |
+| Raw catalog | `reference/sample_stores/decathlon-korea-raw.csv` | ✅ 56,003 rows |
+| Curated catalog | `reference/data/catalog/decathlon-korea-curated.csv` | ✅ 920 SKUs, USD prices |
+| Final SKU file | `reference/data/catalog/decathlon-manhattan-skus.csv` | ✅ English names, ready |
+| Florence CAD ref | `reference/sample_stores/deacthlon_florence/` | ✅ 4 files |
+| API surface doc | `reference/integration/M8TRX-API-SURFACE.md` | ✅ 27 atoms mapped |
 
 ---
 
 ## Active Requirements Filed Back to Core
 
-Briefs live at `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-<NNN>-<short-slug>.md`. Format and lifecycle documented in `m8trx-shared/twin/SISTER-PROJECT.md`. Status enum: `NOT YET FILED` → `FILED, AWAITING ABSORPTION` → `ABSORBED` (or `REJECTED` / `SUPERSEDED`).
-
-- **commerce_projection writer** — substrate (mig 112) exists; writer unfed. Blocks Scripts 1, 3, 5 commercial story. Status: NOT YET FILED (waiting for Bob's audit confirmation in core).
-- **`fitting_room` → `try_on_zone` generalization** — Status: **ABSORBED 2026-05-09**. Brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-001-try-on-zone-generalization.md` (frontmatter updated). Merged-commit `47b42f6` (m8trx-services); mig 127 in m8trx-shared; full 4-repo rename across services / web / android / api closed in core Session 61.
-- **`inventory:sell` capability split** — currently piggybacks `inventory:transfer`. Surfaces when demo authors cashier persona. Status: PRE-EXISTING (already tracked in core's CLEANUP-TASKS.md; brief unnecessary).
+| Brief | Status | Blocks |
+|---|---|---|
+| TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
+| `commerce_projection` writer | NOT YET FILED | Scripts 1, 3, 5 |
+| `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ---
 
-## Deploy State
+## Deploy State (Session 3)
 
-No artifacts yet. Repo bootstrap + Layer 4 schema doc only.
-
-- m8trx-twin HEAD: pending Session 1 close commit (Layer 4 lock + generator catalog + openingState)
+- m8trx-twin: uncommitted (coordinator handles commit)
+- M8trxDemo on mother: 160 zones + 920 products live
+- NATS: smoke objLocation published successfully to .29
+- Service API key: active, `principal_kind=service` — auth works on NATS, fails on REST inventory endpoints
 
 ---
 
 ## Open Decisions
 
-- **Stack** — ✅ LOCKED 2026-05-10: **Kotlin**. Follows the rest of the M8TRX ecosystem (services / edge / android are all Kotlin; only web is TS). Reuses JVM tooling, Apollo + NATS clients, and m8trx-api codegen the same way services/android do. Anthropic SDK has a maintained Kotlin/JVM path; no SDK gap forces the issue.
-- **Container deploy target** — office .28 (alongside main-server), separate host, or cloud (Anthropic API needs outbound; LLM client doesn't run on LAN). Decision after first runnable scenario.
-- **Scenario clock** — ✅ LOCKED Session 1: shared scheduler owned by orchestrator; generators submit callbacks (Q3). `rate=0` step mode supported via orchestrator-exposed `advanceOne()` / `advanceUntil()`. Capture-and-replay locked in Q5.
-- **Config canonical format** — ✅ LOCKED Session 1: JSON canonical (LLM-friendliest) + human surface on top (Q1).
-
----
-
-## Scenario Script Library (planning)
-
-Five scripts brainstormed; build order from highest-leverage substrate to highest-impact set piece:
-
-1. **A Day in the Life** — long-form data substrate (open-to-close, populated). Build first; everything else extracts from it. **Coverage discipline: must run every generator in the catalog at scenario-realistic cadence — this is the integration test for Trinity coverage.**
-2. **Saturday Rush** — investor breadth-flex (~5 min compressed from 4 hr). All Layer 3 surfaces lit up simultaneously.
-3. **The Theft** — LP-buyer demo (~3 min). Single journey ending in EAS alarm + RFID confirmation.
-4. **Fitting Room Conversion** — ops/store-manager demo (~4 min). Three customers, three outcomes; surfaces "Items Tried But Not Bought" report.
-5. **Compliance Day** — big-tenant compliance buyer (~3 min). Planogram drift detection via `zone_history` hypertable.
-
-Scripts 1, 2 = unblocked once Layer 4 substrate runs. Scripts 3, 4 = layer over the substrate. Script 5 = independent of POS, blocked only on layout authoring.
-
----
+- **Container deploy target** — decision deferred until first runnable scenario
+- **Stack** ✅ LOCKED: Kotlin
+- **Scenario clock** ✅ LOCKED: shared scheduler, `rate=0` step mode
+- **Config canonical format** ✅ LOCKED: JSON

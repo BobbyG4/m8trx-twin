@@ -4,6 +4,37 @@
 
 ---
 
+## Session 3 — 2026-05-11 KST — First code: Kotlin scaffold + NATS live + store seeded + 920-SKU catalog loaded
+
+**Lane:** Twin (sister project, system-integrator posture). Core repos not touched.
+
+### What shipped
+
+- **Kotlin project scaffold** — `build.gradle.kts`, `settings.gradle.kts`, `TwinConfig`, `AtomEmitters` interface, `NatsEmitter` (dual-publishes legacy + new pattern), `RestEmitter` (written, untested). Gradle 8.14.4, Kotlin 2.3.20, jnats 2.20.6, Jackson, coroutines.
+- **NATS smoke** — `objLocation` published end-to-end to .29 (`area.<spaceIdNoHyphens>.objLocation` + `m8trx.<t>.<s>.xovis.objLocation`). CONNECTED in 140ms.
+- **M8trxDemo tenant** — created via signup (partially), Bob added as member, service API key issued (`m8trx_6f…`, `principal_kind=service`). Tenant renamed Decathlon Manhattan, 620 6th Ave NYC, USD currency.
+- **Store concept locked** — evolved from Bordeaux running specialty (160 sqm) to Decathlon City format (600 sqm). Store grammar derived from Florence Decathlon CAD plan (`reference/sample_stores/deacthlon_florence/`). E-W gondola orientation matching the CAD reference.
+- **Store seeded** — 160 zones + 3 try_on_zones live on mother: 8 area zones, 3 try-on zones, 149 fixture zones (112 gondola units, 16 perimeter bays, 21 specialty). `scripts/seed_store.py` via Hasura admin. `reference/data/STORE-LAYOUT.md` + SVG floor plan generated.
+- **SKU catalog** — 56,003-row Decathlon Korea raw catalog curated to 920 SKUs. Rule-based Korean→English translation (zero Korean remaining). USD pricing derived from Decathlon series numbers (W100–W900 price tier mapping). 40 high-value EAS items flagged. Seeded to M8trxDemo `product` table via Hasura admin.
+- **MapCanvas contract** — 7-fix spec written at `m8trx-shared/status/cleanup/MAPCANVAS-ZONE-RENDERING-CONTRACT-2026-05-11.md`. Root cause: `zone_type` never reaches canvas (hardcoded to `'fixture'`). Handed to web session.
+
+### Key discoveries (side-effects of twin work)
+
+- **MapCanvas all-zones-same-green bug** — VisionAI canvas renders every zone type identically. Root at `VisionAIPage.tsx:57`. Contracted.
+- **Service bearer auth gap** — `InventoryActionController` uses JWT-only auth path. Service bearer returns 401. Filed in `m8trx-shared/status/CLEANUP-TASKS.md`.
+- **Catalog onboarding FR unbuilt** — no product catalog import flow for tenant onboarding. Filed in CLEANUP-TASKS.md.
+- **Store concept scope creep** — running specialty store can't fill 149 fixtures. Correct format is Decathlon City (multi-sport). Store concept and SKU mix updated accordingly.
+
+### Carried forward
+
+- `inventoryReceive` — create EPCs on floor (blocks all RFID scenarios)
+- Service bearer fix (backend session)
+- TrafficGenerator — walking actor loop
+- Persona definitions with English/American names (US market, internationalize later)
+- Update `day-start.json` snapshot to 600 sqm (currently 300 sqm, outdated)
+
+---
+
 ## Session 2 — 2026-05-10 KST — Step A complete: persona + journey contract + DomainEvent taxonomy + snapshot format + persistence plan
 
 Layer 4 architectural commitment now stable enough to write code against. Step B (integration specs) is the next remaining doc work; Step C (content authoring) and Step D (first code) can run in parallel after that.
