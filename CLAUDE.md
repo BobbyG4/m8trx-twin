@@ -140,16 +140,21 @@ If a session believes it must do any of the above, it stops and asks. The Destru
 
 | Document | Location |
 |----------|----------|
-| Project status | `status/STATUS.md` |
-| Session log | `status/SESSION-LOG.md` (append-only, created on first close) |
+| **Project status** | `status/STATUS.md` — `## ⚠ NEXT SESSION PRIORITIES` (authoritative for what's next) |
+| **Track state** | `status/tracks/TRACK-TWIN.md` — current branch/deploy state + open work + blocked items. Read at session-start. |
+| **Session log** | `status/SESSION-LOG.md` — rolling summary + session index with links to session-notes |
+| **Session notes** | `status/session-notes/` — detailed per-session working notes. Created every session close. |
+| **Briefs** | `status/briefs/` (unfired) · `status/active/` (in-flight) · `status/archive/sprint/` (done) |
+| **Sister project contract** | `~/IdeaProjects/m8trx-shared/twin/SISTER-PROJECT.md` — relationship rules, brief-filing protocol |
 | Layer 4 config schema | `reference/architecture/LAYER4-CONFIG-SCHEMA.md` |
 | Scenario library | `reference/scenarios/` (TBD per script) |
-| SKU curation spec | `reference/data/SKU-CURATION.md` (TBD) |
-| Store layout reference | `reference/data/STORE-LAYOUT.md` (TBD) |
+| SKU curation spec | `reference/data/SKU-CURATION.md` |
+| Store layout reference | `reference/data/STORE-LAYOUT.md` |
+| API surface | `reference/integration/M8TRX-API-SURFACE.md` |
 | Tenant provisioning | `reference/ops/TENANT-PROVISIONING.md` (TBD) |
 
 ---
 
 ## Current Phase
 
-**Bootstrap.** Foundation docs in place; no code yet. First session focuses on **Layer 4 config schema design** — the architectural commitment that shapes everything below. See `status/STATUS.md` for the entry-order recommendation.
+**Active development.** Kotlin scaffold compiles, NATS live, Decathlon Manhattan store seeded (Session 3). Next: item/EPC seeding + TrafficGenerator. See `status/STATUS.md` and `status/tracks/TRACK-TWIN.md` for current priorities.
