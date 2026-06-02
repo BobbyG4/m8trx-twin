@@ -2,30 +2,36 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-05-11 — Session 3 close)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-03 — Session 4 close)
 
-**Session 3 was the first real-code session.** Kotlin project scaffolded, NATS wired end-to-end, store seeded (Decathlon Manhattan, 600 sqm, 160 zones), 920-SKU catalog curated from Korea data and loaded. Major side-effect: the twin exercise exposed serious gaps in the core MapCanvas rendering (all zones same color, no hierarchy, label collision at scale) — these are now contracted for a web session.
+**Session 4 re-based the store data on live regional catalogs (two-store model)** and closed with a hand-off to a cross-project onboarding plan. **Denver (US)** built from the live US Decathlon Shopify catalog — 2,586 real SKUs, 35,912 EPCs, 100% real images, native US names/prices/sizes. **Seoul (KR city) parked** (images need live-KR re-base). **EPC encoder validated** clean-room vs 169k real warehouse tags (filter 1 / partition 6). Denver **not yet seeded to mother** (gated).
 
-**Before next twin session:** check STATUS.md in m8trx-shared for MapCanvas contract delivery status. If canvas is still broken, twin data will still be invisible on VisionAI. Canvas fix is a hard prereq for meaningful demo.
+**NEXT SESSION = Coordinator track:** `status/active/ONBOARDING-BASELINE-HANDOFF-2026-06-03.md` — baseline customer onboarding across core + twin (catalog import, EPC config, product imagery + the full tenant journey) and the UI cleanup. Build as a working-draft.
+
+**Session 4 detail:** `status/session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md`.
 
 ### What's seeded in M8trxDemo (live on mother)
 
 | Asset | State |
 |---|---|
-| Tenant | Decathlon Manhattan (`decathlon-manhattan`), 620 6th Ave NY 10011, USD |
-| Site | Decathlon Manhattan - Flatiron |
-| Space | Main Floor, 24m × 25m (600 sqm), boundary updated |
-| Zones | 160 zones (8 area + 3 try_on + 149 fixture) — E-W gondola grammar from Florence CAD |
-| Products | 920 SKUs, English names, USD pricing, 40 high-value EAS-flagged items |
-| Items / EPCs | ❌ Not seeded — next session |
+| Tenant/Store | renamed Manhattan → **Denver** (manual edit; threw failures first — onboarding-UX gap noted) |
+| Space | Main Floor, 24m × 25m (600 sqm), 160 zones (Manhattan layout, reused for Denver) |
+| Products | 920 SKUs from Session 3 (Korea-derived) — to be replaced by the Denver US catalog |
+| Items / EPCs | ❌ Still NOT seeded — Denver dataset built (`denver-{assortment,epcs}.csv`, 2,586 SKUs / 35,912 EPCs), seed gated |
+
+### Built this session, ready to seed (not yet on mother)
+- **Denver** — `reference/data/analysis/denver-assortment.csv` (real US SKUs + images) + `denver-epcs.csv` (35,912 EPCs) · `scripts/build_denver.py`
+- **EPC encoder** — `reference/data/EPC-ENCODING-DECATHLON.md` (validated)
+- **Operating model** — `reference/data/STORE-OPERATING-MODEL.md` + `.json`
+- **Pipeline + planogram** — `reference/data/INVENTORY-SEEDING-PIPELINE.md`
 
 ### Immediate next steps (ranked)
 
-1. **`inventoryReceive` + item seeding** — create EPCs for each product on the floor. Needed before any RFID scenario runs. Use `POST /api/v2/inventory/items/receive` once service bearer auth is fixed, OR Hasura admin path as interim.
-2. **Service bearer auth fix** (backend session) — `InventoryActionController` uses JWT-only `extractAuthContext`. Add `ApiKeyService` injection + switch to 3-arg overload. Filed in `m8trx-shared/status/CLEANUP-TASKS.md` as `SERVICE-BEARER-INVENTORY`.
-3. **TrafficGenerator** — Layer 3 walking-actor loop: emit `objLocation` every 500ms along a random path through gondola zones + proper session lifecycle (`personSessionStart` → walk → `personSessionClose` → `objEviction`).
-4. **`personSessionStart` smoke** — test the REST atom end-to-end against M8trxDemo once service bearer is fixed.
-5. **Persona names** — English/American names for NYC demographic. Korean names don't translate well. Internationalize later.
+1. **Onboarding-baseline plan (Coordinator track)** — `status/active/ONBOARDING-BASELINE-HANDOFF-2026-06-03.md`. Cross-project plan for customer onboarding + UI cleanup. Pull FRs from `9a`, audit core onboarding surfaces, build a working-draft.
+2. **Seed Denver to mother** — `day-start.json` snapshot + `item_identifier`/`thing_location`/product-image mutations from the Denver CSVs; verify inventory schema first; gated ~36k-row prod write; decide tenant naming.
+3. **TrafficGenerator** — Layer 3 loop (sketch ready); needs orchestrator runtime skeleton (`com.m8trx.twin.runtime`) first.
+4. **Seoul (unpark)** — re-base off live KR catalog (Algolia) for products + images; reuse EPC encoder + Nov velocity.
+5. **TransactionGenerator** — from Nov 160k real baskets.
 
 ### Blocked on core
 

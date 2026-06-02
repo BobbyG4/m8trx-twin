@@ -10,9 +10,19 @@ dist/
 target/
 .gradle/
 *.iml
+__pycache__/
+*.pyc
 
 # Obsidian vault working state (per Multi-Session Protocol § Lane #5)
 .obsidian/
 .space/
 .trash/
 .makemd/
+
+# Heavy reference inputs — NOT tracked (large / re-derivable). Session 4.
+# Raw Korea warehouse DB dumps (~417MB). Source data; kept locally, not in git.
+reference/data/*.sql
+# Live US Decathlon catalog raw pulls (~10MB, re-pullable via scripts/build_denver.py
+# pull loop). Derived CSVs in reference/data/analysis/ ARE tracked.
+reference/data/us-catalog/
+# (Tracked: reference/data/analysis/*.csv — the assortment + EPC data products)

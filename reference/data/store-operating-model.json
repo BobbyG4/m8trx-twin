@@ -1,0 +1,127 @@
+{
+  "$schema": "./store-operating-model.schema.json",
+  "_meta": {
+    "name": "decathlon-manhattan-operating-model",
+    "status": "CALIBRATED_v1",
+    "authored": "2026-06-02",
+    "session": 4,
+    "doc": "reference/data/STORE-OPERATING-MODEL.md",
+    "research_workflow": "wf_1d14474c-c86",
+    "confidence_legend": { "S": "sourced", "D": "derived", "A": "assumed" },
+    "note": "Demo-calibration constants, not audited financials. [S] figures sourced but NOT independently cross-verified (research verifier failed). See doc caveat. Bar: realistic, not accurate."
+  },
+
+  "store": {
+    "format": "decathlon-city",
+    "sales_floor_sqm": 600,
+    "market": "US",
+    "currency": "USD",
+    "operating_hours": { "open": "10:00", "close": "21:00", "open_hours": 11 },
+    "sku_count": 871,
+    "eas_high_value_skus": 36,
+    "catalog_avg_price_usd": 25.36,
+    "fixture_count": 149
+  },
+
+  "traffic": {
+    "visitors_per_day": {
+      "weekday": 850, "weekend": 1450,
+      "weekday_range": [600, 1100], "weekend_range": [1000, 1800],
+      "conf": "A"
+    },
+    "weekend_weekday_multiplier": { "value": 1.7, "range": [1.5, 2.0], "conf": "S" },
+    "capture_rate": { "value": 0.35, "range": [0.25, 0.45], "conf": "A" },
+    "seasonality_factor_range": [0.75, 1.25],
+    "hourly_curve": {
+      "_note": "fraction of daily footfall per open hour, each array sums to 1.0, index 0 = 10:00-11:00",
+      "conf": "S_shape",
+      "weekday": [0.05, 0.07, 0.11, 0.10, 0.08, 0.08, 0.09, 0.11, 0.13, 0.11, 0.07],
+      "weekend": [0.06, 0.09, 0.12, 0.13, 0.12, 0.11, 0.10, 0.09, 0.08, 0.06, 0.04]
+    }
+  },
+
+  "conversion": {
+    "overall_rate": { "value": 0.22, "range": [0.15, 0.28], "conf": "S" },
+    "try_on_engagement_rate": { "value": 0.18, "range": [0.12, 0.25], "conf": "A" },
+    "try_on_buy_uplift": { "value": 2.5, "range": [2.0, 3.0], "conf": "S_marketing" },
+    "fitting_room_to_register": { "value": 0.67, "range": [0.60, 0.72], "conf": "S_marketing" },
+    "gait_analysis_shoe_conversion": { "value": 0.55, "range": [0.45, 0.65], "conf": "A" }
+  },
+
+  "basket": {
+    "atv_usd": { "value": 58, "range": [45, 75], "conf": "D" },
+    "units_per_txn": { "value": 2.2, "range": [1.8, 2.6], "conf": "A" },
+    "avg_line_price_usd": { "value": 26.4, "conf": "D" },
+    "category_revenue_mix": {
+      "_note": "sums to 1.0",
+      "footwear": 0.25, "apparel": 0.25, "hardware_watches": 0.08,
+      "fitness_equipment": 0.18, "outdoor": 0.15, "team_sport": 0.05, "accessories_other": 0.04
+    },
+    "category_unit_mix": {
+      "_note": "sums to 1.0",
+      "footwear": 0.18, "apparel": 0.27, "hardware_watches": 0.04,
+      "fitness_equipment": 0.15, "outdoor": 0.16, "team_sport": 0.07, "accessories_other": 0.13
+    },
+    "store_cat_map": {
+      "footwear": ["running_shoe", "footwear"],
+      "apparel": ["apparel", "running_app"],
+      "hardware_watches": ["watch_gps"],
+      "fitness_equipment": ["fitness"],
+      "outdoor": ["hiking", "swim", "cycling"],
+      "team_sport": ["team_sport"],
+      "accessories_other": ["accessories", "eyewear", "protection", "bag_pack", "other"]
+    }
+  },
+
+  "persona_mix": {
+    "_note": "fraction of sessions; buying personas sum to ~conversion.overall_rate",
+    "browse_and_leave": 0.78,
+    "shop_and_buy": 0.14,
+    "try_on_and_partial_buy": 0.08,
+    "shoplift_baseline": 0.003
+  },
+
+  "shrink": {
+    "rate_pct_of_sales": { "value": 0.016, "range": [0.014, 0.018], "conf": "S" },
+    "split": { "external_theft": 0.37, "internal_employee": 0.29, "administrative": 0.34 },
+    "eas_scope_skus": 36
+  },
+
+  "dwell": {
+    "_note": "minutes",
+    "total_median_min": { "value": 18, "range": [10, 35], "conf": "S" },
+    "by_zone_min": { "footwear_gait": 9, "apparel_gondola": 6, "watch_gps_display": 4, "checkout": 3 },
+    "zones_visited_per_session": { "value": 4, "range": [2, 7], "conf": "A" },
+    "zone_affinity": {
+      "_note": "P(session visits zone); keys are STORE-LAYOUT zone codes; Z-02 = conversion",
+      "Z-04_main_sales_floor": 0.95,
+      "Z-08_footwear_bench": 0.35,
+      "Z-09_gait_analysis": 0.12,
+      "Z-06_gps_accessories": 0.30,
+      "Z-10_fitting_rooms": 0.18
+    }
+  },
+
+  "staffing": {
+    "associates_on_floor_peak": 5,
+    "associates_on_floor_offpeak": 3,
+    "sqm_per_associate": 120,
+    "restock_cadence": "continuous + AM open-fill",
+    "cycle_count": "weekly (rotating zones)",
+    "full_stocktake": "quarterly"
+  },
+
+  "stocking": {
+    "_note": "on-floor unit depth per SKU drives inventoryReceive EPC seeding; total is tunable, not hard-derived",
+    "on_floor_units_per_sku": {
+      "footwear_per_size": 4, "apparel_per_size": 6, "watches_locked": 2,
+      "accessories": 8, "equipment_outdoor": 3
+    },
+    "on_floor_vs_backroom_split": 0.65,
+    "annual_inventory_turns": { "value": 2.7, "range": [2.0, 3.5], "conf": "S" },
+    "active_skus": 5000,
+    "avg_depth_pieces_per_sku": 5,
+    "total_pieces_estimate": 25450,
+    "_scale_note": "Locked 2026-06-02 against 6-10 SKU/m² + depth 4-8 benchmark. See INVENTORY-SEEDING-PIPELINE.md §4. Supersedes earlier 4,300 estimate."
+  }
+}

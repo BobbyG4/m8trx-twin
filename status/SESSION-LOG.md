@@ -7,6 +7,9 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 4 (2026-06-03 · Twin)**
+Store-data strategy re-based on **live regional catalogs**. Two-store model: **Denver (US)** built from the live US Decathlon Shopify catalog — 2,586 real SKUs, 35,912 EPCs, **100% real images**, real US names/prices/sizes; **Seoul (KR city) parked** (images need live-KR Algolia re-base; only 6% free overlap with US). **EPC encoder validated** clean-room against 169k real warehouse tags (filter 1 / partition 6; encode reproduces real tags bit-for-bit). US-calibrated operating model + benchmark research captured. Denver rides the Manhattan layout as-is (GPS watch cases empty — no US watches). Not yet seeded to mother (gated). Store renamed Manhattan→Denver on mother (manual; threw failures first). Closed with a hand-off: next session = **Coordinator-track onboarding-baseline plan** across core + twin.
+
 **Session 3 (2026-05-11 · Twin)**
 First code. Kotlin scaffolded, NATS smoke passed (140ms). Decathlon Manhattan store seeded: 160 zones + 3 try_on_zones + 920-SKU catalog on mother. Key gap found: service bearer auth fails on `InventoryActionController` (JWT-only). MapCanvas all-zones-same-green bug contracted to core web session (now fixed in core Session 70/71).
 
@@ -22,6 +25,7 @@ Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), Even
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 4 | 2026-06-03 | Re-base on live catalogs — Denver (US, real+images) built; Seoul parked; EPC encoder validated; onboarding hand-off | [→](session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md) |
 | 3 | 2026-05-11 | First code — Kotlin + NATS + store seeded + 920 SKUs | [→](session-notes/2026-05-11-session-3-first-code-nats-store-seeded.md) |
 | 2 | 2026-05-10 | Persona + Journey + DomainEvent + Snapshot + persistence plan | [→](session-notes/2026-05-10-session-2-persona-journey-domainevents.md) |
 | 1 | 2026-05-09 | Layer 4 schema lock + Trinity generator catalog | [→](session-notes/2026-05-09-session-1-layer4-schema-lock.md) |
