@@ -5,6 +5,10 @@ chain by **adding 10 new international stores with realistic, varied layouts**, 
 real customer would. New stores (not retrofit) keep the seeded baseline clean and serve triple duty
 (variety · playbook validation both sides · onboarding dogfood).
 
+> **Sequencing — Wave 2 comes AFTER full activity.** First make Wave 1 *alive*: build the in-store
+> activity / the "play" (`ACTIVITY-PLAN.md`) and light the analytics on the baseline chain.
+> **Depth before breadth** — don't add 10 more *static* stores before the first 10 are animated.
+
 ---
 
 ## Wave 2 — the 10 new stores

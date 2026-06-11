@@ -30,11 +30,11 @@
 
 ## Open Work (priority order)
 
-1. **Resolve image pipeline with backend** — link vs cached bytes; gates how images scale across Wave 2.
+1. **Resolve image pipeline with backend** — link vs cached bytes (parallel).
 2. **Follow-up deploy** — provision the corrected **spaces/zones/fixtures** per retail site + place the 277k items at fixture-zones via scan/receive (closes the site-level limitation).
-3. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect. Validates the playbook both sides.
-4. **Phase-2 activity** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → staff journeys; item-movement is the connective tissue.
-5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC.
+3. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**
+4. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — *after* the baseline is alive; parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect. Validates the playbook both sides.
+5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
 
 ## Active Requirements Filed to Core
 

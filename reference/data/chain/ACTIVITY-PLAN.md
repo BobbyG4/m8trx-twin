@@ -8,6 +8,10 @@ Phase 2 is the **play**.
 **Design principle — model backwards from the analytics.** Every behavior below exists because a
 dashboard needs the events it emits. If a behavior lights up no surface, we don't model it.
 
+**Sequencing — this comes BEFORE Wave 2.** Animate the Wave-1 baseline chain (the whole table
+below) and light the analytics *first*; only then expand to the Wave-2 international stores
+(`EXPANSION-PLAN.md`). Depth before breadth.
+
 **Builds on (don't duplicate):** Layer 0–4 architecture (`reference/architecture/`), the
 `PERSONA-SCHEMA`, the DomainEvent taxonomy, `STORE-OPERATING-MODEL.md` (calibration), the 27-atom
 `M8TRX-API-SURFACE.md`, and the corrected import model (`SEED-PLAYBOOK.md` rules — esp. §2: location

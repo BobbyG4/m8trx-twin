@@ -23,11 +23,11 @@ Provision the **corrected spaces/zones/fixtures** per retail site (`layout/space
 
 ### Immediate next steps (ranked)
 
-1. **Resolve the image pipeline with backend** — Shopify hot-link vs **cache bytes** into M8TRX's own asset store. Gates how images scale to Wave 2. *(see Blocked on core)*
-2. **Follow-up deploy** — corrected fixture-zone layout + scan/receive item placement.
-3. **Wave 2 — 10 international stores** (`reference/data/chain/EXPANSION-PLAN.md`) — parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect; validates the playbook both sides.
-4. **Phase-2 activity** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator (people on map) → TransactionGenerator → staff journeys.
-5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC.
+1. **Resolve the image pipeline with backend** — Shopify hot-link vs **cache bytes** into M8TRX's own asset store. *(parallel; see Blocked on core)*
+2. **Follow-up deploy** — corrected fixture-zone layout + scan/receive item placement (completes Wave-1 inventory at fixtures).
+3. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator (people on map) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS, with item-movement throughout. **Animate Wave 1 + light the analytics first.**
+4. **Wave 2 — 10 international stores** (`reference/data/chain/EXPANSION-PLAN.md`) — *after* the baseline is alive; parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; UI-then-API onboarding; validates the playbook both sides.
+5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
 
 ### Blocked on core
 
