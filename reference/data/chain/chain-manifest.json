@@ -1,0 +1,489 @@
+{
+  "chain": "Decathlon (M8trxDemo)",
+  "generated": "deterministic; master_seed=42, per-store seed=sha256(store_id)",
+  "note": "Demo dataset. Shared US product master localized per region. Realistic, not accurate.",
+  "hq": {
+    "id": "dec-hq-global",
+    "region": "FR",
+    "country": "France",
+    "city": "Villeneuve-d'Ascq",
+    "address": "4 Boulevard de Mons, 59650 Villeneuve-d'Ascq",
+    "tz": "Europe/Paris",
+    "site_type": "office",
+    "office_role": "global_hq"
+  },
+  "layout_reference": "layout/space-template.json (shared 600 sqm space — 160 zones = 11 area + 149 zone_type='fixture'; source STORE-LAYOUT.md)",
+  "epc_encoding_reference": "reference/data/EPC-ENCODING-DECATHLON.md (SGTIN-96, filter 1 / partition 6)",
+  "totals": {
+    "sites_total": 14,
+    "retail_sites": 10,
+    "office_sites": 4,
+    "skus_master": 2586,
+    "sku_rows_all_stores": 22944,
+    "epcs_all_stores": 277515
+  },
+  "stores": [
+    {
+      "id": "dec-us-denver",
+      "site_type": "retail",
+      "region": "US",
+      "country": "United States",
+      "city": "Denver",
+      "state": "CO",
+      "address": "1515 16th Street Mall, Denver, CO 80202",
+      "timezone": "America/Denver",
+      "currency": "USD",
+      "locale": "en-US",
+      "tier": "flagship",
+      "tier_label": "Flagship",
+      "sqm": 600,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 600,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2586,
+      "epc_count": 35994,
+      "epc_by_category": {
+        "footwear": 5897,
+        "accessories": 4836,
+        "outdoor": 243,
+        "apparel": 24330,
+        "bag_pack": 688
+      },
+      "files": {
+        "assortment": "stores/dec-us-denver/assortment.csv",
+        "epcs": "stores/dec-us-denver/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-us-nyc",
+      "site_type": "retail",
+      "region": "US",
+      "country": "United States",
+      "city": "New York",
+      "state": "NY",
+      "address": "620 6th Avenue, New York, NY 10011",
+      "timezone": "America/New_York",
+      "currency": "USD",
+      "locale": "en-US",
+      "tier": "flagship",
+      "tier_label": "Flagship",
+      "sqm": 600,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 600,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2586,
+      "epc_count": 33951,
+      "epc_by_category": {
+        "footwear": 5483,
+        "accessories": 4617,
+        "outdoor": 234,
+        "apparel": 23002,
+        "bag_pack": 615
+      },
+      "files": {
+        "assortment": "stores/dec-us-nyc/assortment.csv",
+        "epcs": "stores/dec-us-nyc/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-us-sf",
+      "site_type": "retail",
+      "region": "US",
+      "country": "United States",
+      "city": "San Francisco",
+      "state": "CA",
+      "address": "1 Stockton Street, San Francisco, CA 94108",
+      "timezone": "America/Los_Angeles",
+      "currency": "USD",
+      "locale": "en-US",
+      "tier": "flagship",
+      "tier_label": "Flagship",
+      "sqm": 600,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 600,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2586,
+      "epc_count": 33681,
+      "epc_by_category": {
+        "footwear": 5546,
+        "accessories": 4466,
+        "outdoor": 232,
+        "apparel": 22808,
+        "bag_pack": 629
+      },
+      "files": {
+        "assortment": "stores/dec-us-sf/assortment.csv",
+        "epcs": "stores/dec-us-sf/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-fr-paris",
+      "site_type": "retail",
+      "region": "FR",
+      "country": "France",
+      "city": "Paris",
+      "state": "Île-de-France",
+      "address": "26 Avenue de Wagram, 75008 Paris",
+      "timezone": "Europe/Paris",
+      "currency": "EUR",
+      "locale": "fr-FR",
+      "tier": "flagship",
+      "tier_label": "Flagship",
+      "sqm": 600,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 600,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2586,
+      "epc_count": 35805,
+      "epc_by_category": {
+        "footwear": 5862,
+        "accessories": 4814,
+        "outdoor": 243,
+        "apparel": 24238,
+        "bag_pack": 648
+      },
+      "files": {
+        "assortment": "stores/dec-fr-paris/assortment.csv",
+        "epcs": "stores/dec-fr-paris/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-fr-lyon",
+      "site_type": "retail",
+      "region": "FR",
+      "country": "France",
+      "city": "Lyon",
+      "state": "Auvergne-Rhône-Alpes",
+      "address": "112 Cours Charlemagne, 69002 Lyon",
+      "timezone": "Europe/Paris",
+      "currency": "EUR",
+      "locale": "fr-FR",
+      "tier": "large",
+      "tier_label": "Large",
+      "sqm": 520,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 520,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2400,
+      "epc_count": 28061,
+      "epc_by_category": {
+        "footwear": 4568,
+        "apparel": 18981,
+        "accessories": 3784,
+        "bag_pack": 521,
+        "outdoor": 207
+      },
+      "files": {
+        "assortment": "stores/dec-fr-lyon/assortment.csv",
+        "epcs": "stores/dec-fr-lyon/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-fr-lille",
+      "site_type": "retail",
+      "region": "FR",
+      "country": "France",
+      "city": "Villeneuve-d'Ascq",
+      "state": "Hauts-de-France",
+      "address": "Centre Commercial V2, 59650 Villeneuve-d'Ascq",
+      "timezone": "Europe/Paris",
+      "currency": "EUR",
+      "locale": "fr-FR",
+      "tier": "large",
+      "tier_label": "Large",
+      "sqm": 520,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 520,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2400,
+      "epc_count": 27781,
+      "epc_by_category": {
+        "apparel": 18735,
+        "footwear": 4543,
+        "accessories": 3797,
+        "outdoor": 197,
+        "bag_pack": 509
+      },
+      "files": {
+        "assortment": "stores/dec-fr-lille/assortment.csv",
+        "epcs": "stores/dec-fr-lille/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-fr-marseille",
+      "site_type": "retail",
+      "region": "FR",
+      "country": "France",
+      "city": "Marseille",
+      "state": "Provence-Alpes-Côte d'Azur",
+      "address": "11 Avenue de Bonneveine, 13008 Marseille",
+      "timezone": "Europe/Paris",
+      "currency": "EUR",
+      "locale": "fr-FR",
+      "tier": "medium",
+      "tier_label": "Medium",
+      "sqm": 420,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 420,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 1800,
+      "epc_count": 18033,
+      "epc_by_category": {
+        "apparel": 12216,
+        "footwear": 2924,
+        "bag_pack": 343,
+        "outdoor": 135,
+        "accessories": 2415
+      },
+      "files": {
+        "assortment": "stores/dec-fr-marseille/assortment.csv",
+        "epcs": "stores/dec-fr-marseille/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-fr-bordeaux",
+      "site_type": "retail",
+      "region": "FR",
+      "country": "France",
+      "city": "Bordeaux",
+      "state": "Nouvelle-Aquitaine",
+      "address": "Rue du Professeur Georges Jeanneney, 33300 Bordeaux",
+      "timezone": "Europe/Paris",
+      "currency": "EUR",
+      "locale": "fr-FR",
+      "tier": "medium",
+      "tier_label": "Medium",
+      "sqm": 420,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 420,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 1800,
+      "epc_count": 18061,
+      "epc_by_category": {
+        "apparel": 12185,
+        "footwear": 2957,
+        "bag_pack": 337,
+        "accessories": 2444,
+        "outdoor": 138
+      },
+      "files": {
+        "assortment": "stores/dec-fr-bordeaux/assortment.csv",
+        "epcs": "stores/dec-fr-bordeaux/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-kr-seoul",
+      "site_type": "retail",
+      "region": "KR",
+      "country": "South Korea",
+      "city": "Seoul",
+      "state": "Seoul",
+      "address": "416 Gangnam-daero, Gangnam-gu, Seoul 06367",
+      "timezone": "Asia/Seoul",
+      "currency": "KRW",
+      "locale": "ko-KR",
+      "tier": "large",
+      "tier_label": "Large",
+      "sqm": 520,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 520,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 2400,
+      "epc_count": 28118,
+      "epc_by_category": {
+        "apparel": 19162,
+        "footwear": 4557,
+        "bag_pack": 518,
+        "outdoor": 197,
+        "accessories": 3684
+      },
+      "files": {
+        "assortment": "stores/dec-kr-seoul/assortment.csv",
+        "epcs": "stores/dec-kr-seoul/epcs.csv"
+      }
+    },
+    {
+      "id": "dec-kr-busan",
+      "site_type": "retail",
+      "region": "KR",
+      "country": "South Korea",
+      "city": "Busan",
+      "state": "Busan",
+      "address": "30 Centum 1-ro, Haeundae-gu, Busan 48058",
+      "timezone": "Asia/Seoul",
+      "currency": "KRW",
+      "locale": "ko-KR",
+      "tier": "medium",
+      "tier_label": "Medium",
+      "sqm": 420,
+      "has_space": true,
+      "has_inventory": true,
+      "has_sensors": true,
+      "space": {
+        "name": "Main Floor",
+        "template": "layout/space-template.json",
+        "sqm": 420,
+        "zones_total": 160,
+        "area_zones": 11,
+        "fixture_zones": 149,
+        "try_on_zones": 3
+      },
+      "sku_count": 1800,
+      "epc_count": 18030,
+      "epc_by_category": {
+        "apparel": 12297,
+        "footwear": 2769,
+        "outdoor": 134,
+        "accessories": 2490,
+        "bag_pack": 340
+      },
+      "files": {
+        "assortment": "stores/dec-kr-busan/assortment.csv",
+        "epcs": "stores/dec-kr-busan/epcs.csv"
+      }
+    }
+  ],
+  "office_sites": [
+    {
+      "id": "dec-hq-global",
+      "site_type": "office",
+      "office_role": "global_hq",
+      "region": "FR",
+      "country": "France",
+      "city": "Villeneuve-d'Ascq",
+      "address": "4 Boulevard de Mons, 59650 Villeneuve-d'Ascq",
+      "timezone": "Europe/Paris",
+      "has_space": false,
+      "has_inventory": false,
+      "has_sensors": false,
+      "sku_count": 0,
+      "epc_count": 0
+    },
+    {
+      "id": "dec-us-region",
+      "site_type": "office",
+      "office_role": "regional_hq",
+      "region": "US",
+      "country": "United States",
+      "city": "New York",
+      "address": "110 Fifth Avenue, New York, NY 10011",
+      "timezone": "America/New_York",
+      "has_space": false,
+      "has_inventory": false,
+      "has_sensors": false,
+      "sku_count": 0,
+      "epc_count": 0
+    },
+    {
+      "id": "dec-fr-region",
+      "site_type": "office",
+      "office_role": "regional_hq",
+      "region": "FR",
+      "country": "France",
+      "city": "Paris",
+      "address": "70 Rue de Tocqueville, 75017 Paris",
+      "timezone": "Europe/Paris",
+      "has_space": false,
+      "has_inventory": false,
+      "has_sensors": false,
+      "sku_count": 0,
+      "epc_count": 0
+    },
+    {
+      "id": "dec-kr-region",
+      "site_type": "office",
+      "office_role": "regional_hq",
+      "region": "KR",
+      "country": "South Korea",
+      "city": "Seoul",
+      "address": "14 Teheran-ro, Gangnam-gu, Seoul 06236",
+      "timezone": "Asia/Seoul",
+      "has_space": false,
+      "has_inventory": false,
+      "has_sensors": false,
+      "sku_count": 0,
+      "epc_count": 0
+    }
+  ]
+}

@@ -1,0 +1,252 @@
+email,display_name,name_local,role,role_label,site,region,timezone,status,status_reason,tenant_admin
+zenvendemo@gmail.com,M8TRX Demo Admin,M8TRX Demo Admin,tenant_admin,Tenant Administrator,,,Asia/Seoul,active,,true
+manon.bernard@decathlon-demo.com,Manon Bernard,Manon Bernard,ceo,Chief Executive Officer,dec-hq-global,FR,Europe/Paris,active,,false
+jules.petit@decathlon-demo.com,Jules Petit,Jules Petit,cfo,Chief Financial Officer,dec-hq-global,FR,Europe/Paris,active,,false
+chloe.roussel@decathlon-demo.com,Chloé Roussel,Chloé Roussel,coo,Chief Operating Officer,dec-hq-global,FR,Europe/Paris,active,,false
+chloe.michel@decathlon-demo.com,Chloé Michel,Chloé Michel,cio,Chief Information Officer / IT Director,dec-hq-global,FR,Europe/Paris,active,,false
+emma.muller@decathlon-demo.com,Emma Muller,Emma Muller,global_merch_director,Global Merchandising Director,dec-hq-global,FR,Europe/Paris,active,,false
+baptiste.bonnet@decathlon-demo.com,Baptiste Bonnet,Baptiste Bonnet,global_lp_director,Global Loss-Prevention Director,dec-hq-global,FR,Europe/Paris,active,,false
+lola.martin@decathlon-demo.com,Lola Martin,Lola Martin,global_hr_director,Global HR Director,dec-hq-global,FR,Europe/Paris,active,,false
+alice.roux@decathlon-demo.com,Alice Roux,Alice Roux,global_data_lead,Global Data & Analytics Lead,dec-hq-global,FR,Europe/Paris,active,,false
+nancy.miller@decathlon-demo.com,Nancy Miller,Nancy Miller,regional_director,Regional Director,dec-us-region,US,America/New_York,active,,false
+joshua.thompson@decathlon-demo.com,Joshua Thompson,Joshua Thompson,regional_ops_manager,Regional Operations Manager,dec-us-region,US,America/New_York,active,,false
+robert.robinson@decathlon-demo.com,Robert Robinson,Robert Robinson,regional_merch_manager,Regional Merchandising Manager,dec-us-region,US,America/New_York,active,,false
+linda.scott@decathlon-demo.com,Linda Scott,Linda Scott,regional_lp_manager,Regional Loss-Prevention Manager,dec-us-region,US,America/New_York,active,,false
+louise.henry@decathlon-demo.com,Louise Henry,Louise Henry,regional_director,Regional Director,dec-fr-region,FR,Europe/Paris,active,,false
+hugo.garcia@decathlon-demo.com,Hugo Garcia,Hugo Garcia,regional_ops_manager,Regional Operations Manager,dec-fr-region,FR,Europe/Paris,active,,false
+nathan.petit@decathlon-demo.com,Nathan Petit,Nathan Petit,regional_merch_manager,Regional Merchandising Manager,dec-fr-region,FR,Europe/Paris,active,,false
+louise.simon@decathlon-demo.com,Louise Simon,Louise Simon,regional_lp_manager,Regional Loss-Prevention Manager,dec-fr-region,FR,Europe/Paris,active,,false
+subin.jang@decathlon-demo.com,Jang Su-bin,장수빈,regional_director,Regional Director,dec-kr-region,KR,Asia/Seoul,active,,false
+yujin.kang@decathlon-demo.com,Kang Yu-jin,강유진,regional_ops_manager,Regional Operations Manager,dec-kr-region,KR,Asia/Seoul,inactive,deactivated,false
+haeun.kwon@decathlon-demo.com,Kwon Ha-eun,권하은,regional_merch_manager,Regional Merchandising Manager,dec-kr-region,KR,Asia/Seoul,active,,false
+jungwoo.song@decathlon-demo.com,Song Jung-woo,송정우,regional_lp_manager,Regional Loss-Prevention Manager,dec-kr-region,KR,Asia/Seoul,active,,false
+jennifer.anderson@decathlon-demo.com,Jennifer Anderson,Jennifer Anderson,store_manager,Store Manager,dec-us-denver,US,America/Denver,active,,false
+sarah.jones@decathlon-demo.com,Sarah Jones,Sarah Jones,assistant_manager,Assistant Store Manager,dec-us-denver,US,America/Denver,active,,false
+andrew.wilson@decathlon-demo.com,Andrew Wilson,Andrew Wilson,assistant_manager,Assistant Store Manager,dec-us-denver,US,America/Denver,active,,false
+sandra.martinez@decathlon-demo.com,Sandra Martinez,Sandra Martinez,department_leader,Department Leader — Running & Footwear,dec-us-denver,US,America/Denver,active,,false
+kimberly.wright@decathlon-demo.com,Kimberly Wright,Kimberly Wright,department_leader,Department Leader — Apparel,dec-us-denver,US,America/Denver,active,,false
+betty.nguyen@decathlon-demo.com,Betty Nguyen,Betty Nguyen,department_leader,Department Leader — Fitness,dec-us-denver,US,America/Denver,active,,false
+john.allen@decathlon-demo.com,John Allen,John Allen,department_leader,Department Leader — Outdoor,dec-us-denver,US,America/Denver,active,,false
+jennifer.davis@decathlon-demo.com,Jennifer Davis,Jennifer Davis,department_leader,Department Leader — Cycle & Swim,dec-us-denver,US,America/Denver,active,,false
+betty.hill@decathlon-demo.com,Betty Hill,Betty Hill,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+nathan.robinson@decathlon-demo.com,Nathan Robinson,Nathan Robinson,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+james.davis@decathlon-demo.com,James Davis,James Davis,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+sarah.perez@decathlon-demo.com,Sarah Perez,Sarah Perez,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+daniel.robinson@decathlon-demo.com,Daniel Robinson,Daniel Robinson,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,inactive,deactivated,false
+mark.allen@decathlon-demo.com,Mark Allen,Mark Allen,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+karen.allen@decathlon-demo.com,Karen Allen,Karen Allen,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,inactive,terminated,false
+lisa.hernandez@decathlon-demo.com,Lisa Hernandez,Lisa Hernandez,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+nathan.lee@decathlon-demo.com,Nathan Lee,Nathan Lee,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+lisa.martin@decathlon-demo.com,Lisa Martin,Lisa Martin,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,inactive,on_long_leave,false
+adam.garcia@decathlon-demo.com,Adam Garcia,Adam Garcia,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,inactive,on_long_leave,false
+michael.wright@decathlon-demo.com,Michael Wright,Michael Wright,sales_associate,Sales Associate,dec-us-denver,US,America/Denver,active,,false
+aaron.scott@decathlon-demo.com,Aaron Scott,Aaron Scott,cashier,Cashier,dec-us-denver,US,America/Denver,active,,false
+nathan.ramirez@decathlon-demo.com,Nathan Ramirez,Nathan Ramirez,cashier,Cashier,dec-us-denver,US,America/Denver,active,,false
+matthew.martin@decathlon-demo.com,Matthew Martin,Matthew Martin,cashier,Cashier,dec-us-denver,US,America/Denver,active,,false
+lisa.lewis@decathlon-demo.com,Lisa Lewis,Lisa Lewis,cashier,Cashier,dec-us-denver,US,America/Denver,active,,false
+jessica.anderson@decathlon-demo.com,Jessica Anderson,Jessica Anderson,stock_logistics,Stock & Logistics,dec-us-denver,US,America/Denver,inactive,deactivated,false
+donna.scott@decathlon-demo.com,Donna Scott,Donna Scott,stock_logistics,Stock & Logistics,dec-us-denver,US,America/Denver,active,,false
+james.jones@decathlon-demo.com,James Jones,James Jones,stock_logistics,Stock & Logistics,dec-us-denver,US,America/Denver,inactive,deactivated,false
+michael.williams@decathlon-demo.com,Michael Williams,Michael Williams,stock_logistics,Stock & Logistics,dec-us-denver,US,America/Denver,active,,false
+jessica.moore@decathlon-demo.com,Jessica Moore,Jessica Moore,store_lp,Store Loss-Prevention,dec-us-denver,US,America/Denver,active,,false
+jose.rodriguez@decathlon-demo.com,Jose Rodriguez,Jose Rodriguez,store_manager,Store Manager,dec-us-nyc,US,America/New_York,active,,false
+jessica.walker@decathlon-demo.com,Jessica Walker,Jessica Walker,assistant_manager,Assistant Store Manager,dec-us-nyc,US,America/New_York,active,,false
+david.ramirez@decathlon-demo.com,David Ramirez,David Ramirez,assistant_manager,Assistant Store Manager,dec-us-nyc,US,America/New_York,active,,false
+sandra.brown@decathlon-demo.com,Sandra Brown,Sandra Brown,department_leader,Department Leader — Running & Footwear,dec-us-nyc,US,America/New_York,inactive,terminated,false
+david.brown@decathlon-demo.com,David Brown,David Brown,department_leader,Department Leader — Apparel,dec-us-nyc,US,America/New_York,active,,false
+david.thomas@decathlon-demo.com,David Thomas,David Thomas,department_leader,Department Leader — Fitness,dec-us-nyc,US,America/New_York,active,,false
+jason.rodriguez@decathlon-demo.com,Jason Rodriguez,Jason Rodriguez,department_leader,Department Leader — Outdoor,dec-us-nyc,US,America/New_York,active,,false
+sandra.thomas@decathlon-demo.com,Sandra Thomas,Sandra Thomas,department_leader,Department Leader — Cycle & Swim,dec-us-nyc,US,America/New_York,inactive,resigned,false
+kimberly.miller@decathlon-demo.com,Kimberly Miller,Kimberly Miller,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+james.garcia@decathlon-demo.com,James Garcia,James Garcia,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+ashley.walker@decathlon-demo.com,Ashley Walker,Ashley Walker,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+daniel.harris@decathlon-demo.com,Daniel Harris,Daniel Harris,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+sandra.jackson@decathlon-demo.com,Sandra Jackson,Sandra Jackson,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+kimberly.young@decathlon-demo.com,Kimberly Young,Kimberly Young,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+susan.brown@decathlon-demo.com,Susan Brown,Susan Brown,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+jennifer.lee@decathlon-demo.com,Jennifer Lee,Jennifer Lee,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+aaron.allen@decathlon-demo.com,Aaron Allen,Aaron Allen,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+tyler.garcia@decathlon-demo.com,Tyler Garcia,Tyler Garcia,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+michael.thomas@decathlon-demo.com,Michael Thomas,Michael Thomas,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+jessica.nguyen@decathlon-demo.com,Jessica Nguyen,Jessica Nguyen,sales_associate,Sales Associate,dec-us-nyc,US,America/New_York,active,,false
+linda.clark@decathlon-demo.com,Linda Clark,Linda Clark,cashier,Cashier,dec-us-nyc,US,America/New_York,active,,false
+emily.lee@decathlon-demo.com,Emily Lee,Emily Lee,cashier,Cashier,dec-us-nyc,US,America/New_York,active,,false
+andrew.thomas@decathlon-demo.com,Andrew Thomas,Andrew Thomas,cashier,Cashier,dec-us-nyc,US,America/New_York,active,,false
+karen.robinson@decathlon-demo.com,Karen Robinson,Karen Robinson,cashier,Cashier,dec-us-nyc,US,America/New_York,active,,false
+sandra.flores@decathlon-demo.com,Sandra Flores,Sandra Flores,stock_logistics,Stock & Logistics,dec-us-nyc,US,America/New_York,active,,false
+jose.wilson@decathlon-demo.com,Jose Wilson,Jose Wilson,stock_logistics,Stock & Logistics,dec-us-nyc,US,America/New_York,inactive,resigned,false
+joshua.jones@decathlon-demo.com,Joshua Jones,Joshua Jones,stock_logistics,Stock & Logistics,dec-us-nyc,US,America/New_York,active,,false
+daniel.lewis@decathlon-demo.com,Daniel Lewis,Daniel Lewis,stock_logistics,Stock & Logistics,dec-us-nyc,US,America/New_York,active,,false
+carol.king@decathlon-demo.com,Carol King,Carol King,store_lp,Store Loss-Prevention,dec-us-nyc,US,America/New_York,active,,false
+kimberly.martin@decathlon-demo.com,Kimberly Martin,Kimberly Martin,store_manager,Store Manager,dec-us-sf,US,America/Los_Angeles,active,,false
+mark.davis@decathlon-demo.com,Mark Davis,Mark Davis,assistant_manager,Assistant Store Manager,dec-us-sf,US,America/Los_Angeles,active,,false
+elizabeth.moore@decathlon-demo.com,Elizabeth Moore,Elizabeth Moore,assistant_manager,Assistant Store Manager,dec-us-sf,US,America/Los_Angeles,active,,false
+nancy.wilson@decathlon-demo.com,Nancy Wilson,Nancy Wilson,department_leader,Department Leader — Running & Footwear,dec-us-sf,US,America/Los_Angeles,active,,false
+mark.allen2@decathlon-demo.com,Mark Allen,Mark Allen,department_leader,Department Leader — Apparel,dec-us-sf,US,America/Los_Angeles,active,,false
+jennifer.garcia@decathlon-demo.com,Jennifer Garcia,Jennifer Garcia,department_leader,Department Leader — Fitness,dec-us-sf,US,America/Los_Angeles,active,,false
+sarah.williams@decathlon-demo.com,Sarah Williams,Sarah Williams,department_leader,Department Leader — Outdoor,dec-us-sf,US,America/Los_Angeles,active,,false
+john.taylor@decathlon-demo.com,John Taylor,John Taylor,department_leader,Department Leader — Cycle & Swim,dec-us-sf,US,America/Los_Angeles,active,,false
+kimberly.ramirez@decathlon-demo.com,Kimberly Ramirez,Kimberly Ramirez,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,inactive,account_locked,false
+michael.martinez@decathlon-demo.com,Michael Martinez,Michael Martinez,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+lisa.nguyen@decathlon-demo.com,Lisa Nguyen,Lisa Nguyen,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+john.williams@decathlon-demo.com,John Williams,John Williams,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+robert.thompson@decathlon-demo.com,Robert Thompson,Robert Thompson,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+david.thompson@decathlon-demo.com,David Thompson,David Thompson,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+elizabeth.thomas@decathlon-demo.com,Elizabeth Thomas,Elizabeth Thomas,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+mary.lopez@decathlon-demo.com,Mary Lopez,Mary Lopez,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+jessica.moore2@decathlon-demo.com,Jessica Moore,Jessica Moore,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+kevin.williams@decathlon-demo.com,Kevin Williams,Kevin Williams,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+sandra.thompson@decathlon-demo.com,Sandra Thompson,Sandra Thompson,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+mary.gonzalez@decathlon-demo.com,Mary Gonzalez,Mary Gonzalez,sales_associate,Sales Associate,dec-us-sf,US,America/Los_Angeles,active,,false
+michael.moore@decathlon-demo.com,Michael Moore,Michael Moore,cashier,Cashier,dec-us-sf,US,America/Los_Angeles,active,,false
+margaret.wright@decathlon-demo.com,Margaret Wright,Margaret Wright,cashier,Cashier,dec-us-sf,US,America/Los_Angeles,active,,false
+mark.lopez@decathlon-demo.com,Mark Lopez,Mark Lopez,cashier,Cashier,dec-us-sf,US,America/Los_Angeles,active,,false
+david.hill@decathlon-demo.com,David Hill,David Hill,cashier,Cashier,dec-us-sf,US,America/Los_Angeles,active,,false
+andrew.ramirez@decathlon-demo.com,Andrew Ramirez,Andrew Ramirez,stock_logistics,Stock & Logistics,dec-us-sf,US,America/Los_Angeles,active,,false
+kevin.torres@decathlon-demo.com,Kevin Torres,Kevin Torres,stock_logistics,Stock & Logistics,dec-us-sf,US,America/Los_Angeles,active,,false
+betty.smith@decathlon-demo.com,Betty Smith,Betty Smith,stock_logistics,Stock & Logistics,dec-us-sf,US,America/Los_Angeles,active,,false
+matthew.white@decathlon-demo.com,Matthew White,Matthew White,stock_logistics,Stock & Logistics,dec-us-sf,US,America/Los_Angeles,active,,false
+nancy.flores@decathlon-demo.com,Nancy Flores,Nancy Flores,store_lp,Store Loss-Prevention,dec-us-sf,US,America/Los_Angeles,active,,false
+manon.fournier@decathlon-demo.com,Manon Fournier,Manon Fournier,store_manager,Store Manager,dec-fr-paris,FR,Europe/Paris,active,,false
+quentin.morel@decathlon-demo.com,Quentin Morel,Quentin Morel,assistant_manager,Assistant Store Manager,dec-fr-paris,FR,Europe/Paris,active,,false
+margaux.leroy@decathlon-demo.com,Margaux Leroy,Margaux Leroy,assistant_manager,Assistant Store Manager,dec-fr-paris,FR,Europe/Paris,active,,false
+paul.laurent@decathlon-demo.com,Paul Laurent,Paul Laurent,department_leader,Department Leader — Running & Footwear,dec-fr-paris,FR,Europe/Paris,active,,false
+marie.muller@decathlon-demo.com,Marie Muller,Marie Muller,department_leader,Department Leader — Apparel,dec-fr-paris,FR,Europe/Paris,active,,false
+ines.francois@decathlon-demo.com,Inès François,Inès François,department_leader,Department Leader — Fitness,dec-fr-paris,FR,Europe/Paris,active,,false
+maxime.legrand@decathlon-demo.com,Maxime Legrand,Maxime Legrand,department_leader,Department Leader — Outdoor,dec-fr-paris,FR,Europe/Paris,active,,false
+ines.rousseau@decathlon-demo.com,Inès Rousseau,Inès Rousseau,department_leader,Department Leader — Cycle & Swim,dec-fr-paris,FR,Europe/Paris,active,,false
+chloe.vincent@decathlon-demo.com,Chloé Vincent,Chloé Vincent,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+celine.girard@decathlon-demo.com,Céline Girard,Céline Girard,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+jade.garcia@decathlon-demo.com,Jade Garcia,Jade Garcia,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+hugo.david@decathlon-demo.com,Hugo David,Hugo David,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+louis.legrand@decathlon-demo.com,Louis Legrand,Louis Legrand,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+raphael.dupont@decathlon-demo.com,Raphaël Dupont,Raphaël Dupont,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+camille.martin@decathlon-demo.com,Camille Martin,Camille Martin,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+sarah.blanc@decathlon-demo.com,Sarah Blanc,Sarah Blanc,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+julie.durand@decathlon-demo.com,Julie Durand,Julie Durand,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+clara.blanc@decathlon-demo.com,Clara Blanc,Clara Blanc,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+romain.perrin@decathlon-demo.com,Romain Perrin,Romain Perrin,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,inactive,terminated,false
+margaux.martinez@decathlon-demo.com,Margaux Martinez,Margaux Martinez,sales_associate,Sales Associate,dec-fr-paris,FR,Europe/Paris,active,,false
+thomas.martinez@decathlon-demo.com,Thomas Martinez,Thomas Martinez,cashier,Cashier,dec-fr-paris,FR,Europe/Paris,active,,false
+lola.blanc@decathlon-demo.com,Lola Blanc,Lola Blanc,cashier,Cashier,dec-fr-paris,FR,Europe/Paris,active,,false
+lola.martinez@decathlon-demo.com,Lola Martinez,Lola Martinez,cashier,Cashier,dec-fr-paris,FR,Europe/Paris,inactive,account_locked,false
+julie.roux@decathlon-demo.com,Julie Roux,Julie Roux,cashier,Cashier,dec-fr-paris,FR,Europe/Paris,inactive,deactivated,false
+chloe.leroy@decathlon-demo.com,Chloé Leroy,Chloé Leroy,stock_logistics,Stock & Logistics,dec-fr-paris,FR,Europe/Paris,active,,false
+camille.michel@decathlon-demo.com,Camille Michel,Camille Michel,stock_logistics,Stock & Logistics,dec-fr-paris,FR,Europe/Paris,active,,false
+alice.guerin@decathlon-demo.com,Alice Guérin,Alice Guérin,stock_logistics,Stock & Logistics,dec-fr-paris,FR,Europe/Paris,active,,false
+ines.bonnet@decathlon-demo.com,Inès Bonnet,Inès Bonnet,stock_logistics,Stock & Logistics,dec-fr-paris,FR,Europe/Paris,active,,false
+emma.henry@decathlon-demo.com,Emma Henry,Emma Henry,store_lp,Store Loss-Prevention,dec-fr-paris,FR,Europe/Paris,active,,false
+antoine.fournier@decathlon-demo.com,Antoine Fournier,Antoine Fournier,store_manager,Store Manager,dec-fr-lyon,FR,Europe/Paris,active,,false
+baptiste.nicolas@decathlon-demo.com,Baptiste Nicolas,Baptiste Nicolas,assistant_manager,Assistant Store Manager,dec-fr-lyon,FR,Europe/Paris,active,,false
+lola.francois@decathlon-demo.com,Lola François,Lola François,department_leader,Department Leader — Running & Footwear,dec-fr-lyon,FR,Europe/Paris,active,,false
+alice.lambert@decathlon-demo.com,Alice Lambert,Alice Lambert,department_leader,Department Leader — Apparel,dec-fr-lyon,FR,Europe/Paris,active,,false
+celine.guerin@decathlon-demo.com,Céline Guérin,Céline Guérin,department_leader,Department Leader — Fitness,dec-fr-lyon,FR,Europe/Paris,active,,false
+clement.bernard@decathlon-demo.com,Clément Bernard,Clément Bernard,department_leader,Department Leader — Outdoor,dec-fr-lyon,FR,Europe/Paris,inactive,deactivated,false
+jules.legrand@decathlon-demo.com,Jules Legrand,Jules Legrand,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+paul.morel@decathlon-demo.com,Paul Morel,Paul Morel,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+alice.dupont@decathlon-demo.com,Alice Dupont,Alice Dupont,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+chloe.garnier@decathlon-demo.com,Chloé Garnier,Chloé Garnier,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,inactive,account_locked,false
+lea.andre@decathlon-demo.com,Léa André,Léa André,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+hugo.bernard@decathlon-demo.com,Hugo Bernard,Hugo Bernard,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+emma.perrin@decathlon-demo.com,Emma Perrin,Emma Perrin,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,inactive,on_long_leave,false
+thomas.durand@decathlon-demo.com,Thomas Durand,Thomas Durand,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+leo.mercier@decathlon-demo.com,Léo Mercier,Léo Mercier,sales_associate,Sales Associate,dec-fr-lyon,FR,Europe/Paris,active,,false
+manon.simon@decathlon-demo.com,Manon Simon,Manon Simon,cashier,Cashier,dec-fr-lyon,FR,Europe/Paris,active,,false
+emma.fournier@decathlon-demo.com,Emma Fournier,Emma Fournier,cashier,Cashier,dec-fr-lyon,FR,Europe/Paris,inactive,terminated,false
+marie.lefebvre@decathlon-demo.com,Marie Lefebvre,Marie Lefebvre,cashier,Cashier,dec-fr-lyon,FR,Europe/Paris,inactive,account_locked,false
+julie.petit@decathlon-demo.com,Julie Petit,Julie Petit,stock_logistics,Stock & Logistics,dec-fr-lyon,FR,Europe/Paris,active,,false
+manon.henry@decathlon-demo.com,Manon Henry,Manon Henry,stock_logistics,Stock & Logistics,dec-fr-lyon,FR,Europe/Paris,active,,false
+anais.mercier@decathlon-demo.com,Anaïs Mercier,Anaïs Mercier,stock_logistics,Stock & Logistics,dec-fr-lyon,FR,Europe/Paris,active,,false
+alice.martin@decathlon-demo.com,Alice Martin,Alice Martin,store_lp,Store Loss-Prevention,dec-fr-lyon,FR,Europe/Paris,active,,false
+anais.mercier2@decathlon-demo.com,Anaïs Mercier,Anaïs Mercier,store_manager,Store Manager,dec-fr-lille,FR,Europe/Paris,active,,false
+camille.francois@decathlon-demo.com,Camille François,Camille François,assistant_manager,Assistant Store Manager,dec-fr-lille,FR,Europe/Paris,inactive,deactivated,false
+lola.perrin@decathlon-demo.com,Lola Perrin,Lola Perrin,department_leader,Department Leader — Running & Footwear,dec-fr-lille,FR,Europe/Paris,active,,false
+anais.roussel@decathlon-demo.com,Anaïs Roussel,Anaïs Roussel,department_leader,Department Leader — Apparel,dec-fr-lille,FR,Europe/Paris,active,,false
+julie.richard@decathlon-demo.com,Julie Richard,Julie Richard,department_leader,Department Leader — Fitness,dec-fr-lille,FR,Europe/Paris,active,,false
+clara.henry@decathlon-demo.com,Clara Henry,Clara Henry,department_leader,Department Leader — Outdoor,dec-fr-lille,FR,Europe/Paris,active,,false
+alice.bernard@decathlon-demo.com,Alice Bernard,Alice Bernard,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+elise.michel@decathlon-demo.com,Élise Michel,Élise Michel,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+lola.nicolas@decathlon-demo.com,Lola Nicolas,Lola Nicolas,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+pauline.lefebvre@decathlon-demo.com,Pauline Lefebvre,Pauline Lefebvre,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+quentin.faure@decathlon-demo.com,Quentin Faure,Quentin Faure,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+thomas.faure@decathlon-demo.com,Thomas Faure,Thomas Faure,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+theo.garcia@decathlon-demo.com,Théo Garcia,Théo Garcia,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+jade.roussel@decathlon-demo.com,Jade Roussel,Jade Roussel,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,inactive,account_locked,false
+pauline.andre@decathlon-demo.com,Pauline André,Pauline André,sales_associate,Sales Associate,dec-fr-lille,FR,Europe/Paris,active,,false
+alice.andre@decathlon-demo.com,Alice André,Alice André,cashier,Cashier,dec-fr-lille,FR,Europe/Paris,inactive,account_locked,false
+leo.garcia@decathlon-demo.com,Léo Garcia,Léo Garcia,cashier,Cashier,dec-fr-lille,FR,Europe/Paris,active,,false
+maxime.durand@decathlon-demo.com,Maxime Durand,Maxime Durand,cashier,Cashier,dec-fr-lille,FR,Europe/Paris,active,,false
+raphael.michel@decathlon-demo.com,Raphaël Michel,Raphaël Michel,stock_logistics,Stock & Logistics,dec-fr-lille,FR,Europe/Paris,active,,false
+juliette.blanc@decathlon-demo.com,Juliette Blanc,Juliette Blanc,stock_logistics,Stock & Logistics,dec-fr-lille,FR,Europe/Paris,active,,false
+raphael.vincent@decathlon-demo.com,Raphaël Vincent,Raphaël Vincent,stock_logistics,Stock & Logistics,dec-fr-lille,FR,Europe/Paris,active,,false
+jade.martin@decathlon-demo.com,Jade Martin,Jade Martin,store_lp,Store Loss-Prevention,dec-fr-lille,FR,Europe/Paris,active,,false
+hugo.thomas@decathlon-demo.com,Hugo Thomas,Hugo Thomas,store_manager,Store Manager,dec-fr-marseille,FR,Europe/Paris,active,,false
+jules.faure@decathlon-demo.com,Jules Faure,Jules Faure,assistant_manager,Assistant Store Manager,dec-fr-marseille,FR,Europe/Paris,active,,false
+theo.garnier@decathlon-demo.com,Théo Garnier,Théo Garnier,department_leader,Department Leader — Running & Footwear,dec-fr-marseille,FR,Europe/Paris,active,,false
+sarah.thomas@decathlon-demo.com,Sarah Thomas,Sarah Thomas,department_leader,Department Leader — Apparel,dec-fr-marseille,FR,Europe/Paris,active,,false
+louis.lambert@decathlon-demo.com,Louis Lambert,Louis Lambert,department_leader,Department Leader — Fitness,dec-fr-marseille,FR,Europe/Paris,active,,false
+lea.moreau@decathlon-demo.com,Léa Moreau,Léa Moreau,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,inactive,deactivated,false
+chloe.david@decathlon-demo.com,Chloé David,Chloé David,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,active,,false
+quentin.nicolas@decathlon-demo.com,Quentin Nicolas,Quentin Nicolas,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,active,,false
+pauline.dupont@decathlon-demo.com,Pauline Dupont,Pauline Dupont,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,active,,false
+juliette.francois@decathlon-demo.com,Juliette François,Juliette François,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,active,,false
+lea.perrin@decathlon-demo.com,Léa Perrin,Léa Perrin,sales_associate,Sales Associate,dec-fr-marseille,FR,Europe/Paris,active,,false
+ines.bertrand@decathlon-demo.com,Inès Bertrand,Inès Bertrand,cashier,Cashier,dec-fr-marseille,FR,Europe/Paris,active,,false
+julie.laurent@decathlon-demo.com,Julie Laurent,Julie Laurent,cashier,Cashier,dec-fr-marseille,FR,Europe/Paris,active,,false
+lucas.bonnet@decathlon-demo.com,Lucas Bonnet,Lucas Bonnet,stock_logistics,Stock & Logistics,dec-fr-marseille,FR,Europe/Paris,active,,false
+thomas.vincent@decathlon-demo.com,Thomas Vincent,Thomas Vincent,stock_logistics,Stock & Logistics,dec-fr-marseille,FR,Europe/Paris,active,,false
+theo.legrand@decathlon-demo.com,Théo Legrand,Théo Legrand,store_lp,Store Loss-Prevention,dec-fr-marseille,FR,Europe/Paris,inactive,on_long_leave,false
+leo.roussel@decathlon-demo.com,Léo Roussel,Léo Roussel,store_manager,Store Manager,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+manon.guerin@decathlon-demo.com,Manon Guérin,Manon Guérin,assistant_manager,Assistant Store Manager,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+lola.moreau@decathlon-demo.com,Lola Moreau,Lola Moreau,department_leader,Department Leader — Running & Footwear,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+jade.nicolas@decathlon-demo.com,Jade Nicolas,Jade Nicolas,department_leader,Department Leader — Apparel,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+manon.legrand@decathlon-demo.com,Manon Legrand,Manon Legrand,department_leader,Department Leader — Fitness,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+lola.rousseau@decathlon-demo.com,Lola Rousseau,Lola Rousseau,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+chloe.nicolas@decathlon-demo.com,Chloé Nicolas,Chloé Nicolas,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,inactive,terminated,false
+maxime.nicolas@decathlon-demo.com,Maxime Nicolas,Maxime Nicolas,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+nathan.henry@decathlon-demo.com,Nathan Henry,Nathan Henry,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+lola.henry@decathlon-demo.com,Lola Henry,Lola Henry,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+pauline.martinez@decathlon-demo.com,Pauline Martinez,Pauline Martinez,sales_associate,Sales Associate,dec-fr-bordeaux,FR,Europe/Paris,inactive,account_locked,false
+anais.faure@decathlon-demo.com,Anaïs Faure,Anaïs Faure,cashier,Cashier,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+quentin.girard@decathlon-demo.com,Quentin Girard,Quentin Girard,cashier,Cashier,dec-fr-bordeaux,FR,Europe/Paris,inactive,terminated,false
+arthur.girard@decathlon-demo.com,Arthur Girard,Arthur Girard,stock_logistics,Stock & Logistics,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+theo.lambert@decathlon-demo.com,Théo Lambert,Théo Lambert,stock_logistics,Stock & Logistics,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+chloe.morel@decathlon-demo.com,Chloé Morel,Chloé Morel,store_lp,Store Loss-Prevention,dec-fr-bordeaux,FR,Europe/Paris,active,,false
+seunghyun.seo@decathlon-demo.com,Seo Seung-hyun,서승현,store_manager,Store Manager,dec-kr-seoul,KR,Asia/Seoul,active,,false
+arin.song@decathlon-demo.com,Song A-rin,송아린,assistant_manager,Assistant Store Manager,dec-kr-seoul,KR,Asia/Seoul,active,,false
+joowon.ahn@decathlon-demo.com,Ahn Joo-won,안주원,department_leader,Department Leader — Running & Footwear,dec-kr-seoul,KR,Asia/Seoul,active,,false
+minseo.kwon@decathlon-demo.com,Kwon Min-seo,권민서,department_leader,Department Leader — Apparel,dec-kr-seoul,KR,Asia/Seoul,active,,false
+chaewon.jung@decathlon-demo.com,Jung Chae-won,정채원,department_leader,Department Leader — Fitness,dec-kr-seoul,KR,Asia/Seoul,active,,false
+minseo.choi@decathlon-demo.com,Choi Min-seo,최민서,department_leader,Department Leader — Outdoor,dec-kr-seoul,KR,Asia/Seoul,active,,false
+daeun.yoon@decathlon-demo.com,Yoon Da-eun,윤다은,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,inactive,terminated,false
+minjun.song@decathlon-demo.com,Song Min-jun,송민준,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+siwoo.choi@decathlon-demo.com,Choi Si-woo,최시우,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+siwoo.jung@decathlon-demo.com,Jung Si-woo,정시우,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+woojin.jang@decathlon-demo.com,Jang Woo-jin,장우진,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+jimin.kwon@decathlon-demo.com,Kwon Ji-min,권지민,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+joowon.hong@decathlon-demo.com,Hong Joo-won,홍주원,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+arin.park@decathlon-demo.com,Park A-rin,박아린,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+soyul.ahn@decathlon-demo.com,Ahn So-yul,안소율,sales_associate,Sales Associate,dec-kr-seoul,KR,Asia/Seoul,active,,false
+yeeun.lim@decathlon-demo.com,Lim Ye-eun,임예은,cashier,Cashier,dec-kr-seoul,KR,Asia/Seoul,active,,false
+minseo.jung@decathlon-demo.com,Jung Min-seo,정민서,cashier,Cashier,dec-kr-seoul,KR,Asia/Seoul,active,,false
+jiah.han@decathlon-demo.com,Han Ji-ah,한지아,cashier,Cashier,dec-kr-seoul,KR,Asia/Seoul,active,,false
+hyunwoo.han@decathlon-demo.com,Han Hyun-woo,한현우,stock_logistics,Stock & Logistics,dec-kr-seoul,KR,Asia/Seoul,active,,false
+seonwoo.seo@decathlon-demo.com,Seo Seon-woo,서선우,stock_logistics,Stock & Logistics,dec-kr-seoul,KR,Asia/Seoul,active,,false
+junseo.hwang@decathlon-demo.com,Hwang Jun-seo,황준서,stock_logistics,Stock & Logistics,dec-kr-seoul,KR,Asia/Seoul,inactive,deactivated,false
+daeun.jung@decathlon-demo.com,Jung Da-eun,정다은,store_lp,Store Loss-Prevention,dec-kr-seoul,KR,Asia/Seoul,active,,false
+woojin.ryu@decathlon-demo.com,Ryu Woo-jin,류우진,store_manager,Store Manager,dec-kr-busan,KR,Asia/Seoul,active,,false
+arin.kwon@decathlon-demo.com,Kwon A-rin,권아린,assistant_manager,Assistant Store Manager,dec-kr-busan,KR,Asia/Seoul,active,,false
+minjun.jung@decathlon-demo.com,Jung Min-jun,정민준,department_leader,Department Leader — Running & Footwear,dec-kr-busan,KR,Asia/Seoul,active,,false
+doyoon.hwang@decathlon-demo.com,Hwang Do-yoon,황도윤,department_leader,Department Leader — Apparel,dec-kr-busan,KR,Asia/Seoul,inactive,account_locked,false
+jungwoo.seo@decathlon-demo.com,Seo Jung-woo,서정우,department_leader,Department Leader — Fitness,dec-kr-busan,KR,Asia/Seoul,active,,false
+junseo.song@decathlon-demo.com,Song Jun-seo,송준서,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+jungwoo.hwang@decathlon-demo.com,Hwang Jung-woo,황정우,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+doyoon.yoon@decathlon-demo.com,Yoon Do-yoon,윤도윤,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+jimin.park@decathlon-demo.com,Park Ji-min,박지민,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+yeonwoo.choi@decathlon-demo.com,Choi Yeon-woo,최연우,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+suah.kim@decathlon-demo.com,Kim Su-ah,김수아,sales_associate,Sales Associate,dec-kr-busan,KR,Asia/Seoul,active,,false
+seoyeon.lim@decathlon-demo.com,Lim Seo-yeon,임서연,cashier,Cashier,dec-kr-busan,KR,Asia/Seoul,active,,false
+yejun.yoon@decathlon-demo.com,Yoon Ye-jun,윤예준,cashier,Cashier,dec-kr-busan,KR,Asia/Seoul,active,,false
+subin.kang@decathlon-demo.com,Kang Su-bin,강수빈,stock_logistics,Stock & Logistics,dec-kr-busan,KR,Asia/Seoul,active,,false
+yujin.seo@decathlon-demo.com,Seo Yu-jin,서유진,stock_logistics,Stock & Logistics,dec-kr-busan,KR,Asia/Seoul,active,,false
+minseo.ryu@decathlon-demo.com,Ryu Min-seo,류민서,store_lp,Store Loss-Prevention,dec-kr-busan,KR,Asia/Seoul,active,,false

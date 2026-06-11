@@ -1,0 +1,2073 @@
+{
+  "staff_id": "EMP-00001",
+  "name": "Manon Bernard",
+  "role": "Chief Executive Officer",
+  "home": "dec-hq-global",
+  "status": "active",
+  "reports": [
+    {
+      "staff_id": "EMP-00002",
+      "name": "Jules Petit",
+      "role": "Chief Financial Officer",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    },
+    {
+      "staff_id": "EMP-00003",
+      "name": "Chloé Roussel",
+      "role": "Chief Operating Officer",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": [
+        {
+          "staff_id": "EMP-00009",
+          "name": "Nancy Miller",
+          "role": "Regional Director",
+          "home": "dec-us-region",
+          "status": "active",
+          "reports": [
+            {
+              "staff_id": "EMP-00010",
+              "name": "Joshua Thompson",
+              "role": "Regional Operations Manager",
+              "home": "dec-us-region",
+              "status": "active",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00011",
+              "name": "Robert Robinson",
+              "role": "Regional Merchandising Manager",
+              "home": "dec-us-region",
+              "status": "active",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00012",
+              "name": "Linda Scott",
+              "role": "Regional Loss-Prevention Manager",
+              "home": "dec-us-region",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00049",
+                  "name": "Jessica Moore",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-us-denver",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00078",
+                  "name": "Carol King",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-us-nyc",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00107",
+                  "name": "Nancy Flores",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-us-sf",
+                  "status": "active",
+                  "reports": []
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00021",
+              "name": "Jennifer Anderson",
+              "role": "Store Manager",
+              "home": "dec-us-denver",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00022",
+                  "name": "Sarah Jones",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-denver",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00024",
+                      "name": "Sandra Martinez",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00029",
+                          "name": "Betty Hill",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00034",
+                          "name": "Mark Allen",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00039",
+                          "name": "Adam Garcia",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00026",
+                      "name": "Betty Nguyen",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00031",
+                          "name": "James Davis",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00036",
+                          "name": "Lisa Hernandez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00028",
+                      "name": "Jennifer Davis",
+                      "role": "Department Leader — Cycle & Swim",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00033",
+                          "name": "Daniel Robinson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00038",
+                          "name": "Lisa Martin",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00042",
+                      "name": "Nathan Ramirez",
+                      "role": "Cashier",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00044",
+                      "name": "Lisa Lewis",
+                      "role": "Cashier",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00046",
+                      "name": "Donna Scott",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00048",
+                      "name": "Michael Williams",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                },
+                {
+                  "staff_id": "EMP-00023",
+                  "name": "Andrew Wilson",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-denver",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00025",
+                      "name": "Kimberly Wright",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00030",
+                          "name": "Nathan Robinson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00035",
+                          "name": "Karen Allen",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00040",
+                          "name": "Michael Wright",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00027",
+                      "name": "John Allen",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00032",
+                          "name": "Sarah Perez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00037",
+                          "name": "Nathan Lee",
+                          "role": "Sales Associate",
+                          "home": "dec-us-denver",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00041",
+                      "name": "Aaron Scott",
+                      "role": "Cashier",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00043",
+                      "name": "Matthew Martin",
+                      "role": "Cashier",
+                      "home": "dec-us-denver",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00045",
+                      "name": "Jessica Anderson",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-denver",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00047",
+                      "name": "James Jones",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-denver",
+                      "status": "inactive",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00050",
+              "name": "Jose Rodriguez",
+              "role": "Store Manager",
+              "home": "dec-us-nyc",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00051",
+                  "name": "Jessica Walker",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-nyc",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00053",
+                      "name": "Sandra Brown",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-us-nyc",
+                      "status": "inactive",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00058",
+                          "name": "Kimberly Miller",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00063",
+                          "name": "Kimberly Young",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00068",
+                          "name": "Michael Thomas",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00055",
+                      "name": "David Thomas",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00060",
+                          "name": "Ashley Walker",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00065",
+                          "name": "Jennifer Lee",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00057",
+                      "name": "Sandra Thomas",
+                      "role": "Department Leader — Cycle & Swim",
+                      "home": "dec-us-nyc",
+                      "status": "inactive",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00062",
+                          "name": "Sandra Jackson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00067",
+                          "name": "Tyler Garcia",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00071",
+                      "name": "Emily Lee",
+                      "role": "Cashier",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00073",
+                      "name": "Karen Robinson",
+                      "role": "Cashier",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00075",
+                      "name": "Jose Wilson",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-nyc",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00077",
+                      "name": "Daniel Lewis",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                },
+                {
+                  "staff_id": "EMP-00052",
+                  "name": "David Ramirez",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-nyc",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00054",
+                      "name": "David Brown",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00059",
+                          "name": "James Garcia",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00064",
+                          "name": "Susan Brown",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00069",
+                          "name": "Jessica Nguyen",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00056",
+                      "name": "Jason Rodriguez",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00061",
+                          "name": "Daniel Harris",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00066",
+                          "name": "Aaron Allen",
+                          "role": "Sales Associate",
+                          "home": "dec-us-nyc",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00070",
+                      "name": "Linda Clark",
+                      "role": "Cashier",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00072",
+                      "name": "Andrew Thomas",
+                      "role": "Cashier",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00074",
+                      "name": "Sandra Flores",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00076",
+                      "name": "Joshua Jones",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-nyc",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00079",
+              "name": "Kimberly Martin",
+              "role": "Store Manager",
+              "home": "dec-us-sf",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00080",
+                  "name": "Mark Davis",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-sf",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00082",
+                      "name": "Nancy Wilson",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00087",
+                          "name": "Kimberly Ramirez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00092",
+                          "name": "David Thompson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00097",
+                          "name": "Sandra Thompson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00084",
+                      "name": "Jennifer Garcia",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00089",
+                          "name": "Lisa Nguyen",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00094",
+                          "name": "Mary Lopez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00086",
+                      "name": "John Taylor",
+                      "role": "Department Leader — Cycle & Swim",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00091",
+                          "name": "Robert Thompson",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00096",
+                          "name": "Kevin Williams",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00100",
+                      "name": "Margaret Wright",
+                      "role": "Cashier",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00102",
+                      "name": "David Hill",
+                      "role": "Cashier",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00104",
+                      "name": "Kevin Torres",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00106",
+                      "name": "Matthew White",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                },
+                {
+                  "staff_id": "EMP-00081",
+                  "name": "Elizabeth Moore",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-us-sf",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00083",
+                      "name": "Mark Allen",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00088",
+                          "name": "Michael Martinez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00093",
+                          "name": "Elizabeth Thomas",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00098",
+                          "name": "Mary Gonzalez",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00085",
+                      "name": "Sarah Williams",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00090",
+                          "name": "John Williams",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00095",
+                          "name": "Jessica Moore",
+                          "role": "Sales Associate",
+                          "home": "dec-us-sf",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00099",
+                      "name": "Michael Moore",
+                      "role": "Cashier",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00101",
+                      "name": "Mark Lopez",
+                      "role": "Cashier",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00103",
+                      "name": "Andrew Ramirez",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00105",
+                      "name": "Betty Smith",
+                      "role": "Stock & Logistics",
+                      "home": "dec-us-sf",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "staff_id": "EMP-00013",
+          "name": "Louise Henry",
+          "role": "Regional Director",
+          "home": "dec-fr-region",
+          "status": "active",
+          "reports": [
+            {
+              "staff_id": "EMP-00014",
+              "name": "Hugo Garcia",
+              "role": "Regional Operations Manager",
+              "home": "dec-fr-region",
+              "status": "active",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00015",
+              "name": "Nathan Petit",
+              "role": "Regional Merchandising Manager",
+              "home": "dec-fr-region",
+              "status": "active",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00016",
+              "name": "Louise Simon",
+              "role": "Regional Loss-Prevention Manager",
+              "home": "dec-fr-region",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00136",
+                  "name": "Emma Henry",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-fr-paris",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00158",
+                  "name": "Alice Martin",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-fr-lyon",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00180",
+                  "name": "Jade Martin",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-fr-lille",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00196",
+                  "name": "Théo Legrand",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-fr-marseille",
+                  "status": "inactive",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00212",
+                  "name": "Chloé Morel",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-fr-bordeaux",
+                  "status": "active",
+                  "reports": []
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00108",
+              "name": "Manon Fournier",
+              "role": "Store Manager",
+              "home": "dec-fr-paris",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00109",
+                  "name": "Quentin Morel",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-paris",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00111",
+                      "name": "Paul Laurent",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00116",
+                          "name": "Chloé Vincent",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00121",
+                          "name": "Raphaël Dupont",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00126",
+                          "name": "Romain Perrin",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00113",
+                      "name": "Inès François",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00118",
+                          "name": "Jade Garcia",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00123",
+                          "name": "Sarah Blanc",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00115",
+                      "name": "Inès Rousseau",
+                      "role": "Department Leader — Cycle & Swim",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00120",
+                          "name": "Louis Legrand",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00125",
+                          "name": "Clara Blanc",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00129",
+                      "name": "Lola Blanc",
+                      "role": "Cashier",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00131",
+                      "name": "Julie Roux",
+                      "role": "Cashier",
+                      "home": "dec-fr-paris",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00133",
+                      "name": "Camille Michel",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00135",
+                      "name": "Inès Bonnet",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                },
+                {
+                  "staff_id": "EMP-00110",
+                  "name": "Margaux Leroy",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-paris",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00112",
+                      "name": "Marie Muller",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00117",
+                          "name": "Céline Girard",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00122",
+                          "name": "Camille Martin",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00127",
+                          "name": "Margaux Martinez",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00114",
+                      "name": "Maxime Legrand",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00119",
+                          "name": "Hugo David",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00124",
+                          "name": "Julie Durand",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-paris",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00128",
+                      "name": "Thomas Martinez",
+                      "role": "Cashier",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00130",
+                      "name": "Lola Martinez",
+                      "role": "Cashier",
+                      "home": "dec-fr-paris",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00132",
+                      "name": "Chloé Leroy",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00134",
+                      "name": "Alice Guérin",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-paris",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00137",
+              "name": "Antoine Fournier",
+              "role": "Store Manager",
+              "home": "dec-fr-lyon",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00138",
+                  "name": "Baptiste Nicolas",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-lyon",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00139",
+                      "name": "Lola François",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00143",
+                          "name": "Jules Legrand",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00147",
+                          "name": "Léa André",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00151",
+                          "name": "Léo Mercier",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00140",
+                      "name": "Alice Lambert",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00144",
+                          "name": "Paul Morel",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00148",
+                          "name": "Hugo Bernard",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00141",
+                      "name": "Céline Guérin",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00145",
+                          "name": "Alice Dupont",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00149",
+                          "name": "Emma Perrin",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00142",
+                      "name": "Clément Bernard",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-fr-lyon",
+                      "status": "inactive",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00146",
+                          "name": "Chloé Garnier",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00150",
+                          "name": "Thomas Durand",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lyon",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00152",
+                      "name": "Manon Simon",
+                      "role": "Cashier",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00153",
+                      "name": "Emma Fournier",
+                      "role": "Cashier",
+                      "home": "dec-fr-lyon",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00154",
+                      "name": "Marie Lefebvre",
+                      "role": "Cashier",
+                      "home": "dec-fr-lyon",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00155",
+                      "name": "Julie Petit",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00156",
+                      "name": "Manon Henry",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00157",
+                      "name": "Anaïs Mercier",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lyon",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00159",
+              "name": "Anaïs Mercier",
+              "role": "Store Manager",
+              "home": "dec-fr-lille",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00160",
+                  "name": "Camille François",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-lille",
+                  "status": "inactive",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00161",
+                      "name": "Lola Perrin",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00165",
+                          "name": "Alice Bernard",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00169",
+                          "name": "Quentin Faure",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00173",
+                          "name": "Pauline André",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00162",
+                      "name": "Anaïs Roussel",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00166",
+                          "name": "Élise Michel",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00170",
+                          "name": "Thomas Faure",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00163",
+                      "name": "Julie Richard",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00167",
+                          "name": "Lola Nicolas",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00171",
+                          "name": "Théo Garcia",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00164",
+                      "name": "Clara Henry",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00168",
+                          "name": "Pauline Lefebvre",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00172",
+                          "name": "Jade Roussel",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-lille",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00174",
+                      "name": "Alice André",
+                      "role": "Cashier",
+                      "home": "dec-fr-lille",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00175",
+                      "name": "Léo Garcia",
+                      "role": "Cashier",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00176",
+                      "name": "Maxime Durand",
+                      "role": "Cashier",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00177",
+                      "name": "Raphaël Michel",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00178",
+                      "name": "Juliette Blanc",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00179",
+                      "name": "Raphaël Vincent",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-lille",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00181",
+              "name": "Hugo Thomas",
+              "role": "Store Manager",
+              "home": "dec-fr-marseille",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00182",
+                  "name": "Jules Faure",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-marseille",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00183",
+                      "name": "Théo Garnier",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00186",
+                          "name": "Léa Moreau",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00189",
+                          "name": "Pauline Dupont",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00184",
+                      "name": "Sarah Thomas",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00187",
+                          "name": "Chloé David",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00190",
+                          "name": "Juliette François",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00185",
+                      "name": "Louis Lambert",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00188",
+                          "name": "Quentin Nicolas",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00191",
+                          "name": "Léa Perrin",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-marseille",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00192",
+                      "name": "Inès Bertrand",
+                      "role": "Cashier",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00193",
+                      "name": "Julie Laurent",
+                      "role": "Cashier",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00194",
+                      "name": "Lucas Bonnet",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00195",
+                      "name": "Thomas Vincent",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-marseille",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00197",
+              "name": "Léo Roussel",
+              "role": "Store Manager",
+              "home": "dec-fr-bordeaux",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00198",
+                  "name": "Manon Guérin",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-fr-bordeaux",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00199",
+                      "name": "Lola Moreau",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00202",
+                          "name": "Lola Rousseau",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00205",
+                          "name": "Nathan Henry",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00200",
+                      "name": "Jade Nicolas",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00203",
+                          "name": "Chloé Nicolas",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00206",
+                          "name": "Lola Henry",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00201",
+                      "name": "Manon Legrand",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00204",
+                          "name": "Maxime Nicolas",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00207",
+                          "name": "Pauline Martinez",
+                          "role": "Sales Associate",
+                          "home": "dec-fr-bordeaux",
+                          "status": "inactive",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00208",
+                      "name": "Anaïs Faure",
+                      "role": "Cashier",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00209",
+                      "name": "Quentin Girard",
+                      "role": "Cashier",
+                      "home": "dec-fr-bordeaux",
+                      "status": "inactive",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00210",
+                      "name": "Arthur Girard",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00211",
+                      "name": "Théo Lambert",
+                      "role": "Stock & Logistics",
+                      "home": "dec-fr-bordeaux",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "staff_id": "EMP-00017",
+          "name": "Jang Su-bin",
+          "role": "Regional Director",
+          "home": "dec-kr-region",
+          "status": "active",
+          "reports": [
+            {
+              "staff_id": "EMP-00018",
+              "name": "Kang Yu-jin",
+              "role": "Regional Operations Manager",
+              "home": "dec-kr-region",
+              "status": "inactive",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00019",
+              "name": "Kwon Ha-eun",
+              "role": "Regional Merchandising Manager",
+              "home": "dec-kr-region",
+              "status": "active",
+              "reports": []
+            },
+            {
+              "staff_id": "EMP-00020",
+              "name": "Song Jung-woo",
+              "role": "Regional Loss-Prevention Manager",
+              "home": "dec-kr-region",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00234",
+                  "name": "Jung Da-eun",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-kr-seoul",
+                  "status": "active",
+                  "reports": []
+                },
+                {
+                  "staff_id": "EMP-00250",
+                  "name": "Ryu Min-seo",
+                  "role": "Store Loss-Prevention",
+                  "home": "dec-kr-busan",
+                  "status": "active",
+                  "reports": []
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00213",
+              "name": "Seo Seung-hyun",
+              "role": "Store Manager",
+              "home": "dec-kr-seoul",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00214",
+                  "name": "Song A-rin",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-kr-seoul",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00215",
+                      "name": "Ahn Joo-won",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00219",
+                          "name": "Yoon Da-eun",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "inactive",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00223",
+                          "name": "Jang Woo-jin",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00227",
+                          "name": "Ahn So-yul",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00216",
+                      "name": "Kwon Min-seo",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00220",
+                          "name": "Song Min-jun",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00224",
+                          "name": "Kwon Ji-min",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00217",
+                      "name": "Jung Chae-won",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00221",
+                          "name": "Choi Si-woo",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00225",
+                          "name": "Hong Joo-won",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00218",
+                      "name": "Choi Min-seo",
+                      "role": "Department Leader — Outdoor",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00222",
+                          "name": "Jung Si-woo",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00226",
+                          "name": "Park A-rin",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-seoul",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00228",
+                      "name": "Lim Ye-eun",
+                      "role": "Cashier",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00229",
+                      "name": "Jung Min-seo",
+                      "role": "Cashier",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00230",
+                      "name": "Han Ji-ah",
+                      "role": "Cashier",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00231",
+                      "name": "Han Hyun-woo",
+                      "role": "Stock & Logistics",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00232",
+                      "name": "Seo Seon-woo",
+                      "role": "Stock & Logistics",
+                      "home": "dec-kr-seoul",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00233",
+                      "name": "Hwang Jun-seo",
+                      "role": "Stock & Logistics",
+                      "home": "dec-kr-seoul",
+                      "status": "inactive",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "staff_id": "EMP-00235",
+              "name": "Ryu Woo-jin",
+              "role": "Store Manager",
+              "home": "dec-kr-busan",
+              "status": "active",
+              "reports": [
+                {
+                  "staff_id": "EMP-00236",
+                  "name": "Kwon A-rin",
+                  "role": "Assistant Store Manager",
+                  "home": "dec-kr-busan",
+                  "status": "active",
+                  "reports": [
+                    {
+                      "staff_id": "EMP-00237",
+                      "name": "Jung Min-jun",
+                      "role": "Department Leader — Running & Footwear",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00240",
+                          "name": "Song Jun-seo",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00243",
+                          "name": "Park Ji-min",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00238",
+                      "name": "Hwang Do-yoon",
+                      "role": "Department Leader — Apparel",
+                      "home": "dec-kr-busan",
+                      "status": "inactive",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00241",
+                          "name": "Hwang Jung-woo",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00244",
+                          "name": "Choi Yeon-woo",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00239",
+                      "name": "Seo Jung-woo",
+                      "role": "Department Leader — Fitness",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": [
+                        {
+                          "staff_id": "EMP-00242",
+                          "name": "Yoon Do-yoon",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        },
+                        {
+                          "staff_id": "EMP-00245",
+                          "name": "Kim Su-ah",
+                          "role": "Sales Associate",
+                          "home": "dec-kr-busan",
+                          "status": "active",
+                          "reports": []
+                        }
+                      ]
+                    },
+                    {
+                      "staff_id": "EMP-00246",
+                      "name": "Lim Seo-yeon",
+                      "role": "Cashier",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00247",
+                      "name": "Yoon Ye-jun",
+                      "role": "Cashier",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00248",
+                      "name": "Kang Su-bin",
+                      "role": "Stock & Logistics",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": []
+                    },
+                    {
+                      "staff_id": "EMP-00249",
+                      "name": "Seo Yu-jin",
+                      "role": "Stock & Logistics",
+                      "home": "dec-kr-busan",
+                      "status": "active",
+                      "reports": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "staff_id": "EMP-00004",
+      "name": "Chloé Michel",
+      "role": "Chief Information Officer / IT Director",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    },
+    {
+      "staff_id": "EMP-00005",
+      "name": "Emma Muller",
+      "role": "Global Merchandising Director",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    },
+    {
+      "staff_id": "EMP-00006",
+      "name": "Baptiste Bonnet",
+      "role": "Global Loss-Prevention Director",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    },
+    {
+      "staff_id": "EMP-00007",
+      "name": "Lola Martin",
+      "role": "Global HR Director",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    },
+    {
+      "staff_id": "EMP-00008",
+      "name": "Alice Roux",
+      "role": "Global Data & Analytics Lead",
+      "home": "dec-hq-global",
+      "status": "active",
+      "reports": []
+    }
+  ]
+}

@@ -1,0 +1,251 @@
+staff_id,full_name,name_local,role,role_label,department,region,home_store_id,manager_id,timezone,email,status,status_reason,hire_date
+EMP-00001,Manon Bernard,Manon Bernard,ceo,Chief Executive Officer,,FR,dec-hq-global,,Europe/Paris,manon.bernard@decathlon-demo.com,active,,2019-04-08
+EMP-00002,Jules Petit,Jules Petit,cfo,Chief Financial Officer,,FR,dec-hq-global,EMP-00001,Europe/Paris,jules.petit@decathlon-demo.com,active,,2025-12-18
+EMP-00003,Chloé Roussel,Chloé Roussel,coo,Chief Operating Officer,,FR,dec-hq-global,EMP-00001,Europe/Paris,chloe.roussel@decathlon-demo.com,active,,2021-01-01
+EMP-00004,Chloé Michel,Chloé Michel,cio,Chief Information Officer / IT Director,,FR,dec-hq-global,EMP-00001,Europe/Paris,chloe.michel@decathlon-demo.com,active,,2018-09-20
+EMP-00005,Emma Muller,Emma Muller,global_merch_director,Global Merchandising Director,,FR,dec-hq-global,EMP-00001,Europe/Paris,emma.muller@decathlon-demo.com,active,,2018-12-21
+EMP-00006,Baptiste Bonnet,Baptiste Bonnet,global_lp_director,Global Loss-Prevention Director,,FR,dec-hq-global,EMP-00001,Europe/Paris,baptiste.bonnet@decathlon-demo.com,active,,2018-08-19
+EMP-00007,Lola Martin,Lola Martin,global_hr_director,Global HR Director,,FR,dec-hq-global,EMP-00001,Europe/Paris,lola.martin@decathlon-demo.com,active,,2017-12-14
+EMP-00008,Alice Roux,Alice Roux,global_data_lead,Global Data & Analytics Lead,,FR,dec-hq-global,EMP-00001,Europe/Paris,alice.roux@decathlon-demo.com,active,,2017-04-25
+EMP-00009,Nancy Miller,Nancy Miller,regional_director,Regional Director,,US,dec-us-region,EMP-00003,America/New_York,nancy.miller@decathlon-demo.com,active,,2016-07-04
+EMP-00010,Joshua Thompson,Joshua Thompson,regional_ops_manager,Regional Operations Manager,,US,dec-us-region,EMP-00009,America/New_York,joshua.thompson@decathlon-demo.com,active,,2024-05-26
+EMP-00011,Robert Robinson,Robert Robinson,regional_merch_manager,Regional Merchandising Manager,,US,dec-us-region,EMP-00009,America/New_York,robert.robinson@decathlon-demo.com,active,,2023-02-13
+EMP-00012,Linda Scott,Linda Scott,regional_lp_manager,Regional Loss-Prevention Manager,,US,dec-us-region,EMP-00009,America/New_York,linda.scott@decathlon-demo.com,active,,2019-11-20
+EMP-00013,Louise Henry,Louise Henry,regional_director,Regional Director,,FR,dec-fr-region,EMP-00003,Europe/Paris,louise.henry@decathlon-demo.com,active,,2018-12-03
+EMP-00014,Hugo Garcia,Hugo Garcia,regional_ops_manager,Regional Operations Manager,,FR,dec-fr-region,EMP-00013,Europe/Paris,hugo.garcia@decathlon-demo.com,active,,2019-02-28
+EMP-00015,Nathan Petit,Nathan Petit,regional_merch_manager,Regional Merchandising Manager,,FR,dec-fr-region,EMP-00013,Europe/Paris,nathan.petit@decathlon-demo.com,active,,2021-05-15
+EMP-00016,Louise Simon,Louise Simon,regional_lp_manager,Regional Loss-Prevention Manager,,FR,dec-fr-region,EMP-00013,Europe/Paris,louise.simon@decathlon-demo.com,active,,2020-06-07
+EMP-00017,Jang Su-bin,장수빈,regional_director,Regional Director,,KR,dec-kr-region,EMP-00003,Asia/Seoul,subin.jang@decathlon-demo.com,active,,2025-11-03
+EMP-00018,Kang Yu-jin,강유진,regional_ops_manager,Regional Operations Manager,,KR,dec-kr-region,EMP-00017,Asia/Seoul,yujin.kang@decathlon-demo.com,inactive,deactivated,2023-12-08
+EMP-00019,Kwon Ha-eun,권하은,regional_merch_manager,Regional Merchandising Manager,,KR,dec-kr-region,EMP-00017,Asia/Seoul,haeun.kwon@decathlon-demo.com,active,,2021-05-21
+EMP-00020,Song Jung-woo,송정우,regional_lp_manager,Regional Loss-Prevention Manager,,KR,dec-kr-region,EMP-00017,Asia/Seoul,jungwoo.song@decathlon-demo.com,active,,2018-11-11
+EMP-00021,Jennifer Anderson,Jennifer Anderson,store_manager,Store Manager,,US,dec-us-denver,EMP-00009,America/Denver,jennifer.anderson@decathlon-demo.com,active,,2015-06-13
+EMP-00022,Sarah Jones,Sarah Jones,assistant_manager,Assistant Store Manager,,US,dec-us-denver,EMP-00021,America/Denver,sarah.jones@decathlon-demo.com,active,,2018-10-23
+EMP-00023,Andrew Wilson,Andrew Wilson,assistant_manager,Assistant Store Manager,,US,dec-us-denver,EMP-00021,America/Denver,andrew.wilson@decathlon-demo.com,active,,2025-08-13
+EMP-00024,Sandra Martinez,Sandra Martinez,department_leader,Department Leader — Running & Footwear,Running & Footwear,US,dec-us-denver,EMP-00022,America/Denver,sandra.martinez@decathlon-demo.com,active,,2019-03-08
+EMP-00025,Kimberly Wright,Kimberly Wright,department_leader,Department Leader — Apparel,Apparel,US,dec-us-denver,EMP-00023,America/Denver,kimberly.wright@decathlon-demo.com,active,,2019-12-19
+EMP-00026,Betty Nguyen,Betty Nguyen,department_leader,Department Leader — Fitness,Fitness,US,dec-us-denver,EMP-00022,America/Denver,betty.nguyen@decathlon-demo.com,active,,2021-06-08
+EMP-00027,John Allen,John Allen,department_leader,Department Leader — Outdoor,Outdoor,US,dec-us-denver,EMP-00023,America/Denver,john.allen@decathlon-demo.com,active,,2022-02-25
+EMP-00028,Jennifer Davis,Jennifer Davis,department_leader,Department Leader — Cycle & Swim,Cycle & Swim,US,dec-us-denver,EMP-00022,America/Denver,jennifer.davis@decathlon-demo.com,active,,2017-11-06
+EMP-00029,Betty Hill,Betty Hill,sales_associate,Sales Associate,Running & Footwear,US,dec-us-denver,EMP-00024,America/Denver,betty.hill@decathlon-demo.com,active,,2016-07-13
+EMP-00030,Nathan Robinson,Nathan Robinson,sales_associate,Sales Associate,Apparel,US,dec-us-denver,EMP-00025,America/Denver,nathan.robinson@decathlon-demo.com,active,,2023-05-18
+EMP-00031,James Davis,James Davis,sales_associate,Sales Associate,Fitness,US,dec-us-denver,EMP-00026,America/Denver,james.davis@decathlon-demo.com,active,,2025-09-25
+EMP-00032,Sarah Perez,Sarah Perez,sales_associate,Sales Associate,Outdoor,US,dec-us-denver,EMP-00027,America/Denver,sarah.perez@decathlon-demo.com,active,,2016-05-14
+EMP-00033,Daniel Robinson,Daniel Robinson,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-denver,EMP-00028,America/Denver,daniel.robinson@decathlon-demo.com,inactive,deactivated,2015-12-24
+EMP-00034,Mark Allen,Mark Allen,sales_associate,Sales Associate,Running & Footwear,US,dec-us-denver,EMP-00024,America/Denver,mark.allen@decathlon-demo.com,active,,2017-09-04
+EMP-00035,Karen Allen,Karen Allen,sales_associate,Sales Associate,Apparel,US,dec-us-denver,EMP-00025,America/Denver,karen.allen@decathlon-demo.com,inactive,terminated,2024-04-05
+EMP-00036,Lisa Hernandez,Lisa Hernandez,sales_associate,Sales Associate,Fitness,US,dec-us-denver,EMP-00026,America/Denver,lisa.hernandez@decathlon-demo.com,active,,2023-09-01
+EMP-00037,Nathan Lee,Nathan Lee,sales_associate,Sales Associate,Outdoor,US,dec-us-denver,EMP-00027,America/Denver,nathan.lee@decathlon-demo.com,active,,2022-01-04
+EMP-00038,Lisa Martin,Lisa Martin,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-denver,EMP-00028,America/Denver,lisa.martin@decathlon-demo.com,inactive,on_long_leave,2018-01-08
+EMP-00039,Adam Garcia,Adam Garcia,sales_associate,Sales Associate,Running & Footwear,US,dec-us-denver,EMP-00024,America/Denver,adam.garcia@decathlon-demo.com,inactive,on_long_leave,2016-12-16
+EMP-00040,Michael Wright,Michael Wright,sales_associate,Sales Associate,Apparel,US,dec-us-denver,EMP-00025,America/Denver,michael.wright@decathlon-demo.com,active,,2017-03-22
+EMP-00041,Aaron Scott,Aaron Scott,cashier,Cashier,,US,dec-us-denver,EMP-00023,America/Denver,aaron.scott@decathlon-demo.com,active,,2017-05-17
+EMP-00042,Nathan Ramirez,Nathan Ramirez,cashier,Cashier,,US,dec-us-denver,EMP-00022,America/Denver,nathan.ramirez@decathlon-demo.com,active,,2018-09-25
+EMP-00043,Matthew Martin,Matthew Martin,cashier,Cashier,,US,dec-us-denver,EMP-00023,America/Denver,matthew.martin@decathlon-demo.com,active,,2021-11-21
+EMP-00044,Lisa Lewis,Lisa Lewis,cashier,Cashier,,US,dec-us-denver,EMP-00022,America/Denver,lisa.lewis@decathlon-demo.com,active,,2023-08-04
+EMP-00045,Jessica Anderson,Jessica Anderson,stock_logistics,Stock & Logistics,,US,dec-us-denver,EMP-00023,America/Denver,jessica.anderson@decathlon-demo.com,inactive,deactivated,2016-06-01
+EMP-00046,Donna Scott,Donna Scott,stock_logistics,Stock & Logistics,,US,dec-us-denver,EMP-00022,America/Denver,donna.scott@decathlon-demo.com,active,,2018-10-08
+EMP-00047,James Jones,James Jones,stock_logistics,Stock & Logistics,,US,dec-us-denver,EMP-00023,America/Denver,james.jones@decathlon-demo.com,inactive,deactivated,2025-01-08
+EMP-00048,Michael Williams,Michael Williams,stock_logistics,Stock & Logistics,,US,dec-us-denver,EMP-00022,America/Denver,michael.williams@decathlon-demo.com,active,,2020-02-17
+EMP-00049,Jessica Moore,Jessica Moore,store_lp,Store Loss-Prevention,,US,dec-us-denver,EMP-00012,America/Denver,jessica.moore@decathlon-demo.com,active,,2025-08-07
+EMP-00050,Jose Rodriguez,Jose Rodriguez,store_manager,Store Manager,,US,dec-us-nyc,EMP-00009,America/New_York,jose.rodriguez@decathlon-demo.com,active,,2024-10-16
+EMP-00051,Jessica Walker,Jessica Walker,assistant_manager,Assistant Store Manager,,US,dec-us-nyc,EMP-00050,America/New_York,jessica.walker@decathlon-demo.com,active,,2021-04-04
+EMP-00052,David Ramirez,David Ramirez,assistant_manager,Assistant Store Manager,,US,dec-us-nyc,EMP-00050,America/New_York,david.ramirez@decathlon-demo.com,active,,2020-07-14
+EMP-00053,Sandra Brown,Sandra Brown,department_leader,Department Leader — Running & Footwear,Running & Footwear,US,dec-us-nyc,EMP-00051,America/New_York,sandra.brown@decathlon-demo.com,inactive,terminated,2025-11-21
+EMP-00054,David Brown,David Brown,department_leader,Department Leader — Apparel,Apparel,US,dec-us-nyc,EMP-00052,America/New_York,david.brown@decathlon-demo.com,active,,2021-12-11
+EMP-00055,David Thomas,David Thomas,department_leader,Department Leader — Fitness,Fitness,US,dec-us-nyc,EMP-00051,America/New_York,david.thomas@decathlon-demo.com,active,,2018-04-18
+EMP-00056,Jason Rodriguez,Jason Rodriguez,department_leader,Department Leader — Outdoor,Outdoor,US,dec-us-nyc,EMP-00052,America/New_York,jason.rodriguez@decathlon-demo.com,active,,2021-03-09
+EMP-00057,Sandra Thomas,Sandra Thomas,department_leader,Department Leader — Cycle & Swim,Cycle & Swim,US,dec-us-nyc,EMP-00051,America/New_York,sandra.thomas@decathlon-demo.com,inactive,resigned,2016-08-26
+EMP-00058,Kimberly Miller,Kimberly Miller,sales_associate,Sales Associate,Running & Footwear,US,dec-us-nyc,EMP-00053,America/New_York,kimberly.miller@decathlon-demo.com,active,,2015-11-18
+EMP-00059,James Garcia,James Garcia,sales_associate,Sales Associate,Apparel,US,dec-us-nyc,EMP-00054,America/New_York,james.garcia@decathlon-demo.com,active,,2018-03-14
+EMP-00060,Ashley Walker,Ashley Walker,sales_associate,Sales Associate,Fitness,US,dec-us-nyc,EMP-00055,America/New_York,ashley.walker@decathlon-demo.com,active,,2018-07-02
+EMP-00061,Daniel Harris,Daniel Harris,sales_associate,Sales Associate,Outdoor,US,dec-us-nyc,EMP-00056,America/New_York,daniel.harris@decathlon-demo.com,active,,2015-07-09
+EMP-00062,Sandra Jackson,Sandra Jackson,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-nyc,EMP-00057,America/New_York,sandra.jackson@decathlon-demo.com,active,,2021-12-24
+EMP-00063,Kimberly Young,Kimberly Young,sales_associate,Sales Associate,Running & Footwear,US,dec-us-nyc,EMP-00053,America/New_York,kimberly.young@decathlon-demo.com,active,,2017-04-10
+EMP-00064,Susan Brown,Susan Brown,sales_associate,Sales Associate,Apparel,US,dec-us-nyc,EMP-00054,America/New_York,susan.brown@decathlon-demo.com,active,,2024-12-18
+EMP-00065,Jennifer Lee,Jennifer Lee,sales_associate,Sales Associate,Fitness,US,dec-us-nyc,EMP-00055,America/New_York,jennifer.lee@decathlon-demo.com,active,,2015-01-19
+EMP-00066,Aaron Allen,Aaron Allen,sales_associate,Sales Associate,Outdoor,US,dec-us-nyc,EMP-00056,America/New_York,aaron.allen@decathlon-demo.com,active,,2023-03-02
+EMP-00067,Tyler Garcia,Tyler Garcia,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-nyc,EMP-00057,America/New_York,tyler.garcia@decathlon-demo.com,active,,2017-02-20
+EMP-00068,Michael Thomas,Michael Thomas,sales_associate,Sales Associate,Running & Footwear,US,dec-us-nyc,EMP-00053,America/New_York,michael.thomas@decathlon-demo.com,active,,2021-02-19
+EMP-00069,Jessica Nguyen,Jessica Nguyen,sales_associate,Sales Associate,Apparel,US,dec-us-nyc,EMP-00054,America/New_York,jessica.nguyen@decathlon-demo.com,active,,2024-01-20
+EMP-00070,Linda Clark,Linda Clark,cashier,Cashier,,US,dec-us-nyc,EMP-00052,America/New_York,linda.clark@decathlon-demo.com,active,,2025-10-19
+EMP-00071,Emily Lee,Emily Lee,cashier,Cashier,,US,dec-us-nyc,EMP-00051,America/New_York,emily.lee@decathlon-demo.com,active,,2019-04-22
+EMP-00072,Andrew Thomas,Andrew Thomas,cashier,Cashier,,US,dec-us-nyc,EMP-00052,America/New_York,andrew.thomas@decathlon-demo.com,active,,2019-07-05
+EMP-00073,Karen Robinson,Karen Robinson,cashier,Cashier,,US,dec-us-nyc,EMP-00051,America/New_York,karen.robinson@decathlon-demo.com,active,,2020-02-01
+EMP-00074,Sandra Flores,Sandra Flores,stock_logistics,Stock & Logistics,,US,dec-us-nyc,EMP-00052,America/New_York,sandra.flores@decathlon-demo.com,active,,2024-02-03
+EMP-00075,Jose Wilson,Jose Wilson,stock_logistics,Stock & Logistics,,US,dec-us-nyc,EMP-00051,America/New_York,jose.wilson@decathlon-demo.com,inactive,resigned,2023-05-05
+EMP-00076,Joshua Jones,Joshua Jones,stock_logistics,Stock & Logistics,,US,dec-us-nyc,EMP-00052,America/New_York,joshua.jones@decathlon-demo.com,active,,2018-06-10
+EMP-00077,Daniel Lewis,Daniel Lewis,stock_logistics,Stock & Logistics,,US,dec-us-nyc,EMP-00051,America/New_York,daniel.lewis@decathlon-demo.com,active,,2023-12-10
+EMP-00078,Carol King,Carol King,store_lp,Store Loss-Prevention,,US,dec-us-nyc,EMP-00012,America/New_York,carol.king@decathlon-demo.com,active,,2015-11-27
+EMP-00079,Kimberly Martin,Kimberly Martin,store_manager,Store Manager,,US,dec-us-sf,EMP-00009,America/Los_Angeles,kimberly.martin@decathlon-demo.com,active,,2025-02-05
+EMP-00080,Mark Davis,Mark Davis,assistant_manager,Assistant Store Manager,,US,dec-us-sf,EMP-00079,America/Los_Angeles,mark.davis@decathlon-demo.com,active,,2016-12-18
+EMP-00081,Elizabeth Moore,Elizabeth Moore,assistant_manager,Assistant Store Manager,,US,dec-us-sf,EMP-00079,America/Los_Angeles,elizabeth.moore@decathlon-demo.com,active,,2019-10-07
+EMP-00082,Nancy Wilson,Nancy Wilson,department_leader,Department Leader — Running & Footwear,Running & Footwear,US,dec-us-sf,EMP-00080,America/Los_Angeles,nancy.wilson@decathlon-demo.com,active,,2025-11-28
+EMP-00083,Mark Allen,Mark Allen,department_leader,Department Leader — Apparel,Apparel,US,dec-us-sf,EMP-00081,America/Los_Angeles,mark.allen2@decathlon-demo.com,active,,2022-05-28
+EMP-00084,Jennifer Garcia,Jennifer Garcia,department_leader,Department Leader — Fitness,Fitness,US,dec-us-sf,EMP-00080,America/Los_Angeles,jennifer.garcia@decathlon-demo.com,active,,2025-07-27
+EMP-00085,Sarah Williams,Sarah Williams,department_leader,Department Leader — Outdoor,Outdoor,US,dec-us-sf,EMP-00081,America/Los_Angeles,sarah.williams@decathlon-demo.com,active,,2015-06-25
+EMP-00086,John Taylor,John Taylor,department_leader,Department Leader — Cycle & Swim,Cycle & Swim,US,dec-us-sf,EMP-00080,America/Los_Angeles,john.taylor@decathlon-demo.com,active,,2017-12-15
+EMP-00087,Kimberly Ramirez,Kimberly Ramirez,sales_associate,Sales Associate,Running & Footwear,US,dec-us-sf,EMP-00082,America/Los_Angeles,kimberly.ramirez@decathlon-demo.com,inactive,account_locked,2023-01-04
+EMP-00088,Michael Martinez,Michael Martinez,sales_associate,Sales Associate,Apparel,US,dec-us-sf,EMP-00083,America/Los_Angeles,michael.martinez@decathlon-demo.com,active,,2023-01-27
+EMP-00089,Lisa Nguyen,Lisa Nguyen,sales_associate,Sales Associate,Fitness,US,dec-us-sf,EMP-00084,America/Los_Angeles,lisa.nguyen@decathlon-demo.com,active,,2023-03-14
+EMP-00090,John Williams,John Williams,sales_associate,Sales Associate,Outdoor,US,dec-us-sf,EMP-00085,America/Los_Angeles,john.williams@decathlon-demo.com,active,,2019-06-26
+EMP-00091,Robert Thompson,Robert Thompson,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-sf,EMP-00086,America/Los_Angeles,robert.thompson@decathlon-demo.com,active,,2018-11-08
+EMP-00092,David Thompson,David Thompson,sales_associate,Sales Associate,Running & Footwear,US,dec-us-sf,EMP-00082,America/Los_Angeles,david.thompson@decathlon-demo.com,active,,2023-07-20
+EMP-00093,Elizabeth Thomas,Elizabeth Thomas,sales_associate,Sales Associate,Apparel,US,dec-us-sf,EMP-00083,America/Los_Angeles,elizabeth.thomas@decathlon-demo.com,active,,2017-03-14
+EMP-00094,Mary Lopez,Mary Lopez,sales_associate,Sales Associate,Fitness,US,dec-us-sf,EMP-00084,America/Los_Angeles,mary.lopez@decathlon-demo.com,active,,2020-07-26
+EMP-00095,Jessica Moore,Jessica Moore,sales_associate,Sales Associate,Outdoor,US,dec-us-sf,EMP-00085,America/Los_Angeles,jessica.moore2@decathlon-demo.com,active,,2017-12-04
+EMP-00096,Kevin Williams,Kevin Williams,sales_associate,Sales Associate,Cycle & Swim,US,dec-us-sf,EMP-00086,America/Los_Angeles,kevin.williams@decathlon-demo.com,active,,2022-04-07
+EMP-00097,Sandra Thompson,Sandra Thompson,sales_associate,Sales Associate,Running & Footwear,US,dec-us-sf,EMP-00082,America/Los_Angeles,sandra.thompson@decathlon-demo.com,active,,2019-04-08
+EMP-00098,Mary Gonzalez,Mary Gonzalez,sales_associate,Sales Associate,Apparel,US,dec-us-sf,EMP-00083,America/Los_Angeles,mary.gonzalez@decathlon-demo.com,active,,2021-06-09
+EMP-00099,Michael Moore,Michael Moore,cashier,Cashier,,US,dec-us-sf,EMP-00081,America/Los_Angeles,michael.moore@decathlon-demo.com,active,,2020-11-17
+EMP-00100,Margaret Wright,Margaret Wright,cashier,Cashier,,US,dec-us-sf,EMP-00080,America/Los_Angeles,margaret.wright@decathlon-demo.com,active,,2020-01-04
+EMP-00101,Mark Lopez,Mark Lopez,cashier,Cashier,,US,dec-us-sf,EMP-00081,America/Los_Angeles,mark.lopez@decathlon-demo.com,active,,2024-05-02
+EMP-00102,David Hill,David Hill,cashier,Cashier,,US,dec-us-sf,EMP-00080,America/Los_Angeles,david.hill@decathlon-demo.com,active,,2021-06-24
+EMP-00103,Andrew Ramirez,Andrew Ramirez,stock_logistics,Stock & Logistics,,US,dec-us-sf,EMP-00081,America/Los_Angeles,andrew.ramirez@decathlon-demo.com,active,,2024-09-04
+EMP-00104,Kevin Torres,Kevin Torres,stock_logistics,Stock & Logistics,,US,dec-us-sf,EMP-00080,America/Los_Angeles,kevin.torres@decathlon-demo.com,active,,2018-05-02
+EMP-00105,Betty Smith,Betty Smith,stock_logistics,Stock & Logistics,,US,dec-us-sf,EMP-00081,America/Los_Angeles,betty.smith@decathlon-demo.com,active,,2023-09-22
+EMP-00106,Matthew White,Matthew White,stock_logistics,Stock & Logistics,,US,dec-us-sf,EMP-00080,America/Los_Angeles,matthew.white@decathlon-demo.com,active,,2021-02-22
+EMP-00107,Nancy Flores,Nancy Flores,store_lp,Store Loss-Prevention,,US,dec-us-sf,EMP-00012,America/Los_Angeles,nancy.flores@decathlon-demo.com,active,,2020-11-28
+EMP-00108,Manon Fournier,Manon Fournier,store_manager,Store Manager,,FR,dec-fr-paris,EMP-00013,Europe/Paris,manon.fournier@decathlon-demo.com,active,,2023-05-22
+EMP-00109,Quentin Morel,Quentin Morel,assistant_manager,Assistant Store Manager,,FR,dec-fr-paris,EMP-00108,Europe/Paris,quentin.morel@decathlon-demo.com,active,,2021-12-10
+EMP-00110,Margaux Leroy,Margaux Leroy,assistant_manager,Assistant Store Manager,,FR,dec-fr-paris,EMP-00108,Europe/Paris,margaux.leroy@decathlon-demo.com,active,,2018-07-22
+EMP-00111,Paul Laurent,Paul Laurent,department_leader,Department Leader — Running & Footwear,Running & Footwear,FR,dec-fr-paris,EMP-00109,Europe/Paris,paul.laurent@decathlon-demo.com,active,,2024-10-10
+EMP-00112,Marie Muller,Marie Muller,department_leader,Department Leader — Apparel,Apparel,FR,dec-fr-paris,EMP-00110,Europe/Paris,marie.muller@decathlon-demo.com,active,,2015-05-10
+EMP-00113,Inès François,Inès François,department_leader,Department Leader — Fitness,Fitness,FR,dec-fr-paris,EMP-00109,Europe/Paris,ines.francois@decathlon-demo.com,active,,2024-10-21
+EMP-00114,Maxime Legrand,Maxime Legrand,department_leader,Department Leader — Outdoor,Outdoor,FR,dec-fr-paris,EMP-00110,Europe/Paris,maxime.legrand@decathlon-demo.com,active,,2022-08-22
+EMP-00115,Inès Rousseau,Inès Rousseau,department_leader,Department Leader — Cycle & Swim,Cycle & Swim,FR,dec-fr-paris,EMP-00109,Europe/Paris,ines.rousseau@decathlon-demo.com,active,,2022-12-06
+EMP-00116,Chloé Vincent,Chloé Vincent,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-paris,EMP-00111,Europe/Paris,chloe.vincent@decathlon-demo.com,active,,2023-11-21
+EMP-00117,Céline Girard,Céline Girard,sales_associate,Sales Associate,Apparel,FR,dec-fr-paris,EMP-00112,Europe/Paris,celine.girard@decathlon-demo.com,active,,2016-04-22
+EMP-00118,Jade Garcia,Jade Garcia,sales_associate,Sales Associate,Fitness,FR,dec-fr-paris,EMP-00113,Europe/Paris,jade.garcia@decathlon-demo.com,active,,2018-03-01
+EMP-00119,Hugo David,Hugo David,sales_associate,Sales Associate,Outdoor,FR,dec-fr-paris,EMP-00114,Europe/Paris,hugo.david@decathlon-demo.com,active,,2022-10-28
+EMP-00120,Louis Legrand,Louis Legrand,sales_associate,Sales Associate,Cycle & Swim,FR,dec-fr-paris,EMP-00115,Europe/Paris,louis.legrand@decathlon-demo.com,active,,2021-11-19
+EMP-00121,Raphaël Dupont,Raphaël Dupont,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-paris,EMP-00111,Europe/Paris,raphael.dupont@decathlon-demo.com,active,,2022-07-08
+EMP-00122,Camille Martin,Camille Martin,sales_associate,Sales Associate,Apparel,FR,dec-fr-paris,EMP-00112,Europe/Paris,camille.martin@decathlon-demo.com,active,,2016-07-08
+EMP-00123,Sarah Blanc,Sarah Blanc,sales_associate,Sales Associate,Fitness,FR,dec-fr-paris,EMP-00113,Europe/Paris,sarah.blanc@decathlon-demo.com,active,,2022-01-18
+EMP-00124,Julie Durand,Julie Durand,sales_associate,Sales Associate,Outdoor,FR,dec-fr-paris,EMP-00114,Europe/Paris,julie.durand@decathlon-demo.com,active,,2022-03-26
+EMP-00125,Clara Blanc,Clara Blanc,sales_associate,Sales Associate,Cycle & Swim,FR,dec-fr-paris,EMP-00115,Europe/Paris,clara.blanc@decathlon-demo.com,active,,2023-10-11
+EMP-00126,Romain Perrin,Romain Perrin,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-paris,EMP-00111,Europe/Paris,romain.perrin@decathlon-demo.com,inactive,terminated,2023-07-27
+EMP-00127,Margaux Martinez,Margaux Martinez,sales_associate,Sales Associate,Apparel,FR,dec-fr-paris,EMP-00112,Europe/Paris,margaux.martinez@decathlon-demo.com,active,,2017-12-28
+EMP-00128,Thomas Martinez,Thomas Martinez,cashier,Cashier,,FR,dec-fr-paris,EMP-00110,Europe/Paris,thomas.martinez@decathlon-demo.com,active,,2019-04-27
+EMP-00129,Lola Blanc,Lola Blanc,cashier,Cashier,,FR,dec-fr-paris,EMP-00109,Europe/Paris,lola.blanc@decathlon-demo.com,active,,2022-11-08
+EMP-00130,Lola Martinez,Lola Martinez,cashier,Cashier,,FR,dec-fr-paris,EMP-00110,Europe/Paris,lola.martinez@decathlon-demo.com,inactive,account_locked,2016-12-10
+EMP-00131,Julie Roux,Julie Roux,cashier,Cashier,,FR,dec-fr-paris,EMP-00109,Europe/Paris,julie.roux@decathlon-demo.com,inactive,deactivated,2020-06-18
+EMP-00132,Chloé Leroy,Chloé Leroy,stock_logistics,Stock & Logistics,,FR,dec-fr-paris,EMP-00110,Europe/Paris,chloe.leroy@decathlon-demo.com,active,,2017-04-13
+EMP-00133,Camille Michel,Camille Michel,stock_logistics,Stock & Logistics,,FR,dec-fr-paris,EMP-00109,Europe/Paris,camille.michel@decathlon-demo.com,active,,2016-07-14
+EMP-00134,Alice Guérin,Alice Guérin,stock_logistics,Stock & Logistics,,FR,dec-fr-paris,EMP-00110,Europe/Paris,alice.guerin@decathlon-demo.com,active,,2022-07-02
+EMP-00135,Inès Bonnet,Inès Bonnet,stock_logistics,Stock & Logistics,,FR,dec-fr-paris,EMP-00109,Europe/Paris,ines.bonnet@decathlon-demo.com,active,,2021-10-23
+EMP-00136,Emma Henry,Emma Henry,store_lp,Store Loss-Prevention,,FR,dec-fr-paris,EMP-00016,Europe/Paris,emma.henry@decathlon-demo.com,active,,2021-08-01
+EMP-00137,Antoine Fournier,Antoine Fournier,store_manager,Store Manager,,FR,dec-fr-lyon,EMP-00013,Europe/Paris,antoine.fournier@decathlon-demo.com,active,,2021-07-18
+EMP-00138,Baptiste Nicolas,Baptiste Nicolas,assistant_manager,Assistant Store Manager,,FR,dec-fr-lyon,EMP-00137,Europe/Paris,baptiste.nicolas@decathlon-demo.com,active,,2018-08-08
+EMP-00139,Lola François,Lola François,department_leader,Department Leader — Running & Footwear,Running & Footwear,FR,dec-fr-lyon,EMP-00138,Europe/Paris,lola.francois@decathlon-demo.com,active,,2022-01-13
+EMP-00140,Alice Lambert,Alice Lambert,department_leader,Department Leader — Apparel,Apparel,FR,dec-fr-lyon,EMP-00138,Europe/Paris,alice.lambert@decathlon-demo.com,active,,2017-08-05
+EMP-00141,Céline Guérin,Céline Guérin,department_leader,Department Leader — Fitness,Fitness,FR,dec-fr-lyon,EMP-00138,Europe/Paris,celine.guerin@decathlon-demo.com,active,,2015-07-19
+EMP-00142,Clément Bernard,Clément Bernard,department_leader,Department Leader — Outdoor,Outdoor,FR,dec-fr-lyon,EMP-00138,Europe/Paris,clement.bernard@decathlon-demo.com,inactive,deactivated,2016-11-14
+EMP-00143,Jules Legrand,Jules Legrand,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lyon,EMP-00139,Europe/Paris,jules.legrand@decathlon-demo.com,active,,2017-01-09
+EMP-00144,Paul Morel,Paul Morel,sales_associate,Sales Associate,Apparel,FR,dec-fr-lyon,EMP-00140,Europe/Paris,paul.morel@decathlon-demo.com,active,,2018-08-11
+EMP-00145,Alice Dupont,Alice Dupont,sales_associate,Sales Associate,Fitness,FR,dec-fr-lyon,EMP-00141,Europe/Paris,alice.dupont@decathlon-demo.com,active,,2019-07-09
+EMP-00146,Chloé Garnier,Chloé Garnier,sales_associate,Sales Associate,Outdoor,FR,dec-fr-lyon,EMP-00142,Europe/Paris,chloe.garnier@decathlon-demo.com,inactive,account_locked,2015-12-18
+EMP-00147,Léa André,Léa André,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lyon,EMP-00139,Europe/Paris,lea.andre@decathlon-demo.com,active,,2018-11-03
+EMP-00148,Hugo Bernard,Hugo Bernard,sales_associate,Sales Associate,Apparel,FR,dec-fr-lyon,EMP-00140,Europe/Paris,hugo.bernard@decathlon-demo.com,active,,2018-04-27
+EMP-00149,Emma Perrin,Emma Perrin,sales_associate,Sales Associate,Fitness,FR,dec-fr-lyon,EMP-00141,Europe/Paris,emma.perrin@decathlon-demo.com,inactive,on_long_leave,2017-04-05
+EMP-00150,Thomas Durand,Thomas Durand,sales_associate,Sales Associate,Outdoor,FR,dec-fr-lyon,EMP-00142,Europe/Paris,thomas.durand@decathlon-demo.com,active,,2024-04-15
+EMP-00151,Léo Mercier,Léo Mercier,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lyon,EMP-00139,Europe/Paris,leo.mercier@decathlon-demo.com,active,,2017-10-20
+EMP-00152,Manon Simon,Manon Simon,cashier,Cashier,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,manon.simon@decathlon-demo.com,active,,2019-02-19
+EMP-00153,Emma Fournier,Emma Fournier,cashier,Cashier,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,emma.fournier@decathlon-demo.com,inactive,terminated,2024-11-13
+EMP-00154,Marie Lefebvre,Marie Lefebvre,cashier,Cashier,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,marie.lefebvre@decathlon-demo.com,inactive,account_locked,2016-10-23
+EMP-00155,Julie Petit,Julie Petit,stock_logistics,Stock & Logistics,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,julie.petit@decathlon-demo.com,active,,2019-11-20
+EMP-00156,Manon Henry,Manon Henry,stock_logistics,Stock & Logistics,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,manon.henry@decathlon-demo.com,active,,2015-06-18
+EMP-00157,Anaïs Mercier,Anaïs Mercier,stock_logistics,Stock & Logistics,,FR,dec-fr-lyon,EMP-00138,Europe/Paris,anais.mercier@decathlon-demo.com,active,,2016-09-21
+EMP-00158,Alice Martin,Alice Martin,store_lp,Store Loss-Prevention,,FR,dec-fr-lyon,EMP-00016,Europe/Paris,alice.martin@decathlon-demo.com,active,,2021-08-04
+EMP-00159,Anaïs Mercier,Anaïs Mercier,store_manager,Store Manager,,FR,dec-fr-lille,EMP-00013,Europe/Paris,anais.mercier2@decathlon-demo.com,active,,2025-08-23
+EMP-00160,Camille François,Camille François,assistant_manager,Assistant Store Manager,,FR,dec-fr-lille,EMP-00159,Europe/Paris,camille.francois@decathlon-demo.com,inactive,deactivated,2017-12-17
+EMP-00161,Lola Perrin,Lola Perrin,department_leader,Department Leader — Running & Footwear,Running & Footwear,FR,dec-fr-lille,EMP-00160,Europe/Paris,lola.perrin@decathlon-demo.com,active,,2023-08-15
+EMP-00162,Anaïs Roussel,Anaïs Roussel,department_leader,Department Leader — Apparel,Apparel,FR,dec-fr-lille,EMP-00160,Europe/Paris,anais.roussel@decathlon-demo.com,active,,2019-06-28
+EMP-00163,Julie Richard,Julie Richard,department_leader,Department Leader — Fitness,Fitness,FR,dec-fr-lille,EMP-00160,Europe/Paris,julie.richard@decathlon-demo.com,active,,2019-08-08
+EMP-00164,Clara Henry,Clara Henry,department_leader,Department Leader — Outdoor,Outdoor,FR,dec-fr-lille,EMP-00160,Europe/Paris,clara.henry@decathlon-demo.com,active,,2024-11-13
+EMP-00165,Alice Bernard,Alice Bernard,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lille,EMP-00161,Europe/Paris,alice.bernard@decathlon-demo.com,active,,2022-06-06
+EMP-00166,Élise Michel,Élise Michel,sales_associate,Sales Associate,Apparel,FR,dec-fr-lille,EMP-00162,Europe/Paris,elise.michel@decathlon-demo.com,active,,2020-05-11
+EMP-00167,Lola Nicolas,Lola Nicolas,sales_associate,Sales Associate,Fitness,FR,dec-fr-lille,EMP-00163,Europe/Paris,lola.nicolas@decathlon-demo.com,active,,2019-09-01
+EMP-00168,Pauline Lefebvre,Pauline Lefebvre,sales_associate,Sales Associate,Outdoor,FR,dec-fr-lille,EMP-00164,Europe/Paris,pauline.lefebvre@decathlon-demo.com,active,,2016-04-24
+EMP-00169,Quentin Faure,Quentin Faure,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lille,EMP-00161,Europe/Paris,quentin.faure@decathlon-demo.com,active,,2023-04-23
+EMP-00170,Thomas Faure,Thomas Faure,sales_associate,Sales Associate,Apparel,FR,dec-fr-lille,EMP-00162,Europe/Paris,thomas.faure@decathlon-demo.com,active,,2022-01-03
+EMP-00171,Théo Garcia,Théo Garcia,sales_associate,Sales Associate,Fitness,FR,dec-fr-lille,EMP-00163,Europe/Paris,theo.garcia@decathlon-demo.com,active,,2021-12-08
+EMP-00172,Jade Roussel,Jade Roussel,sales_associate,Sales Associate,Outdoor,FR,dec-fr-lille,EMP-00164,Europe/Paris,jade.roussel@decathlon-demo.com,inactive,account_locked,2020-08-18
+EMP-00173,Pauline André,Pauline André,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-lille,EMP-00161,Europe/Paris,pauline.andre@decathlon-demo.com,active,,2021-12-18
+EMP-00174,Alice André,Alice André,cashier,Cashier,,FR,dec-fr-lille,EMP-00160,Europe/Paris,alice.andre@decathlon-demo.com,inactive,account_locked,2022-05-10
+EMP-00175,Léo Garcia,Léo Garcia,cashier,Cashier,,FR,dec-fr-lille,EMP-00160,Europe/Paris,leo.garcia@decathlon-demo.com,active,,2016-12-07
+EMP-00176,Maxime Durand,Maxime Durand,cashier,Cashier,,FR,dec-fr-lille,EMP-00160,Europe/Paris,maxime.durand@decathlon-demo.com,active,,2023-12-06
+EMP-00177,Raphaël Michel,Raphaël Michel,stock_logistics,Stock & Logistics,,FR,dec-fr-lille,EMP-00160,Europe/Paris,raphael.michel@decathlon-demo.com,active,,2022-05-24
+EMP-00178,Juliette Blanc,Juliette Blanc,stock_logistics,Stock & Logistics,,FR,dec-fr-lille,EMP-00160,Europe/Paris,juliette.blanc@decathlon-demo.com,active,,2024-05-04
+EMP-00179,Raphaël Vincent,Raphaël Vincent,stock_logistics,Stock & Logistics,,FR,dec-fr-lille,EMP-00160,Europe/Paris,raphael.vincent@decathlon-demo.com,active,,2018-06-06
+EMP-00180,Jade Martin,Jade Martin,store_lp,Store Loss-Prevention,,FR,dec-fr-lille,EMP-00016,Europe/Paris,jade.martin@decathlon-demo.com,active,,2023-03-09
+EMP-00181,Hugo Thomas,Hugo Thomas,store_manager,Store Manager,,FR,dec-fr-marseille,EMP-00013,Europe/Paris,hugo.thomas@decathlon-demo.com,active,,2023-05-23
+EMP-00182,Jules Faure,Jules Faure,assistant_manager,Assistant Store Manager,,FR,dec-fr-marseille,EMP-00181,Europe/Paris,jules.faure@decathlon-demo.com,active,,2016-01-19
+EMP-00183,Théo Garnier,Théo Garnier,department_leader,Department Leader — Running & Footwear,Running & Footwear,FR,dec-fr-marseille,EMP-00182,Europe/Paris,theo.garnier@decathlon-demo.com,active,,2022-08-11
+EMP-00184,Sarah Thomas,Sarah Thomas,department_leader,Department Leader — Apparel,Apparel,FR,dec-fr-marseille,EMP-00182,Europe/Paris,sarah.thomas@decathlon-demo.com,active,,2019-08-04
+EMP-00185,Louis Lambert,Louis Lambert,department_leader,Department Leader — Fitness,Fitness,FR,dec-fr-marseille,EMP-00182,Europe/Paris,louis.lambert@decathlon-demo.com,active,,2022-02-19
+EMP-00186,Léa Moreau,Léa Moreau,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-marseille,EMP-00183,Europe/Paris,lea.moreau@decathlon-demo.com,inactive,deactivated,2017-10-10
+EMP-00187,Chloé David,Chloé David,sales_associate,Sales Associate,Apparel,FR,dec-fr-marseille,EMP-00184,Europe/Paris,chloe.david@decathlon-demo.com,active,,2016-09-25
+EMP-00188,Quentin Nicolas,Quentin Nicolas,sales_associate,Sales Associate,Fitness,FR,dec-fr-marseille,EMP-00185,Europe/Paris,quentin.nicolas@decathlon-demo.com,active,,2024-10-08
+EMP-00189,Pauline Dupont,Pauline Dupont,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-marseille,EMP-00183,Europe/Paris,pauline.dupont@decathlon-demo.com,active,,2022-08-10
+EMP-00190,Juliette François,Juliette François,sales_associate,Sales Associate,Apparel,FR,dec-fr-marseille,EMP-00184,Europe/Paris,juliette.francois@decathlon-demo.com,active,,2019-10-20
+EMP-00191,Léa Perrin,Léa Perrin,sales_associate,Sales Associate,Fitness,FR,dec-fr-marseille,EMP-00185,Europe/Paris,lea.perrin@decathlon-demo.com,active,,2016-04-21
+EMP-00192,Inès Bertrand,Inès Bertrand,cashier,Cashier,,FR,dec-fr-marseille,EMP-00182,Europe/Paris,ines.bertrand@decathlon-demo.com,active,,2025-02-06
+EMP-00193,Julie Laurent,Julie Laurent,cashier,Cashier,,FR,dec-fr-marseille,EMP-00182,Europe/Paris,julie.laurent@decathlon-demo.com,active,,2023-02-06
+EMP-00194,Lucas Bonnet,Lucas Bonnet,stock_logistics,Stock & Logistics,,FR,dec-fr-marseille,EMP-00182,Europe/Paris,lucas.bonnet@decathlon-demo.com,active,,2022-12-20
+EMP-00195,Thomas Vincent,Thomas Vincent,stock_logistics,Stock & Logistics,,FR,dec-fr-marseille,EMP-00182,Europe/Paris,thomas.vincent@decathlon-demo.com,active,,2015-04-10
+EMP-00196,Théo Legrand,Théo Legrand,store_lp,Store Loss-Prevention,,FR,dec-fr-marseille,EMP-00016,Europe/Paris,theo.legrand@decathlon-demo.com,inactive,on_long_leave,2016-11-08
+EMP-00197,Léo Roussel,Léo Roussel,store_manager,Store Manager,,FR,dec-fr-bordeaux,EMP-00013,Europe/Paris,leo.roussel@decathlon-demo.com,active,,2025-04-14
+EMP-00198,Manon Guérin,Manon Guérin,assistant_manager,Assistant Store Manager,,FR,dec-fr-bordeaux,EMP-00197,Europe/Paris,manon.guerin@decathlon-demo.com,active,,2018-11-05
+EMP-00199,Lola Moreau,Lola Moreau,department_leader,Department Leader — Running & Footwear,Running & Footwear,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,lola.moreau@decathlon-demo.com,active,,2016-01-06
+EMP-00200,Jade Nicolas,Jade Nicolas,department_leader,Department Leader — Apparel,Apparel,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,jade.nicolas@decathlon-demo.com,active,,2024-05-15
+EMP-00201,Manon Legrand,Manon Legrand,department_leader,Department Leader — Fitness,Fitness,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,manon.legrand@decathlon-demo.com,active,,2019-12-13
+EMP-00202,Lola Rousseau,Lola Rousseau,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-bordeaux,EMP-00199,Europe/Paris,lola.rousseau@decathlon-demo.com,active,,2023-08-15
+EMP-00203,Chloé Nicolas,Chloé Nicolas,sales_associate,Sales Associate,Apparel,FR,dec-fr-bordeaux,EMP-00200,Europe/Paris,chloe.nicolas@decathlon-demo.com,inactive,terminated,2015-07-24
+EMP-00204,Maxime Nicolas,Maxime Nicolas,sales_associate,Sales Associate,Fitness,FR,dec-fr-bordeaux,EMP-00201,Europe/Paris,maxime.nicolas@decathlon-demo.com,active,,2019-01-03
+EMP-00205,Nathan Henry,Nathan Henry,sales_associate,Sales Associate,Running & Footwear,FR,dec-fr-bordeaux,EMP-00199,Europe/Paris,nathan.henry@decathlon-demo.com,active,,2024-01-25
+EMP-00206,Lola Henry,Lola Henry,sales_associate,Sales Associate,Apparel,FR,dec-fr-bordeaux,EMP-00200,Europe/Paris,lola.henry@decathlon-demo.com,active,,2015-03-16
+EMP-00207,Pauline Martinez,Pauline Martinez,sales_associate,Sales Associate,Fitness,FR,dec-fr-bordeaux,EMP-00201,Europe/Paris,pauline.martinez@decathlon-demo.com,inactive,account_locked,2019-03-19
+EMP-00208,Anaïs Faure,Anaïs Faure,cashier,Cashier,,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,anais.faure@decathlon-demo.com,active,,2016-08-12
+EMP-00209,Quentin Girard,Quentin Girard,cashier,Cashier,,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,quentin.girard@decathlon-demo.com,inactive,terminated,2020-11-04
+EMP-00210,Arthur Girard,Arthur Girard,stock_logistics,Stock & Logistics,,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,arthur.girard@decathlon-demo.com,active,,2021-12-16
+EMP-00211,Théo Lambert,Théo Lambert,stock_logistics,Stock & Logistics,,FR,dec-fr-bordeaux,EMP-00198,Europe/Paris,theo.lambert@decathlon-demo.com,active,,2023-01-15
+EMP-00212,Chloé Morel,Chloé Morel,store_lp,Store Loss-Prevention,,FR,dec-fr-bordeaux,EMP-00016,Europe/Paris,chloe.morel@decathlon-demo.com,active,,2019-06-04
+EMP-00213,Seo Seung-hyun,서승현,store_manager,Store Manager,,KR,dec-kr-seoul,EMP-00017,Asia/Seoul,seunghyun.seo@decathlon-demo.com,active,,2023-01-22
+EMP-00214,Song A-rin,송아린,assistant_manager,Assistant Store Manager,,KR,dec-kr-seoul,EMP-00213,Asia/Seoul,arin.song@decathlon-demo.com,active,,2022-07-02
+EMP-00215,Ahn Joo-won,안주원,department_leader,Department Leader — Running & Footwear,Running & Footwear,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,joowon.ahn@decathlon-demo.com,active,,2020-10-25
+EMP-00216,Kwon Min-seo,권민서,department_leader,Department Leader — Apparel,Apparel,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,minseo.kwon@decathlon-demo.com,active,,2015-04-09
+EMP-00217,Jung Chae-won,정채원,department_leader,Department Leader — Fitness,Fitness,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,chaewon.jung@decathlon-demo.com,active,,2019-08-23
+EMP-00218,Choi Min-seo,최민서,department_leader,Department Leader — Outdoor,Outdoor,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,minseo.choi@decathlon-demo.com,active,,2015-11-20
+EMP-00219,Yoon Da-eun,윤다은,sales_associate,Sales Associate,Running & Footwear,KR,dec-kr-seoul,EMP-00215,Asia/Seoul,daeun.yoon@decathlon-demo.com,inactive,terminated,2017-05-18
+EMP-00220,Song Min-jun,송민준,sales_associate,Sales Associate,Apparel,KR,dec-kr-seoul,EMP-00216,Asia/Seoul,minjun.song@decathlon-demo.com,active,,2021-02-08
+EMP-00221,Choi Si-woo,최시우,sales_associate,Sales Associate,Fitness,KR,dec-kr-seoul,EMP-00217,Asia/Seoul,siwoo.choi@decathlon-demo.com,active,,2022-02-21
+EMP-00222,Jung Si-woo,정시우,sales_associate,Sales Associate,Outdoor,KR,dec-kr-seoul,EMP-00218,Asia/Seoul,siwoo.jung@decathlon-demo.com,active,,2022-12-10
+EMP-00223,Jang Woo-jin,장우진,sales_associate,Sales Associate,Running & Footwear,KR,dec-kr-seoul,EMP-00215,Asia/Seoul,woojin.jang@decathlon-demo.com,active,,2021-08-16
+EMP-00224,Kwon Ji-min,권지민,sales_associate,Sales Associate,Apparel,KR,dec-kr-seoul,EMP-00216,Asia/Seoul,jimin.kwon@decathlon-demo.com,active,,2023-03-13
+EMP-00225,Hong Joo-won,홍주원,sales_associate,Sales Associate,Fitness,KR,dec-kr-seoul,EMP-00217,Asia/Seoul,joowon.hong@decathlon-demo.com,active,,2023-12-05
+EMP-00226,Park A-rin,박아린,sales_associate,Sales Associate,Outdoor,KR,dec-kr-seoul,EMP-00218,Asia/Seoul,arin.park@decathlon-demo.com,active,,2019-07-11
+EMP-00227,Ahn So-yul,안소율,sales_associate,Sales Associate,Running & Footwear,KR,dec-kr-seoul,EMP-00215,Asia/Seoul,soyul.ahn@decathlon-demo.com,active,,2019-01-10
+EMP-00228,Lim Ye-eun,임예은,cashier,Cashier,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,yeeun.lim@decathlon-demo.com,active,,2024-10-22
+EMP-00229,Jung Min-seo,정민서,cashier,Cashier,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,minseo.jung@decathlon-demo.com,active,,2022-09-16
+EMP-00230,Han Ji-ah,한지아,cashier,Cashier,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,jiah.han@decathlon-demo.com,active,,2023-09-13
+EMP-00231,Han Hyun-woo,한현우,stock_logistics,Stock & Logistics,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,hyunwoo.han@decathlon-demo.com,active,,2018-12-08
+EMP-00232,Seo Seon-woo,서선우,stock_logistics,Stock & Logistics,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,seonwoo.seo@decathlon-demo.com,active,,2018-07-02
+EMP-00233,Hwang Jun-seo,황준서,stock_logistics,Stock & Logistics,,KR,dec-kr-seoul,EMP-00214,Asia/Seoul,junseo.hwang@decathlon-demo.com,inactive,deactivated,2021-07-22
+EMP-00234,Jung Da-eun,정다은,store_lp,Store Loss-Prevention,,KR,dec-kr-seoul,EMP-00020,Asia/Seoul,daeun.jung@decathlon-demo.com,active,,2022-01-05
+EMP-00235,Ryu Woo-jin,류우진,store_manager,Store Manager,,KR,dec-kr-busan,EMP-00017,Asia/Seoul,woojin.ryu@decathlon-demo.com,active,,2020-02-28
+EMP-00236,Kwon A-rin,권아린,assistant_manager,Assistant Store Manager,,KR,dec-kr-busan,EMP-00235,Asia/Seoul,arin.kwon@decathlon-demo.com,active,,2016-09-15
+EMP-00237,Jung Min-jun,정민준,department_leader,Department Leader — Running & Footwear,Running & Footwear,KR,dec-kr-busan,EMP-00236,Asia/Seoul,minjun.jung@decathlon-demo.com,active,,2021-11-05
+EMP-00238,Hwang Do-yoon,황도윤,department_leader,Department Leader — Apparel,Apparel,KR,dec-kr-busan,EMP-00236,Asia/Seoul,doyoon.hwang@decathlon-demo.com,inactive,account_locked,2019-06-20
+EMP-00239,Seo Jung-woo,서정우,department_leader,Department Leader — Fitness,Fitness,KR,dec-kr-busan,EMP-00236,Asia/Seoul,jungwoo.seo@decathlon-demo.com,active,,2025-02-28
+EMP-00240,Song Jun-seo,송준서,sales_associate,Sales Associate,Running & Footwear,KR,dec-kr-busan,EMP-00237,Asia/Seoul,junseo.song@decathlon-demo.com,active,,2021-06-21
+EMP-00241,Hwang Jung-woo,황정우,sales_associate,Sales Associate,Apparel,KR,dec-kr-busan,EMP-00238,Asia/Seoul,jungwoo.hwang@decathlon-demo.com,active,,2023-01-20
+EMP-00242,Yoon Do-yoon,윤도윤,sales_associate,Sales Associate,Fitness,KR,dec-kr-busan,EMP-00239,Asia/Seoul,doyoon.yoon@decathlon-demo.com,active,,2025-11-10
+EMP-00243,Park Ji-min,박지민,sales_associate,Sales Associate,Running & Footwear,KR,dec-kr-busan,EMP-00237,Asia/Seoul,jimin.park@decathlon-demo.com,active,,2021-02-25
+EMP-00244,Choi Yeon-woo,최연우,sales_associate,Sales Associate,Apparel,KR,dec-kr-busan,EMP-00238,Asia/Seoul,yeonwoo.choi@decathlon-demo.com,active,,2022-03-23
+EMP-00245,Kim Su-ah,김수아,sales_associate,Sales Associate,Fitness,KR,dec-kr-busan,EMP-00239,Asia/Seoul,suah.kim@decathlon-demo.com,active,,2015-06-26
+EMP-00246,Lim Seo-yeon,임서연,cashier,Cashier,,KR,dec-kr-busan,EMP-00236,Asia/Seoul,seoyeon.lim@decathlon-demo.com,active,,2020-06-14
+EMP-00247,Yoon Ye-jun,윤예준,cashier,Cashier,,KR,dec-kr-busan,EMP-00236,Asia/Seoul,yejun.yoon@decathlon-demo.com,active,,2023-07-19
+EMP-00248,Kang Su-bin,강수빈,stock_logistics,Stock & Logistics,,KR,dec-kr-busan,EMP-00236,Asia/Seoul,subin.kang@decathlon-demo.com,active,,2017-03-03
+EMP-00249,Seo Yu-jin,서유진,stock_logistics,Stock & Logistics,,KR,dec-kr-busan,EMP-00236,Asia/Seoul,yujin.seo@decathlon-demo.com,active,,2024-11-08
+EMP-00250,Ryu Min-seo,류민서,store_lp,Store Loss-Prevention,,KR,dec-kr-busan,EMP-00020,Asia/Seoul,minseo.ryu@decathlon-demo.com,active,,2017-04-15

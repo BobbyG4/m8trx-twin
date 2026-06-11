@@ -1,0 +1,26 @@
+{
+  "US": {
+    "country": "United States",
+    "currency": "USD",
+    "symbol": "$",
+    "locale": "en-US",
+    "factor": 1.0,
+    "rounding": 0.01
+  },
+  "FR": {
+    "country": "France",
+    "currency": "EUR",
+    "symbol": "€",
+    "locale": "fr-FR",
+    "factor": 0.95,
+    "rounding": 0.01
+  },
+  "KR": {
+    "country": "South Korea",
+    "currency": "KRW",
+    "symbol": "₩",
+    "locale": "ko-KR",
+    "factor": 1350.0,
+    "rounding": 100.0
+  }
+}

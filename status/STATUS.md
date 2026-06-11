@@ -2,42 +2,42 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-03 — Session 4 close)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-11 — Session 5 close)
 
-**Session 4 re-based the store data on live regional catalogs (two-store model)** and closed with a hand-off to a cross-project onboarding plan. **Denver (US)** built from the live US Decathlon Shopify catalog — 2,586 real SKUs, 35,912 EPCs, 100% real images, native US names/prices/sizes. **Seoul (KR city) parked** (images need live-KR re-base). **EPC encoder validated** clean-room vs 169k real warehouse tags (filter 1 / partition 6). Denver **not yet seeded to mother** (gated).
+**Session 5 built + seeded the multi-store chain dataset.** Wave 1 = **14 sites** (10 retail + 4 office), **251 users** (30 inactive), **2,586-SKU** catalog, **277,515 EPCs**, one shared **160-zone** layout, localized USD/EUR/KRW · EN/FR/KO — all under `reference/data/chain/`, deterministic. **Backend seeded it to M8trxDemo** (`tenant_id ecfa6903…`, site-level) and filed an **IMPORT-CONTRACT** + a **5-point corrections** doc + **TWIN-REQ-002**. Applied the biggest correction (**fixtures are `zone_type='fixture'` zones**) and captured everything in a **SEED-PLAYBOOK**, a Phase-2 **ACTIVITY-PLAN**, and an **EXPANSION-PLAN** (Wave 2 / Wave 3).
 
-**NEXT SESSION = Coordinator track:** `status/active/ONBOARDING-BASELINE-HANDOFF-2026-06-03.md` — baseline customer onboarding across core + twin (catalog import, EPC config, product imagery + the full tenant journey) and the UI cleanup. Build as a working-draft.
-
-**Session 4 detail:** `status/session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md`.
+**Session 5 detail:** `status/session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md`.
 
 ### What's seeded in M8trxDemo (live on mother)
 
 | Asset | State |
 |---|---|
-| Tenant/Store | renamed Manhattan → **Denver** (manual edit; threw failures first — onboarding-UX gap noted) |
-| Space | Main Floor, 24m × 25m (600 sqm), 160 zones (Manhattan layout, reused for Denver) |
-| Products | 920 SKUs from Session 3 (Korea-derived) — to be replaced by the Denver US catalog |
-| Items / EPCs | ❌ Still NOT seeded — Denver dataset built (`denver-{assortment,epcs}.csv`, 2,586 SKUs / 35,912 EPCs), seed gated |
+| Tenant | **M8trxDemo** `ecfa6903-5c50-439f-8f80-185982de944e` — chain seeded via direct psql (reversible via tenant-delete; pre-seed backup on mother) |
+| Sites | **14** — 10 retail (US×3 / FR×5 / KR×2) + 4 office (HQ + 3 regional) |
+| Users | **251** — tenant-admin `zenvendemo@gmail.com`; roles → core Profiles (member/site-manager/staff); 30 inactive |
+| Catalog | **2,586 products** (tenant-scoped) + 2,586 images; **USD display** (EUR/KRW in `display_attributes.prices`) |
+| Inventory | **277,515 EPCs** → item/identifier (1:1, `in_stock`) — **site-level only** (no fixture pins yet) |
 
-### Built this session, ready to seed (not yet on mother)
-- **Denver** — `reference/data/analysis/denver-assortment.csv` (real US SKUs + images) + `denver-epcs.csv` (35,912 EPCs) · `scripts/build_denver.py`
-- **EPC encoder** — `reference/data/EPC-ENCODING-DECATHLON.md` (validated)
-- **Operating model** — `reference/data/STORE-OPERATING-MODEL.md` + `.json`
-- **Pipeline + planogram** — `reference/data/INVENTORY-SEEDING-PIPELINE.md`
+### Pending follow-up deploy (data ready)
+Provision the **corrected spaces/zones/fixtures** per retail site (`layout/space-template.json`, 160 zones = 11 area + 149 `zone_type='fixture'`) + place items at fixture-zones via **scan/receive** (corrections §2). Closes the site-level limitation.
 
 ### Immediate next steps (ranked)
 
-1. **Onboarding-baseline plan (Coordinator track)** — `status/active/ONBOARDING-BASELINE-HANDOFF-2026-06-03.md`. Cross-project plan for customer onboarding + UI cleanup. Pull FRs from `9a`, audit core onboarding surfaces, build a working-draft.
-2. **Seed Denver to mother** — `day-start.json` snapshot + `item_identifier`/`thing_location`/product-image mutations from the Denver CSVs; verify inventory schema first; gated ~36k-row prod write; decide tenant naming.
-3. **TrafficGenerator** — Layer 3 loop (sketch ready); needs orchestrator runtime skeleton (`com.m8trx.twin.runtime`) first.
-4. **Seoul (unpark)** — re-base off live KR catalog (Algolia) for products + images; reuse EPC encoder + Nov velocity.
-5. **TransactionGenerator** — from Nov 160k real baskets.
+1. **Resolve the image pipeline with backend** — Shopify hot-link vs **cache bytes** into M8TRX's own asset store. Gates how images scale to Wave 2. *(see Blocked on core)*
+2. **Follow-up deploy** — corrected fixture-zone layout + scan/receive item placement.
+3. **Wave 2 — 10 international stores** (`reference/data/chain/EXPANSION-PLAN.md`) — parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect; validates the playbook both sides.
+4. **Phase-2 activity** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator (people on map) → TransactionGenerator → staff journeys.
+5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC.
 
 ### Blocked on core
 
-- **Service bearer not wired to inventory endpoints** — `InventoryActionController`, and likely others, need `ApiKeyService` injected. Filed in `m8trx-shared/status/CLEANUP-TASKS.md`.
-- **Catalog import onboarding flow** — no product catalog import UI or REST path exists for tenants. Twin works around via Hasura admin. Real customers need this as part of tenant setup. Filed in CLEANUP-TASKS.md as `CATALOG-IMPORT-ONBOARDING`.
-- **MapCanvas rendering** — zones all render as the same green regardless of `zone_type`. Contract at `m8trx-shared/status/cleanup/MAPCANVAS-ZONE-RENDERING-CONTRACT-2026-05-11.md`. Canvas fix is a hard prereq for demo-quality VisionAI display.
+- **Image pipeline (NEW)** — `image` = Shopify CDN hot-link; backend hit an issue; likely need cached bytes in M8TRX's own asset store. Confirm what the seed did + whether core can store/serve cached assets. Part of `CATALOG-IMPORT-ONBOARDING`.
+- **Service bearer not wired to inventory endpoints** — REST inventory 401; `ApiKeyService` injection. `SERVICE-BEARER-INVENTORY` (CLEANUP-TASKS).
+- **Catalog import onboarding flow incl. images** — no tenant product-import path. `CATALOG-IMPORT-ONBOARDING`.
+- **commerce_projection writer** — unfed; commerce dashboards blank on API path. **TWIN-REQ-002** (filed 2026-06-11).
+- **No cold-start/manual location** — inventory location needs a scan/receive event (corrections §2). CLEANUP-TASKS.
+- **No EAS-alarm subscriber** — LP/theft analytics don't surface. API-SURFACE gap.
+- **MapCanvas rendering** — `zone_type` colors (fixed core Session 70/71 per log — re-verify against the new fixture-zones).
 
 ---
 
@@ -76,8 +76,10 @@
 | Brief | Status | Blocks |
 |---|---|---|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
-| `commerce_projection` writer | NOT YET FILED | Scripts 1, 3, 5 |
+| TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
+
+> TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).
 
 ---
 

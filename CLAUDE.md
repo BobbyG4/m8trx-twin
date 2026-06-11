@@ -100,7 +100,7 @@ The **M8trxDemo** tenant is the canonical instance. Lives on mother alongside re
 Running list of schema/API improvements the demo work makes obvious. Each gets filed back to core as a requirement brief; track status here.
 
 - **`fitting_room` → `try_on_zone` generalization** — current Layer-1 spatial primitive is apparel-specific; demo needs footwear bench + watch demo station rendered as try-on zones. Same behavioral analytics work across all kinds. Status: under discussion (Bob + Amy / call); NOT YET FILED.
-- **`commerce_projection` writer** — substrate (mig 112) exists; writer unfed. Headline blocker for the demo's commercial story (3 of 5 scenario scripts depend on it). Pattern: Hasura event trigger on `item_custody_event` SOLD transitions → controller → projection hypertable. Precedent: audit-log capture chain (mig 101). Status: pending audit confirmation in core; NOT YET FILED.
+- **`commerce_projection` writer** — substrate (mig 112) exists; writer unfed. Headline blocker for the demo's commercial story (3 of 5 scenario scripts depend on it). Pattern: Hasura event trigger on `item_custody_event` SOLD transitions → controller → projection hypertable. Precedent: audit-log capture chain (mig 101). Status: **FILED 2026-06-11 as TWIN-REQ-002** (`~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md`), AWAITING ABSORPTION.
 - **`inventory:sell` capability split** — currently piggybacks `inventory:transfer`. Surfaces when scenarios author a "cashier" persona. Status: PRE-EXISTING (in core's CLEANUP-TASKS.md).
 - **Per-vendor field mapping (Lightspeed Retail)** — optional; lets the demo claim "this is Decathlon's real Lightspeed feed" defensibly. Lower priority than commerce_projection. Status: NOT YET FILED.
 
