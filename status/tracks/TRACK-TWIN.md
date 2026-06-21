@@ -8,7 +8,8 @@
 ## Current State
 
 **m8trx-twin:** main branch, Kotlin scaffold compiles, NATS smoke passed. No event emit yet (runtime not built).
-**Chain dataset (Wave 1):** built + committed under `reference/data/chain/` — **14 sites** (10 retail + 4 office), **251 users**, **2,586-SKU** catalog, **277,515 EPCs**, one shared **160-zone** layout (11 area + 149 `zone_type='fixture'`), localized USD/EUR/KRW · EN/FR/KO. Deterministic builders (`build_layout`/`localize_names`/`build_chain`/`build_staff_roster`, sha256 seeds).
+**Chain dataset (Wave 1):** built + committed under `reference/data/chain/` — **14 sites** (10 retail + 4 office), **251 users**, **2,586-SKU** catalog, **277,515 EPCs**, one shared **160-zone** layout (11 area + 149 `zone_type='fixture'`), localized USD/EUR/KRW · EN/FR/KO. Deterministic builders (`build_layout`/`localize_names`/`build_chain`/`build_attributes`/`build_staff_roster`, sha256 seeds).
+**Catalog coding layer (CORE-REQ-001, delivered 2026-06-21):** `assortment.csv` +`brand` (←vendor) +`classification_key`; new `classification.csv` (5 roots + 90 leaves, `attributes_schema`, `lifecycle_type`) + `display_lookup.csv` (colour raw→canonical family ×3 locales, swatch). Decathlon normalisation model; MK/Hansae numeric-code model documented as a seam (`CATALOG-CODING-MODEL.md`). Awaiting core re-seed.
 **M8trxDemo on mother:** **Wave 1 SEEDED** by backend — `tenant_id ecfa6903-5c50-439f-8f80-185982de944e`, via direct psql, **site-level** inventory, USD display, fixtures stored as zones. Reversible via tenant-delete; pre-seed backup on mother.
 **Pending follow-up deploy:** the **corrected fixture-zone layout** + **scan/receive item placement** (so inventory shows at fixtures, not just site-level). Data ready (`layout/space-template.json` + `epcs.csv` fixture codes).
 **EPC encoder:** VALIDATED (`EPC-ENCODING-DECATHLON.md`) — filter 1 / partition 6, round-trips real tags.
@@ -42,6 +43,7 @@
 |-------|--------|--------|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ✅ ABSORBED (mig 127) | — |
 | TWIN-REQ-002 `commerce_projection` writer | 📨 FILED, AWAITING ABSORPTION (2026-06-11) | Scripts 1, 3, 5 |
+| CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | 📦 DELIVERED 2026-06-21 → awaiting core re-seed → ABSORBED | core Things/Discover surface |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ## Key Docs

@@ -19,13 +19,15 @@ reverse-engineer core's tables, invent capability strings, or write to mother.
 
 ```bash
 python3 scripts/localize_names.py       # EN->FR/KO product-name map (enrichment, run first)
-python3 scripts/build_chain.py          # inventory: manifest + per-store assortment/EPCs
+python3 scripts/build_chain.py          # inventory: manifest + per-store assortment/EPCs (+brand/classification_key)
+python3 scripts/build_attributes.py     # coding layer: classification.csv + display_lookup.csv (reads flagship assortment)
 python3 scripts/build_staff_roster.py   # org/staff: roster + org-chart
 ```
 Fully deterministic — regeneration is byte-identical (verified by md5). Per-store seed is a
 **stable SHA-256** of the store id (not Python's per-process-salted `hash()`); roster `seed=42`.
-Config lives in `scripts/chain_config.py` (stores, regions, tiers, org template, name pools) —
-the single source of truth all builders read.
+Config lives in `scripts/chain_config.py` (stores, regions, tiers, org template, name pools) and
+`scripts/catalog_coding.py` (brand/classification/colour coding — CORE-REQ-001) — the single
+source of truth all builders read.
 
 ---
 
@@ -67,6 +69,9 @@ timezone but **no space, zones, fixtures, inventory, or sensors**
 reference/data/chain/
 ├── chain-manifest.json              # site directory: 10 retail stores[] + 4 office_sites[], site_type, tz, currency, counts
 ├── regions.json                     # per-region currency/locale/price-localization rules
+├── classification.csv               # product taxonomy: 5 roots + 90 leaves, lifecycle_type, attributes_schema (CORE-REQ-001 §2)
+├── display_lookup.csv               # raw->display attribute coding (colour), localized en/fr-FR/ko-KR (CORE-REQ-001 §3)
+├── CATALOG-CODING-MODEL.md          # the coding model (Decathlon normalisation + MK/Hansae seam) — read this for §1–§3
 ├── localization/
 │   └── name-localization.csv        # ean -> name_en / name_fr / name_ko (master, 2,586 SKUs)
 ├── layout/
@@ -145,11 +150,13 @@ One row per **SKU carried by that store** (variant-level: a size/color is its ow
 |---|---|
 | `ean` | EAN-13 barcode (real Decathlon GS1-FR) — the product's stable identity |
 | `item_cd` | Decathlon article/SKU code from the source catalog |
+| `brand` | Decathlon passion brand (Quechua, Kiprun, Forclaz, …) — from Shopify `vendor`, authoritative. **CORE-REQ-001 §1** |
 | `category` | planogram bucket: footwear / apparel / accessories / bag_pack / outdoor |
+| `classification_key` | leaf class key → `classification.csv` (`<category>.<product_type-slug>`, stable). **CORE-REQ-001 §2** |
 | `product_type` | finer source type (Shoes, Jacket, Backpack, …) |
 | `name_en` | English product name (real, from the US catalog) |
 | `name_local` | localized display name in the store's language: `name_en` (US), French (FR), Korean (KR). From `localization/name-localization.csv`. Machine gloss — see Localization |
-| `size_us`, `color` | variant attributes |
+| `size_us`, `color` | variant attributes. `color` is cleaned of nbsp noise + coded to a canonical family via `display_lookup.csv`; `size_us` is a class-dependent display axis (see `attributes_schema`) |
 | `price_usd` | base USD price (master) |
 | `price_local` | price in the store's currency (`localize_price` in chain_config.py) |
 | `currency`, `locale` | matches the store's region |
@@ -173,6 +180,43 @@ One row per **physical unit** (one RFID tag = one sellable item). This is the in
 **EPC encoding** — validated Decathlon SGTIN-96 (`filter=1`, `partition=6`, EAN-derived
 company/itemref, sparse 38-bit serial). Every EPC across all 10 stores is **globally unique** and
 **round-trips** to its EAN. Full spec + clean-room encoder: `reference/data/EPC-ENCODING-DECATHLON.md`.
+
+---
+
+## Schema — the catalog coding layer (`classification.csv` + `display_lookup.csv`)
+
+Delivers **CORE-REQ-001** — brand, classification + `attributes_schema`, and coded attributes.
+Full rationale (Decathlon normalisation model + the MK/Hansae numeric-code seam) and the grain
+decision live in **`CATALOG-CODING-MODEL.md`**. Both files are **tenant-scoped** (one corporate
+coding scheme chain-wide; locale variation rides the `locale` axis). Stable keys → idempotent re-seed.
+
+### `classification.csv` — product taxonomy
+One row per class: **5 category roots** (`parent_key=""`) + **90 leaves** (one per real
+`product_type`). `assortment.csv.classification_key` FKs the leaf.
+
+| Column | Notes |
+|---|---|
+| `classification_key` | stable slug: roots = `apparel`/`footwear`/…; leaves = `<category>.<product_type-slug>` (e.g. `footwear.shoes`) |
+| `parent_key` | root key for leaves; empty for roots |
+| `name` | human label (`Footwear`, `Shoes`) |
+| `lifecycle_type` | `serialized` (RFID-tagged sellable unit) or `display_model` (floor demo unit, sold to order — bikes/tents/furniture; 14 classes). Empty on roots |
+| `attributes_schema` | JSON Schema of the class's searchable axes — `color` (`x-coded:true, x-lookup:color`), `brand` (facet), and the **class-dependent size axis** (footwear→`size_us`/`footwear_us`; apparel→`size`/`apparel_alpha`; bag_pack→`capacity`/`volume_liters`; …). This is what makes attributes vertical-portable |
+
+### `display_lookup.csv` — raw→display attribute coding
+The resolution map. Currently codes **`color`**: 135 raw strings × {`en`, `fr-FR`, `ko-KR`} = **405 rows**.
+
+| Column | Notes |
+|---|---|
+| `attribute_name` | the coded attribute (`color`) |
+| `raw_value` | the **stored** value on the product (Decathlon: messy display string `Smoked Black`; MK/Hansae seam: a numeric code `560`) |
+| `display_value` | canonical family, localized (`Black` / `Noir` / `블랙`) |
+| `locale` | `en` / `fr-FR` / `ko-KR` |
+| `visual` | JSON, e.g. `{"swatch":"#1a1a1a"}` |
+
+> **Authenticity (CORE-REQ-001 §3):** Decathlon does **not** numerically code colour, so we don't
+> invent codes — colour is coded by *normalisation* (raw display → canonical family). Size is **not**
+> coded either; it's a class-dependent display axis declared in `attributes_schema`. The numeric-code
+> flavour (MK/Hansae) drops into the same `display_lookup` grain when such a catalog is onboarded.
 
 ---
 

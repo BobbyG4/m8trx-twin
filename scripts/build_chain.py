@@ -21,6 +21,7 @@ from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from chain_config import STORES, REGIONS, TIERS, HQ, OFFICE_SITES, localize_price
+import catalog_coding as cc          # brand/classification/colour coding (CORE-REQ-001)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DET = os.path.join(ROOT, "reference/data/us-catalog/detail")
@@ -126,8 +127,10 @@ def load_master():
                 img = imgs[0]
             variants.append({
                 "ean": ean, "item_cd": (v.get("sku") or "").strip(), "category": cat,
+                "brand": (p.get("vendor") or "").strip(),     # §1 authoritative brand
                 "name_en": p["title"], "product_type": p.get("product_type", ""),
-                "size_us": size, "color": color, "price_usd": v.get("price"),
+                "size_us": size, "color": cc.clean_value(color),   # nbsp/space noise removed
+                "price_usd": v.get("price"),
                 "handle": p["handle"], "image": img, "n_images": len(imgs)})
     # stable order so a store's seeded subset is reproducible
     variants.sort(key=lambda v: v["ean"])
@@ -135,9 +138,9 @@ def load_master():
 
 
 # ── build one store ───────────────────────────────────────────────────────────
-ASSORT_COLS = ["ean", "item_cd", "category", "product_type", "name_en", "name_local",
-               "size_us", "color", "price_usd", "price_local", "currency", "locale",
-               "fixture", "depth", "handle", "image", "n_images"]
+ASSORT_COLS = ["ean", "item_cd", "brand", "category", "classification_key", "product_type",
+               "name_en", "name_local", "size_us", "color", "price_usd", "price_local",
+               "currency", "locale", "fixture", "depth", "handle", "image", "n_images"]
 EPC_COLS = ["epc", "ean", "item_cd", "category", "fixture", "store_id"]
 
 
@@ -186,6 +189,7 @@ def build_store(store, master, global_used, global_epcs, name_map):
         v["fixture"] = fx[rr[v["category"]] % len(fx)]
         rr[v["category"]] += 1
         v["depth"] = depth
+        v["classification_key"] = cc.classification_key(v["category"], v["product_type"])  # §2 link
         # localization
         fr, ko = name_map.get(v["ean"], (v["name_en"], v["name_en"]))
         v["name_local"] = {"US": v["name_en"], "FR": fr, "KR": ko}[store["region"]]
