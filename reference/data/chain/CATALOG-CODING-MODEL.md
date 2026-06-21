@@ -38,14 +38,15 @@ is a messy display string that must be mapped to a canonical family + swatch. Th
 numeric colour code to decode** — inventing one would test our own fiction (CORE-REQ-001 §3
 explicit: "don't invent a code; authenticity is the whole point").
 
-### Model B — MK / HANSAE (documented seam, NOT built here)
+### Model B — MK / HANSAE (BUILT — `reference/data/mk-trend/`)
 
-A structured **style code** whose colour and size **are positional segments**, decoded via a
-per-catalog numeric lookup (e.g. colour `560 → Navy`, size `08 → M`). This is the textbook
-raw-code→display case. The pattern was specced in the **main-project FRs (core-side)** and is
-**segregated from this twin session** — not reproduced here. When an MK/Hansae catalog is
-onboarded, its numeric codes drop straight into `display_lookup` (see below); only the *source*
-of `raw_value` differs (a code segment vs a messy string).
+A structured 15-char **STYLE/COLOR/SIZE** code whose brand, year, season, item, division, and
+colour **are positional code segments**, each decoded to a display via a per-attribute lookup
+(colour `06 → NAVY / 네이비`, item `DC → DENIM COAT`). The textbook raw-code→display case — the
+inverse of Decathlon's opaque-number + messy-string model. Built from the real MK Trend spec
+(`reference/hansaemk/`, operational in the older Zenven product); full writeup in
+**`reference/data/mk-trend/MK-CODING-PROFILE.md`**. Its codes drop straight into the same
+`display_lookup` grain; only the *source* of `raw_value` differs (a code segment vs a messy string).
 
 ---
 
@@ -106,14 +107,23 @@ the assortment columns). Re-seed is byte-identical.
 
 ---
 
-## Wiring the MK/Hansae profile later (the seam)
+## The MK/Hansae profile (built)
 
-When an MK/Hansae catalog is onboarded:
-1. Parse the style code into its colour/size **code segments** (raw values).
-2. Emit `display_lookup` rows with `raw_value=<code>`, `display_value=<word>`, per locale.
-3. Mark the relevant `attributes_schema` axes `x-coded:true, x-lookup:<attr>` (as colour is here).
-4. No change to the table, the loader, or the Discover grounding path.
+Built in `reference/data/mk-trend/` (config/parser `scripts/mk_coding.py`, emitter
+`scripts/build_mk_attributes.py`). It emits the **same three artifacts** as the Decathlon profile:
+- `display_lookup.csv` — colour/item/brand/season/division codes → display, ×{en,ko}; colour's
+  `visual` resolves through the **shared** family map, so MK `06→NAVY` and Decathlon `Asphalt Blue`
+  both land on `Blue`/`#1f4e8c`.
+- `classification.csv` — division roots → item leaves; `attributes_schema` codes MORE axes
+  (colour+brand+season+year) than Decathlon, same schema shape.
+- `assortment-sample.csv` — 2,610-SKU synthetic line, every row a decoded 15-char style code,
+  round-trips 100%.
 
-**Needed from core (segregated now):** the actual MK/Hansae style-code grammar (segment offsets +
-the colour/size code tables) from the main-project FRs. Hand it to a twin session to build the
-profile against a real MK/Hansae sample.
+Proof of portability — the identical `display_lookup` grain holds both models with no schema change:
+```
+Decathlon  color, "Asphalt Blue", Blue,  en, {"swatch":"#1f4e8c"}            (coding = normalisation)
+MK Trend   color, "06",           NAVY,  en, {"swatch":"#1f4e8c","family":"Blue"}  (coding = decode)
+```
+A loader/Discover path that handles one handles the other. See `MK-CODING-PROFILE.md` for the
+grammar, code tables, and boundaries (EPC bit-encoding TBD; one item table had an off-by-one defect,
+sourced from the clean table instead).

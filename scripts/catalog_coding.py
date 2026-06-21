@@ -84,6 +84,9 @@ WORD_FAMILY = {
     "cedar": "Brown", "bronze": "Brown", "hazelnut": "Brown", "cappucino": "Brown",
     "beige": "Beige", "sand": "Beige", "linen": "Beige", "putty": "Beige",
     "cream": "Beige", "ivory": "Beige", "tan": "Beige",
+    # general colour words added for the MK Trend vocabulary (no Decathlon collision)
+    "stone": "Gray", "oatmeal": "Beige", "camel": "Beige", "hunter": "Green",
+    "mustard": "Yellow", "gold": "Yellow", "wine": "Red",
 }
 
 # explicit overrides for tokens the heuristic can't get right / non-colours.

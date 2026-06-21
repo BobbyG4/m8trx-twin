@@ -1,0 +1,345 @@
+attribute_name,raw_value,display_value,locale,visual
+color,00,WHITE,en,"{""swatch"":""#f5f5f5"",""family"":""White""}"
+color,00,화이트,ko,"{""swatch"":""#f5f5f5"",""family"":""White""}"
+color,01,OFF WHITE,en,"{""swatch"":""#f5f5f5"",""family"":""White""}"
+color,01,오프 화이트,ko,"{""swatch"":""#f5f5f5"",""family"":""White""}"
+color,02,IVORY,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,02,아이보리,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,03,MINT,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,03,민트,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,04,MELANGE MINT,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,04,멜란지 민트,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,05,L/NAVY,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,05,라이트 네이비,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,06,NAVY,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,06,네이비,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,07,MELANGE NAVY,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,07,멜란지 네이비,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,08,D/NAVY,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,08,다크 네이비,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,09,MIX,en,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,09,믹스,ko,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,10,STONE,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,10,스톤,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,11,LIGHT GREY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,11,라이트 그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,12,GREY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,12,그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,13,MELANGE GREY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,13,멜란지 그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,14,DARK GREY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,14,다크 그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,15,CHACOAL GREY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,15,차콜 그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,16,KHAKI GRAY,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,16,카키 그레이,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,19,BLACK,en,"{""swatch"":""#1a1a1a"",""family"":""Black""}"
+color,19,블랙,ko,"{""swatch"":""#1a1a1a"",""family"":""Black""}"
+color,20,LIGHT BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,20,라이트 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,21,BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,21,블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,22,MELANGE BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,22,멜란지 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,23,DARK BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,23,다크 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,24,SKY BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,24,스카이 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,25,AQUA BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,25,아쿠아 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,26,COBALT BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,26,코발트 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,27,ROYAL BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,27,로얄 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,28,GREY BLUE,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,28,그레이 블루,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,29,TURKY BLUE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,29,터키 블루,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,30,LIGHT PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,30,라이트 핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,31,PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,31,핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,32,MELANGE PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,32,멜란지 핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,33,D/PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,33,다크 핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,34,CORAL PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,34,코랄 핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,35,INDIAN PINK,en,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,35,인디언 핑크,ko,"{""swatch"":""#e84d8a"",""family"":""Pink""}"
+color,36,RED,en,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,36,레드,ko,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,37,MELANGE RED,en,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,37,멜란지 레드,ko,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,38,WINE,en,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,38,와인,ko,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,39,MELANGE WINE,en,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,39,멜란지 와인,ko,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,40,LIGHT ORANGE,en,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,40,라이트 오렌지,ko,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,41,ORANGE,en,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,41,오렌지,ko,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,42,MELANGE ORANGE,en,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,42,멜란지 오렌지,ko,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,43,DARK ORANGE,en,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,43,다크 오렌지,ko,"{""swatch"":""#e8730f"",""family"":""Orange""}"
+color,44,LEMON YELLOW,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,44,멜란지 옐로우,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,45,LIGHT YELLOW,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,45,라이트 옐로우,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,46,YELLOW,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,46,옐로우,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,47,MELANGE YELLOW,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,47,멜란지 옐로우,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,48,DARK YELLOW,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,48,다크 옐로우,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,49,MUSTARD,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,49,머스타드,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,50,LIGHT GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,50,라이트 그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,51,GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,51,그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,52,MELANGE GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,52,멜란지 그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,53,D/GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,53,다크 그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,54,OLIVE KHAKI,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,54,올리브 카키,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,55,L/KHAKI,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,55,라이트 카키,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,56,KHAKI,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,56,카키,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,57,MELANGE KHAKI,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,57,멜란지 카키,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,58,D/KHAKI,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,58,다크 카키,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,59,HUNTER,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,59,헌터,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,60,L/BROWN,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,60,라이트 브라운,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,61,BROWN,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,61,브라운,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,62,MELANGE BROWN,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,62,멜란지 브라운,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,63,D/BROWN,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,63,다크 브라운,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,64,KHAKI BROWN,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,64,카키 브라운,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,65,CHOCOLATE,en,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,65,초콜릿,ko,"{""swatch"":""#6b4423"",""family"":""Brown""}"
+color,66,BURGUNDY,en,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,66,버건디,ko,"{""swatch"":""#c0392b"",""family"":""Red""}"
+color,68,TURKY GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,68,터키 그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,69,PURPLE,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,69,퍼플,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,70,L/PURPLE,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,70,라이트 퍼플,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,71,PURPLE BLUE,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,71,퍼플,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,72,MELANGE PURPLE,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,72,멜란지 퍼플,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,73,D/PURPLE,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,73,다크 퍼플,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,74,L/VIOLET,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,74,라이트 바이올렛,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,75,VIOLET,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,75,바이올렛,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,76,MELANGE VIOLET,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,76,멜란지 바이올렛,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,77,D/VIOLET,en,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,77,다크 바이올렛,ko,"{""swatch"":""#7d3ca8"",""family"":""Purple""}"
+color,78,GREY PURPLE,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,78,그레이 퍼플,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,79,RAW,en,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,79,로,ko,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,80,OATMEAL,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,80,오트밀,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,81,SAND,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,81,샌드,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,82,L/BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,82,라이트 베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,83,BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,83,베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,84,MELANGE BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,84,멜란지 베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,85,D/BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,85,다크 베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,86,YELLOW BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,86,옐로우 베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,87,CAMEL,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,87,카멜,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,88,KHAKI BEIGE,en,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,88,카키 베이지,ko,"{""swatch"":""#d9c6a5"",""family"":""Beige""}"
+color,89,YELLOW GREEN,en,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,89,옐로우 그린,ko,"{""swatch"":""#3f7d3a"",""family"":""Green""}"
+color,90,VINTAGE,en,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,90,빈티지,ko,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,91,ICE,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,91,아이스,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,92,L/INDIGO,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,92,라이트 인디고,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,93,INDIGO,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,93,인디고,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,94,D/INDIGO,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,94,다크 인디고,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,95,GOLD,en,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,95,골드,ko,"{""swatch"":""#f2c200"",""family"":""Yellow""}"
+color,96,SILVER,en,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,96,실버,ko,"{""swatch"":""#808080"",""family"":""Gray""}"
+color,97,JET BLACK,en,"{""swatch"":""#1a1a1a"",""family"":""Black""}"
+color,97,제트 블랙,ko,"{""swatch"":""#1a1a1a"",""family"":""Black""}"
+color,98,BLUE BLACK,en,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,98,블루 블랙,ko,"{""swatch"":""#1f4e8c"",""family"":""Blue""}"
+color,99,WHOLE COLOR,en,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+color,99,전체칼라,ko,"{""swatch"":""#cccccc"",""family"":""Unspecified""}"
+item,AA,ACCESSORY GLASSES,en,
+item,AA,ACCESSORY GLASSES,ko,
+item,AB,ACCESSORY BAG,en,
+item,AB,ACCESSORY BAG,ko,
+item,AC,ACCESSORY ETC,en,
+item,AC,ACCESSORY 기타,ko,
+item,AG,ACCESSORY GLOVES,en,
+item,AG,ACCESSORY GLOVES,ko,
+item,AH,ACCESSORY HOOD,en,
+item,AH,ACCESSORY HOOD,ko,
+item,AI,INNERWEAR,en,
+item,AI,이너웨어,ko,
+item,AJ,JEWELRY,en,
+item,AJ,주얼리,ko,
+item,AM,ACCESSORY MUFFLER,en,
+item,AM,ACCESSORY MUFFLER,ko,
+item,AO,ACCESSORY SOCKS,en,
+item,AO,ACCESSORY SOCKS,ko,
+item,AP,ACCESSORY CAP,en,
+item,AP,ACCESSORY CAP,ko,
+item,AS,ACCESSORY SHOES,en,
+item,AS,ACCESSORY SHOES,ko,
+item,AT,ACCESSORY BELT,en,
+item,AT,ACCESSORY BELT,ko,
+item,AU,ACCESSORY UMBRELLA,en,
+item,AU,ACCESSORY UMBRELLA,ko,
+item,AW,ACCESSORY WALLET,en,
+item,AW,ACCESSORY WALLET,ko,
+item,AX,ACCESSORY BELT,en,
+item,AX,ACCESSORY BELT,ko,
+item,CT,WOVEN COAT,en,
+item,CT,WOVEN COAT,ko,
+item,CU,CULOTTES -LPGA Added,en,
+item,CU,CULOTTES ?LPGA 추가,ko,
+item,DC,DENIM COAT,en,
+item,DC,DENIM COAT,ko,
+item,DJ,DENIM JACKET,en,
+item,DJ,DENIM JACKET,ko,
+item,DK,DENIM SKIRT,en,
+item,DK,DENIM SKIRT,ko,
+item,DO,DENIM OVER ALL,en,
+item,DO,DENIM OVER ALL,ko,
+item,DP,DENIM PANTS,en,
+item,DP,DENIM PANTS,ko,
+item,DS,DENIM SHIRT,en,
+item,DS,DENIM SHIRT,ko,
+item,DV,DENIM VEST,en,
+item,DV,DENIM VEST,ko,
+item,DW,WOVEN DOWN,en,
+item,DW,WOVEN DOWN,ko,
+item,FA,FABRIC,en,
+item,FA,원단,ko,
+item,FB,SUBSIDIERY,en,
+item,FB,부자재,ko,
+item,JB,WOVEN JUMPER(for BUCKAROO),en,
+item,JB,WOVEN JUMPER(버커루용),ko,
+item,JK,WOVEN JACKET,en,
+item,JK,WOVEN JACKET,ko,
+item,JM,ARTIFICIAL SWEDE COAT,en,
+item,JM,인조무스탕,ko,
+item,JP,WOVEN JUMPER,en,
+item,JP,WOVEN JUMPER,ko,
+item,KC,KNIT CARDIGAN,en,
+item,KC,KNIT CARDIGAN,ko,
+item,KT,KNIT P/OVER,en,
+item,KT,KNIT P/OVER,ko,
+item,KV,KNIT VEST,en,
+item,KV,KNIT VEST,ko,
+item,LI,LEATHER IMITATION,en,
+item,LI,LEATHER IMITATION,ko,
+item,LR,LEATHER REAL,en,
+item,LR,LEATHER REAL,ko,
+item,OP,WOVEN ONE PIECE,en,
+item,OP,WOVEN ONE PIECE,ko,
+item,PT,WOVEN PANTS,en,
+item,PT,WOVEN PANTS,ko,
+item,RB,RAINWEAR BOTTOM -LPGA Added,en,
+item,RB,RAINWEAR BOTTOM ?LPGA 추가,ko,
+item,RJ,RAINWEAR JUMPER -LPGA Added,en,
+item,RJ,RAINWEAR JUMPER ?LPGA추가,ko,
+item,SH,WOVEN SHIRT,en,
+item,SH,WOVEN SHIRT,ko,
+item,SK,WOVEN SKIRT,en,
+item,SK,WOVEN SKIRT,ko,
+item,TJ,C&S JUMPER,en,
+item,TJ,C&S JUMPER,ko,
+item,TK,C&S SKIRT,en,
+item,TK,C&S SKIRT,ko,
+item,TO,C&S O-PIECE,en,
+item,TO,C&S O-PIECE,ko,
+item,TP,C&S PANTS,en,
+item,TP,C&S PANTS,ko,
+item,TS,C&S T-SHIRTS,en,
+item,TS,C&S T-SHIRTS,ko,
+item,UW,UNDERWEAR,en,
+item,UW,UNDERWEAR,ko,
+item,VT,WOVEN VEST,en,
+item,VT,WOVEN VEST,ko,
+item,XX,Sample Cloth,en,
+item,XX,Sample Cloth,ko,
+item,Y1,SHOPPING BAG,en,
+item,Y1,쇼핑백,ko,
+item,Y2,HANGER,en,
+item,Y2,옷걸이,ko,
+item,Y3,원/부폐기,en,
+item,Y3,원/부폐기,ko,
+item,Y4,원/부매각,en,
+item,Y4,원/부매각,ko,
+item,Y5,FREE GIFT,en,
+item,Y5,사은품,ko,
+item,Z0,EVENT,en,
+item,Z0,EVENT행사),ko,
+item,Z1,SPECIAL PLANNED,en,
+item,Z1,기획,ko,
+item,Z2,SPECIAL PLANNED1,en,
+item,Z2,기획1,ko,
+item,Z3,SPECIAL PLANNED2,en,
+item,Z3,기획2,ko,
+item,Z4,SPECIAL PLANNED3,en,
+item,Z4,기획3,ko,
+item,Z5,SPECIAL PLANNED4,en,
+item,Z5,기획4,ko,
+item,Z6,SPECIAL PLANNED5,en,
+item,Z6,기획5,ko,
+item,Z7,SPECIAL PLANNED6,en,
+item,Z7,기획6,ko,
+brand,B,BUCKAROO,en,
+brand,B,BUCKAROO,ko,
+brand,L,LPGA,en,
+brand,L,LPGA,ko,
+brand,N,NBA,en,
+brand,N,NBA,ko,
+brand,O,ANDEW,en,
+brand,O,ANDEW,ko,
+brand,T,TBJ,en,
+brand,T,TBJ,ko,
+season,1,SPRING,en,
+season,1,SPRING,ko,
+season,2,SUMMER,en,
+season,2,SUMMER,ko,
+season,3,FALL,en,
+season,3,FALL,ko,
+season,4,WINTER,en,
+season,4,WINTER,ko,
+season,5,RUNNING,en,
+season,5,RUNNING,ko,
+division,M,제품,en,
+division,M,제품,ko,
+division,P,상품,en,
+division,P,상품,ko,
