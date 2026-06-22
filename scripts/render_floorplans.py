@@ -40,7 +40,7 @@ def render(layout):
         if z["zone_type"] != "fixture":
             continue
         r = z["rect_mm"]; col = COL.get(z["fixture_category"], "#888")
-        if z.get("shape") == "circle":
+        if z.get("geometry_type") == "circle":
             cx = (r["x1"] + r["x2"]) / 2 * sc
             cy = (D - (r["y1"] + r["y2"]) / 2) * sc
             rad = min(r["x2"] - r["x1"], r["y2"] - r["y1"]) / 2 * sc
@@ -83,7 +83,7 @@ def render_comparison(layouts):
             if z["zone_type"] != "fixture":
                 continue
             r = z["rect_mm"]; col = COL.get(z["fixture_category"], "#888")
-            if z.get("shape") == "circle":
+            if z.get("geometry_type") == "circle":
                 cx = ox + (r["x1"] + r["x2"]) / 2 * sc
                 cy = baseY + (dep - (r["y1"] + r["y2"]) / 2) * sc
                 rad = min(r["x2"] - r["x1"], r["y2"] - r["y1"]) / 2 * sc

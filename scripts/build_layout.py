@@ -53,13 +53,30 @@ def asqm(x1, y1, x2, y2):
     return round((x2 - x1) * (y2 - y1) / 1_000_000, 1)
 
 
+def geometry_for(x1, y1, x2, y2, shape="rect", rotation=0):
+    """Mother-canonical zone geometry (verified against live `zone` rows, 2026-06-22):
+      • polygon  → full closed `POLYGON Z` ring in `geometry`; `properties` = {}
+      • circle/ellipse → center `POINT Z` in `geometry`; shape in `properties`
+        (centerX/Y, radiusX/Y in mm, rotation in degrees). circle ⇔ radiusX==radiusY.
+    SRID 0, millimetres, Z=0. The POINT center MUST equal properties.centerX/Y.
+    Returns (geometry_type, geometry_wkt, properties, bbox)."""
+    x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+    if shape == "circle":
+        cx, cy = round((x1 + x2) / 2), round((y1 + y2) / 2)
+        r = round(min(x2 - x1, y2 - y1) / 2)                  # true circle inscribed in the footprint
+        props = {"centerX": cx, "centerY": cy, "radiusX": r, "radiusY": r, "rotation": rotation}
+        return "circle", f"POINT Z ({cx} {cy} 0)", props, (cx - r, cy - r, cx + r, cy + r)
+    ring = f"({x1} {y1} 0, {x2} {y1} 0, {x2} {y2} 0, {x1} {y2} 0, {x1} {y1} 0)"
+    return "polygon", f"POLYGON Z ({ring})", {}, (x1, y1, x2, y2)
+
+
 def fixture(code, name, x1, y1, x2, y2, in_zone, cat, shape="rect", rotation=0):
-    # rect_mm is always the bounding box (ingest-safe). shape/rotation are render hints:
-    # core draws the richer shape if it supports it, else the bounding rect.
+    gtype, geom, props, (bx1, by1, bx2, by2) = geometry_for(x1, y1, x2, y2, shape, rotation)
     return {"code": code, "name": name, "zone_type": "fixture", "parent": "space",
-            "in_area_zone": in_zone, "fixture_category": cat, "shape": shape, "rotation_deg": rotation,
-            "area_sqm": asqm(x1, y1, x2, y2),
-            "rect_mm": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)}}
+            "in_area_zone": in_zone, "fixture_category": cat,
+            "geometry_type": gtype, "geometry": geom, "properties": props,
+            "area_sqm": asqm(bx1, by1, bx2, by2),
+            "rect_mm": {"x1": bx1, "y1": by1, "x2": bx2, "y2": by2}}    # bbox (twin convenience)
 
 
 def cells(x1, y1, x2, y2, ncols, nrows, cw, ch):
@@ -138,9 +155,11 @@ def generate(store):
     NON_CUST = {"Z-03", "Z-05"}
     area_zones = []
     for code, name, zt, x1, y1, x2, y2 in area:
+        gtype, geom, props, (bx1, by1, bx2, by2) = geometry_for(x1, y1, x2, y2)
         z = {"code": code, "name": name, "zone_type": zt, "parent": "space",
+             "geometry_type": gtype, "geometry": geom, "properties": props,
              "area_sqm": asqm(x1, y1, x2, y2), "customer_accessible": code not in NON_CUST,
-             "rect_mm": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)}}
+             "rect_mm": {"x1": bx1, "y1": by1, "x2": bx2, "y2": by2}}
         if code in TRY_ON:
             z["zone_type"] = "try_on_zone"; z["try_on_profile"] = TRY_ON[code]
         area_zones.append(z)
@@ -210,6 +229,11 @@ def generate(store):
     assert not overlaps, f"{sid}: OVERLAPS {overlaps[:6]} ({len(overlaps)})"
     oob = [f["code"] for f in fx if not (0 <= f["rect_mm"]["x1"] and f["rect_mm"]["x2"] <= W and 0 <= f["rect_mm"]["y1"] and f["rect_mm"]["y2"] <= D)]
     assert not oob, f"{sid}: out-of-bounds {oob[:6]}"
+    # circle center must agree between the geometry POINT and properties (live mother had 7/16 mismatched)
+    for f in fx + area_zones:
+        if f["geometry_type"] == "circle":
+            p = f["properties"]
+            assert f["geometry"] == f"POINT Z ({p['centerX']} {p['centerY']} 0)", f"{sid} {f['code']}: center mismatch"
 
     by_cat = {}
     for f in fx:

@@ -42,6 +42,23 @@ Origin (0,0): SW corner.  Entrance: south wall, center.  Checkout: bottom-right.
 
 ---
 
+## Geometry format (matches mother's live `zone` model — verified 2026-06-22)
+
+Every zone (area zones + fixtures) carries `geometry_type`, `geometry` (WKT), and `properties` (JSON),
+in the **SRF-canonical frame: SRID 0, millimetres, Z = 0**. Two shapes:
+
+| `geometry_type` | `geometry` | `properties` |
+|---|---|---|
+| `polygon` (rects + rooms) | full closed `POLYGON Z ((x y 0, …, first repeated))` | `{}` |
+| `circle` (round racks, promo islands; covers ellipses too) | **center only** `POINT Z (cx cy 0)` | `{centerX, centerY, radiusX, radiusY, rotation}` — mm + degrees; circle ⇔ `radiusX==radiusY` |
+
+The circle's center is stored in **both** the `POINT` and `properties` and the generator asserts they're
+**identical** (a real defect on 7/16 live rows — twin generates them in sync). `rect_mm` is kept as a
+twin-side bounding-box convenience (= the polygon bbox / the circle's bbox). `rotation` is degrees,
+0 = axis-aligned.
+
+---
+
 ## Area Zones (11) — unchanged
 
 | Code | Name | Type | x1 | y1 | x2 | y2 |

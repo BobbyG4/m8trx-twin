@@ -127,7 +127,11 @@ side all vary by tier+seed; 0 overlaps + 0 out-of-bounds asserted). Office sites
 > `fixture` codes in that store's `epcs.csv` resolve to the **fixture-zone of the same `code`**, keyed
 > `(store_id, code)`. Codes (`GF-R1-U2`, `PW-01`, `GPS-01`…) repeat across stores but geometry differs.
 
-- **`zones[]`** — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, `rect_mm{x1,y1,x2,y2}`.
+- **`zones[]`** — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, plus the
+  **mother-canonical geometry** (SRID 0, mm, Z=0): `geometry_type` (`polygon`|`circle`), `geometry`
+  (WKT — `POLYGON Z` ring for polygons, center-only `POINT Z` for circles), `properties` (`{}` for
+  polygons; `{centerX,centerY,radiusX,radiusY,rotation}` for circles/ellipses). `rect_mm{x1,y1,x2,y2}`
+  is a twin-side bounding-box convenience. (Round racks + promo islands use `circle`; see STORE-LAYOUT.md § Geometry format.)
   - **Area zones** (11, every store): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
     try-on zones add `try_on_profile` (`footwear_bench`/`equipment_test`/`apparel_room`); plus
     `customer_accessible`. Codes `Z-01`…`Z-11`.

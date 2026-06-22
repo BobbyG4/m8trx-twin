@@ -116,7 +116,7 @@
 <rect x="149.8" y="151.7" width="7.7" height="15.7" fill="#64748b" fill-opacity="0.8"/>
 <rect x="158.6" y="151.7" width="7.7" height="15.7" fill="#64748b" fill-opacity="0.8"/>
 <rect x="131.9" y="169.4" width="34.7" height="2.8" fill="#94a3b8" fill-opacity="0.8"/>
-<circle cx="58.2" cy="162.9" r="3.9" fill="#fb923c" fill-opacity="0.85"/>
+<circle cx="58.1" cy="162.9" r="3.9" fill="#fb923c" fill-opacity="0.85"/>
 <circle cx="77.9" cy="162.9" r="3.9" fill="#be185d" fill-opacity="0.85"/>
 <circle cx="97.7" cy="162.9" r="3.9" fill="#fb923c" fill-opacity="0.85"/>
 <text x="8.0" y="187.0" font-size="9.5" fill="#0f172a">us-denver · 741m²</text>
@@ -431,7 +431,7 @@
 <rect x="682.9" y="151.7" width="8.4" height="15.7" fill="#64748b" fill-opacity="0.8"/>
 <rect x="654.1" y="169.4" width="37.5" height="2.8" fill="#94a3b8" fill-opacity="0.8"/>
 <circle cx="600.0" cy="162.9" r="3.9" fill="#fb923c" fill-opacity="0.85"/>
-<circle cx="614.1" cy="162.9" r="3.9" fill="#be185d" fill-opacity="0.85"/>
+<circle cx="614.2" cy="162.9" r="3.9" fill="#be185d" fill-opacity="0.85"/>
 <circle cx="628.3" cy="162.9" r="3.9" fill="#fb923c" fill-opacity="0.85"/>
 <text x="558.2" y="187.0" font-size="9.5" fill="#0f172a">fr-paris · 660m²</text>
 <text x="558.2" y="199.0" font-size="8" fill="#64748b">flagship · 7×5 · 104fx</text>
