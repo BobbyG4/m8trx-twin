@@ -1,28 +1,30 @@
 <svg viewBox="0 0 900.0 945.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
-<title>dec-kr-busan — medium floor (324 m² footprint) — 34 fixtures, 0 overlaps</title>
+<title>dec-kr-busan — medium floor (324 m² footprint) — 39 fixtures, 0 overlaps</title>
 <rect x="0" y="0" width="900.0" height="900.0" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
-<rect x="230.0" y="750.0" width="240.0" height="150.0" fill="#dcfce7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="233.0" y="761.0" font-size="8" fill="#475569">Z-01</text>
-<rect x="550.0" y="700.0" width="350.0" height="200.0" fill="#e2e8f0" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="711.0" font-size="8" fill="#475569">Z-02</text>
-<rect x="0.0" y="150.0" width="150.0" height="600.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="161.0" font-size="8" fill="#475569">Z-03</text>
-<rect x="150.0" y="500.0" width="400.0" height="250.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="511.0" font-size="8" fill="#475569">Z-04</text>
-<rect x="0.0" y="0.0" width="900.0" height="150.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="11.0" font-size="8" fill="#475569">Z-05</text>
-<rect x="550.0" y="500.0" width="350.0" height="200.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="511.0" font-size="8" fill="#475569">Z-11</text>
-<rect x="550.0" y="150.0" width="350.0" height="350.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="161.0" font-size="8" fill="#475569">Z-10</text>
-<rect x="150.0" y="150.0" width="136.0" height="350.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="161.0" font-size="8" fill="#475569">Z-06</text>
-<rect x="286.0" y="150.0" width="80.0" height="350.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="289.0" y="161.0" font-size="8" fill="#475569">Z-07</text>
-<rect x="366.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="369.0" y="161.0" font-size="8" fill="#475569">Z-09</text>
-<rect x="458.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="461.0" y="161.0" font-size="8" fill="#475569">Z-08</text>
+<rect x="230.0" y="750.0" width="240.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="233.0" y="761.0" font-size="8" fill="#334155" font-weight="400">Z-01</text>
+<rect x="550.0" y="700.0" width="350.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="553.0" y="711.0" font-size="8" fill="#334155" font-weight="400">Z-02</text>
+<rect x="0.0" y="150.0" width="150.0" height="600.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="3.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-03</text>
+<rect x="0.0" y="0.0" width="900.0" height="150.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="3.0" y="11.0" font-size="8" fill="#334155" font-weight="400">Stockroom</text>
+<rect x="550.0" y="500.0" width="350.0" height="200.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="553.0" y="511.0" font-size="8" fill="#334155" font-weight="400">Z-11</text>
+<rect x="550.0" y="150.0" width="350.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="553.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-10</text>
+<rect x="150.0" y="150.0" width="136.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-06</text>
+<rect x="286.0" y="150.0" width="80.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="289.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-07</text>
+<rect x="366.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="369.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-09</text>
+<rect x="458.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="461.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-08</text>
+<rect x="150.0" y="625.0" width="400.0" height="125.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="636.0" font-size="8" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
+<rect x="150.0" y="500.0" width="400.0" height="125.0" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="511.0" font-size="8" fill="#334155" font-weight="600">General / Multi-sport</text>
 <rect x="231.7" y="676.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="231.7" y="646.7" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="368.3" y="676.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
@@ -57,6 +59,11 @@
 <rect x="730.0" y="710.0" width="160.0" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="557.5" y="867.5" width="335.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <circle cx="350.0" cy="810.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
-<text x="6" y="916.0" font-size="11" fill="#0f172a">dec-kr-busan · medium · 18000×18000mm · 2×2 gondolas · 45 zones · 0 overlaps</text>
-<text x="6" y="932.0" font-size="9" fill="#64748b">blue=gondolas · purple=walls · red=GPS · amber=accessories · teal/green=gait+bench · pink=fitting · grey=checkout · entrance=bottom</text>
+<rect x="10.0" y="10.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="165.0" y="80.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="527.5" y="80.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="165.0" y="20.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="527.5" y="20.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<text x="6" y="916.0" font-size="11" fill="#0f172a">dec-kr-busan · medium · 18000×18000mm · 2×2 gondolas · 51 zones · 0 overlaps</text>
+<text x="6" y="932.0" font-size="9" fill="#64748b">tinted bands = sport-universe depts · blue=gondolas · purple=walls · dark grey band (top) = back-of-house (dock+racks) · entrance=bottom</text>
 </svg>

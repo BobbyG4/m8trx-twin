@@ -1,28 +1,32 @@
 <svg viewBox="0 0 950.0 1020.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
-<title>dec-fr-marseille — medium floor (370 m² footprint) — 34 fixtures, 0 overlaps</title>
+<title>dec-fr-marseille — medium floor (370 m² footprint) — 39 fixtures, 0 overlaps</title>
 <rect x="0" y="0" width="950.0" height="975.0" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
-<rect x="235.0" y="825.0" width="255.0" height="150.0" fill="#dcfce7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="238.0" y="836.0" font-size="8" fill="#475569">Z-01</text>
-<rect x="575.0" y="775.0" width="375.0" height="200.0" fill="#e2e8f0" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="786.0" font-size="8" fill="#475569">Z-02</text>
-<rect x="0.0" y="150.0" width="150.0" height="675.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="161.0" font-size="8" fill="#475569">Z-03</text>
-<rect x="150.0" y="450.0" width="425.0" height="375.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="461.0" font-size="8" fill="#475569">Z-04</text>
-<rect x="0.0" y="0.0" width="950.0" height="150.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="11.0" font-size="8" fill="#475569">Z-05</text>
-<rect x="575.0" y="450.0" width="375.0" height="325.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="461.0" font-size="8" fill="#475569">Z-11</text>
-<rect x="575.0" y="150.0" width="375.0" height="300.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="161.0" font-size="8" fill="#475569">Z-10</text>
-<rect x="150.0" y="150.0" width="144.5" height="300.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="161.0" font-size="8" fill="#475569">Z-06</text>
-<rect x="294.5" y="150.0" width="85.0" height="300.0" fill="#ffffff" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="297.5" y="161.0" font-size="8" fill="#475569">Z-07</text>
-<rect x="379.5" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="382.5" y="161.0" font-size="8" fill="#475569">Z-09</text>
-<rect x="477.2" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>
-<text x="480.2" y="161.0" font-size="8" fill="#475569">Z-08</text>
+<rect x="235.0" y="825.0" width="255.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="238.0" y="836.0" font-size="8" fill="#334155" font-weight="400">Z-01</text>
+<rect x="575.0" y="775.0" width="375.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="578.0" y="786.0" font-size="8" fill="#334155" font-weight="400">Z-02</text>
+<rect x="0.0" y="150.0" width="150.0" height="675.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="3.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-03</text>
+<rect x="0.0" y="0.0" width="950.0" height="150.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="3.0" y="11.0" font-size="8" fill="#334155" font-weight="400">Stockroom</text>
+<rect x="575.0" y="450.0" width="375.0" height="325.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="578.0" y="461.0" font-size="8" fill="#334155" font-weight="400">Z-11</text>
+<rect x="575.0" y="150.0" width="375.0" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="578.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-10</text>
+<rect x="150.0" y="150.0" width="144.5" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-06</text>
+<rect x="294.5" y="150.0" width="85.0" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="297.5" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-07</text>
+<rect x="379.5" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="382.5" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-09</text>
+<rect x="477.2" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="480.2" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-08</text>
+<rect x="150.0" y="691.9" width="425.0" height="133.1" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="702.9" font-size="8" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
+<rect x="150.0" y="583.1" width="425.0" height="108.8" fill="#dbeafe" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="594.1" font-size="8" fill="#334155" font-weight="600">Running & Trail</text>
+<rect x="150.0" y="450.0" width="425.0" height="133.1" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="153.0" y="461.0" font-size="8" fill="#334155" font-weight="600">General / Multi-sport</text>
 <rect x="240.0" y="746.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="240.0" y="716.2" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="385.0" y="746.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
@@ -57,6 +61,11 @@
 <rect x="767.5" y="785.0" width="172.5" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <rect x="582.5" y="942.5" width="360.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
 <circle cx="362.5" cy="885.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
-<text x="6" y="991.0" font-size="11" fill="#0f172a">dec-fr-marseille · medium · 19000×19500mm · 3×2 gondolas · 45 zones · 0 overlaps</text>
-<text x="6" y="1007.0" font-size="9" fill="#64748b">blue=gondolas · purple=walls · red=GPS · amber=accessories · teal/green=gait+bench · pink=fitting · grey=checkout · entrance=bottom</text>
+<rect x="10.0" y="10.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="165.0" y="80.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="552.5" y="80.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="165.0" y="20.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="552.5" y="20.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<text x="6" y="991.0" font-size="11" fill="#0f172a">dec-fr-marseille · medium · 19000×19500mm · 3×2 gondolas · 52 zones · 0 overlaps</text>
+<text x="6" y="1007.0" font-size="9" fill="#64748b">tinted bands = sport-universe depts · blue=gondolas · purple=walls · dark grey band (top) = back-of-house (dock+racks) · entrance=bottom</text>
 </svg>

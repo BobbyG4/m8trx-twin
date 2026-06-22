@@ -33,40 +33,42 @@ TIERS = {
 # Real-anchored cities + plausible Decathlon addresses + correct IANA timezones.
 # target_pieces overrides per store (flagships vary 34k–36k). sqm reused from the
 # established 600 sqm Decathlon-City layout (STORE-LAYOUT.md) unless noted.
+# lat/lon = WGS84 decimal degrees, geocoded to each store's actual address (realistic, not
+# surveyed). Populates site.latitude/longitude so the geo map can plot every site.
 STORES = [
     # US — 3 flagships, 3 distinct US timezones
     {"id": "dec-us-denver", "region": "US", "city": "Denver", "state": "CO",
      "address": "1515 16th Street Mall, Denver, CO 80202", "tz": "America/Denver",
-     "tier": "flagship", "target_pieces": 36000, "sqm": 600},
+     "lat": 39.74750, "lon": -104.99620, "tier": "flagship", "target_pieces": 36000, "sqm": 600},
     {"id": "dec-us-nyc", "region": "US", "city": "New York", "state": "NY",
      "address": "620 6th Avenue, New York, NY 10011", "tz": "America/New_York",
-     "tier": "flagship", "target_pieces": 34000, "sqm": 600},
+     "lat": 40.74050, "lon": -73.99420, "tier": "flagship", "target_pieces": 34000, "sqm": 600},
     {"id": "dec-us-sf", "region": "US", "city": "San Francisco", "state": "CA",
      "address": "1 Stockton Street, San Francisco, CA 94108", "tz": "America/Los_Angeles",
-     "tier": "flagship", "target_pieces": 34000, "sqm": 600},
+     "lat": 37.78570, "lon": -122.40650, "tier": "flagship", "target_pieces": 34000, "sqm": 600},
     # FR — 5 stores, Decathlon home market
     {"id": "dec-fr-paris", "region": "FR", "city": "Paris", "state": "Île-de-France",
      "address": "26 Avenue de Wagram, 75008 Paris", "tz": "Europe/Paris",
-     "tier": "flagship", "target_pieces": 36000, "sqm": 600},
+     "lat": 48.87660, "lon": 2.29560, "tier": "flagship", "target_pieces": 36000, "sqm": 600},
     {"id": "dec-fr-lyon", "region": "FR", "city": "Lyon", "state": "Auvergne-Rhône-Alpes",
      "address": "112 Cours Charlemagne, 69002 Lyon", "tz": "Europe/Paris",
-     "tier": "large", "target_pieces": 28000, "sqm": 520},
+     "lat": 45.74300, "lon": 4.81800, "tier": "large", "target_pieces": 28000, "sqm": 520},
     {"id": "dec-fr-lille", "region": "FR", "city": "Villeneuve-d'Ascq", "state": "Hauts-de-France",
      "address": "Centre Commercial V2, 59650 Villeneuve-d'Ascq", "tz": "Europe/Paris",
-     "tier": "large", "target_pieces": 28000, "sqm": 520},
+     "lat": 50.62300, "lon": 3.13200, "tier": "large", "target_pieces": 28000, "sqm": 520},
     {"id": "dec-fr-marseille", "region": "FR", "city": "Marseille", "state": "Provence-Alpes-Côte d'Azur",
      "address": "11 Avenue de Bonneveine, 13008 Marseille", "tz": "Europe/Paris",
-     "tier": "medium", "target_pieces": 18000, "sqm": 420},
+     "lat": 43.25400, "lon": 5.38500, "tier": "medium", "target_pieces": 18000, "sqm": 420},
     {"id": "dec-fr-bordeaux", "region": "FR", "city": "Bordeaux", "state": "Nouvelle-Aquitaine",
      "address": "Rue du Professeur Georges Jeanneney, 33300 Bordeaux", "tz": "Europe/Paris",
-     "tier": "medium", "target_pieces": 18000, "sqm": 420},
+     "lat": 44.88700, "lon": -0.56800, "tier": "medium", "target_pieces": 18000, "sqm": 420},
     # KR — 2 stores
     {"id": "dec-kr-seoul", "region": "KR", "city": "Seoul", "state": "Seoul",
      "address": "416 Gangnam-daero, Gangnam-gu, Seoul 06367", "tz": "Asia/Seoul",
-     "tier": "large", "target_pieces": 28000, "sqm": 520},
+     "lat": 37.49420, "lon": 127.02900, "tier": "large", "target_pieces": 28000, "sqm": 520},
     {"id": "dec-kr-busan", "region": "KR", "city": "Busan", "state": "Busan",
      "address": "30 Centum 1-ro, Haeundae-gu, Busan 48058", "tz": "Asia/Seoul",
-     "tier": "medium", "target_pieces": 18000, "sqm": 420},
+     "lat": 35.16900, "lon": 129.13000, "tier": "medium", "target_pieces": 18000, "sqm": 420},
 ]
 
 # ── tenant ────────────────────────────────────────────────────────────────────
@@ -86,16 +88,16 @@ TENANT = {
 OFFICE_SITES = [
     {"id": "dec-hq-global", "region": "FR", "country": "France", "city": "Villeneuve-d'Ascq",
      "address": "4 Boulevard de Mons, 59650 Villeneuve-d'Ascq", "tz": "Europe/Paris",
-     "site_type": "office", "office_role": "global_hq"},
+     "lat": 50.61100, "lon": 3.17800, "site_type": "office", "office_role": "global_hq"},
     {"id": "dec-us-region", "region": "US", "country": "United States", "city": "New York",
      "address": "110 Fifth Avenue, New York, NY 10011", "tz": "America/New_York",
-     "site_type": "office", "office_role": "regional_hq"},
+     "lat": 40.73900, "lon": -73.99300, "site_type": "office", "office_role": "regional_hq"},
     {"id": "dec-fr-region", "region": "FR", "country": "France", "city": "Paris",
      "address": "70 Rue de Tocqueville, 75017 Paris", "tz": "Europe/Paris",
-     "site_type": "office", "office_role": "regional_hq"},
+     "lat": 48.88400, "lon": 2.30800, "site_type": "office", "office_role": "regional_hq"},
     {"id": "dec-kr-region", "region": "KR", "country": "South Korea", "city": "Seoul",
      "address": "14 Teheran-ro, Gangnam-gu, Seoul 06236", "tz": "Asia/Seoul",
-     "site_type": "office", "office_role": "regional_hq"},
+     "lat": 37.50000, "lon": 127.02700, "site_type": "office", "office_role": "regional_hq"},
 ]
 HQ = OFFICE_SITES[0]                                    # global HQ (back-compat alias)
 OFFICE_BY_REGION = {o["region"]: o for o in OFFICE_SITES if o["office_role"] == "regional_hq"}

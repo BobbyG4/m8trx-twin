@@ -9,6 +9,8 @@
     "city": "Villeneuve-d'Ascq",
     "address": "4 Boulevard de Mons, 59650 Villeneuve-d'Ascq",
     "tz": "Europe/Paris",
+    "lat": 50.611,
+    "lon": 3.178,
     "site_type": "office",
     "office_role": "global_hq"
   },
@@ -19,8 +21,8 @@
     "retail_sites": 10,
     "office_sites": 4,
     "skus_master": 2586,
-    "sku_rows_all_stores": 22944,
-    "epcs_all_stores": 277515
+    "sku_rows_all_stores": 22975,
+    "epcs_all_stores": 102675
   },
   "stores": [
     {
@@ -31,6 +33,8 @@
       "city": "Denver",
       "state": "CO",
       "address": "1515 16th Street Mall, Denver, CO 80202",
+      "latitude": 39.7475,
+      "longitude": -104.9962,
       "timezone": "America/Denver",
       "currency": "USD",
       "locale": "en-US",
@@ -49,21 +53,64 @@
           "depth": 26000,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 129,
-        "area_zones": 11,
-        "fixture_zones": 118,
+        "zones_total": 143,
+        "area_zones": 16,
+        "fixture_zones": 127,
         "try_on_zones": 3,
+        "departments": 6,
+        "backroom_racks": 8,
         "gondola_grid": "6×7"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "cycling",
+          "label": "Cycling"
+        },
+        {
+          "code": "D-06",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 2586,
-      "epc_count": 35994,
+      "epc_count": 15005,
       "epc_by_category": {
-        "footwear": 5897,
-        "accessories": 4836,
-        "outdoor": 243,
-        "apparel": 24330,
-        "bag_pack": 688
+        "apparel": 10250,
+        "accessories": 1488,
+        "bag_pack": 685,
+        "outdoor": 181,
+        "footwear": 2401
       },
+      "epc_by_department": {
+        "snow": 253,
+        "general": 17,
+        "hike_camp": 1203,
+        "climb": 404,
+        "running": 427,
+        "cycling": 201
+      },
+      "boh_epc": 2785,
       "files": {
         "assortment": "stores/dec-us-denver/assortment.csv",
         "epcs": "stores/dec-us-denver/epcs.csv"
@@ -77,6 +124,8 @@
       "city": "New York",
       "state": "NY",
       "address": "620 6th Avenue, New York, NY 10011",
+      "latitude": 40.7405,
+      "longitude": -73.9942,
       "timezone": "America/New_York",
       "currency": "USD",
       "locale": "en-US",
@@ -95,21 +144,70 @@
           "depth": 29500,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 117,
-        "area_zones": 11,
-        "fixture_zones": 106,
+        "zones_total": 132,
+        "area_zones": 17,
+        "fixture_zones": 115,
         "try_on_zones": 3,
+        "departments": 7,
+        "backroom_racks": 8,
         "gondola_grid": "7×5"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "cycling",
+          "label": "Cycling"
+        },
+        {
+          "code": "D-06",
+          "key": "water",
+          "label": "Watersports"
+        },
+        {
+          "code": "D-07",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 2586,
-      "epc_count": 33951,
+      "epc_count": 14642,
       "epc_by_category": {
-        "footwear": 5483,
-        "accessories": 4617,
-        "outdoor": 234,
-        "apparel": 23002,
-        "bag_pack": 615
+        "apparel": 9840,
+        "accessories": 1522,
+        "bag_pack": 735,
+        "outdoor": 181,
+        "footwear": 2364
       },
+      "epc_by_department": {
+        "snow": 254,
+        "general": 10,
+        "hike_camp": 1201,
+        "climb": 401,
+        "running": 423,
+        "cycling": 202,
+        "water": 7
+      },
+      "boh_epc": 2694,
       "files": {
         "assortment": "stores/dec-us-nyc/assortment.csv",
         "epcs": "stores/dec-us-nyc/epcs.csv"
@@ -123,6 +221,8 @@
       "city": "San Francisco",
       "state": "CA",
       "address": "1 Stockton Street, San Francisco, CA 94108",
+      "latitude": 37.7857,
+      "longitude": -122.4065,
       "timezone": "America/Los_Angeles",
       "currency": "USD",
       "locale": "en-US",
@@ -141,21 +241,64 @@
           "depth": 29500,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 106,
-        "area_zones": 11,
-        "fixture_zones": 95,
+        "zones_total": 120,
+        "area_zones": 16,
+        "fixture_zones": 104,
         "try_on_zones": 3,
+        "departments": 6,
+        "backroom_racks": 8,
         "gondola_grid": "6×5"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "cycling",
+          "label": "Cycling"
+        },
+        {
+          "code": "D-06",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 2586,
-      "epc_count": 33681,
+      "epc_count": 14580,
       "epc_by_category": {
-        "footwear": 5546,
-        "accessories": 4466,
-        "outdoor": 232,
-        "apparel": 22808,
-        "bag_pack": 629
+        "apparel": 9732,
+        "accessories": 1485,
+        "bag_pack": 685,
+        "outdoor": 182,
+        "footwear": 2496
       },
+      "epc_by_department": {
+        "snow": 254,
+        "general": 17,
+        "hike_camp": 1202,
+        "climb": 405,
+        "running": 428,
+        "cycling": 202
+      },
+      "boh_epc": 2683,
       "files": {
         "assortment": "stores/dec-us-sf/assortment.csv",
         "epcs": "stores/dec-us-sf/epcs.csv"
@@ -169,6 +312,8 @@
       "city": "Paris",
       "state": "Île-de-France",
       "address": "26 Avenue de Wagram, 75008 Paris",
+      "latitude": 48.8766,
+      "longitude": 2.2956,
       "timezone": "Europe/Paris",
       "currency": "EUR",
       "locale": "fr-FR",
@@ -187,21 +332,70 @@
           "depth": 27500,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 115,
-        "area_zones": 11,
-        "fixture_zones": 104,
+        "zones_total": 130,
+        "area_zones": 17,
+        "fixture_zones": 113,
         "try_on_zones": 3,
+        "departments": 7,
+        "backroom_racks": 8,
         "gondola_grid": "7×5"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "cycling",
+          "label": "Cycling"
+        },
+        {
+          "code": "D-06",
+          "key": "water",
+          "label": "Watersports"
+        },
+        {
+          "code": "D-07",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 2586,
-      "epc_count": 35805,
+      "epc_count": 14943,
       "epc_by_category": {
-        "footwear": 5862,
-        "accessories": 4814,
-        "outdoor": 243,
-        "apparel": 24238,
-        "bag_pack": 648
+        "apparel": 10229,
+        "accessories": 1415,
+        "bag_pack": 751,
+        "outdoor": 180,
+        "footwear": 2368
       },
+      "epc_by_department": {
+        "snow": 254,
+        "general": 10,
+        "hike_camp": 1198,
+        "climb": 404,
+        "running": 427,
+        "cycling": 201,
+        "water": 7
+      },
+      "boh_epc": 2772,
       "files": {
         "assortment": "stores/dec-fr-paris/assortment.csv",
         "epcs": "stores/dec-fr-paris/epcs.csv"
@@ -215,6 +409,8 @@
       "city": "Lyon",
       "state": "Auvergne-Rhône-Alpes",
       "address": "112 Cours Charlemagne, 69002 Lyon",
+      "latitude": 45.743,
+      "longitude": 4.818,
       "timezone": "Europe/Paris",
       "currency": "EUR",
       "locale": "fr-FR",
@@ -233,21 +429,58 @@
           "depth": 24000,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 72,
-        "area_zones": 11,
-        "fixture_zones": 61,
+        "zones_total": 83,
+        "area_zones": 15,
+        "fixture_zones": 68,
         "try_on_zones": 3,
+        "departments": 5,
+        "backroom_racks": 6,
         "gondola_grid": "5×3"
       },
-      "sku_count": 2400,
-      "epc_count": 28061,
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
+      "sku_count": 2408,
+      "epc_count": 9669,
       "epc_by_category": {
-        "footwear": 4568,
-        "apparel": 18981,
-        "accessories": 3784,
-        "bag_pack": 521,
-        "outdoor": 207
+        "outdoor": 149,
+        "apparel": 6560,
+        "accessories": 906,
+        "footwear": 1614,
+        "bag_pack": 440
       },
+      "epc_by_department": {
+        "hike_camp": 1073,
+        "snow": 234,
+        "running": 410,
+        "general": 198,
+        "climb": 374
+      },
+      "boh_epc": 1714,
       "files": {
         "assortment": "stores/dec-fr-lyon/assortment.csv",
         "epcs": "stores/dec-fr-lyon/epcs.csv"
@@ -261,6 +494,8 @@
       "city": "Villeneuve-d'Ascq",
       "state": "Hauts-de-France",
       "address": "Centre Commercial V2, 59650 Villeneuve-d'Ascq",
+      "latitude": 50.623,
+      "longitude": 3.132,
       "timezone": "Europe/Paris",
       "currency": "EUR",
       "locale": "fr-FR",
@@ -279,21 +514,52 @@
           "depth": 24000,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 70,
-        "area_zones": 11,
-        "fixture_zones": 59,
+        "zones_total": 80,
+        "area_zones": 14,
+        "fixture_zones": 66,
         "try_on_zones": 3,
+        "departments": 4,
+        "backroom_racks": 6,
         "gondola_grid": "4×4"
       },
-      "sku_count": 2400,
-      "epc_count": 27781,
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
+      "sku_count": 2410,
+      "epc_count": 9797,
       "epc_by_category": {
-        "apparel": 18735,
-        "footwear": 4543,
-        "accessories": 3797,
-        "outdoor": 197,
-        "bag_pack": 509
+        "apparel": 6742,
+        "bag_pack": 476,
+        "accessories": 915,
+        "footwear": 1519,
+        "outdoor": 145
       },
+      "epc_by_department": {
+        "general": 444,
+        "hike_camp": 1128,
+        "running": 341,
+        "climb": 392
+      },
+      "boh_epc": 1764,
       "files": {
         "assortment": "stores/dec-fr-lille/assortment.csv",
         "epcs": "stores/dec-fr-lille/epcs.csv"
@@ -307,6 +573,8 @@
       "city": "Marseille",
       "state": "Provence-Alpes-Côte d'Azur",
       "address": "11 Avenue de Bonneveine, 13008 Marseille",
+      "latitude": 43.254,
+      "longitude": 5.385,
       "timezone": "Europe/Paris",
       "currency": "EUR",
       "locale": "fr-FR",
@@ -325,21 +593,46 @@
           "depth": 19500,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 45,
-        "area_zones": 11,
-        "fixture_zones": 34,
+        "zones_total": 52,
+        "area_zones": 13,
+        "fixture_zones": 39,
         "try_on_zones": 3,
+        "departments": 3,
+        "backroom_racks": 4,
         "gondola_grid": "3×2"
       },
-      "sku_count": 1800,
-      "epc_count": 18033,
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
+      "sku_count": 1804,
+      "epc_count": 4816,
       "epc_by_category": {
-        "apparel": 12216,
-        "footwear": 2924,
-        "bag_pack": 343,
-        "outdoor": 135,
-        "accessories": 2415
+        "accessories": 496,
+        "footwear": 753,
+        "outdoor": 73,
+        "apparel": 3264,
+        "bag_pack": 230
       },
+      "epc_by_department": {
+        "hike_camp": 796,
+        "running": 275,
+        "general": 585
+      },
+      "boh_epc": 760,
       "files": {
         "assortment": "stores/dec-fr-marseille/assortment.csv",
         "epcs": "stores/dec-fr-marseille/epcs.csv"
@@ -353,6 +646,8 @@
       "city": "Bordeaux",
       "state": "Nouvelle-Aquitaine",
       "address": "Rue du Professeur Georges Jeanneney, 33300 Bordeaux",
+      "latitude": 44.887,
+      "longitude": -0.568,
       "timezone": "Europe/Paris",
       "currency": "EUR",
       "locale": "fr-FR",
@@ -371,21 +666,46 @@
           "depth": 20500,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 49,
-        "area_zones": 11,
-        "fixture_zones": 38,
+        "zones_total": 56,
+        "area_zones": 13,
+        "fixture_zones": 43,
         "try_on_zones": 3,
+        "departments": 3,
+        "backroom_racks": 4,
         "gondola_grid": "3×2"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 1800,
-      "epc_count": 18061,
+      "epc_count": 4993,
       "epc_by_category": {
-        "apparel": 12185,
-        "footwear": 2957,
-        "bag_pack": 337,
-        "accessories": 2444,
-        "outdoor": 138
+        "apparel": 3464,
+        "footwear": 685,
+        "accessories": 468,
+        "outdoor": 82,
+        "bag_pack": 294
       },
+      "epc_by_department": {
+        "general": 576,
+        "running": 236,
+        "hike_camp": 828
+      },
+      "boh_epc": 814,
       "files": {
         "assortment": "stores/dec-fr-bordeaux/assortment.csv",
         "epcs": "stores/dec-fr-bordeaux/epcs.csv"
@@ -399,6 +719,8 @@
       "city": "Seoul",
       "state": "Seoul",
       "address": "416 Gangnam-daero, Gangnam-gu, Seoul 06367",
+      "latitude": 37.4942,
+      "longitude": 127.029,
       "timezone": "Asia/Seoul",
       "currency": "KRW",
       "locale": "ko-KR",
@@ -417,21 +739,58 @@
           "depth": 24000,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 91,
-        "area_zones": 11,
-        "fixture_zones": 80,
+        "zones_total": 102,
+        "area_zones": 15,
+        "fixture_zones": 87,
         "try_on_zones": 3,
+        "departments": 5,
+        "backroom_racks": 6,
         "gondola_grid": "5×5"
       },
-      "sku_count": 2400,
-      "epc_count": 28118,
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "running",
+          "label": "Running & Trail"
+        },
+        {
+          "code": "D-03",
+          "key": "climb",
+          "label": "Climbing & Mountaineering"
+        },
+        {
+          "code": "D-04",
+          "key": "snow",
+          "label": "Snow & Ski"
+        },
+        {
+          "code": "D-05",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
+      "sku_count": 2409,
+      "epc_count": 9507,
       "epc_by_category": {
-        "apparel": 19162,
-        "footwear": 4557,
-        "bag_pack": 518,
-        "outdoor": 197,
-        "accessories": 3684
+        "apparel": 6472,
+        "footwear": 1462,
+        "bag_pack": 477,
+        "accessories": 951,
+        "outdoor": 145
       },
+      "epc_by_department": {
+        "running": 409,
+        "hike_camp": 1077,
+        "climb": 363,
+        "snow": 230,
+        "general": 206
+      },
+      "boh_epc": 1647,
       "files": {
         "assortment": "stores/dec-kr-seoul/assortment.csv",
         "epcs": "stores/dec-kr-seoul/epcs.csv"
@@ -445,6 +804,8 @@
       "city": "Busan",
       "state": "Busan",
       "address": "30 Centum 1-ro, Haeundae-gu, Busan 48058",
+      "latitude": 35.169,
+      "longitude": 129.13,
       "timezone": "Asia/Seoul",
       "currency": "KRW",
       "locale": "ko-KR",
@@ -463,21 +824,40 @@
           "depth": 18000,
           "origin": "SW corner (0,0)"
         },
-        "zones_total": 45,
-        "area_zones": 11,
-        "fixture_zones": 34,
+        "zones_total": 51,
+        "area_zones": 12,
+        "fixture_zones": 39,
         "try_on_zones": 3,
+        "departments": 2,
+        "backroom_racks": 4,
         "gondola_grid": "2×2"
       },
+      "departments": [
+        {
+          "code": "D-01",
+          "key": "hike_camp",
+          "label": "Hiking, Trekking & Camping"
+        },
+        {
+          "code": "D-02",
+          "key": "general",
+          "label": "General / Multi-sport"
+        }
+      ],
       "sku_count": 1800,
-      "epc_count": 18030,
+      "epc_count": 4723,
       "epc_by_category": {
-        "apparel": 12297,
-        "footwear": 2769,
-        "outdoor": 134,
-        "accessories": 2490,
-        "bag_pack": 340
+        "footwear": 688,
+        "outdoor": 76,
+        "apparel": 3246,
+        "bag_pack": 227,
+        "accessories": 486
       },
+      "epc_by_department": {
+        "general": 868,
+        "hike_camp": 767
+      },
+      "boh_epc": 776,
       "files": {
         "assortment": "stores/dec-kr-busan/assortment.csv",
         "epcs": "stores/dec-kr-busan/epcs.csv"
@@ -493,6 +873,8 @@
       "country": "France",
       "city": "Villeneuve-d'Ascq",
       "address": "4 Boulevard de Mons, 59650 Villeneuve-d'Ascq",
+      "latitude": 50.611,
+      "longitude": 3.178,
       "timezone": "Europe/Paris",
       "has_space": false,
       "has_inventory": false,
@@ -508,6 +890,8 @@
       "country": "United States",
       "city": "New York",
       "address": "110 Fifth Avenue, New York, NY 10011",
+      "latitude": 40.739,
+      "longitude": -73.993,
       "timezone": "America/New_York",
       "has_space": false,
       "has_inventory": false,
@@ -523,6 +907,8 @@
       "country": "France",
       "city": "Paris",
       "address": "70 Rue de Tocqueville, 75017 Paris",
+      "latitude": 48.884,
+      "longitude": 2.308,
       "timezone": "Europe/Paris",
       "has_space": false,
       "has_inventory": false,
@@ -538,6 +924,8 @@
       "country": "South Korea",
       "city": "Seoul",
       "address": "14 Teheran-ro, Gangnam-gu, Seoul 06236",
+      "latitude": 37.5,
+      "longitude": 127.027,
       "timezone": "Asia/Seoul",
       "has_space": false,
       "has_inventory": false,

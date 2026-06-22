@@ -15,8 +15,12 @@ COL = {"gondola_front": "#2563eb", "gondola_back": "#3b82f6", "perimeter_west": 
        "perimeter_east": "#7c3aed", "gps_case": "#dc2626", "accessories_wall": "#f59e0b",
        "footwear_bench": "#10b981", "gait_treadmill": "#14b8a6", "fitting_stall": "#ec4899",
        "fitting_service": "#f472b6", "checkout": "#64748b", "impulse_rack": "#94a3b8",
-       "round_rack": "#be185d", "promo_island": "#fb923c"}
+       "round_rack": "#be185d", "promo_island": "#fb923c",
+       "receiving_dock": "#334155", "backroom_rack": "#475569"}
 ZONE_FILL = {"try_on_zone": "#fef3c7", "entry_exit": "#dcfce7", "checkout": "#e2e8f0"}
+# sport-universe department band tints (soft, distinct per universe) + BOH
+DEPT_FILL = {"hike_camp": "#dcfce7", "running": "#dbeafe", "climb": "#ffedd5", "snow": "#cffafe",
+             "cycling": "#f3e8ff", "water": "#e0f2fe", "general": "#f1f5f9", "boh": "#e2e8f0"}
 
 
 def render(layout):
@@ -32,10 +36,15 @@ def render(layout):
         if z["zone_type"] == "fixture":
             continue
         r = z["rect_mm"]
+        dept = z.get("department")
+        boh = z["code"] == "Z-05"
+        fill = DEPT_FILL.get(dept, DEPT_FILL["boh"] if boh else ZONE_FILL.get(z["zone_type"], "#ffffff"))
+        label = z["name"] if (dept or boh) else z["code"]
         s.append(f'<rect x="{fx(r["x1"])}" y="{fy(r["y2"])}" width="{round((r["x2"]-r["x1"])*sc,1)}" '
-                 f'height="{round((r["y2"]-r["y1"])*sc,1)}" fill="{ZONE_FILL.get(z["zone_type"],"#ffffff")}" '
-                 f'fill-opacity="0.5" stroke="#cbd5e1" stroke-width="1"/>')
-        s.append(f'<text x="{round(fx(r["x1"])+3,1)}" y="{round(fy(r["y2"])+11,1)}" font-size="8" fill="#475569">{z["code"]}</text>')
+                 f'height="{round((r["y2"]-r["y1"])*sc,1)}" fill="{fill}" '
+                 f'fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>')
+        s.append(f'<text x="{round(fx(r["x1"])+3,1)}" y="{round(fy(r["y2"])+11,1)}" font-size="8" '
+                 f'fill="#334155" font-weight="{"600" if dept else "400"}">{label}</text>')
     for z in layout["zones"]:
         if z["zone_type"] != "fixture":
             continue
@@ -53,8 +62,8 @@ def render(layout):
     c = layout["counts"]
     s.append(f'<text x="6" y="{round(D*sc+16,1)}" font-size="11" fill="#0f172a">{layout["store_id"]} · {layout["tier"]} · '
              f'{W}×{D}mm · {c["gondola_rows"]}×{c["gondola_units"]} gondolas · {c["zones_total"]} zones · 0 overlaps</text>')
-    s.append(f'<text x="6" y="{round(D*sc+32,1)}" font-size="9" fill="#64748b">blue=gondolas · purple=walls · '
-             f'red=GPS · amber=accessories · teal/green=gait+bench · pink=fitting · grey=checkout · entrance=bottom</text>')
+    s.append(f'<text x="6" y="{round(D*sc+32,1)}" font-size="9" fill="#64748b">tinted bands = sport-universe depts · '
+             f'blue=gondolas · purple=walls · dark grey band (top) = back-of-house (dock+racks) · entrance=bottom</text>')
     s.append('</svg>')
     return "\n".join(s)
 

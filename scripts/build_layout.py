@@ -20,6 +20,11 @@ import json, os, hashlib, random, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from chain_config import STORES
+import sport_universe as su          # brand→sport-universe departments
+
+# our store tiers (flagship/large/medium) → Decathlon format buckets the universe model speaks
+TIER_BUCKET = {"flagship": "flagship", "large": "medium", "medium": "city"}
+BOH_RACKS = {"flagship": 8, "large": 6, "medium": 4}   # backroom rack count by tier
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "reference/data/chain")
@@ -136,7 +141,7 @@ def generate(store):
         ("Z-01", "Entrance", "entry_exit", ent_x1, 0, ent_x1 + ent_w, SOUTH),
         ("Z-02", "Checkout Area", "checkout", east_x1, 0, W, co_y2),
         ("Z-03", "Non-Retail Left Strip", "region", 0, SOUTH, WEST, D - STOCK),
-        ("Z-04", "Main Sales Floor", "region", sales_x1, hall_y1, sales_x2, hall_y2),
+        # Z-04 (was single "Main Sales Floor") is replaced below by sport-universe DEPARTMENT bands
         ("Z-05", "Stockroom", "region", 0, D - STOCK, W, D),
         ("Z-11", "Service Cluster", "region", east_x1, co_y2, W, spec_y1),
         ("Z-10", "Fitting Rooms", "region", east_x1, spec_y1, W, spec_y2),
@@ -175,16 +180,64 @@ def generate(store):
     rows = min(max_rows, max(2, base["rows"] + rng.choice([-1, 0, 0])))
     max_units = int((gx2 - gx1 - 300) / (UNIT_W + 300))
     units = min(max_units, max(2, base["rows"] + rng.choice([-1, 0, 1])))
-    for x1, y1, x2, y2, r, c in cells(gx1, hall_y1, gx2, hall_y2, units, rows, UNIT_W, GOND_DEPTH):
-        rr, uu = rows - r, c + 1                          # R1 = south (front of store)
-        fx.append(fixture(f"GF-R{rr}-U{uu}", f"Gondola R{rr} Front U{uu}", x1, y1, x2, y1 + 600, "Z-04", "gondola_front"))
-        fx.append(fixture(f"GB-R{rr}-U{uu}", f"Gondola R{rr} Back U{uu}", x1, y1 + 600, x2, y2, "Z-04", "gondola_back"))
-    # ── perimeter wall bays (one column each side of the hall) ──
+    gcells = cells(gx1, hall_y1, gx2, hall_y2, units, rows, UNIT_W, GOND_DEPTH)
+    rows_y = {}                                            # gondola-row r -> (y_lo, y_hi)
+    for x1, y1, x2, y2, r, c in gcells:
+        rows_y[r] = (y1, y1 + GOND_DEPTH)
+
+    # ── DEPARTMENTS: carve the hall into sport-universe bands (replaces single Z-04) ──
+    # contiguous gondola-row blocks, south(front)→north, biggest universe first.
+    dept_keys = su.universes_for_tier(TIER_BUCKET[tier], store_seed(sid))
+    nb = min(len(dept_keys), rows)
+    dept_keys = dept_keys[:nb]
+    if "general" not in dept_keys:                         # keep the multi-sport catch-all
+        dept_keys[-1] = "general"
+    per = [rows // nb + (1 if i < rows % nb else 0) for i in range(nb)]
+    row_dept = {}
+    rstart = 0
+    for di, cnt in enumerate(per):
+        for r in range(rstart, rstart + cnt):
+            row_dept[r] = di
+        rstart += cnt
+    dept_rows = {di: sorted(r for r, d in row_dept.items() if d == di) for di in range(nb)}
+    bounds = [hall_y1]
+    for di in range(nb - 1):
+        last_r, next_r = dept_rows[di][-1], dept_rows[di + 1][0]
+        bounds.append(round((rows_y[last_r][1] + rows_y[next_r][0]) / 2))
+    bounds.append(hall_y2)
+    dept_code = {di: f"D-{di + 1:02d}" for di in range(nb)}
+    for di in range(nb):
+        key = dept_keys[di]
+        gtype, geom, props, (bx1, by1, bx2, by2) = geometry_for(sales_x1, bounds[di], sales_x2, bounds[di + 1])
+        area_zones.append({"code": dept_code[di], "name": su.label_for(key), "zone_type": "region",
+                           "parent": "space", "department": key,
+                           "geometry_type": gtype, "geometry": geom, "properties": props,
+                           "area_sqm": asqm(sales_x1, bounds[di], sales_x2, bounds[di + 1]),
+                           "customer_accessible": True,
+                           "rect_mm": {"x1": bx1, "y1": by1, "x2": bx2, "y2": by2}})
+
+    def dept_by_y(yc):                                     # perimeter bays: band containing y-center
+        for di in range(nb):
+            if bounds[di] <= yc < bounds[di + 1]:
+                return di
+        return nb - 1
+
+    # ── gondola fixtures, each tagged with its department ──
+    for x1, y1, x2, y2, r, c in gcells:
+        di = row_dept[r]; rr, uu = rows - r, c + 1         # R1 = south (front of store)
+        gf = fixture(f"GF-R{rr}-U{uu}", f"Gondola R{rr} Front U{uu}", x1, y1, x2, y1 + 600, dept_code[di], "gondola_front")
+        gb = fixture(f"GB-R{rr}-U{uu}", f"Gondola R{rr} Back U{uu}", x1, y1 + 600, x2, y2, dept_code[di], "gondola_back")
+        gf["department"] = gb["department"] = dept_keys[di]
+        fx += [gf, gb]
+    # ── perimeter wall bays (one column each side) — tagged by the band they fall in ──
     pbays = max(3, rows)
-    for x1, y1, x2, y2, r, c in fill(sales_x1, hall_y1, sales_x1 + WALL_D, hall_y2, 1, pbays):
-        fx.append(fixture(f"PW-{r+1:02d}", f"West Wall Bay {r+1}", x1, y1, x2, y2, "Z-04", "perimeter_west"))
-    for x1, y1, x2, y2, r, c in fill(sales_x2 - WALL_D, hall_y1, sales_x2, hall_y2, 1, pbays):
-        fx.append(fixture(f"PE-{r+1:02d}", f"East Wall Bay {r+1}", x1, y1, x2, y2, "Z-04", "perimeter_east"))
+    for side, label, role, sx1, sx2 in (("PW", "West", "perimeter_west", sales_x1, sales_x1 + WALL_D),
+                                        ("PE", "East", "perimeter_east", sales_x2 - WALL_D, sales_x2)):
+        for x1, y1, x2, y2, r, c in fill(sx1, hall_y1, sx2, hall_y2, 1, pbays):
+            di = dept_by_y((y1 + y2) / 2)
+            pf = fixture(f"{side}-{r+1:02d}", f"{label} Wall Bay {r+1}", x1, y1, x2, y2, dept_code[di], role)
+            pf["department"] = dept_keys[di]
+            fx.append(pf)
     # ── specialty fixtures (counts seeded; fill-placed so they always fit their zone) ──
     z = {a["code"]: a["rect_mm"] for a in area_zones}
     def rect(c): r = z[c]; return (r["x1"], r["y1"], r["x2"], r["y2"])
@@ -223,6 +276,21 @@ def generate(store):
                           x1, y1, x2, y2, "Z-01",
                           "round_rack" if rack else "promo_island", shape="circle"))
 
+    # ── back-of-house: Stockroom (Z-05) made real — receiving dock + lean backroom racks ──
+    # non-customer (Z-05 ∈ NON_CUST); gives restock / receiving / stocktake a real from-location.
+    bz = z["Z-05"]
+    dock_w = 2600
+    fx.append(fixture("RCV-01", "Receiving Dock", bz["x1"] + 200, bz["y1"] + 200,
+                      bz["x1"] + 200 + dock_w, bz["y2"] - 200, "Z-05", "receiving_dock"))
+    n_rack = BOH_RACKS[tier]
+    rcols = (n_rack + 1) // 2
+    for x1, y1, x2, y2, r, c in fill(bz["x1"] + 200 + dock_w + 300, bz["y1"] + 200, bz["x2"] - 200, bz["y2"] - 200, rcols, 2):
+        idx = r * rcols + c + 1
+        if idx <= n_rack:
+            br = fixture(f"BR-{idx:02d}", f"Backroom Rack {idx}", x1, y1, x2, y2, "Z-05", "backroom_rack")
+            br["department"] = "boh"
+            fx.append(br)
+
     zones = area_zones + fx
     # ── per-store verification ──
     overlaps = [(fx[i]["code"], fx[j]["code"]) for i in range(len(fx)) for j in range(i + 1, len(fx)) if _overlap(fx[i], fx[j]) > 0]
@@ -246,7 +314,10 @@ def generate(store):
         "coordinate_units": "millimeters", "geometry": "rectangles -> POLYGON Z, SRID 0",
         "counts": {"zones_total": len(zones), "area_zones": len(area_zones), "fixture_zones": len(fx),
                    "try_on_zones": sum(1 for a in area_zones if a["zone_type"] == "try_on_zone"),
+                   "departments": nb, "backroom_racks": n_rack,
                    "gondola_rows": rows, "gondola_units": units},
+        "departments": [{"code": dept_code[di], "key": dept_keys[di], "label": su.label_for(dept_keys[di])}
+                        for di in range(nb)],
         "zones": zones,
         "crossing_slices": [{"code": "CS-01", "name": "Main Entrance Gate", "zone_code": "Z-01",
                              "y": 600, "x_start": ent_x1, "x_end": ent_x1 + ent_w, "eas_gate": True}],
@@ -269,7 +340,8 @@ def main():
         c = tmpl["counts"]
         tot_fx += c["fixture_zones"]
         print(f"  {store['id']:<18} {store['tier']:<9} {tmpl['footprint_mm']['width']}×{tmpl['footprint_mm']['depth']}mm  "
-              f"{c['gondola_rows']}×{c['gondola_units']} gondolas  {c['zones_total']:>3} zones ({c['fixture_zones']} fx)  0 overlaps")
+              f"{c['gondola_rows']}×{c['gondola_units']} gond  {c['departments']} depts  {c['backroom_racks']} racks  "
+              f"{c['zones_total']:>3} zones ({c['fixture_zones']} fx)  0 overlaps")
     print(f"\nwrote {len(retail)} layouts ({tot_fx} fixture-zones total). All asserted overlap-free + in-bounds.")
 
 
