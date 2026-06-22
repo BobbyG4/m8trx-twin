@@ -2,7 +2,7 @@
 
 **What this is:** the plan for the *dynamic* layer — the event stream that makes the seeded chain
 **live** and, crucially, **produces the events every analytics surface reads**. Phase 1 built the
-**set** (sites · spaces · 114 zones/fixtures · catalog · 277,515 opening-state items · 250 users).
+**set** (sites · per-store departmentalized spaces + lean BOH · catalog + coding · 102,675 opening-state items · 250 users).
 Phase 2 is the **play**.
 
 **Design principle — model backwards from the analytics.** Every behavior below exists because a
@@ -25,7 +25,7 @@ is read from `scan_event` at the **fixture-zone**).
 |---|---|---|---|
 | **Customers** | synthetic shoppers, spawned per arrival | ❌ no — created at runtime (`personSessionStart`) | TrafficGenerator + a persona/journey |
 | **Staff** | the 250 real users, scheduled into shifts | ✅ yes (Phase 1) | StaffShiftGenerator + staff journeys |
-| **Items** | the 277,515 tags — they **react** | ✅ yes (opening stock) | customer & staff handling (each touch = a location event) |
+| **Items** | the 102,675 tags — they **react** | ✅ yes (opening stock) | customer & staff handling (each touch = a location event) |
 
 **Items are the connective tissue.** A customer or staff member acting on an item produces an RFID
 location change — `scan_event.zone_id` at a **fixture-zone**. Item movement is what ties traffic,
@@ -165,7 +165,7 @@ field mapping (Lightspeed Retail)"** insight (twin `CLAUDE.md` §Insights — NO
 
 ## Build order (shortest path to "looks alive", then to "full analytics")
 
-1. **Opening-stock placement** — scan/receive the 277k items to their fixture-zones → inventory surfaces light up. *(data ready; the follow-up deploy)*
+1. **Opening-stock placement** — scan/receive the 102.7k items to their department/BOH fixture-zones → inventory surfaces light up. *(data ready; the reseed)*
 2. **Runtime skeleton + emit path** — unblock REST (service bearer).
 3. **TrafficGenerator + customer journeys w/ item micro-movement** → people on the map + RFID movement. *Biggest visual win; NATS-only, no core blocker.*
 4. **TransactionGenerator** → sales. *(commerce dashboards gated on TWIN-REQ-002)*

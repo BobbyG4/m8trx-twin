@@ -16,8 +16,9 @@ rework round the first time (Session 5, 2026-06-11).
 
 Produce a deterministic, disposable dataset under `reference/data/chain/`, hand it to backend, they
 seed M8trxDemo (reversible via tenant-delete). Last run: **14 sites** (10 retail + 4 office) · **251
-users** (250 staff + tenant-admin, 30 inactive) · **2,586 products** · **277,515 EPCs** · 11 zones +
-103 fixtures shared layout · 5 timezones · 3 currencies.
+users** (250 staff + tenant-admin, 30 inactive) · **2,586 products** + coding layer · **102,675 EPCs**
+(realistic size curves, ~18% back-of-house) · **10 per-store departmentalized floors + lean BOH** ·
+14 sites with lat/long · 5 timezones · 3 currencies.
 
 ### Pipeline (deterministic — byte-identical every run)
 ```bash
@@ -36,14 +37,13 @@ name pools, TENANT). Per-store seed = `sha256(store_id)` (NOT Python `hash()` �
 ### 1. Fixtures ARE zones (`zone_type='fixture'`) — not a separate table  ⚠ biggest one
 Core's space canvas renders fixtures as **`zone` rows with `zone_type='fixture'`**, children of the
 space alongside area/checkout/try_on zones. **The `fixture` table is unused (0 rows in every working
-space).** A floor = area-zones + fixture-zones (e.g. **11 + 103 = 114 zones**). Importing fixtures
+space).** A floor = area-zones (incl. sport-universe **department bands** + **BOH**) + fixture-zones (per-store, ~50–130 total). Importing fixtures
 into the `fixture` table → **canvas renders nothing** (had to be redone last time).
-- **Generate accordingly:** present the 103 fixtures as `zone_type='fixture'` zones — either one
+- **Generate accordingly:** present the fixtures as `zone_type='fixture'` zones — either one
   unified `zones[]` carrying `zone_type`, or keep `fixtures[]` but state at the top that *each becomes
   a `zone_type='fixture'` zone at import* (parent = its `zone_code`).
 - Geometry was correct, keep it: **mm, SW origin (0,0), rectangles → `POLYGON Z` SRID 0.**
-- ✅ **DONE** (Session 5, 2026-06-11; regenerated 2026-06-22 realism pass — overlap-free parametric grid): `build_layout.py` emits a unified `zones[]` of **114** =
-  11 area + 103 `zone_type='fixture'` (each with `in_area_zone` + `fixture_category`).
+- ✅ **DONE** (Session 5, 2026-06-11; 2026-06-22 realism pass — departments + BOH, overlap-free parametric grid): `build_layout.py` emits a unified per-store `zones[]`: base area zones + **2–7 sport-universe department bands** + lean BOH + N `zone_type='fixture'` (each with `in_area_zone` + `fixture_category` + `department`).
   each `stores/<id>/layout.json` is canvas-ready — no fix-up next import. The `epcs.csv` `fixture` code →
   the fixture-zone of the same `code`.
 

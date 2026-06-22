@@ -7,6 +7,20 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 7 (2026-06-22 · Twin) — OPEN (reseed pending)**
+Reseed-dataset realism overhaul. Carved the floor into **sport-universe departments** from `brand`
+(flagship 7 / large 4–5 / medium 2–3; new `sport_universe.py`; Decathlon's real "univers" model,
+decided after web research on departments + back-of-house), made the **Stockroom a real lean
+back-of-house** (receiving dock + racks; 18% of each style staged → a from-location for restock),
+and fixed Bob's **flat-depth "88-pair shoe"** with realistic **size curves** (new `size_curve.py`;
+per-style bell, colour-aware) — dropping inventory **277,515 → 102,675 EPCs** (the old total was the
+bug; density knob `TIER_SCALE` ~2× for testing variety + realism). Added **lat/long to all 14 sites**
+(was 0/14 on mother → geo map had nothing to plot). Rewrote `DEPLOY-HANDOFF.md` as the authoritative
+**reseed hand-off** (in-place: site-coord UPDATE · drop+recreate departmentalized spaces + BOH ·
+catalog enrich · re-import 102.7k items — EPC strings changed, so re-import not re-locate); synced
+CHAIN-DATA-SPEC + IMPORT-MAPPING; updated STATUS + TRACK. Committed `17872e5` (feat) + `be0f712`
+(docs). **Reseed NOT yet run on mother — session held OPEN to amend the dataset during the seed.**
+
 **Session 6 (2026-06-22 · Twin)**
 Catalog-coding + store-layout overhaul. Delivered **CORE-REQ-001** (inverse core→twin) catalog
 attribute coding — `brand` (←vendor), `classification.csv` (+per-class `attributes_schema`),
@@ -55,6 +69,7 @@ Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), Even
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 7 | 2026-06-22 | **OPEN** — reseed realism overhaul: sport-universe departments + lean BOH + realistic size curves (88-pair-shoe fix, 277k→102k EPCs) + site geo (14 lat/long); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |
 | 6 | 2026-06-22 | CORE-REQ-001 catalog coding delivered + **ABSORBED** by core; MK/Hansae 2nd coding profile built (portability proof); jackson 2.18→2.21 (CVEs); 134-overlap layout bug fixed → 10 unique per-store layouts; mother-canonical zone geometry (circle POINT Z + properties / polygon POLYGON Z) | [→](session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md) |
 | 5 | 2026-06-11 | Multi-store chain dataset (14 sites, 251 users, 277k EPCs) seeded; backend corrections digested into playbook; fixtures-as-zones applied; Phase-2 activity + Wave-2/3 roadmap | [→](session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md) |
 | 4 | 2026-06-03 | Re-base on live catalogs — Denver (US, real+images) built; Seoul parked; EPC encoder validated; onboarding hand-off | [→](session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md) |

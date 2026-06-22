@@ -2,43 +2,49 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-22 — Session 6 close)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-22 — Session 7, **OPEN**: reseed pending)
 
-**Session 6 = catalog-coding + store-layout overhaul. All committed + deterministic; NOT yet reseeded to mother → a full reseed is the #1 next step.**
+**Session 7 = reseed-dataset realism overhaul. Sport-universe departments + lean back-of-house + realistic size curves + site geo; reseed hand-off rewritten. All committed + deterministic. The RESEED ITSELF HAS NOT RUN on mother — session kept OPEN to amend the dataset if the seed surfaces issues.**
 
-- **CORE-REQ-001 (inverse core→twin) DELIVERED + ABSORBED** — catalog attribute coding: `brand` (←Shopify vendor), `classification.csv` (5 roots + 90 leaves + per-class `attributes_schema`), `display_lookup.csv` (colour raw→canonical family ×3 locales + swatch). Decathlon **normalisation** model. Core absorbed 2026-06-21 (mother loaded + verified; brief `status: absorbed`, `merged-commit: eb39526`). Core built a multi-catalog SurfaceProfile architecture from our input.
-- **MK/Hansae numeric-code coding profile BUILT** — `reference/data/mk-trend/` (the 2nd, contrasting coding model, from the real MK Trend spec in `reference/hansaemk/`). Proves attribute-coding is vertical-portable (same `display_lookup`/`classification` grain). Multi-catalog architecture input filed to core (`m8trx-shared/twin/insights/2026-06-22-multi-catalog-coding-architecture.md`).
-- **Store layouts overhauled** — fixed the **134-overlap** bug (root cause: twin's hand-authored coords, NOT core's seed) AND went **per-store unique**: `build_layout.py` is now parametric → **10 distinct floors** seeded off `store_id` (324–741 m², grids 2×2–6×7, 0 overlaps + 0 OOB asserted), `build_chain.py` layout-driven planogram, checkout lanes scale by tier (4/3/2), circular front-of-store feature displays added. Floor-plan SVGs via `scripts/render_floorplans.py`.
-- **Geometry now matches mother's live `zone` model** (verified vs real rows) — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0.
-- **jackson 2.18.2→2.21.3** (HIGH CVEs, 2026-06-22 tech-watch).
+- **Sport-universe DEPARTMENTS** — floor carved into Decathlon "univers" bands from `brand` (CORE-REQ-001 payoff): flagship 7 / large 4–5 / medium 2–3. `sport_universe.py` (brand→universe, e.g. Quechua/Forclaz→Hiking, Kiprun→Running, Simond→Climbing, Wedze→Snow, Van Rysel→Cycling); `build_layout.py` emits department `region` bands (replacing the single "Main Sales Floor"); `build_chain.py` places each SKU in its department (absent universes fold to *General* in small stores). Decided after research — Decathlon's real organizing unit is the sport universe w/ a "Sport Leader" each.
+- **Lean BACK-OF-HOUSE** — Stockroom (Z-05) is now real: `receiving_dock` + `backroom_rack` fixtures; **18% of each style staged to the backroom** (a real from-location for restock/receiving/stocktake). Decathlon-honest (lean ~10–15% footprint; their stores minimise BOH).
+- **Realistic SIZE CURVES** — `size_curve.py`: per-STYLE depth budget × size-curve allocation (bell over distinct sizes, split across colours, color-aware). **Fixes the flat-depth bug** Bob caught (the "89 of one size" — actually 88-pair styles). Footwear now ~40 pairs/style, ~5 facings/modal size, thin tails. **Inventory 277,515 → 102,675 EPCs** (the old number was the bug inflating depth; with 464 styles, realistic depth can't be 277k). Density knob `TIER_SCALE` in `build_chain.py` (~2×) — Bob chose higher for testing variety + realism.
+- **SITE GEO** — lat/long on all 14 sites (geocoded to address) in `chain_config.py` → populates `site.latitude/longitude` (was **0/14 populated** on mother; geo map had nothing to plot). Reseed adds an `UPDATE site` on the 14 existing rows.
+- **Reseed hand-off REWRITTEN** — `reference/data/chain/DEPLOY-HANDOFF.md` §RESEED-2026-06-22 is the authoritative instruction (in-place mechanism); `CHAIN-DATA-SPEC.md` + `IMPORT-MAPPING.md` synced.
 
-**Commits:** twin `f24c82c` (coding) · `345f9b8` (MK) · `7d1e4e8` (jackson) · `19ccedf` (per-store layouts) · `e64ac01` (geometry); shared `1477f90` `346c9f4` `3ea86ac`. **Session 5 detail:** `status/session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md`.
+**Commits:** twin `17872e5` (realism feat) · `be0f712` (reseed hand-off + spec sync). **Session 6 detail:** `status/session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md`.
 
-### What's seeded in M8trxDemo (live on mother)
+### What's LIVE on mother (still the 2026-06-11 seed — reseed PENDING)
 
 | Asset | State |
 |---|---|
-| Tenant | **M8trxDemo** `ecfa6903-5c50-439f-8f80-185982de944e` — chain seeded via direct psql (reversible via tenant-delete; pre-seed backup on mother) |
-| Sites | **14** — 10 retail (US×3 / FR×5 / KR×2) + 4 office (HQ + 3 regional) |
-| Users | **251** — tenant-admin `zenvendemo@gmail.com`; roles → core Profiles (member/site-manager/staff); 30 inactive |
-| Catalog | **2,586 products** (tenant-scoped) + 2,586 images; **USD display** (EUR/KRW in `display_attributes.prices`) |
-| Inventory | **277,515 EPCs** → item/identifier (1:1, `in_stock`) — **site-level only** (no fixture pins yet) |
+| Tenant | **M8trxDemo** `ecfa6903-5c50-439f-8f80-185982de944e` (pre-seed backup on mother) |
+| Sites | **14** — 10 retail (US×3 / FR×5 / KR×2) + 4 office · **no coordinates** |
+| Users | **251** — tenant-admin `zenvendemo@gmail.com`; 30 inactive |
+| Catalog | **2,586 products** + images · **USD display** · **no coding layer applied** |
+| Inventory | **277,515 EPCs**, flat per-size depth, **site-level only** |
 
-### Pending follow-up deploy (data ready)
-Provision each retail site's **own** spaces/zones/fixtures (`stores/<id>/layout.json` — **per-store unique floors**, 2026-06-22 redesign) + place items at fixture-zones via **scan/receive** (corrections §2). Closes the site-level limitation.
+### Twin dataset READY for reseed (regenerated 2026-06-22, committed)
 
-> **⚠ Layout redesigned 2026-06-22 — full reseed needed.** Two changes: (1) fixed the overlap bug — the originally-seeded layout had **134 overlapping fixture pairs** (hand-authored gondolas pitched 1800mm but 2400mm deep, into the specialty cluster); root cause was the **twin source, not core's seed**. (2) **`build_layout.py` is now parametric per-store** — each of the 10 stores has a UNIQUE floor (footprint/grid/aisles/specialty seeded off store_id; flagship ~600m²/5–6 rows → medium ~400m²/3–4 rows), 0 overlaps asserted, layout-driven planogram. All 10 regenerated (`stores/<id>/layout.json`). The on-mother layout is superseded → re-provision per-store + re-receive the 277k EPCs at the new fixtures. SVGs: `scripts/render_floorplans.py`.
+| Asset | State |
+|---|---|
+| Layouts | 10 per-store floors · **2–7 sport-universe department bands** + **lean BOH** (dock + racks) · mother-canonical geometry · 0 overlaps asserted |
+| Catalog | 2,586 products + **`brand`/`classification_key`/`department`** + `classification.csv` + `display_lookup.csv` |
+| Inventory | **102,675 EPCs** · realistic size curves · ~18% (~18.4k) back-of-house · at department + BOH fixture-zones (EPC strings all CHANGED → full re-import, not re-locate) |
+| Sites | 14 with **lat/long** (geocoded to address) |
+
+> **Regenerate byte-identical:** `build_layout` → `localize_names` → `build_chain` → `build_staff_roster` → `render_floorplans`.
 
 ### Immediate next steps (ranked)
 
-1. **★ Draft + run the core RESEED hand-off** — the gating item. M8trxDemo on mother holds the OLD (overlapping, shared) layout + an unfed coding layer. Core needs to: tenant-delete / re-provision the **10 per-store layouts** (`stores/<id>/layout.json` — geometry now matches mother), load the **CORE-REQ-001** artifacts (`classification.csv`, `display_lookup.csv`, + `brand`/`classification_key` on `assortment.csv`), and **re-receive the 277,515 EPCs** at the new fixtures via scan/receive (corrections §2). Then verify on mother + flip CORE-REQ-001 brief → `absorbed`. Twin data is ready, deterministic, regenerable (`build_layout`→`build_chain`→`build_attributes`→`render_floorplans`). **Draft this hand-off first thing.**
-2. **Verify circular fixtures render round** on MapCanvas post-reseed (geometry now matches mother — should be true circles, not bounding boxes).
+1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long (14 rows); drop+recreate the per-store **departmentalized** spaces + **BOH**; enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+2. **Verify post-reseed** — geo map plots 14 sites; circular fixtures render round (not bounding boxes); size curves show per-style (not a flat pile); departments + backroom stock visible.
 3. **Resolve the image pipeline** with backend — Shopify hot-link vs **cache bytes**. *(parallel; see Blocked on core)*
-4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS, item-movement throughout. **Animate Wave 1 + light the analytics.**
-5. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout mechanism already landed; China←KR catalog, rest←US Shopify; UI-then-API onboarding.
-6. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
+4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake (**BOH now gives it a from-location**) → LP/EAS, item-movement throughout.
+5. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout + departments already land; China←KR catalog, rest←US Shopify; UI-then-API onboarding.
+6. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC.
 
-**Deferred (Bob's call, noted):** rotate the mother Hasura admin secret + de-hardcode it from `scripts/seed_store.py:20` (committed prod secret — Bob will rotate later). Optional fixture realism: end-caps (need reserved hall space). MK/Hansae EPC bit-encoding TBD (only if an MK tenant is seeded).
+**Deferred (Bob's call, noted):** rotate the mother Hasura admin secret + de-hardcode `scripts/seed_store.py:20` (committed prod secret). Optional fixture realism: end-caps. MK/Hansae EPC bit-encoding (only if an MK tenant seeded). **Backroom-as-separate-`space`** (true separate sensor domain) — needs core confirmation that >1 space/site is allowed; modelled as an area zone for now, NOT YET FILED.
 
 ### Blocked on core
 
