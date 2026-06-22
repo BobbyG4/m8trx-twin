@@ -2,7 +2,7 @@
 
 **What this is:** the plan for the *dynamic* layer — the event stream that makes the seeded chain
 **live** and, crucially, **produces the events every analytics surface reads**. Phase 1 built the
-**set** (sites · spaces · 160 zones/fixtures · catalog · 277,515 opening-state items · 250 users).
+**set** (sites · spaces · 114 zones/fixtures · catalog · 277,515 opening-state items · 250 users).
 Phase 2 is the **play**.
 
 **Design principle — model backwards from the analytics.** Every behavior below exists because a

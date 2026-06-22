@@ -60,21 +60,31 @@ def bucket(t):
     return None if t in DROP else TYPEMAP.get(t, "outdoor")
 
 
-def GF(rows):
-    return [f"GF-R{r}-U{u}" for r in rows for u in range(1, 8)]
-
-
-def GB(rows):
-    return [f"GB-R{r}-U{u}" for r in rows for u in range(1, 8)]
-
-
-PLAN = {
-    "apparel":     GF([1, 2, 3, 4]) + GB([1, 2, 3, 4]) + ["FR-01", "FR-02", "FR-03", "FR-04"],
-    "accessories": ["ACC-01", "ACC-02", "ACC-03", "ACC-04", "CO-IR"] + GB([5]),
-    "footwear":    [f"PW-0{i}" for i in range(1, 9)] + [f"PE-0{i}" for i in range(1, 6)] + ["FB-01", "GA-01", "GA-02"],
-    "bag_pack":    ["PE-06", "PE-07", "PE-08"] + GF([5]),
-    "outdoor":     GF([6, 7, 8]) + GB([6, 7, 8]),
+# LAYOUT-DRIVEN planogram: SKU category -> eligible fixture ROLES (priority order). Each store's
+# planogram is built from whatever fixtures of these roles ITS OWN layout has (build_layout.py
+# emits per-store layouts). No hardcoded fixture codes — adapts to any floor.
+CATEGORY_ROLES = {
+    "apparel":     ["gondola_front", "gondola_back", "fitting_stall", "round_rack"],
+    "accessories": ["accessories_wall", "impulse_rack", "gondola_back", "promo_island"],
+    "footwear":    ["perimeter_west", "perimeter_east", "footwear_bench", "gait_treadmill"],
+    "bag_pack":    ["perimeter_east", "gondola_front"],
+    "outdoor":     ["gondola_front", "gondola_back"],
 }
+
+
+def planogram(layout):
+    """category -> [fixture codes] for THIS store, from its layout's fixtures grouped by role.
+    Falls back to the gondola pool if a role is absent. Sorted → deterministic round-robin."""
+    by_role = defaultdict(list)
+    for z in layout["zones"]:
+        if z.get("zone_type") == "fixture":
+            by_role[z["fixture_category"]].append(z["code"])
+    gondolas = sorted(by_role.get("gondola_front", []) + by_role.get("gondola_back", []))
+    pools = {}
+    for cat, roles in CATEGORY_ROLES.items():
+        pool = [code for role in roles for code in sorted(by_role.get(role, []))]
+        pools[cat] = pool or gondolas
+    return pools
 
 # ── validated Decathlon SGTIN-96 encoder (EPC-ENCODING-DECATHLON.md) ───────────
 FILTER, PARTITION = 1, 6
@@ -154,12 +164,10 @@ def load_name_map():
     return m
 
 
-def load_layout():
-    """Shared space template (zones + fixtures) from build_layout.py, if present."""
-    path = os.path.join(OUT, "layout", "space-template.json")
-    if not os.path.exists(path):
-        return None
-    return json.load(open(path, encoding="utf-8"))
+def load_store_layout(store_id):
+    """Per-store layout (zones + fixtures) from build_layout.py."""
+    path = os.path.join(OUT, "stores", store_id, "layout.json")
+    return json.load(open(path, encoding="utf-8")) if os.path.exists(path) else None
 
 
 def build_store(store, master, global_used, global_epcs, name_map):
@@ -167,6 +175,9 @@ def build_store(store, master, global_used, global_epcs, name_map):
     # stable per-store seed (Python's hash() is salted per process — not reproducible)
     seed = int(hashlib.sha256(store["id"].encode()).hexdigest(), 16) % (2**31)
     rng = random.Random(seed)
+
+    layout = load_store_layout(store["id"])
+    pools = planogram(layout)                    # this store's category -> fixture codes
 
     # SKU subset by tier (shared master, seeded subset for sub-flagship tiers)
     n = TIERS[store["tier"]]["sku_count"]
@@ -185,8 +196,8 @@ def build_store(store, master, global_used, global_epcs, name_map):
         depth = max(1, round(DEPTH[v["category"]] * scale * rng.uniform(0.6, 1.4)))
         if v["category"] in SHALLOW:
             depth = min(depth, rng.randint(1, 3))
-        fx = PLAN[v["category"]]
-        v["fixture"] = fx[rr[v["category"]] % len(fx)]
+        pool = pools[v["category"]]
+        v["fixture"] = pool[rr[v["category"]] % len(pool)]
         rr[v["category"]] += 1
         v["depth"] = depth
         v["classification_key"] = cc.classification_key(v["category"], v["product_type"])  # §2 link
@@ -217,30 +228,33 @@ def build_store(store, master, global_used, global_epcs, name_map):
         w = csv.DictWriter(f, fieldnames=EPC_COLS); w.writeheader(); w.writerows(epcs)
 
     return {"sku_count": len(rows), "epc_count": len(epcs),
-            "by_category": dict(Counter(e["category"] for e in epcs)), "rows": rows, "epcs": epcs}
+            "by_category": dict(Counter(e["category"] for e in epcs)), "rows": rows, "epcs": epcs,
+            "layout": layout,
+            "fixture_codes": {z["code"] for z in layout["zones"] if z.get("zone_type") == "fixture"}}
 
 
 def main():
     os.makedirs(OUT, exist_ok=True)
     master = load_master()
     name_map = load_name_map()
-    layout = load_layout()
-    layout_fixtures = ({z["code"] for z in layout["zones"] if z.get("zone_type") == "fixture"}
-                       if layout else None)
     print(f"master SKUs (encodable): {len(master)}")
     print(f"name localization map: {len(name_map)} SKUs "
           f"({'loaded' if name_map else 'MISSING — name_local falls back to English'})")
-    print(f"layout template: {'loaded (%d zones = %d area + %d fixture-zones)' % (layout['counts']['zones_total'], layout['counts']['area_zones'], layout['counts']['fixture_zones']) if layout else 'MISSING — run build_layout.py'}")
+    print("per-store layouts: stores/<id>/layout.json (run build_layout.py first)")
     print("by category:", dict(Counter(v["category"] for v in master)))
 
-    global_used, global_epcs, used_fixtures = set(), set(), set()
+    global_used, global_epcs = set(), set()
+    total_fixtures = total_stocked = 0
+    fixture_missing = set()
     manifest_stores, total_epcs, total_sku = [], 0, 0
     rt_checked = rt_ok = 0
 
     for store in STORES:
         res = build_store(store, master, global_used, global_epcs, name_map)
         total_epcs += res["epc_count"]; total_sku += res["sku_count"]
-        used_fixtures.update(e["fixture"] for e in res["epcs"])
+        store_used = {e["fixture"] for e in res["epcs"]}
+        fixture_missing |= (store_used - res["fixture_codes"])      # EPCs must sit on this store's fixtures
+        total_fixtures += len(res["fixture_codes"]); total_stocked += len(store_used & res["fixture_codes"])
         # round-trip 1% sample
         sample = res["epcs"][:: max(1, len(res["epcs"]) // 100)]
         for e in sample:
@@ -255,12 +269,13 @@ def main():
             "locale": region["locale"], "tier": store["tier"],
             "tier_label": TIERS[store["tier"]]["label"], "sqm": store["sqm"],
             "has_space": True, "has_inventory": True, "has_sensors": True,
-            "space": {"name": "Main Floor", "template": "layout/space-template.json",
-                      "sqm": store["sqm"],
-                      "zones_total": layout["counts"]["zones_total"] if layout else None,
-                      "area_zones": layout["counts"]["area_zones"] if layout else None,
-                      "fixture_zones": layout["counts"]["fixture_zones"] if layout else None,
-                      "try_on_zones": layout["counts"]["try_on_zones"] if layout else None},
+            "space": {"name": "Main Floor", "template": f"stores/{store['id']}/layout.json",
+                      "sqm": store["sqm"], "footprint_mm": res["layout"]["footprint_mm"],
+                      "zones_total": res["layout"]["counts"]["zones_total"],
+                      "area_zones": res["layout"]["counts"]["area_zones"],
+                      "fixture_zones": res["layout"]["counts"]["fixture_zones"],
+                      "try_on_zones": res["layout"]["counts"]["try_on_zones"],
+                      "gondola_grid": f"{res['layout']['counts']['gondola_rows']}×{res['layout']['counts']['gondola_units']}"},
             "sku_count": res["sku_count"], "epc_count": res["epc_count"],
             "epc_by_category": res["by_category"],
             "files": {"assortment": f"stores/{store['id']}/assortment.csv",
@@ -281,7 +296,7 @@ def main():
         "generated": "deterministic; master_seed=42, per-store seed=sha256(store_id)",
         "note": "Demo dataset. Shared US product master localized per region. Realistic, not accurate.",
         "hq": HQ,
-        "layout_reference": "layout/space-template.json (shared 600 sqm space — 160 zones = 11 area + 149 zone_type='fixture'; source STORE-LAYOUT.md)",
+        "layout_reference": "per-store: stores/<id>/layout.json (UNIQUE floor per store — parametric build_layout.py, seed=sha256(store_id); 0 overlaps asserted; source STORE-LAYOUT.md)",
         "epc_encoding_reference": "reference/data/EPC-ENCODING-DECATHLON.md (SGTIN-96, filter 1 / partition 6)",
         "totals": {"sites_total": len(STORES) + len(OFFICE_SITES),
                    "retail_sites": len(STORES), "office_sites": len(OFFICE_SITES),
@@ -303,11 +318,9 @@ def main():
     print(f"EPC global uniqueness: OK ({len(global_epcs)} distinct)")
     print(f"EPC round-trip decode: {rt_ok}/{rt_checked} sampled tags decode to their EAN")
     assert rt_ok == rt_checked, "EPC round-trip FAILED"
-    # every fixture an EPC sits on must exist in the shared layout template
-    if layout_fixtures is not None:
-        missing = used_fixtures - layout_fixtures
-        assert not missing, f"EPCs reference fixtures absent from layout: {sorted(missing)}"
-        print(f"fixture coverage: OK ({len(used_fixtures)}/{len(layout_fixtures)} layout fixtures stocked)")
+    # every EPC must sit on a fixture that exists in ITS store's own layout
+    assert not fixture_missing, f"EPCs reference fixtures absent from store layout: {sorted(fixture_missing)[:10]}"
+    print(f"fixture coverage: OK ({total_stocked}/{total_fixtures} per-store fixtures stocked across {len(STORES)} layouts)")
     # tz validity
     try:
         import zoneinfo

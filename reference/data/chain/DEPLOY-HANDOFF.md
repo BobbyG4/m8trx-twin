@@ -22,7 +22,7 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 
 **Carried limitations:** currency displays **USD** (EUR/KRW preserved in `product.display_attributes.prices`); inventory is **site-level only** (no `thing_location`/fixture pins); commerce dashboards blank until `commerce_projection` writer ships (**TWIN-REQ-002**).
 
-**✅ LAYOUT SEEDED (2026-06-11):** per-store layout provisioned from `layout/space-template.json` — **10 spaces · 110 zones · 30 try-on-zones · 1,490 fixtures** (POLYGON Z, mm, SRID 0) — and all **277,515 items allocated to fixtures** via `thing_location` (position = fixture centroid). Site-level limitation **closed**; inventory now renders at fixture-level pins.
+**⚠ LAYOUT SUPERSEDED — FULL RE-SEED NEEDED (2026-06-22):** the 2026-06-11 seed (10 spaces from a shared template) had **overlapping fixtures** and is replaced by **10 UNIQUE per-store layouts** (`stores/<id>/layout.json`, parametric, 0 overlaps asserted). Re-provision each store's own spaces/zones/fixtures + re-receive the **277,515 items** at the new fixture-zones via scan/receive (`thing_location` = fixture centroid). Old fixture codes/positions on mother no longer match — full re-provision, not a patch.
 
 ---
 
@@ -40,7 +40,7 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 | Users | **251** (250 staff + 1 tenant-admin) · 30 inactive |
 | Catalog | 22,944 store-SKU rows (2,586 distinct master SKUs, real images) |
 | Inventory | **277,515 EPCs** (scanner-decodable SGTIN-96) |
-| Layout | 1 shared space per retail site · 160 zones (11 area + 149 `zone_type='fixture'`) |
+| Layout | each retail site's OWN unique floor · 11 area zones + N `zone_type='fixture'` (N ~42–78, varies by tier+seed) |
 | Spread | 5 IANA timezones (UTC-8 → +9) · 3 currencies (USD/EUR/KRW) |
 
 ---
@@ -59,10 +59,11 @@ else joins on.
 - **`office_sites[]`** — 4 **office** sites (HQ + US/FR/KR regional). `site_type=office`,
   `has_space=has_inventory=has_sensors=false` — **provision a site row only**, no space/zone/fixture.
 
-### 2b. Spaces / zones / fixtures (retail only) — `layout/space-template.json`
-Each of the 10 retail sites instantiates **one space** → **160 zones** = 11 area zones (incl. 3
-try-on, EAS entrance, checkout, stockroom) + **149 `zone_type='fixture'` zones**. **Fixtures are
-zones, not a separate table** (core's `fixture` table is unused — corrections doc §1). Office sites
+### 2b. Spaces / zones / fixtures (retail only) — `stores/<id>/layout.json` (per-store, unique)
+Each of the 10 retail sites instantiates **its own unique space** → 11 area zones (incl. 3
+try-on, EAS entrance, checkout, stockroom) + **N `zone_type='fixture'` zones** (N varies per store,
+~42–78, from that store's `layout.json`). **Fixtures are zones, not a separate table** (core's
+`fixture` table is unused — corrections doc §1). Office sites
 get no space. The `fixture` codes in `epcs.csv` resolve to the **fixture-zone of the same code**
 `(store_id, code)` — so provision spaces **before** inventory (step 5), and place items at the
 **fixture-zone** via scan/receive (step 5).

@@ -17,7 +17,7 @@ rework round the first time (Session 5, 2026-06-11).
 Produce a deterministic, disposable dataset under `reference/data/chain/`, hand it to backend, they
 seed M8trxDemo (reversible via tenant-delete). Last run: **14 sites** (10 retail + 4 office) · **251
 users** (250 staff + tenant-admin, 30 inactive) · **2,586 products** · **277,515 EPCs** · 11 zones +
-149 fixtures shared layout · 5 timezones · 3 currencies.
+103 fixtures shared layout · 5 timezones · 3 currencies.
 
 ### Pipeline (deterministic — byte-identical every run)
 ```bash
@@ -36,15 +36,15 @@ name pools, TENANT). Per-store seed = `sha256(store_id)` (NOT Python `hash()` �
 ### 1. Fixtures ARE zones (`zone_type='fixture'`) — not a separate table  ⚠ biggest one
 Core's space canvas renders fixtures as **`zone` rows with `zone_type='fixture'`**, children of the
 space alongside area/checkout/try_on zones. **The `fixture` table is unused (0 rows in every working
-space).** A floor = area-zones + fixture-zones (e.g. **11 + 149 = 160 zones**). Importing fixtures
+space).** A floor = area-zones + fixture-zones (e.g. **11 + 103 = 114 zones**). Importing fixtures
 into the `fixture` table → **canvas renders nothing** (had to be redone last time).
-- **Generate accordingly:** present the 149 fixtures as `zone_type='fixture'` zones — either one
+- **Generate accordingly:** present the 103 fixtures as `zone_type='fixture'` zones — either one
   unified `zones[]` carrying `zone_type`, or keep `fixtures[]` but state at the top that *each becomes
   a `zone_type='fixture'` zone at import* (parent = its `zone_code`).
 - Geometry was correct, keep it: **mm, SW origin (0,0), rectangles → `POLYGON Z` SRID 0.**
-- ✅ **DONE** (Session 5, 2026-06-11): `build_layout.py` now emits a unified `zones[]` of **160** =
-  11 area + 149 `zone_type='fixture'` (each with `in_area_zone` + `fixture_category`).
-  `space-template.json` is canvas-ready — no fix-up next import. The `epcs.csv` `fixture` code →
+- ✅ **DONE** (Session 5, 2026-06-11; regenerated 2026-06-22 realism pass — overlap-free parametric grid): `build_layout.py` emits a unified `zones[]` of **114** =
+  11 area + 103 `zone_type='fixture'` (each with `in_area_zone` + `fixture_category`).
+  each `stores/<id>/layout.json` is canvas-ready — no fix-up next import. The `epcs.csv` `fixture` code →
   the fixture-zone of the same `code`.
 
 ### 2. Inventory location is read from `scan_event`, at the fixture-zone — feed RAW
@@ -101,7 +101,7 @@ mm units · SW origin · SRID 0 · rectangles → `POLYGON Z`. No change needed.
 ---
 
 ## Pre-flight checklist (run before handing off)
-- [ ] Fixtures expressed as `zone_type='fixture'` zones (rule 1) — area + fixture zone count stated (e.g. 160).
+- [ ] Fixtures expressed as `zone_type='fixture'` zones (rule 1) — area + fixture zone count stated (e.g. 114).
 - [ ] Inventory delivered as scan/receive events at the **fixture-zone**, or epcs carry fixture codes + note "emit scan to place" (rule 2).
 - [ ] Catalog deduped to **one product row per SKU** (tenant-scoped); per-region prices in `display_attributes.prices`; single-currency display expected (rule 3).
 - [ ] Office sites = managed-with-no-space; **invariant asserted** (build fails if an office gets a space/inventory) (rule 4).

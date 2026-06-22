@@ -1,137 +1,252 @@
 #!/usr/bin/env python3
 """
-Extract the store layout from STORE-LAYOUT.md into a machine-readable space template the backend
-can provision directly.
+Generate PER-STORE store layouts — 10 unique floors (parametric, deterministic, overlap-free).
 
-CORE-MODEL MATCH (per twin/insights/2026-06-11-seed-exercise-corrections.md §1): core renders
-fixtures as `zone` rows with `zone_type='fixture'` (the `fixture` table is unused). So this emits a
-SINGLE unified `zones[]` — 11 area/checkout/try_on zones + 149 fixture-zones = 160 zones, all
-children of the one space. The `fixture` codes in epcs.csv resolve to the fixture-zone of the same
-`code`, keyed (store_id, code). Geometry: mm, SW origin (0,0), rectangles → POLYGON Z, SRID 0.
+Step 1 of the realism redesign (2026-06-22). Replaces the single shared 600 sqm template: each
+retail store now gets its OWN floor, sized to its tier and varied off a stable sha256(store_id)
+seed — different footprint, gondola grid (rows/units/aisle), specialty mix, perimeter, checkout
+side. Macro grammar is shared (entrance south, checkout + service + fitting east band, specialty
+cluster north, gondola hall center, stockroom rear, non-retail west); the QUANTITIES vary.
 
-All 10 retail sites share this ONE 600 sqm template (each instantiates its own space + 160 zones).
-Office sites get no space.
+Geometry is correct-by-construction: every fixture is placed by an even-gap grid filler inside a
+non-overlapping zone rect, and each store's layout is asserted to have 0 fixture overlaps and 0
+out-of-bounds before writing. Fixtures ARE zones (zone_type='fixture'); mm, SW origin (0,0),
+rect -> POLYGON Z SRID 0. Office sites get no layout.
 
-In  : reference/data/STORE-LAYOUT.md
-Out : reference/data/chain/layout/space-template.json
+Out: reference/data/chain/stores/<retail-id>/layout.json  (one per retail store)
+Consumed by build_chain.py (layout-driven planogram) for EPC placement.
 """
-import json, os, re
+import json, os, hashlib, random, sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from chain_config import STORES
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(ROOT, "reference/data/STORE-LAYOUT.md")
-OUTDIR = os.path.join(ROOT, "reference/data/chain/layout")
+OUT = os.path.join(ROOT, "reference/data/chain")
 
-# fixture code prefix -> (area zone it sits in, fixture_category)
-PREFIX = {
-    "GF": ("Z-04", "gondola_front"), "GB": ("Z-04", "gondola_back"),
-    "PE": ("Z-04", "perimeter_east"), "PW": ("Z-04", "perimeter_west"),
-    "GPS": ("Z-06", "gps_case"), "ACC": ("Z-07", "accessories_wall"),
-    "FB": ("Z-08", "footwear_bench"), "GA": ("Z-09", "gait_treadmill"),
-    "FR": ("Z-10", "fitting_stall"), "CO": ("Z-02", "checkout"),
+# ── per-tier base params (footprint + target gondola rows). sqm ≈ w*d/1e6 ──
+# Tiers are spread WIDE so sizes read as clearly different (flagship ~675 / large ~485 /
+# medium ~370 m²); large per-store jitter (varies width & depth independently → size + aspect).
+TIER_LAYOUT = {
+    "flagship": {"fp": (26000, 26000), "rows": 7},
+    "large":    {"fp": (22000, 22000), "rows": 5},
+    "medium":   {"fp": (19000, 19500), "rows": 4},
 }
-TRY_ON = {"Z-08": "footwear_bench", "Z-09": "equipment_test", "Z-10": "apparel_room"}
-NON_CUSTOMER = {"Z-03", "Z-05"}                       # non-retail strip + stockroom
+W_JITTER = {"flagship": [-2000, -1000, 0, 1500, 2500], "large": [-2000, -1000, 0, 1000, 1500],
+            "medium": [-1500, -1000, 0, 1000, 1500]}
+D_JITTER = {"flagship": [-2000, 0, 1500, 2500, 3500], "large": [-2000, -1000, 0, 1500, 2000],
+            "medium": [-1500, -500, 0, 1000, 1500]}
+GOND_DEPTH = 1200            # double-sided gondola: front 600 (south) + back 600 (north)
+MIN_AISLE = 700
+UNIT_W = 2000               # gondola unit width
+WALL_D = 500                # perimeter wall depth
+SOUTH = 3000                # entrance band depth
+STOCK = 3000                # stockroom band depth (north)
+WEST = 3000                 # non-retail west strip
 
-ZONE_RE = re.compile(r"^\|\s*(Z-\d+)\s*\|\s*([^|]+?)\s*\|\s*([a-z_]+)\s*\|\s*"
-                     r"(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|")
-FIX_RE = re.compile(r"^\|\s*([A-Z]{2,3}-[A-Z0-9-]+)\s*\|\s*([^|]+?)\s*\|\s*"
-                    r"(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|")
+
+def store_seed(sid):
+    return int(hashlib.sha256(sid.encode()).hexdigest(), 16) % (2**31)
 
 
-def area_sqm(x1, y1, x2, y2):
+def asqm(x1, y1, x2, y2):
     return round((x2 - x1) * (y2 - y1) / 1_000_000, 1)
 
 
-def main():
-    os.makedirs(OUTDIR, exist_ok=True)
-    text = open(SRC, encoding="utf-8").read()
+def fixture(code, name, x1, y1, x2, y2, in_zone, cat, shape="rect", rotation=0):
+    # rect_mm is always the bounding box (ingest-safe). shape/rotation are render hints:
+    # core draws the richer shape if it supports it, else the bounding rect.
+    return {"code": code, "name": name, "zone_type": "fixture", "parent": "space",
+            "in_area_zone": in_zone, "fixture_category": cat, "shape": shape, "rotation_deg": rotation,
+            "area_sqm": asqm(x1, y1, x2, y2),
+            "rect_mm": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)}}
 
-    area_zones, fixture_zones = [], []
-    for ln in text.splitlines():
-        zm = ZONE_RE.match(ln)
-        if zm:
-            code, name, ztype, x1, y1, x2, y2 = zm.group(1), zm.group(2), zm.group(3), *map(int, zm.groups()[3:])
-            z = {"code": code, "name": name, "zone_type": ztype, "parent": "space",
-                 "area_sqm": area_sqm(x1, y1, x2, y2),
-                 "customer_accessible": code not in NON_CUSTOMER,
-                 "rect_mm": {"x1": x1, "y1": y1, "x2": x2, "y2": y2}}
-            if code in TRY_ON:
-                z["zone_type"] = "try_on_zone"
-                z["try_on_profile"] = TRY_ON[code]
-            area_zones.append(z)
-            continue
-        fm = FIX_RE.match(ln)
-        if fm:
-            code, name, x1, y1, x2, y2 = fm.group(1), fm.group(2), *map(int, fm.groups()[2:])
-            prefix = code.split("-")[0]
-            if prefix not in PREFIX:
-                continue
-            in_zone, cat = PREFIX[prefix]
-            if code == "FR-SC":
-                cat = "fitting_service"
-            if code == "CO-IR":
-                cat = "impulse_rack"
-            # a fixture IS a zone (zone_type='fixture'), sibling of area zones under the space
-            fixture_zones.append({
-                "code": code, "name": name, "zone_type": "fixture", "parent": "space",
-                "in_area_zone": in_zone, "fixture_category": cat,
-                "area_sqm": area_sqm(x1, y1, x2, y2),
-                "rect_mm": {"x1": x1, "y1": y1, "x2": x2, "y2": y2}})
 
-    zones = area_zones + fixture_zones            # unified list — what core stores (160 zone rows)
+def cells(x1, y1, x2, y2, ncols, nrows, cw, ch):
+    """ncols×nrows cells of FIXED cw×ch, even gaps (incl. margins), inside the rect.
+    Caller must ensure cw·ncols and ch·nrows fit (gaps go negative → overlap otherwise)."""
+    gx = (x2 - x1 - ncols * cw) / (ncols + 1)
+    gy = (y2 - y1 - nrows * ch) / (nrows + 1)
+    out = []
+    for r in range(nrows):
+        for c in range(ncols):
+            ax1 = x1 + gx * (c + 1) + cw * c
+            ay1 = y1 + gy * (r + 1) + ch * r
+            out.append((ax1, ay1, ax1 + cw, ay1 + ch, r, c))
+    return out
 
-    crossing_slices = [{"code": "CS-01", "name": "Main Entrance Gate", "zone_code": "Z-01",
-                        "y": 600, "x_start": 8000, "x_end": 12000,
-                        "direction": "left=exit, right=entry", "eas_gate": True}]
-    sensors = [
-        {"type": "xovis_3d", "x": 10000, "y": 8000, "coverage": "gondola rows 1-5"},
-        {"type": "xovis_3d", "x": 10000, "y": 16000, "coverage": "gondola rows 6-8 + specialty"},
-        {"type": "xovis_3d", "x": 20000, "y": 10000, "coverage": "service cluster + checkout"},
-        {"type": "rfid_overhead", "zone_code": "Z-06", "coverage": "GPS display cases"},
-        {"type": "eas_gate", "zone_code": "Z-01", "coverage": "main entrance (CS-01)"},
+
+def fill(x1, y1, x2, y2, ncols, nrows, gap=200):
+    """ncols×nrows cells that FILL the rect (cell size derived from space). Always fits."""
+    cw = (x2 - x1 - (ncols + 1) * gap) / ncols
+    ch = (y2 - y1 - (nrows + 1) * gap) / nrows
+    out = []
+    for r in range(nrows):
+        for c in range(ncols):
+            ax1 = x1 + gap * (c + 1) + cw * c
+            ay1 = y1 + gap * (r + 1) + ch * r
+            out.append((ax1, ay1, ax1 + cw, ay1 + ch, r, c))
+    return out
+
+
+def _overlap(a, b):
+    a, b = a["rect_mm"], b["rect_mm"]
+    return (max(0, min(a["x2"], b["x2"]) - max(a["x1"], b["x1"]))
+            * max(0, min(a["y2"], b["y2"]) - max(a["y1"], b["y1"])))
+
+
+def generate(store):
+    sid, tier = store["id"], store["tier"]
+    rng = random.Random(store_seed(sid))
+    base = TIER_LAYOUT[tier]
+    W = base["fp"][0] + rng.choice(W_JITTER[tier])
+    D = base["fp"][1] + rng.choice(D_JITTER[tier])
+    EAST = rng.choice([6500, 7000, 7500])          # east service/fitting/checkout band
+    spec_h = rng.choice([6000, 6500, 7000])        # specialty band height
+    checkout_right = True                           # east band holds checkout (grammar)
+
+    sales_x1, sales_x2 = WEST, W - EAST
+    east_x1 = W - EAST
+    spec_y2 = D - STOCK
+    spec_y1 = spec_y2 - spec_h
+    hall_y1, hall_y2 = SOUTH, spec_y1               # gondola hall (below specialty)
+
+    # ── area zones ──
+    ent_w = int((sales_x2 - sales_x1) * 0.6)
+    ent_x1 = sales_x1 + ((sales_x2 - sales_x1) - ent_w) // 2
+    co_y2 = 4000
+    area = [
+        ("Z-01", "Entrance", "entry_exit", ent_x1, 0, ent_x1 + ent_w, SOUTH),
+        ("Z-02", "Checkout Area", "checkout", east_x1, 0, W, co_y2),
+        ("Z-03", "Non-Retail Left Strip", "region", 0, SOUTH, WEST, D - STOCK),
+        ("Z-04", "Main Sales Floor", "region", sales_x1, hall_y1, sales_x2, hall_y2),
+        ("Z-05", "Stockroom", "region", 0, D - STOCK, W, D),
+        ("Z-11", "Service Cluster", "region", east_x1, co_y2, W, spec_y1),
+        ("Z-10", "Fitting Rooms", "region", east_x1, spec_y1, W, spec_y2),
     ]
+    # specialty band split into 4 columns: GPS / accessories / gait / bench
+    sw = sales_x2 - sales_x1
+    cuts = [sales_x1, sales_x1 + int(sw * 0.34), sales_x1 + int(sw * 0.54),
+            sales_x1 + int(sw * 0.77), sales_x2]
+    area += [
+        ("Z-06", "GPS & Accessories", "region", cuts[0], spec_y1, cuts[1], spec_y2),
+        ("Z-07", "Accessories Wall", "region", cuts[1], spec_y1, cuts[2], spec_y2),
+        ("Z-09", "Gait Analysis", "region", cuts[2], spec_y1, cuts[3], spec_y2),
+        ("Z-08", "Footwear Bench", "region", cuts[3], spec_y1, cuts[4], spec_y2),
+    ]
+    TRY_ON = {"Z-08": "footwear_bench", "Z-09": "equipment_test", "Z-10": "apparel_room"}
+    NON_CUST = {"Z-03", "Z-05"}
+    area_zones = []
+    for code, name, zt, x1, y1, x2, y2 in area:
+        z = {"code": code, "name": name, "zone_type": zt, "parent": "space",
+             "area_sqm": asqm(x1, y1, x2, y2), "customer_accessible": code not in NON_CUST,
+             "rect_mm": {"x1": int(x1), "y1": int(y1), "x2": int(x2), "y2": int(y2)}}
+        if code in TRY_ON:
+            z["zone_type"] = "try_on_zone"; z["try_on_profile"] = TRY_ON[code]
+        area_zones.append(z)
 
-    template = {
-        "name": "Decathlon City — 600 sqm (shared template)",
-        "source": "reference/data/STORE-LAYOUT.md",
-        "model_note": ("Fixtures are zones with zone_type='fixture' (core's `fixture` table is "
-                       "unused). One space = these zones[]. Each retail site instantiates its own "
-                       "space + 160 zones; epcs.csv `fixture` code -> the fixture-zone of that code "
-                       "(key: store_id, code). Smaller-tier stores reuse the full set — manifest "
-                       "sqm is nominal. Office sites have no space."),
-        "sqm": 600,
-        "footprint_mm": {"width": 24000, "depth": 25000, "origin": "SW corner (0,0)"},
-        "coordinate_units": "millimeters",
-        "geometry": "rectangles -> POLYGON Z, SRID 0",
-        "counts": {"zones_total": len(zones), "area_zones": len(area_zones),
-                   "fixture_zones": len(fixture_zones),
-                   "try_on_zones": sum(1 for z in area_zones if z["zone_type"] == "try_on_zone"),
-                   "crossing_slices": len(crossing_slices), "sensors": len(sensors)},
-        "zones": zones,
-        "crossing_slices": crossing_slices, "sensors": sensors,
-    }
+    fx = []
+    # ── gondolas: fit rows×units into the hall with guaranteed aisles ──
+    gx1 = sales_x1 + WALL_D + 400          # inset past west wall + side aisle
+    gx2 = sales_x2 - WALL_D - 400
+    hall_h = hall_y2 - hall_y1
+    # max count that fits with >= gap spacing:  n <= (span - gap) / (size + gap).
+    # result is min(fit cap, desired) — the fit cap ALWAYS wins so it can't overflow.
+    max_rows = int((hall_h - MIN_AISLE) / (GOND_DEPTH + MIN_AISLE))
+    rows = min(max_rows, max(2, base["rows"] + rng.choice([-1, 0, 0])))
+    max_units = int((gx2 - gx1 - 300) / (UNIT_W + 300))
+    units = min(max_units, max(2, base["rows"] + rng.choice([-1, 0, 1])))
+    for x1, y1, x2, y2, r, c in cells(gx1, hall_y1, gx2, hall_y2, units, rows, UNIT_W, GOND_DEPTH):
+        rr, uu = rows - r, c + 1                          # R1 = south (front of store)
+        fx.append(fixture(f"GF-R{rr}-U{uu}", f"Gondola R{rr} Front U{uu}", x1, y1, x2, y1 + 600, "Z-04", "gondola_front"))
+        fx.append(fixture(f"GB-R{rr}-U{uu}", f"Gondola R{rr} Back U{uu}", x1, y1 + 600, x2, y2, "Z-04", "gondola_back"))
+    # ── perimeter wall bays (one column each side of the hall) ──
+    pbays = max(3, rows)
+    for x1, y1, x2, y2, r, c in fill(sales_x1, hall_y1, sales_x1 + WALL_D, hall_y2, 1, pbays):
+        fx.append(fixture(f"PW-{r+1:02d}", f"West Wall Bay {r+1}", x1, y1, x2, y2, "Z-04", "perimeter_west"))
+    for x1, y1, x2, y2, r, c in fill(sales_x2 - WALL_D, hall_y1, sales_x2, hall_y2, 1, pbays):
+        fx.append(fixture(f"PE-{r+1:02d}", f"East Wall Bay {r+1}", x1, y1, x2, y2, "Z-04", "perimeter_east"))
+    # ── specialty fixtures (counts seeded; fill-placed so they always fit their zone) ──
+    z = {a["code"]: a["rect_mm"] for a in area_zones}
+    def rect(c): r = z[c]; return (r["x1"], r["y1"], r["x2"], r["y2"])
+    n_gps = rng.choice([4, 6])
+    for x1, y1, x2, y2, r, c in fill(*rect("Z-06"), 2, n_gps // 2):
+        fx.append(fixture(f"GPS-{r*2+c+1:02d}", f"GPS Display Case {r*2+c+1}", x1, y1, x2, y2, "Z-06", "gps_case"))
+    n_acc = rng.choice([3, 4])
+    for x1, y1, x2, y2, r, c in fill(*rect("Z-07"), 1, n_acc):
+        fx.append(fixture(f"ACC-{r+1:02d}", f"Accessories Bay {r+1}", x1, y1, x2, y2, "Z-07", "accessories_wall"))
+    n_tm = rng.choice([1, 2])
+    for x1, y1, x2, y2, r, c in fill(*rect("Z-09"), n_tm, 1):
+        fx.append(fixture(f"GA-{c+1:02d}", f"Treadmill {c+1}", x1, y1, x2, y2, "Z-09", "gait_treadmill"))
+    for x1, y1, x2, y2, r, c in fill(*rect("Z-08"), 1, 1):
+        fx.append(fixture("FB-01", "Footwear Bench Seat", x1, y1, x2, y2, "Z-08", "footwear_bench"))
+    n_fr = rng.choice([3, 4])
+    fr_rows = (n_fr + 1) // 2
+    for x1, y1, x2, y2, r, c in fill(*rect("Z-10"), 2, fr_rows):
+        idx = r * 2 + c + 1
+        if idx <= n_fr:
+            fx.append(fixture(f"FR-{idx:02d}", f"Fitting Stall {idx}", x1, y1, x2, y2, "Z-10", "fitting_stall"))
+    # checkout counters (top of Z-02) — lanes scale with tier/traffic — + impulse rack (bottom strip)
+    n_co = {"flagship": 4, "large": 3, "medium": 2}[tier]
+    cz = z["Z-02"]
+    for x1, y1, x2, y2, r, c in fill(cz["x1"], cz["y1"] + 800, cz["x2"], cz["y2"], n_co, 1):
+        fx.append(fixture(f"CO-{c+1:02d}", f"Checkout Counter {c+1}", x1, y1, x2, y2, "Z-02", "checkout"))
+    fx.append(fixture("CO-IR", "Impulse Rack", cz["x1"] + 150, cz["y1"] + 150, cz["x2"] - 150, cz["y1"] + 650, "Z-02", "impulse_rack"))
 
-    # ── verify ──
-    area_codes = {z["code"] for z in area_zones}
-    orphan = [z["code"] for z in fixture_zones if z["in_area_zone"] not in area_codes]
+    # front-of-store FEATURE displays in the entrance (Z-01) — circular promo islands + apparel
+    # rounders (the "circular fixture" type, used sparingly as Decathlon does). shape=circle.
+    n_feat = {"flagship": 3, "large": 2, "medium": 1}[tier]
+    ez = z["Z-01"]
+    for x1, y1, x2, y2, r, c in fill(ez["x1"] + 300, 900, ez["x2"] - 300, 2700, n_feat, 1):
+        rack = c % 2 == 1
+        fx.append(fixture(f"{'RR' if rack else 'PI'}-{c+1:02d}",
+                          f"Apparel Round Rack {c+1}" if rack else f"Promo Island {c+1}",
+                          x1, y1, x2, y2, "Z-01",
+                          "round_rack" if rack else "promo_island", shape="circle"))
+
+    zones = area_zones + fx
+    # ── per-store verification ──
+    overlaps = [(fx[i]["code"], fx[j]["code"]) for i in range(len(fx)) for j in range(i + 1, len(fx)) if _overlap(fx[i], fx[j]) > 0]
+    assert not overlaps, f"{sid}: OVERLAPS {overlaps[:6]} ({len(overlaps)})"
+    oob = [f["code"] for f in fx if not (0 <= f["rect_mm"]["x1"] and f["rect_mm"]["x2"] <= W and 0 <= f["rect_mm"]["y1"] and f["rect_mm"]["y2"] <= D)]
+    assert not oob, f"{sid}: out-of-bounds {oob[:6]}"
+
     by_cat = {}
-    for z in fixture_zones:
-        by_cat[z["fixture_category"]] = by_cat.get(z["fixture_category"], 0) + 1
-    assert not orphan, f"fixture-zones with unknown area zone: {orphan}"
-    assert len(area_zones) == 11, f"expected 11 area zones, got {len(area_zones)}"
-    assert len(fixture_zones) == 149, f"expected 149 fixture-zones, got {len(fixture_zones)}"
-    assert len(zones) == 160, f"expected 160 zones total, got {len(zones)}"
+    for f in fx:
+        by_cat[f["fixture_category"]] = by_cat.get(f["fixture_category"], 0) + 1
+    template = {
+        "store_id": sid, "tier": tier,
+        "name": f"{sid} — {tier} floor ({asqm(0,0,W,D):.0f} m² footprint)",
+        "source": "scripts/build_layout.py (parametric, per-store seed=sha256(store_id))",
+        "footprint_mm": {"width": W, "depth": D, "origin": "SW corner (0,0)"},
+        "coordinate_units": "millimeters", "geometry": "rectangles -> POLYGON Z, SRID 0",
+        "counts": {"zones_total": len(zones), "area_zones": len(area_zones), "fixture_zones": len(fx),
+                   "try_on_zones": sum(1 for a in area_zones if a["zone_type"] == "try_on_zone"),
+                   "gondola_rows": rows, "gondola_units": units},
+        "zones": zones,
+        "crossing_slices": [{"code": "CS-01", "name": "Main Entrance Gate", "zone_code": "Z-01",
+                             "y": 600, "x_start": ent_x1, "x_end": ent_x1 + ent_w, "eas_gate": True}],
+        "sensors": [{"type": "rfid_overhead", "zone_code": "Z-06", "coverage": "GPS display cases"},
+                    {"type": "eas_gate", "zone_code": "Z-01", "coverage": "main entrance"}],
+    }
+    return template, by_cat
 
-    path = os.path.join(OUTDIR, "space-template.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(template, f, indent=2, ensure_ascii=False)
 
-    print(f"zones: {len(zones)} total = {len(area_zones)} area "
-          f"({sum(1 for z in area_zones if z['zone_type']=='try_on_zone')} try-on) "
-          f"+ {len(fixture_zones)} fixture-zones")
-    print(f"fixture-zones by category: {by_cat}")
-    print(f"orphan fixture-zones (bad area zone): {len(orphan)}")
-    print(f"wrote {path}")
+def main():
+    retail = [s for s in STORES]
+    print(f"generating {len(retail)} per-store layouts...\n")
+    tot_fx = 0
+    for store in retail:
+        tmpl, by_cat = generate(store)
+        sdir = os.path.join(OUT, "stores", store["id"])
+        os.makedirs(sdir, exist_ok=True)
+        with open(os.path.join(sdir, "layout.json"), "w", encoding="utf-8") as f:
+            json.dump(tmpl, f, indent=2, ensure_ascii=False)
+        c = tmpl["counts"]
+        tot_fx += c["fixture_zones"]
+        print(f"  {store['id']:<18} {store['tier']:<9} {tmpl['footprint_mm']['width']}×{tmpl['footprint_mm']['depth']}mm  "
+              f"{c['gondola_rows']}×{c['gondola_units']} gondolas  {c['zones_total']:>3} zones ({c['fixture_zones']} fx)  0 overlaps")
+    print(f"\nwrote {len(retail)} layouts ({tot_fx} fixture-zones total). All asserted overlap-free + in-bounds.")
 
 
 if __name__ == "__main__":

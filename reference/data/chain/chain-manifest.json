@@ -12,7 +12,7 @@
     "site_type": "office",
     "office_role": "global_hq"
   },
-  "layout_reference": "layout/space-template.json (shared 600 sqm space — 160 zones = 11 area + 149 zone_type='fixture'; source STORE-LAYOUT.md)",
+  "layout_reference": "per-store: stores/<id>/layout.json (UNIQUE floor per store — parametric build_layout.py, seed=sha256(store_id); 0 overlaps asserted; source STORE-LAYOUT.md)",
   "epc_encoding_reference": "reference/data/EPC-ENCODING-DECATHLON.md (SGTIN-96, filter 1 / partition 6)",
   "totals": {
     "sites_total": 14,
@@ -42,12 +42,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-us-denver/layout.json",
         "sqm": 600,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 28500,
+          "depth": 26000,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 129,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 118,
+        "try_on_zones": 3,
+        "gondola_grid": "6×7"
       },
       "sku_count": 2586,
       "epc_count": 35994,
@@ -82,12 +88,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-us-nyc/layout.json",
         "sqm": 600,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 24000,
+          "depth": 29500,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 117,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 106,
+        "try_on_zones": 3,
+        "gondola_grid": "7×5"
       },
       "sku_count": 2586,
       "epc_count": 33951,
@@ -122,12 +134,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-us-sf/layout.json",
         "sqm": 600,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 25000,
+          "depth": 29500,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 106,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 95,
+        "try_on_zones": 3,
+        "gondola_grid": "6×5"
       },
       "sku_count": 2586,
       "epc_count": 33681,
@@ -162,12 +180,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-fr-paris/layout.json",
         "sqm": 600,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 24000,
+          "depth": 27500,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 115,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 104,
+        "try_on_zones": 3,
+        "gondola_grid": "7×5"
       },
       "sku_count": 2586,
       "epc_count": 35805,
@@ -202,12 +226,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-fr-lyon/layout.json",
         "sqm": 520,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 21000,
+          "depth": 24000,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 72,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 61,
+        "try_on_zones": 3,
+        "gondola_grid": "5×3"
       },
       "sku_count": 2400,
       "epc_count": 28061,
@@ -242,12 +272,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-fr-lille/layout.json",
         "sqm": 520,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 23000,
+          "depth": 24000,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 70,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 59,
+        "try_on_zones": 3,
+        "gondola_grid": "4×4"
       },
       "sku_count": 2400,
       "epc_count": 27781,
@@ -282,12 +318,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-fr-marseille/layout.json",
         "sqm": 420,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 19000,
+          "depth": 19500,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 45,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 34,
+        "try_on_zones": 3,
+        "gondola_grid": "3×2"
       },
       "sku_count": 1800,
       "epc_count": 18033,
@@ -322,12 +364,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-fr-bordeaux/layout.json",
         "sqm": 420,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 18000,
+          "depth": 20500,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 49,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 38,
+        "try_on_zones": 3,
+        "gondola_grid": "3×2"
       },
       "sku_count": 1800,
       "epc_count": 18061,
@@ -362,12 +410,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-kr-seoul/layout.json",
         "sqm": 520,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 23500,
+          "depth": 24000,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 91,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 80,
+        "try_on_zones": 3,
+        "gondola_grid": "5×5"
       },
       "sku_count": 2400,
       "epc_count": 28118,
@@ -402,12 +456,18 @@
       "has_sensors": true,
       "space": {
         "name": "Main Floor",
-        "template": "layout/space-template.json",
+        "template": "stores/dec-kr-busan/layout.json",
         "sqm": 420,
-        "zones_total": 160,
+        "footprint_mm": {
+          "width": 18000,
+          "depth": 18000,
+          "origin": "SW corner (0,0)"
+        },
+        "zones_total": 45,
         "area_zones": 11,
-        "fixture_zones": 149,
-        "try_on_zones": 3
+        "fixture_zones": 34,
+        "try_on_zones": 3,
+        "gondola_grid": "2×2"
       },
       "sku_count": 1800,
       "epc_count": 18030,

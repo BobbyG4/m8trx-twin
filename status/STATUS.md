@@ -4,7 +4,7 @@
 
 ## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-11 — Session 5 close)
 
-**Session 5 built + seeded the multi-store chain dataset.** Wave 1 = **14 sites** (10 retail + 4 office), **251 users** (30 inactive), **2,586-SKU** catalog, **277,515 EPCs**, one shared **160-zone** layout, localized USD/EUR/KRW · EN/FR/KO — all under `reference/data/chain/`, deterministic. **Backend seeded it to M8trxDemo** (`tenant_id ecfa6903…`, site-level) and filed an **IMPORT-CONTRACT** + a **5-point corrections** doc + **TWIN-REQ-002**. Applied the biggest correction (**fixtures are `zone_type='fixture'` zones**) and captured everything in a **SEED-PLAYBOOK**, a Phase-2 **ACTIVITY-PLAN**, and an **EXPANSION-PLAN** (Wave 2 / Wave 3).
+**Session 5 built + seeded the multi-store chain dataset.** Wave 1 = **14 sites** (10 retail + 4 office), **251 users** (30 inactive), **2,586-SKU** catalog, **277,515 EPCs**, one shared **114-zone** layout (redesigned 2026-06-22 — overlap-free; was 160), localized USD/EUR/KRW · EN/FR/KO — all under `reference/data/chain/`, deterministic. **Backend seeded it to M8trxDemo** (`tenant_id ecfa6903…`, site-level) and filed an **IMPORT-CONTRACT** + a **5-point corrections** doc + **TWIN-REQ-002**. Applied the biggest correction (**fixtures are `zone_type='fixture'` zones**) and captured everything in a **SEED-PLAYBOOK**, a Phase-2 **ACTIVITY-PLAN**, and an **EXPANSION-PLAN** (Wave 2 / Wave 3).
 
 **Session 5 detail:** `status/session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md`.
 
@@ -19,7 +19,9 @@
 | Inventory | **277,515 EPCs** → item/identifier (1:1, `in_stock`) — **site-level only** (no fixture pins yet) |
 
 ### Pending follow-up deploy (data ready)
-Provision the **corrected spaces/zones/fixtures** per retail site (`layout/space-template.json`, 160 zones = 11 area + 149 `zone_type='fixture'`) + place items at fixture-zones via **scan/receive** (corrections §2). Closes the site-level limitation.
+Provision each retail site's **own** spaces/zones/fixtures (`stores/<id>/layout.json` — **per-store unique floors**, 2026-06-22 redesign) + place items at fixture-zones via **scan/receive** (corrections §2). Closes the site-level limitation.
+
+> **⚠ Layout redesigned 2026-06-22 — full reseed needed.** Two changes: (1) fixed the overlap bug — the originally-seeded layout had **134 overlapping fixture pairs** (hand-authored gondolas pitched 1800mm but 2400mm deep, into the specialty cluster); root cause was the **twin source, not core's seed**. (2) **`build_layout.py` is now parametric per-store** — each of the 10 stores has a UNIQUE floor (footprint/grid/aisles/specialty seeded off store_id; flagship ~600m²/5–6 rows → medium ~400m²/3–4 rows), 0 overlaps asserted, layout-driven planogram. All 10 regenerated (`stores/<id>/layout.json`). The on-mother layout is superseded → re-provision per-store + re-receive the 277k EPCs at the new fixtures. SVGs: `scripts/render_floorplans.py`.
 
 ### Immediate next steps (ranked)
 

@@ -1,0 +1,2005 @@
+{
+  "store_id": "dec-us-nyc",
+  "tier": "flagship",
+  "name": "dec-us-nyc — flagship floor (708 m² footprint)",
+  "source": "scripts/build_layout.py (parametric, per-store seed=sha256(store_id))",
+  "footprint_mm": {
+    "width": 24000,
+    "depth": 29500,
+    "origin": "SW corner (0,0)"
+  },
+  "coordinate_units": "millimeters",
+  "geometry": "rectangles -> POLYGON Z, SRID 0",
+  "counts": {
+    "zones_total": 117,
+    "area_zones": 11,
+    "fixture_zones": 106,
+    "try_on_zones": 3,
+    "gondola_rows": 7,
+    "gondola_units": 5
+  },
+  "zones": [
+    {
+      "code": "Z-01",
+      "name": "Entrance",
+      "zone_type": "entry_exit",
+      "parent": "space",
+      "area_sqm": 26.1,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 5900,
+        "y1": 0,
+        "x2": 14600,
+        "y2": 3000
+      }
+    },
+    {
+      "code": "Z-02",
+      "name": "Checkout Area",
+      "zone_type": "checkout",
+      "parent": "space",
+      "area_sqm": 26.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 17500,
+        "y1": 0,
+        "x2": 24000,
+        "y2": 4000
+      }
+    },
+    {
+      "code": "Z-03",
+      "name": "Non-Retail Left Strip",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 70.5,
+      "customer_accessible": false,
+      "rect_mm": {
+        "x1": 0,
+        "y1": 3000,
+        "x2": 3000,
+        "y2": 26500
+      }
+    },
+    {
+      "code": "Z-04",
+      "name": "Main Sales Floor",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 253.8,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 3000,
+        "y1": 3000,
+        "x2": 17500,
+        "y2": 20500
+      }
+    },
+    {
+      "code": "Z-05",
+      "name": "Stockroom",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 72.0,
+      "customer_accessible": false,
+      "rect_mm": {
+        "x1": 0,
+        "y1": 26500,
+        "x2": 24000,
+        "y2": 29500
+      }
+    },
+    {
+      "code": "Z-11",
+      "name": "Service Cluster",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 107.2,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 17500,
+        "y1": 4000,
+        "x2": 24000,
+        "y2": 20500
+      }
+    },
+    {
+      "code": "Z-10",
+      "name": "Fitting Rooms",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 39.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 17500,
+        "y1": 20500,
+        "x2": 24000,
+        "y2": 26500
+      },
+      "try_on_profile": "apparel_room"
+    },
+    {
+      "code": "Z-06",
+      "name": "GPS & Accessories",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 29.6,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 3000,
+        "y1": 20500,
+        "x2": 7930,
+        "y2": 26500
+      }
+    },
+    {
+      "code": "Z-07",
+      "name": "Accessories Wall",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 17.4,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 7930,
+        "y1": 20500,
+        "x2": 10830,
+        "y2": 26500
+      }
+    },
+    {
+      "code": "Z-09",
+      "name": "Gait Analysis",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 20.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 10830,
+        "y1": 20500,
+        "x2": 14165,
+        "y2": 26500
+      },
+      "try_on_profile": "equipment_test"
+    },
+    {
+      "code": "Z-08",
+      "name": "Footwear Bench",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 20.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 14165,
+        "y1": 20500,
+        "x2": 17500,
+        "y2": 26500
+      },
+      "try_on_profile": "footwear_bench"
+    },
+    {
+      "code": "GF-R7-U1",
+      "name": "Gondola R7 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 4137,
+        "x2": 6350,
+        "y2": 4737
+      }
+    },
+    {
+      "code": "GB-R7-U1",
+      "name": "Gondola R7 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 4737,
+        "x2": 6350,
+        "y2": 5337
+      }
+    },
+    {
+      "code": "GF-R7-U2",
+      "name": "Gondola R7 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 4137,
+        "x2": 8800,
+        "y2": 4737
+      }
+    },
+    {
+      "code": "GB-R7-U2",
+      "name": "Gondola R7 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 4737,
+        "x2": 8800,
+        "y2": 5337
+      }
+    },
+    {
+      "code": "GF-R7-U3",
+      "name": "Gondola R7 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 4137,
+        "x2": 11250,
+        "y2": 4737
+      }
+    },
+    {
+      "code": "GB-R7-U3",
+      "name": "Gondola R7 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 4737,
+        "x2": 11250,
+        "y2": 5337
+      }
+    },
+    {
+      "code": "GF-R7-U4",
+      "name": "Gondola R7 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 4137,
+        "x2": 13700,
+        "y2": 4737
+      }
+    },
+    {
+      "code": "GB-R7-U4",
+      "name": "Gondola R7 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 4737,
+        "x2": 13700,
+        "y2": 5337
+      }
+    },
+    {
+      "code": "GF-R7-U5",
+      "name": "Gondola R7 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 4137,
+        "x2": 16150,
+        "y2": 4737
+      }
+    },
+    {
+      "code": "GB-R7-U5",
+      "name": "Gondola R7 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 4737,
+        "x2": 16150,
+        "y2": 5337
+      }
+    },
+    {
+      "code": "GF-R6-U1",
+      "name": "Gondola R6 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 6475,
+        "x2": 6350,
+        "y2": 7075
+      }
+    },
+    {
+      "code": "GB-R6-U1",
+      "name": "Gondola R6 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 7075,
+        "x2": 6350,
+        "y2": 7675
+      }
+    },
+    {
+      "code": "GF-R6-U2",
+      "name": "Gondola R6 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 6475,
+        "x2": 8800,
+        "y2": 7075
+      }
+    },
+    {
+      "code": "GB-R6-U2",
+      "name": "Gondola R6 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 7075,
+        "x2": 8800,
+        "y2": 7675
+      }
+    },
+    {
+      "code": "GF-R6-U3",
+      "name": "Gondola R6 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 6475,
+        "x2": 11250,
+        "y2": 7075
+      }
+    },
+    {
+      "code": "GB-R6-U3",
+      "name": "Gondola R6 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 7075,
+        "x2": 11250,
+        "y2": 7675
+      }
+    },
+    {
+      "code": "GF-R6-U4",
+      "name": "Gondola R6 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 6475,
+        "x2": 13700,
+        "y2": 7075
+      }
+    },
+    {
+      "code": "GB-R6-U4",
+      "name": "Gondola R6 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 7075,
+        "x2": 13700,
+        "y2": 7675
+      }
+    },
+    {
+      "code": "GF-R6-U5",
+      "name": "Gondola R6 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 6475,
+        "x2": 16150,
+        "y2": 7075
+      }
+    },
+    {
+      "code": "GB-R6-U5",
+      "name": "Gondola R6 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 7075,
+        "x2": 16150,
+        "y2": 7675
+      }
+    },
+    {
+      "code": "GF-R5-U1",
+      "name": "Gondola R5 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 8812,
+        "x2": 6350,
+        "y2": 9412
+      }
+    },
+    {
+      "code": "GB-R5-U1",
+      "name": "Gondola R5 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 9412,
+        "x2": 6350,
+        "y2": 10012
+      }
+    },
+    {
+      "code": "GF-R5-U2",
+      "name": "Gondola R5 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 8812,
+        "x2": 8800,
+        "y2": 9412
+      }
+    },
+    {
+      "code": "GB-R5-U2",
+      "name": "Gondola R5 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 9412,
+        "x2": 8800,
+        "y2": 10012
+      }
+    },
+    {
+      "code": "GF-R5-U3",
+      "name": "Gondola R5 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 8812,
+        "x2": 11250,
+        "y2": 9412
+      }
+    },
+    {
+      "code": "GB-R5-U3",
+      "name": "Gondola R5 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 9412,
+        "x2": 11250,
+        "y2": 10012
+      }
+    },
+    {
+      "code": "GF-R5-U4",
+      "name": "Gondola R5 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 8812,
+        "x2": 13700,
+        "y2": 9412
+      }
+    },
+    {
+      "code": "GB-R5-U4",
+      "name": "Gondola R5 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 9412,
+        "x2": 13700,
+        "y2": 10012
+      }
+    },
+    {
+      "code": "GF-R5-U5",
+      "name": "Gondola R5 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 8812,
+        "x2": 16150,
+        "y2": 9412
+      }
+    },
+    {
+      "code": "GB-R5-U5",
+      "name": "Gondola R5 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 9412,
+        "x2": 16150,
+        "y2": 10012
+      }
+    },
+    {
+      "code": "GF-R4-U1",
+      "name": "Gondola R4 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 11150,
+        "x2": 6350,
+        "y2": 11750
+      }
+    },
+    {
+      "code": "GB-R4-U1",
+      "name": "Gondola R4 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 11750,
+        "x2": 6350,
+        "y2": 12350
+      }
+    },
+    {
+      "code": "GF-R4-U2",
+      "name": "Gondola R4 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 11150,
+        "x2": 8800,
+        "y2": 11750
+      }
+    },
+    {
+      "code": "GB-R4-U2",
+      "name": "Gondola R4 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 11750,
+        "x2": 8800,
+        "y2": 12350
+      }
+    },
+    {
+      "code": "GF-R4-U3",
+      "name": "Gondola R4 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 11150,
+        "x2": 11250,
+        "y2": 11750
+      }
+    },
+    {
+      "code": "GB-R4-U3",
+      "name": "Gondola R4 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 11750,
+        "x2": 11250,
+        "y2": 12350
+      }
+    },
+    {
+      "code": "GF-R4-U4",
+      "name": "Gondola R4 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 11150,
+        "x2": 13700,
+        "y2": 11750
+      }
+    },
+    {
+      "code": "GB-R4-U4",
+      "name": "Gondola R4 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 11750,
+        "x2": 13700,
+        "y2": 12350
+      }
+    },
+    {
+      "code": "GF-R4-U5",
+      "name": "Gondola R4 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 11150,
+        "x2": 16150,
+        "y2": 11750
+      }
+    },
+    {
+      "code": "GB-R4-U5",
+      "name": "Gondola R4 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 11750,
+        "x2": 16150,
+        "y2": 12350
+      }
+    },
+    {
+      "code": "GF-R3-U1",
+      "name": "Gondola R3 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 13487,
+        "x2": 6350,
+        "y2": 14087
+      }
+    },
+    {
+      "code": "GB-R3-U1",
+      "name": "Gondola R3 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 14087,
+        "x2": 6350,
+        "y2": 14687
+      }
+    },
+    {
+      "code": "GF-R3-U2",
+      "name": "Gondola R3 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 13487,
+        "x2": 8800,
+        "y2": 14087
+      }
+    },
+    {
+      "code": "GB-R3-U2",
+      "name": "Gondola R3 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 14087,
+        "x2": 8800,
+        "y2": 14687
+      }
+    },
+    {
+      "code": "GF-R3-U3",
+      "name": "Gondola R3 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 13487,
+        "x2": 11250,
+        "y2": 14087
+      }
+    },
+    {
+      "code": "GB-R3-U3",
+      "name": "Gondola R3 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 14087,
+        "x2": 11250,
+        "y2": 14687
+      }
+    },
+    {
+      "code": "GF-R3-U4",
+      "name": "Gondola R3 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 13487,
+        "x2": 13700,
+        "y2": 14087
+      }
+    },
+    {
+      "code": "GB-R3-U4",
+      "name": "Gondola R3 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 14087,
+        "x2": 13700,
+        "y2": 14687
+      }
+    },
+    {
+      "code": "GF-R3-U5",
+      "name": "Gondola R3 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 13487,
+        "x2": 16150,
+        "y2": 14087
+      }
+    },
+    {
+      "code": "GB-R3-U5",
+      "name": "Gondola R3 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 14087,
+        "x2": 16150,
+        "y2": 14687
+      }
+    },
+    {
+      "code": "GF-R2-U1",
+      "name": "Gondola R2 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 15825,
+        "x2": 6350,
+        "y2": 16425
+      }
+    },
+    {
+      "code": "GB-R2-U1",
+      "name": "Gondola R2 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 16425,
+        "x2": 6350,
+        "y2": 17025
+      }
+    },
+    {
+      "code": "GF-R2-U2",
+      "name": "Gondola R2 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 15825,
+        "x2": 8800,
+        "y2": 16425
+      }
+    },
+    {
+      "code": "GB-R2-U2",
+      "name": "Gondola R2 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 16425,
+        "x2": 8800,
+        "y2": 17025
+      }
+    },
+    {
+      "code": "GF-R2-U3",
+      "name": "Gondola R2 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 15825,
+        "x2": 11250,
+        "y2": 16425
+      }
+    },
+    {
+      "code": "GB-R2-U3",
+      "name": "Gondola R2 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 16425,
+        "x2": 11250,
+        "y2": 17025
+      }
+    },
+    {
+      "code": "GF-R2-U4",
+      "name": "Gondola R2 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 15825,
+        "x2": 13700,
+        "y2": 16425
+      }
+    },
+    {
+      "code": "GB-R2-U4",
+      "name": "Gondola R2 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 16425,
+        "x2": 13700,
+        "y2": 17025
+      }
+    },
+    {
+      "code": "GF-R2-U5",
+      "name": "Gondola R2 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 15825,
+        "x2": 16150,
+        "y2": 16425
+      }
+    },
+    {
+      "code": "GB-R2-U5",
+      "name": "Gondola R2 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 16425,
+        "x2": 16150,
+        "y2": 17025
+      }
+    },
+    {
+      "code": "GF-R1-U1",
+      "name": "Gondola R1 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 18162,
+        "x2": 6350,
+        "y2": 18762
+      }
+    },
+    {
+      "code": "GB-R1-U1",
+      "name": "Gondola R1 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4350,
+        "y1": 18762,
+        "x2": 6350,
+        "y2": 19362
+      }
+    },
+    {
+      "code": "GF-R1-U2",
+      "name": "Gondola R1 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 18162,
+        "x2": 8800,
+        "y2": 18762
+      }
+    },
+    {
+      "code": "GB-R1-U2",
+      "name": "Gondola R1 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 6800,
+        "y1": 18762,
+        "x2": 8800,
+        "y2": 19362
+      }
+    },
+    {
+      "code": "GF-R1-U3",
+      "name": "Gondola R1 Front U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 18162,
+        "x2": 11250,
+        "y2": 18762
+      }
+    },
+    {
+      "code": "GB-R1-U3",
+      "name": "Gondola R1 Back U3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 9250,
+        "y1": 18762,
+        "x2": 11250,
+        "y2": 19362
+      }
+    },
+    {
+      "code": "GF-R1-U4",
+      "name": "Gondola R1 Front U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 18162,
+        "x2": 13700,
+        "y2": 18762
+      }
+    },
+    {
+      "code": "GB-R1-U4",
+      "name": "Gondola R1 Back U4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 11700,
+        "y1": 18762,
+        "x2": 13700,
+        "y2": 19362
+      }
+    },
+    {
+      "code": "GF-R1-U5",
+      "name": "Gondola R1 Front U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 18162,
+        "x2": 16150,
+        "y2": 18762
+      }
+    },
+    {
+      "code": "GB-R1-U5",
+      "name": "Gondola R1 Back U5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 14150,
+        "y1": 18762,
+        "x2": 16150,
+        "y2": 19362
+      }
+    },
+    {
+      "code": "PW-01",
+      "name": "West Wall Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 3200,
+        "x2": 3300,
+        "y2": 5471
+      }
+    },
+    {
+      "code": "PW-02",
+      "name": "West Wall Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 5671,
+        "x2": 3300,
+        "y2": 7942
+      }
+    },
+    {
+      "code": "PW-03",
+      "name": "West Wall Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 8142,
+        "x2": 3300,
+        "y2": 10414
+      }
+    },
+    {
+      "code": "PW-04",
+      "name": "West Wall Bay 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 10614,
+        "x2": 3300,
+        "y2": 12885
+      }
+    },
+    {
+      "code": "PW-05",
+      "name": "West Wall Bay 5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 13085,
+        "x2": 3300,
+        "y2": 15357
+      }
+    },
+    {
+      "code": "PW-06",
+      "name": "West Wall Bay 6",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 15557,
+        "x2": 3300,
+        "y2": 17828
+      }
+    },
+    {
+      "code": "PW-07",
+      "name": "West Wall Bay 7",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 18028,
+        "x2": 3300,
+        "y2": 20300
+      }
+    },
+    {
+      "code": "PE-01",
+      "name": "East Wall Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 3200,
+        "x2": 17300,
+        "y2": 5471
+      }
+    },
+    {
+      "code": "PE-02",
+      "name": "East Wall Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 5671,
+        "x2": 17300,
+        "y2": 7942
+      }
+    },
+    {
+      "code": "PE-03",
+      "name": "East Wall Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 8142,
+        "x2": 17300,
+        "y2": 10414
+      }
+    },
+    {
+      "code": "PE-04",
+      "name": "East Wall Bay 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 10614,
+        "x2": 17300,
+        "y2": 12885
+      }
+    },
+    {
+      "code": "PE-05",
+      "name": "East Wall Bay 5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 13085,
+        "x2": 17300,
+        "y2": 15357
+      }
+    },
+    {
+      "code": "PE-06",
+      "name": "East Wall Bay 6",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 15557,
+        "x2": 17300,
+        "y2": 17828
+      }
+    },
+    {
+      "code": "PE-07",
+      "name": "East Wall Bay 7",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.2,
+      "rect_mm": {
+        "x1": 17200,
+        "y1": 18028,
+        "x2": 17300,
+        "y2": 20300
+      }
+    },
+    {
+      "code": "GPS-01",
+      "name": "GPS Display Case 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 20700,
+        "x2": 5365,
+        "y2": 22433
+      }
+    },
+    {
+      "code": "GPS-02",
+      "name": "GPS Display Case 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 5565,
+        "y1": 20700,
+        "x2": 7730,
+        "y2": 22433
+      }
+    },
+    {
+      "code": "GPS-03",
+      "name": "GPS Display Case 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 22633,
+        "x2": 5365,
+        "y2": 24366
+      }
+    },
+    {
+      "code": "GPS-04",
+      "name": "GPS Display Case 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 5565,
+        "y1": 22633,
+        "x2": 7730,
+        "y2": 24366
+      }
+    },
+    {
+      "code": "GPS-05",
+      "name": "GPS Display Case 5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 24566,
+        "x2": 5365,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "GPS-06",
+      "name": "GPS Display Case 6",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.8,
+      "rect_mm": {
+        "x1": 5565,
+        "y1": 24566,
+        "x2": 7730,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "ACC-01",
+      "name": "Accessories Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 4.3,
+      "rect_mm": {
+        "x1": 8130,
+        "y1": 20700,
+        "x2": 10630,
+        "y2": 22433
+      }
+    },
+    {
+      "code": "ACC-02",
+      "name": "Accessories Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 4.3,
+      "rect_mm": {
+        "x1": 8130,
+        "y1": 22633,
+        "x2": 10630,
+        "y2": 24366
+      }
+    },
+    {
+      "code": "ACC-03",
+      "name": "Accessories Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 4.3,
+      "rect_mm": {
+        "x1": 8130,
+        "y1": 24566,
+        "x2": 10630,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "GA-01",
+      "name": "Treadmill 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-09",
+      "fixture_category": "gait_treadmill",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 16.4,
+      "rect_mm": {
+        "x1": 11030,
+        "y1": 20700,
+        "x2": 13965,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "FB-01",
+      "name": "Footwear Bench Seat",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-08",
+      "fixture_category": "footwear_bench",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 16.4,
+      "rect_mm": {
+        "x1": 14365,
+        "y1": 20700,
+        "x2": 17300,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "FR-01",
+      "name": "Fitting Stall 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 8.0,
+      "rect_mm": {
+        "x1": 17700,
+        "y1": 20700,
+        "x2": 20650,
+        "y2": 23400
+      }
+    },
+    {
+      "code": "FR-02",
+      "name": "Fitting Stall 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 8.0,
+      "rect_mm": {
+        "x1": 20850,
+        "y1": 20700,
+        "x2": 23800,
+        "y2": 23400
+      }
+    },
+    {
+      "code": "FR-03",
+      "name": "Fitting Stall 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 8.0,
+      "rect_mm": {
+        "x1": 17700,
+        "y1": 23600,
+        "x2": 20650,
+        "y2": 26300
+      }
+    },
+    {
+      "code": "CO-01",
+      "name": "Checkout Counter 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.9,
+      "rect_mm": {
+        "x1": 17700,
+        "y1": 1000,
+        "x2": 19075,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-02",
+      "name": "Checkout Counter 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.9,
+      "rect_mm": {
+        "x1": 19275,
+        "y1": 1000,
+        "x2": 20650,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-03",
+      "name": "Checkout Counter 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.9,
+      "rect_mm": {
+        "x1": 20850,
+        "y1": 1000,
+        "x2": 22225,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-04",
+      "name": "Checkout Counter 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.9,
+      "rect_mm": {
+        "x1": 22425,
+        "y1": 1000,
+        "x2": 23800,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-IR",
+      "name": "Impulse Rack",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "impulse_rack",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.1,
+      "rect_mm": {
+        "x1": 17650,
+        "y1": 150,
+        "x2": 23850,
+        "y2": 650
+      }
+    },
+    {
+      "code": "PI-01",
+      "name": "Promo Island 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-01",
+      "fixture_category": "promo_island",
+      "shape": "circle",
+      "rotation_deg": 0,
+      "area_sqm": 3.4,
+      "rect_mm": {
+        "x1": 6400,
+        "y1": 1100,
+        "x2": 8833,
+        "y2": 2500
+      }
+    },
+    {
+      "code": "RR-02",
+      "name": "Apparel Round Rack 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-01",
+      "fixture_category": "round_rack",
+      "shape": "circle",
+      "rotation_deg": 0,
+      "area_sqm": 3.4,
+      "rect_mm": {
+        "x1": 9033,
+        "y1": 1100,
+        "x2": 11466,
+        "y2": 2500
+      }
+    },
+    {
+      "code": "PI-03",
+      "name": "Promo Island 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-01",
+      "fixture_category": "promo_island",
+      "shape": "circle",
+      "rotation_deg": 0,
+      "area_sqm": 3.4,
+      "rect_mm": {
+        "x1": 11666,
+        "y1": 1100,
+        "x2": 14100,
+        "y2": 2500
+      }
+    }
+  ],
+  "crossing_slices": [
+    {
+      "code": "CS-01",
+      "name": "Main Entrance Gate",
+      "zone_code": "Z-01",
+      "y": 600,
+      "x_start": 5900,
+      "x_end": 14600,
+      "eas_gate": true
+    }
+  ],
+  "sensors": [
+    {
+      "type": "rfid_overhead",
+      "zone_code": "Z-06",
+      "coverage": "GPS display cases"
+    },
+    {
+      "type": "eas_gate",
+      "zone_code": "Z-01",
+      "coverage": "main entrance"
+    }
+  ]
+}

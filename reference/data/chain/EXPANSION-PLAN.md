@@ -53,8 +53,12 @@ Deterministic, visibly-distinct stores without a full CAD engine.
 
 **Parametric (`build_layout.py` generates from footprint/format):** gondola rows = f(depth);
 units/row = f(width); perimeter bays = f(wall); fitting stalls = f(format); gait/GPS specialty zones
-only above a size threshold. Output = same `space-template.json` shape (unified `zones[]`,
+only above a size threshold. Output = a per-store `stores/<id>/layout.json` (unified `zones[]`,
 `zone_type='fixture'`), different **counts + coordinates** per store.
+
+> ✅ **Landed early (2026-06-22):** the per-store parametric generator is built and live for Wave-1
+> (10 unique floors, seeded off `store_id`, 0 overlaps asserted, layout-driven planogram). Wave-2
+> reuses the same mechanism — just add stores to `chain_config.py`.
 
 **Format archetypes:**
 | Format | Footprint | Used by |

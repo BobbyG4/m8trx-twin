@@ -1,0 +1,849 @@
+{
+  "store_id": "dec-fr-bordeaux",
+  "tier": "medium",
+  "name": "dec-fr-bordeaux — medium floor (369 m² footprint)",
+  "source": "scripts/build_layout.py (parametric, per-store seed=sha256(store_id))",
+  "footprint_mm": {
+    "width": 18000,
+    "depth": 20500,
+    "origin": "SW corner (0,0)"
+  },
+  "coordinate_units": "millimeters",
+  "geometry": "rectangles -> POLYGON Z, SRID 0",
+  "counts": {
+    "zones_total": 49,
+    "area_zones": 11,
+    "fixture_zones": 38,
+    "try_on_zones": 3,
+    "gondola_rows": 3,
+    "gondola_units": 2
+  },
+  "zones": [
+    {
+      "code": "Z-01",
+      "name": "Entrance",
+      "zone_type": "entry_exit",
+      "parent": "space",
+      "area_sqm": 13.5,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 4500,
+        "y1": 0,
+        "x2": 9000,
+        "y2": 3000
+      }
+    },
+    {
+      "code": "Z-02",
+      "name": "Checkout Area",
+      "zone_type": "checkout",
+      "parent": "space",
+      "area_sqm": 30.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 10500,
+        "y1": 0,
+        "x2": 18000,
+        "y2": 4000
+      }
+    },
+    {
+      "code": "Z-03",
+      "name": "Non-Retail Left Strip",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 43.5,
+      "customer_accessible": false,
+      "rect_mm": {
+        "x1": 0,
+        "y1": 3000,
+        "x2": 3000,
+        "y2": 17500
+      }
+    },
+    {
+      "code": "Z-04",
+      "name": "Main Sales Floor",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 63.8,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 3000,
+        "y1": 3000,
+        "x2": 10500,
+        "y2": 11500
+      }
+    },
+    {
+      "code": "Z-05",
+      "name": "Stockroom",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 54.0,
+      "customer_accessible": false,
+      "rect_mm": {
+        "x1": 0,
+        "y1": 17500,
+        "x2": 18000,
+        "y2": 20500
+      }
+    },
+    {
+      "code": "Z-11",
+      "name": "Service Cluster",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 56.2,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 10500,
+        "y1": 4000,
+        "x2": 18000,
+        "y2": 11500
+      }
+    },
+    {
+      "code": "Z-10",
+      "name": "Fitting Rooms",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 45.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 10500,
+        "y1": 11500,
+        "x2": 18000,
+        "y2": 17500
+      },
+      "try_on_profile": "apparel_room"
+    },
+    {
+      "code": "Z-06",
+      "name": "GPS & Accessories",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 15.3,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 3000,
+        "y1": 11500,
+        "x2": 5550,
+        "y2": 17500
+      }
+    },
+    {
+      "code": "Z-07",
+      "name": "Accessories Wall",
+      "zone_type": "region",
+      "parent": "space",
+      "area_sqm": 9.0,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 5550,
+        "y1": 11500,
+        "x2": 7050,
+        "y2": 17500
+      }
+    },
+    {
+      "code": "Z-09",
+      "name": "Gait Analysis",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 10.3,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 7050,
+        "y1": 11500,
+        "x2": 8775,
+        "y2": 17500
+      },
+      "try_on_profile": "equipment_test"
+    },
+    {
+      "code": "Z-08",
+      "name": "Footwear Bench",
+      "zone_type": "try_on_zone",
+      "parent": "space",
+      "area_sqm": 10.3,
+      "customer_accessible": true,
+      "rect_mm": {
+        "x1": 8775,
+        "y1": 11500,
+        "x2": 10500,
+        "y2": 17500
+      },
+      "try_on_profile": "footwear_bench"
+    },
+    {
+      "code": "GF-R3-U1",
+      "name": "Gondola R3 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 4225,
+        "x2": 6466,
+        "y2": 4825
+      }
+    },
+    {
+      "code": "GB-R3-U1",
+      "name": "Gondola R3 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 4825,
+        "x2": 6466,
+        "y2": 5425
+      }
+    },
+    {
+      "code": "GF-R3-U2",
+      "name": "Gondola R3 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 4225,
+        "x2": 9033,
+        "y2": 4825
+      }
+    },
+    {
+      "code": "GB-R3-U2",
+      "name": "Gondola R3 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 4825,
+        "x2": 9033,
+        "y2": 5425
+      }
+    },
+    {
+      "code": "GF-R2-U1",
+      "name": "Gondola R2 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 6650,
+        "x2": 6466,
+        "y2": 7250
+      }
+    },
+    {
+      "code": "GB-R2-U1",
+      "name": "Gondola R2 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 7250,
+        "x2": 6466,
+        "y2": 7850
+      }
+    },
+    {
+      "code": "GF-R2-U2",
+      "name": "Gondola R2 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 6650,
+        "x2": 9033,
+        "y2": 7250
+      }
+    },
+    {
+      "code": "GB-R2-U2",
+      "name": "Gondola R2 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 7250,
+        "x2": 9033,
+        "y2": 7850
+      }
+    },
+    {
+      "code": "GF-R1-U1",
+      "name": "Gondola R1 Front U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 9075,
+        "x2": 6466,
+        "y2": 9675
+      }
+    },
+    {
+      "code": "GB-R1-U1",
+      "name": "Gondola R1 Back U1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 4466,
+        "y1": 9675,
+        "x2": 6466,
+        "y2": 10275
+      }
+    },
+    {
+      "code": "GF-R1-U2",
+      "name": "Gondola R1 Front U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_front",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 9075,
+        "x2": 9033,
+        "y2": 9675
+      }
+    },
+    {
+      "code": "GB-R1-U2",
+      "name": "Gondola R1 Back U2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "gondola_back",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.2,
+      "rect_mm": {
+        "x1": 7033,
+        "y1": 9675,
+        "x2": 9033,
+        "y2": 10275
+      }
+    },
+    {
+      "code": "PW-01",
+      "name": "West Wall Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 3200,
+        "x2": 3300,
+        "y2": 5766
+      }
+    },
+    {
+      "code": "PW-02",
+      "name": "West Wall Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 5966,
+        "x2": 3300,
+        "y2": 8533
+      }
+    },
+    {
+      "code": "PW-03",
+      "name": "West Wall Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_west",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 8733,
+        "x2": 3300,
+        "y2": 11299
+      }
+    },
+    {
+      "code": "PE-01",
+      "name": "East Wall Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 10200,
+        "y1": 3200,
+        "x2": 10300,
+        "y2": 5766
+      }
+    },
+    {
+      "code": "PE-02",
+      "name": "East Wall Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 10200,
+        "y1": 5966,
+        "x2": 10300,
+        "y2": 8533
+      }
+    },
+    {
+      "code": "PE-03",
+      "name": "East Wall Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-04",
+      "fixture_category": "perimeter_east",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 0.3,
+      "rect_mm": {
+        "x1": 10200,
+        "y1": 8733,
+        "x2": 10300,
+        "y2": 11299
+      }
+    },
+    {
+      "code": "GPS-01",
+      "name": "GPS Display Case 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 11700,
+        "x2": 4175,
+        "y2": 13433
+      }
+    },
+    {
+      "code": "GPS-02",
+      "name": "GPS Display Case 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 4375,
+        "y1": 11700,
+        "x2": 5350,
+        "y2": 13433
+      }
+    },
+    {
+      "code": "GPS-03",
+      "name": "GPS Display Case 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 13633,
+        "x2": 4175,
+        "y2": 15366
+      }
+    },
+    {
+      "code": "GPS-04",
+      "name": "GPS Display Case 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 4375,
+        "y1": 13633,
+        "x2": 5350,
+        "y2": 15366
+      }
+    },
+    {
+      "code": "GPS-05",
+      "name": "GPS Display Case 5",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 3200,
+        "y1": 15566,
+        "x2": 4175,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "GPS-06",
+      "name": "GPS Display Case 6",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-06",
+      "fixture_category": "gps_case",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.7,
+      "rect_mm": {
+        "x1": 4375,
+        "y1": 15566,
+        "x2": 5350,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "ACC-01",
+      "name": "Accessories Bay 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.9,
+      "rect_mm": {
+        "x1": 5750,
+        "y1": 11700,
+        "x2": 6850,
+        "y2": 13433
+      }
+    },
+    {
+      "code": "ACC-02",
+      "name": "Accessories Bay 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.9,
+      "rect_mm": {
+        "x1": 5750,
+        "y1": 13633,
+        "x2": 6850,
+        "y2": 15366
+      }
+    },
+    {
+      "code": "ACC-03",
+      "name": "Accessories Bay 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-07",
+      "fixture_category": "accessories_wall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 1.9,
+      "rect_mm": {
+        "x1": 5750,
+        "y1": 15566,
+        "x2": 6850,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "GA-01",
+      "name": "Treadmill 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-09",
+      "fixture_category": "gait_treadmill",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.1,
+      "rect_mm": {
+        "x1": 7250,
+        "y1": 11700,
+        "x2": 7812,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "GA-02",
+      "name": "Treadmill 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-09",
+      "fixture_category": "gait_treadmill",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.1,
+      "rect_mm": {
+        "x1": 8012,
+        "y1": 11700,
+        "x2": 8575,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "FB-01",
+      "name": "Footwear Bench Seat",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-08",
+      "fixture_category": "footwear_bench",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 7.4,
+      "rect_mm": {
+        "x1": 8975,
+        "y1": 11700,
+        "x2": 10300,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "FR-01",
+      "name": "Fitting Stall 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.3,
+      "rect_mm": {
+        "x1": 10700,
+        "y1": 11700,
+        "x2": 14150,
+        "y2": 14400
+      }
+    },
+    {
+      "code": "FR-02",
+      "name": "Fitting Stall 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.3,
+      "rect_mm": {
+        "x1": 14350,
+        "y1": 11700,
+        "x2": 17800,
+        "y2": 14400
+      }
+    },
+    {
+      "code": "FR-03",
+      "name": "Fitting Stall 3",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.3,
+      "rect_mm": {
+        "x1": 10700,
+        "y1": 14600,
+        "x2": 14150,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "FR-04",
+      "name": "Fitting Stall 4",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-10",
+      "fixture_category": "fitting_stall",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.3,
+      "rect_mm": {
+        "x1": 14350,
+        "y1": 14600,
+        "x2": 17800,
+        "y2": 17300
+      }
+    },
+    {
+      "code": "CO-01",
+      "name": "Checkout Counter 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.7,
+      "rect_mm": {
+        "x1": 10700,
+        "y1": 1000,
+        "x2": 14150,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-02",
+      "name": "Checkout Counter 2",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "checkout",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 9.7,
+      "rect_mm": {
+        "x1": 14350,
+        "y1": 1000,
+        "x2": 17800,
+        "y2": 3800
+      }
+    },
+    {
+      "code": "CO-IR",
+      "name": "Impulse Rack",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-02",
+      "fixture_category": "impulse_rack",
+      "shape": "rect",
+      "rotation_deg": 0,
+      "area_sqm": 3.6,
+      "rect_mm": {
+        "x1": 10650,
+        "y1": 150,
+        "x2": 17850,
+        "y2": 650
+      }
+    },
+    {
+      "code": "PI-01",
+      "name": "Promo Island 1",
+      "zone_type": "fixture",
+      "parent": "space",
+      "in_area_zone": "Z-01",
+      "fixture_category": "promo_island",
+      "shape": "circle",
+      "rotation_deg": 0,
+      "area_sqm": 4.9,
+      "rect_mm": {
+        "x1": 5000,
+        "y1": 1100,
+        "x2": 8500,
+        "y2": 2500
+      }
+    }
+  ],
+  "crossing_slices": [
+    {
+      "code": "CS-01",
+      "name": "Main Entrance Gate",
+      "zone_code": "Z-01",
+      "y": 600,
+      "x_start": 4500,
+      "x_end": 9000,
+      "eas_gate": true
+    }
+  ],
+  "sensors": [
+    {
+      "type": "rfid_overhead",
+      "zone_code": "Z-06",
+      "coverage": "GPS display cases"
+    },
+    {
+      "type": "eas_gate",
+      "zone_code": "Z-01",
+      "coverage": "main entrance"
+    }
+  ]
+}

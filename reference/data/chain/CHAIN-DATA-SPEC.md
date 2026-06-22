@@ -74,11 +74,10 @@ reference/data/chain/
 ├── CATALOG-CODING-MODEL.md          # the coding model (Decathlon normalisation + MK/Hansae seam) — read this for §1–§3
 ├── localization/
 │   └── name-localization.csv        # ean -> name_en / name_fr / name_ko (master, 2,586 SKUs)
-├── layout/
-│   └── space-template.json          # shared 600 sqm space: 160 zones (11 area + 149 zone_type='fixture')
 ├── stores/<store-id>/
 │   ├── assortment.csv               # product list for the store (localized name/price/currency/locale)
-│   └── epcs.csv                     # one row per physical unit (RFID tag) — the inventory
+│   ├── epcs.csv                     # one row per physical unit (RFID tag) — the inventory
+│   └── layout.json                  # this store's UNIQUE floor (parametric, 0-overlap asserted; build_layout.py)
 ├── staff/
 │   ├── roster.csv                   # 250 people, flat, with manager_id reporting links
 │   ├── org-chart.json               # same people as a nested tree rooted at the CEO
@@ -104,7 +103,7 @@ Top level: `chain`, `generated`, `note`, `hq{}`, `layout_reference`, `epc_encodi
 | `currency`, `locale` | ISO currency + BCP-47 locale for the store's market |
 | `tier`, `tier_label` | Flagship / Large / Medium — drives SKU breadth + stock depth |
 | `sqm` | selling-floor area (nominal — flagship 600 / large 520 / medium 420; all reuse the one 600 sqm fixture set) |
-| `space` | the site's **one space**: `name`, `template` (→ `layout/space-template.json`), `sqm`, `zones_total` (160), `area_zones` (11), `fixture_zones` (149), `try_on_zones` (3) |
+| `space` | the site's **one space**: `name`, `template` (→ `stores/<id>/layout.json`), `sqm`, `footprint_mm`, `zones_total`, `area_zones` (11), `fixture_zones`, `try_on_zones` (3), `gondola_grid` — **counts vary per store** (flagship ~88 zones/77 fx … medium ~53/42) |
 | `sku_count`, `epc_count` | actual rows in the store's two files |
 | `epc_by_category` | piece counts per planogram bucket |
 | `files` | relative paths to the store's assortment/EPC CSVs |
@@ -115,27 +114,28 @@ Each `office_sites[]` entry (HQ + 3 regional): `id`, `site_type="office"`, `offi
 store dir, no `space/zone/fixture` rows — they provision as a **site row only** and exist to host
 staff (HQ + regional org). They are valid `site` targets in `users.csv`.
 
-## Schema — `layout/space-template.json` (shared by all 10 retail sites)
+## Schema — `stores/<id>/layout.json` (one UNIQUE floor per retail site)
 
-The one 600 sqm Decathlon-City floor, extracted from `STORE-LAYOUT.md`. **Every retail site
-instantiates ONE space from this template** → its own `space_id` + 160 `zone_id`s. Office sites get
-no space.
+Each retail store has its **own** Decathlon-City floor, generated parametrically by
+`build_layout.py` from `sha256(store_id)` (footprint, gondola grid, aisles, specialty mix, checkout
+side all vary by tier+seed; 0 overlaps + 0 out-of-bounds asserted). Office sites get no layout.
+`STORE-LAYOUT.md` documents the shared grammar; `scripts/render_floorplans.py` renders each to SVG.
 
 > **Fixtures are zones.** Per core's model (corrections doc §1), a fixture is a `zone` with
-> `zone_type='fixture'` — **not** a row in the `fixture` table (unused). So this is **one unified
-> `zones[]` of 160**: 11 area zones + 149 fixture-zones, all children of the space. The `fixture`
-> codes in every `epcs.csv` resolve to the **fixture-zone of the same `code`**, keyed `(store_id, code)`.
+> `zone_type='fixture'` — **not** a row in the `fixture` table (unused). So each store's `zones[]` is
+> a unified list: 11 area zones + N fixture-zones, all children of the store's one space. The
+> `fixture` codes in that store's `epcs.csv` resolve to the **fixture-zone of the same `code`**, keyed
+> `(store_id, code)`. Codes (`GF-R1-U2`, `PW-01`, `GPS-01`…) repeat across stores but geometry differs.
 
-- **`zones[]`** (160) — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, `rect_mm{x1,y1,x2,y2}`.
-  - **Area zones** (11): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
+- **`zones[]`** — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, `rect_mm{x1,y1,x2,y2}`.
+  - **Area zones** (11, every store): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
     try-on zones add `try_on_profile` (`footwear_bench`/`equipment_test`/`apparel_room`); plus
     `customer_accessible`. Codes `Z-01`…`Z-11`.
-  - **Fixture-zones** (149): `zone_type='fixture'`, plus `in_area_zone` (the area zone it sits in,
-    e.g. `Z-04`) and `fixture_category` (`gondola_front`/`perimeter_west`/`gps_case`/…). Codes
-    `GF-R1-U2`, `PW-01`, `GPS-01`… 140 are stocked; 9 (GPS cases, checkout counters, service
-    counter) exist but are unstocked.
-- **`counts`** — `zones_total` (160), `area_zones` (11), `fixture_zones` (149), `try_on_zones` (3),
-  `crossing_slices`, `sensors`.
+  - **Fixture-zones** (varies, ~42 medium → ~78 flagship): `zone_type='fixture'`, plus `in_area_zone`
+    and `fixture_category` (`gondola_front`/`perimeter_west`/`gps_case`/…). GPS cases + checkout/service
+    counters exist but are unstocked (no watch SKUs; non-merchandise).
+- **`counts`** — `zones_total`, `area_zones` (11), `fixture_zones`, `try_on_zones` (3),
+  `gondola_rows`, `gondola_units`. **`footprint_mm`** — this store's `{width, depth}`.
 - **`crossing_slices[]`** (1) — `CS-01` main entrance EAS gate (traffic/EAS).
 - **`sensors[]`** (5) — 3 Xovis 3D cameras + RFID overhead + EAS gate (planned placement).
 - **Geometry:** millimeters, origin SW corner, footprint 24,000 × 25,000 mm, rectangles → `POLYGON Z` SRID 0.
@@ -320,10 +320,10 @@ adjective agreement are approximate). Example, one SKU across regions:
 1. **FR/KO product-name polish** — names are machine-glossed (~97% type coverage). A future pass
    could fix adjective agreement/word order and clear the ~3% residual English nouns, or harvest
    authentic FR/KO names from the live decathlon.fr / decathlon.co.kr catalogs. Not ingest-blocking.
-2. **Per-store distinct layouts** — the structured space template (11 zones, 149 fixtures) now
-   ships as `layout/space-template.json`, but all 10 retail sites **share** it (smaller tiers reuse
-   the full 600 sqm fixture set; their `sqm` is nominal). Distinct per-store planograms/footprints
-   are future work — not ingest-blocking.
+2. **Per-store distinct layouts** — ✅ **DONE (2026-06-22).** Each retail store now has its own
+   parametric floor (`stores/<id>/layout.json`): footprint, gondola grid, aisles, specialty mix +
+   checkout side vary by tier+seed (flagship ~600 m²/5–6 rows → medium ~400 m²/3–4 rows), 0 overlaps
+   asserted, layout-driven planogram in `build_chain.py`. Render: `scripts/render_floorplans.py`.
 3. **Watches/GPS** — the US master has no sports-watch SKUs, so watch fixtures are unstocked
    (same limitation noted for Denver in Session 4). The LP/EAS demo anchor needs a watch SKU source.
 
