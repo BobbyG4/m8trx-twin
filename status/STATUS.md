@@ -2,11 +2,17 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-11 — Session 5 close)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-22 — Session 6 close)
 
-**Session 5 built + seeded the multi-store chain dataset.** Wave 1 = **14 sites** (10 retail + 4 office), **251 users** (30 inactive), **2,586-SKU** catalog, **277,515 EPCs**, one shared **114-zone** layout (redesigned 2026-06-22 — overlap-free; was 160), localized USD/EUR/KRW · EN/FR/KO — all under `reference/data/chain/`, deterministic. **Backend seeded it to M8trxDemo** (`tenant_id ecfa6903…`, site-level) and filed an **IMPORT-CONTRACT** + a **5-point corrections** doc + **TWIN-REQ-002**. Applied the biggest correction (**fixtures are `zone_type='fixture'` zones**) and captured everything in a **SEED-PLAYBOOK**, a Phase-2 **ACTIVITY-PLAN**, and an **EXPANSION-PLAN** (Wave 2 / Wave 3).
+**Session 6 = catalog-coding + store-layout overhaul. All committed + deterministic; NOT yet reseeded to mother → a full reseed is the #1 next step.**
 
-**Session 5 detail:** `status/session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md`.
+- **CORE-REQ-001 (inverse core→twin) DELIVERED** — catalog attribute coding: `brand` (←Shopify vendor), `classification.csv` (5 roots + 90 leaves + per-class `attributes_schema`), `display_lookup.csv` (colour raw→canonical family ×3 locales + swatch). Decathlon **normalisation** model. Brief → `delivered`.
+- **MK/Hansae numeric-code coding profile BUILT** — `reference/data/mk-trend/` (the 2nd, contrasting coding model, from the real MK Trend spec in `reference/hansaemk/`). Proves attribute-coding is vertical-portable (same `display_lookup`/`classification` grain). Multi-catalog architecture input filed to core (`m8trx-shared/twin/insights/2026-06-22-multi-catalog-coding-architecture.md`).
+- **Store layouts overhauled** — fixed the **134-overlap** bug (root cause: twin's hand-authored coords, NOT core's seed) AND went **per-store unique**: `build_layout.py` is now parametric → **10 distinct floors** seeded off `store_id` (324–741 m², grids 2×2–6×7, 0 overlaps + 0 OOB asserted), `build_chain.py` layout-driven planogram, checkout lanes scale by tier (4/3/2), circular front-of-store feature displays added. Floor-plan SVGs via `scripts/render_floorplans.py`.
+- **Geometry now matches mother's live `zone` model** (verified vs real rows) — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0.
+- **jackson 2.18.2→2.21.3** (HIGH CVEs, 2026-06-22 tech-watch).
+
+**Commits:** twin `f24c82c` (coding) · `345f9b8` (MK) · `7d1e4e8` (jackson) · `19ccedf` (per-store layouts) · `e64ac01` (geometry); shared `1477f90` `346c9f4` `3ea86ac`. **Session 5 detail:** `status/session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md`.
 
 ### What's seeded in M8trxDemo (live on mother)
 
@@ -25,11 +31,14 @@ Provision each retail site's **own** spaces/zones/fixtures (`stores/<id>/layout.
 
 ### Immediate next steps (ranked)
 
-1. **Resolve the image pipeline with backend** — Shopify hot-link vs **cache bytes** into M8TRX's own asset store. *(parallel; see Blocked on core)*
-2. **Follow-up deploy** — corrected fixture-zone layout + scan/receive item placement (completes Wave-1 inventory at fixtures).
-3. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator (people on map) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS, with item-movement throughout. **Animate Wave 1 + light the analytics first.**
-4. **Wave 2 — 10 international stores** (`reference/data/chain/EXPANSION-PLAN.md`) — *after* the baseline is alive; parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; UI-then-API onboarding; validates the playbook both sides.
-5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
+1. **★ Draft + run the core RESEED hand-off** — the gating item. M8trxDemo on mother holds the OLD (overlapping, shared) layout + an unfed coding layer. Core needs to: tenant-delete / re-provision the **10 per-store layouts** (`stores/<id>/layout.json` — geometry now matches mother), load the **CORE-REQ-001** artifacts (`classification.csv`, `display_lookup.csv`, + `brand`/`classification_key` on `assortment.csv`), and **re-receive the 277,515 EPCs** at the new fixtures via scan/receive (corrections §2). Then verify on mother + flip CORE-REQ-001 brief → `absorbed`. Twin data is ready, deterministic, regenerable (`build_layout`→`build_chain`→`build_attributes`→`render_floorplans`). **Draft this hand-off first thing.**
+2. **Verify circular fixtures render round** on MapCanvas post-reseed (geometry now matches mother — should be true circles, not bounding boxes).
+3. **Resolve the image pipeline** with backend — Shopify hot-link vs **cache bytes**. *(parallel; see Blocked on core)*
+4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS, item-movement throughout. **Animate Wave 1 + light the analytics.**
+5. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout mechanism already landed; China←KR catalog, rest←US Shopify; UI-then-API onboarding.
+6. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
+
+**Deferred (Bob's call, noted):** rotate the mother Hasura admin secret + de-hardcode it from `scripts/seed_store.py:20` (committed prod secret — Bob will rotate later). Optional fixture realism: end-caps (need reserved hall space). MK/Hansae EPC bit-encoding TBD (only if an MK tenant is seeded).
 
 ### Blocked on core
 
