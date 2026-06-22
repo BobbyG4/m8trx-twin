@@ -7,6 +7,22 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 6 (2026-06-22 · Twin)**
+Catalog-coding + store-layout overhaul. Delivered **CORE-REQ-001** (inverse core→twin) catalog
+attribute coding — `brand` (←vendor), `classification.csv` (+per-class `attributes_schema`),
+`display_lookup.csv` (colour normalisation ×3 locales) — and **core absorbed it** (mother loaded +
+verified, brief closed; core built a multi-catalog SurfaceProfile arch from our input). Built the
+**MK/Hansae numeric-code coding profile** (`reference/data/mk-trend/`) as the contrasting 2nd model
+(vertical-portability proof) from the real MK Trend spec (`reference/hansaemk/`, ex-Zenven). Bumped
+jackson 2.18.2→2.21.3 (HIGH CVEs). Then diagnosed + fixed the **134-overlap MapCanvas bug** — root
+cause **twin's hand-authored coords, not core's seed** — by rewriting `build_layout.py` parametric →
+**10 UNIQUE per-store floors** (seeded off store_id, 324–741 m², 0 overlaps asserted, layout-driven
+planogram), scaled checkout lanes (4/3/2), added circular front-of-store feature displays, and made
+twin emit **mother-canonical zone geometry** (circle = center `POINT Z` + `properties`; polygon =
+`POLYGON Z` ring; SRID 0/mm/Z=0). Open: **full mother reseed** of per-store layouts + geometry +
+re-receive 277k EPCs at new fixtures (mother still on the old overlapping layout). ⚠ committed prod
+Hasura admin secret in `scripts/seed_store.py` (Bob to rotate later).
+
 **Session 5 (2026-06-11 · Twin)**
 Pivoted from the onboarding-baseline plan to **building the multi-store chain dataset**. Shipped
 **Wave 1** under `reference/data/chain/`: 14 sites (10 retail + 4 office), 251 users (30 inactive,
@@ -39,6 +55,7 @@ Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), Even
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 6 | 2026-06-22 | CORE-REQ-001 catalog coding delivered + **ABSORBED** by core; MK/Hansae 2nd coding profile built (portability proof); jackson 2.18→2.21 (CVEs); 134-overlap layout bug fixed → 10 unique per-store layouts; mother-canonical zone geometry (circle POINT Z + properties / polygon POLYGON Z) | [→](session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md) |
 | 5 | 2026-06-11 | Multi-store chain dataset (14 sites, 251 users, 277k EPCs) seeded; backend corrections digested into playbook; fixtures-as-zones applied; Phase-2 activity + Wave-2/3 roadmap | [→](session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md) |
 | 4 | 2026-06-03 | Re-base on live catalogs — Denver (US, real+images) built; Seoul parked; EPC encoder validated; onboarding hand-off | [→](session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md) |
 | 3 | 2026-05-11 | First code — Kotlin + NATS + store seeded + 920 SKUs | [→](session-notes/2026-05-11-session-3-first-code-nats-store-seeded.md) |

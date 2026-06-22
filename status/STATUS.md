@@ -6,7 +6,7 @@
 
 **Session 6 = catalog-coding + store-layout overhaul. All committed + deterministic; NOT yet reseeded to mother → a full reseed is the #1 next step.**
 
-- **CORE-REQ-001 (inverse core→twin) DELIVERED** — catalog attribute coding: `brand` (←Shopify vendor), `classification.csv` (5 roots + 90 leaves + per-class `attributes_schema`), `display_lookup.csv` (colour raw→canonical family ×3 locales + swatch). Decathlon **normalisation** model. Brief → `delivered`.
+- **CORE-REQ-001 (inverse core→twin) DELIVERED + ABSORBED** — catalog attribute coding: `brand` (←Shopify vendor), `classification.csv` (5 roots + 90 leaves + per-class `attributes_schema`), `display_lookup.csv` (colour raw→canonical family ×3 locales + swatch). Decathlon **normalisation** model. Core absorbed 2026-06-21 (mother loaded + verified; brief `status: absorbed`, `merged-commit: eb39526`). Core built a multi-catalog SurfaceProfile architecture from our input.
 - **MK/Hansae numeric-code coding profile BUILT** — `reference/data/mk-trend/` (the 2nd, contrasting coding model, from the real MK Trend spec in `reference/hansaemk/`). Proves attribute-coding is vertical-portable (same `display_lookup`/`classification` grain). Multi-catalog architecture input filed to core (`m8trx-shared/twin/insights/2026-06-22-multi-catalog-coding-architecture.md`).
 - **Store layouts overhauled** — fixed the **134-overlap** bug (root cause: twin's hand-authored coords, NOT core's seed) AND went **per-store unique**: `build_layout.py` is now parametric → **10 distinct floors** seeded off `store_id` (324–741 m², grids 2×2–6×7, 0 overlaps + 0 OOB asserted), `build_chain.py` layout-driven planogram, checkout lanes scale by tier (4/3/2), circular front-of-store feature displays added. Floor-plan SVGs via `scripts/render_floorplans.py`.
 - **Geometry now matches mother's live `zone` model** (verified vs real rows) — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0.
@@ -88,7 +88,7 @@ Provision each retail site's **own** spaces/zones/fixtures (`stores/<id>/layout.
 |---|---|---|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
-| CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | **DELIVERED 2026-06-21**, awaiting core re-seed → ABSORBED | Things/Discover surface (core) |
+| CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 > TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).

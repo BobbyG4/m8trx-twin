@@ -1,7 +1,7 @@
 # Track: Twin
 
-**Last session:** Session 5 (2026-06-11)
-**Last session notes:** [→](../session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md)
+**Last session:** Session 6 (2026-06-22)
+**Last session notes:** [→](../session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md)
 
 ---
 
@@ -33,11 +33,12 @@
 
 ## Open Work (priority order)
 
-1. **Resolve image pipeline with backend** — link vs cached bytes (parallel).
-2. **Follow-up deploy** — provision the corrected **spaces/zones/fixtures** per retail site + place the 277k items at fixture-zones via scan/receive (closes the site-level limitation).
-3. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**
-4. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — *after* the baseline is alive; parametric `build_layout` + layout-driven `build_chain`; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect. Validates the playbook both sides.
-5. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
+1. **★ Core RESEED hand-off (gating)** — provision the **10 per-store layouts** (`stores/<id>/layout.json`, geometry now matches mother) + re-receive the 277k EPCs at the new fixture-zones via scan/receive (corrections §2). Mother still holds the OLD overlapping shared layout. Draft hand-off first thing.
+2. **Verify circular fixtures render round** on MapCanvas post-reseed (geometry matches mother now).
+3. **Resolve image pipeline** with backend — link vs cached bytes (parallel).
+4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**
+5. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout mechanism landed early; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect.
+6. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
 
 ## Active Requirements Filed to Core
 
@@ -45,7 +46,7 @@
 |-------|--------|--------|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ✅ ABSORBED (mig 127) | — |
 | TWIN-REQ-002 `commerce_projection` writer | 📨 FILED, AWAITING ABSORPTION (2026-06-11) | Scripts 1, 3, 5 |
-| CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | 📦 DELIVERED 2026-06-21 → awaiting core re-seed → ABSORBED | core Things/Discover surface |
+| CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | ✅ ABSORBED 2026-06-21 (core merged-commit `eb39526`; mother loaded + verified) | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ## Key Docs
