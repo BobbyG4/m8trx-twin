@@ -1,6 +1,6 @@
 # Decathlon Chain Dataset — Data Spec & Handoff
 
-**Status:** v1, generated 2026-06-11 (Twin Session 5). Deterministic, regenerable.
+**Status:** v2, generated 2026-06-22 (Twin Session 7). Deterministic, regenerable.
 **Purpose:** populate the **M8trxDemo** tenant as a realistic multi-store retail chain so every
 m8trx surface (web / backend / edge) is exercised against chain-scale data — real timezones,
 currencies, org hierarchy, staff, inventory, and location — instead of one store or office boxes.
@@ -35,23 +35,24 @@ source of truth all builders read.
 
 | Store ID | Region | City | Timezone | Cur | Tier | SKUs | EPCs |
 |---|---|---|---|---|---|---|---|
-| dec-us-denver | US | Denver, CO | America/Denver | USD | Flagship | 2,586 | 35,994 |
-| dec-us-nyc | US | New York, NY | America/New_York | USD | Flagship | 2,586 | 33,951 |
-| dec-us-sf | US | San Francisco, CA | America/Los_Angeles | USD | Flagship | 2,586 | 33,681 |
-| dec-fr-paris | FR | Paris | Europe/Paris | EUR | Flagship | 2,586 | 35,805 |
-| dec-fr-lyon | FR | Lyon | Europe/Paris | EUR | Large | 2,400 | 28,061 |
-| dec-fr-lille | FR | Villeneuve-d'Ascq | Europe/Paris | EUR | Large | 2,400 | 27,781 |
-| dec-fr-marseille | FR | Marseille | Europe/Paris | EUR | Medium | 1,800 | 18,033 |
-| dec-fr-bordeaux | FR | Bordeaux | Europe/Paris | EUR | Medium | 1,800 | 18,061 |
-| dec-kr-seoul | KR | Seoul | Asia/Seoul | KRW | Large | 2,400 | 28,118 |
-| dec-kr-busan | KR | Busan | Asia/Seoul | KRW | Medium | 1,800 | 18,030 |
+| dec-us-denver | US | Denver, CO | America/Denver | USD | Flagship | 2,586 | 15,005 |
+| dec-us-nyc | US | New York, NY | America/New_York | USD | Flagship | 2,586 | 14,642 |
+| dec-us-sf | US | San Francisco, CA | America/Los_Angeles | USD | Flagship | 2,586 | 14,580 |
+| dec-fr-paris | FR | Paris | Europe/Paris | EUR | Flagship | 2,586 | 14,943 |
+| dec-fr-lyon | FR | Lyon | Europe/Paris | EUR | Large | 2,408 | 9,669 |
+| dec-fr-lille | FR | Villeneuve-d'Ascq | Europe/Paris | EUR | Large | 2,410 | 9,797 |
+| dec-fr-marseille | FR | Marseille | Europe/Paris | EUR | Medium | 1,804 | 4,816 |
+| dec-fr-bordeaux | FR | Bordeaux | Europe/Paris | EUR | Medium | 1,800 | 4,993 |
+| dec-kr-seoul | KR | Seoul | Asia/Seoul | KRW | Large | 2,409 | 9,507 |
+| dec-kr-busan | KR | Busan | Asia/Seoul | KRW | Medium | 1,800 | 4,723 |
 
-**Totals:** **14 sites = 10 retail + 4 office** · 22,944 store-SKU rows (2,586 distinct master
-SKUs) · **277,515 EPCs** · 251 users (250 staff + tenant-admin). **5 distinct IANA timezones**
-spanning UTC-8 → UTC+9.
+**Totals:** **14 sites = 10 retail + 4 office** · 22,975 store-SKU rows (2,586 distinct master
+SKUs) · **102,675 EPCs** (~18.4k back-of-house, ~84.3k on floor) · 251 users (250 staff +
+tenant-admin). **5 distinct IANA timezones** spanning UTC-8 → UTC+9.
 
-Every site carries a **`site_type`**. **Office sites** (HQ + 3 regional) have a real address +
-timezone but **no space, zones, fixtures, inventory, or sensors**
+Every site carries a **`site_type`** and **`latitude`/`longitude`** (WGS84 decimal degrees,
+geocoded to the address). **Office sites** (HQ + 3 regional) have a real address + timezone but
+**no space, zones, fixtures, inventory, or sensors**
 (`has_space=has_inventory=has_sensors=false`) — staff bind to them exactly like a retail site:
 
 | Office site | Role | City | Timezone | Staff |
@@ -99,20 +100,24 @@ Top level: `chain`, `generated`, `note`, `hq{}`, `layout_reference`, `epc_encodi
 | `has_space` / `has_inventory` / `has_sensors` | all `true` for retail |
 | `region` | `US` / `FR` / `KR` |
 | `country`, `city`, `state`, `address` | location (real-anchored) |
+| `latitude`, `longitude` | WGS84 decimal degrees, geocoded to address — present on all retail and office sites |
 | `timezone` | **IANA** zone (e.g. `Europe/Paris`) — use for all per-store local-time logic |
 | `currency`, `locale` | ISO currency + BCP-47 locale for the store's market |
 | `tier`, `tier_label` | Flagship / Large / Medium — drives SKU breadth + stock depth |
-| `sqm` | selling-floor area (nominal — flagship 600 / large 520 / medium 420; all reuse the one 600 sqm fixture set) |
-| `space` | the site's **one space**: `name`, `template` (→ `stores/<id>/layout.json`), `sqm`, `footprint_mm`, `zones_total`, `area_zones` (11), `fixture_zones`, `try_on_zones` (3), `gondola_grid` — **counts vary per store** (flagship ~88 zones/77 fx … medium ~53/42) |
+| `sqm` | selling-floor area (nominal — flagship 600 / large 520 / medium 420) |
+| `space` | the site's **one space**: `name`, `template` (→ `stores/<id>/layout.json`), `sqm`, `footprint_mm`, `zones_total`, `area_zones`, `fixture_zones`, `try_on_zones` (3), `departments`, `backroom_racks`, `gondola_grid` — **counts vary per store** (flagship ~120–143 zones / medium ~51–56) |
+| `departments[]` | top-level list of `{code, key, label}` sport-universe bands for this store (flagship 6–7 / large 4–5 / medium 2–3) |
 | `sku_count`, `epc_count` | actual rows in the store's two files |
 | `epc_by_category` | piece counts per planogram bucket |
+| `epc_by_department` | piece counts per sport-universe department key |
+| `boh_epc` | back-of-house EPC count (~18% of store total, staged on `backroom_rack` fixtures in Z-05) |
 | `files` | relative paths to the store's assortment/EPC CSVs |
 
 Each `office_sites[]` entry (HQ + 3 regional): `id`, `site_type="office"`, `office_role`
-(`global_hq`/`regional_hq`), `region`, `country`, `city`, `address`, `timezone`,
-`has_space=has_inventory=has_sensors=false`, `sku_count=epc_count=0`. Office sites have **no**
-store dir, no `space/zone/fixture` rows — they provision as a **site row only** and exist to host
-staff (HQ + regional org). They are valid `site` targets in `users.csv`.
+(`global_hq`/`regional_hq`), `region`, `country`, `city`, `address`, `latitude`, `longitude`,
+`timezone`, `has_space=has_inventory=has_sensors=false`, `sku_count=epc_count=0`. Office sites
+have **no** store dir, no `space/zone/fixture` rows — they provision as a **site row only** and
+exist to host staff (HQ + regional org). They are valid `site` targets in `users.csv`.
 
 ## Schema — `stores/<id>/layout.json` (one UNIQUE floor per retail site)
 
@@ -127,19 +132,28 @@ side all vary by tier+seed; 0 overlaps + 0 out-of-bounds asserted). Office sites
 > `fixture` codes in that store's `epcs.csv` resolve to the **fixture-zone of the same `code`**, keyed
 > `(store_id, code)`. Codes (`GF-R1-U2`, `PW-01`, `GPS-01`…) repeat across stores but geometry differs.
 
+- **`departments[]`** (top-level, mirrors `chain-manifest.json`): `[{code, key, label}]` — the
+  sport-universe bands for this store (flagship 6–7 / large 4–5 / medium 2–3).
 - **`zones[]`** — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, plus the
   **mother-canonical geometry** (SRID 0, mm, Z=0): `geometry_type` (`polygon`|`circle`), `geometry`
   (WKT — `POLYGON Z` ring for polygons, center-only `POINT Z` for circles), `properties` (`{}` for
   polygons; `{centerX,centerY,radiusX,radiusY,rotation}` for circles/ellipses). `rect_mm{x1,y1,x2,y2}`
   is a twin-side bounding-box convenience. (Round racks + promo islands use `circle`; see STORE-LAYOUT.md § Geometry format.)
-  - **Area zones** (11, every store): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
+  - **Area zones** (12–17, varies by store): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
     try-on zones add `try_on_profile` (`footwear_bench`/`equipment_test`/`apparel_room`); plus
-    `customer_accessible`. Codes `Z-01`…`Z-11`.
-  - **Fixture-zones** (varies, ~42 medium → ~78 flagship): `zone_type='fixture'`, plus `in_area_zone`
-    and `fixture_category` (`gondola_front`/`perimeter_west`/`gps_case`/…). GPS cases + checkout/service
+    `customer_accessible`. Non-department area zones use `Z-0N` codes; department band zones use `D-0N` codes.
+    - **Department bands** (`zone_type='region'`, codes `D-01`…`D-0N`): the main selling-floor bands,
+      each with a `department` key (e.g. `"hike_camp"`) and a name (e.g. `"Hiking, Trekking & Camping"`).
+      Replaces the old single "Main Sales Floor" region.
+    - **Stockroom (Z-05)**: `zone_type='region'`, `customer_accessible=false` — the back-of-house holding
+      area. Contains `receiving_dock` (code `RCV-01`) and `backroom_rack` (codes `BR-01`…`BR-0N`) fixtures.
+  - **Fixture-zones** (varies, ~39 medium → ~115+ flagship): `zone_type='fixture'`, plus `in_area_zone`
+    (points at their department band `D-0N` for floor fixtures, `Z-05` for BOH fixtures) and
+    `fixture_category` (`gondola_front`/`perimeter_west`/`gps_case`/`backroom_rack`/`receiving_dock`/…).
+    Floor fixtures carry a `department` field (sport-universe key). GPS cases + checkout/service
     counters exist but are unstocked (no watch SKUs; non-merchandise).
-- **`counts`** — `zones_total`, `area_zones` (11), `fixture_zones`, `try_on_zones` (3),
-  `gondola_rows`, `gondola_units`. **`footprint_mm`** — this store's `{width, depth}`.
+- **`counts`** — `zones_total`, `area_zones`, `fixture_zones`, `try_on_zones` (3), `departments`,
+  `backroom_racks`, `gondola_rows`, `gondola_units`. **`footprint_mm`** — this store's `{width, depth}`.
 - **`crossing_slices[]`** (1) — `CS-01` main entrance EAS gate (traffic/EAS).
 - **`sensors[]`** (5) — 3 Xovis 3D cameras + RFID overhead + EAS gate (planned placement).
 - **Geometry:** millimeters, origin SW corner, footprint 24,000 × 25,000 mm, rectangles → `POLYGON Z` SRID 0.
@@ -150,6 +164,10 @@ side all vary by tier+seed; 0 overlaps + 0 out-of-bounds asserted). Office sites
 
 One row per **SKU carried by that store** (variant-level: a size/color is its own row).
 
+Full column order: `ean`, `item_cd`, `brand`, `category`, `classification_key`, `department`,
+`product_type`, `name_en`, `name_local`, `size_us`, `color`, `price_usd`, `price_local`,
+`currency`, `locale`, `fixture`, `depth`, `handle`, `image`, `n_images`.
+
 | Column | Notes |
 |---|---|
 | `ean` | EAN-13 barcode (real Decathlon GS1-FR) — the product's stable identity |
@@ -157,6 +175,7 @@ One row per **SKU carried by that store** (variant-level: a size/color is its ow
 | `brand` | Decathlon passion brand (Quechua, Kiprun, Forclaz, …) — from Shopify `vendor`, authoritative. **CORE-REQ-001 §1** |
 | `category` | planogram bucket: footwear / apparel / accessories / bag_pack / outdoor |
 | `classification_key` | leaf class key → `classification.csv` (`<category>.<product_type-slug>`, stable). **CORE-REQ-001 §2** |
+| `department` | sport-universe key the style belongs to: `hike_camp` / `running` / `climb` / `snow` / `cycling` / `water` / `general`. Matches the store's department bands. |
 | `product_type` | finer source type (Shoes, Jacket, Backpack, …) |
 | `name_en` | English product name (real, from the US catalog) |
 | `name_local` | localized display name in the store's language: `name_en` (US), French (FR), Korean (KR). From `localization/name-localization.csv`. Machine gloss — see Localization |
@@ -164,8 +183,8 @@ One row per **SKU carried by that store** (variant-level: a size/color is its ow
 | `price_usd` | base USD price (master) |
 | `price_local` | price in the store's currency (`localize_price` in chain_config.py) |
 | `currency`, `locale` | matches the store's region |
-| `fixture` | planogram fixture code (e.g. `GF-R1-U2`, `PW-01`) per STORE-LAYOUT.md |
-| `depth` | how many physical units of this SKU the store stocks (= count of its EPC rows) |
+| `fixture` | planogram fixture code (e.g. `GF-R1-U2`, `PW-01`) per STORE-LAYOUT.md — always a customer-facing floor fixture |
+| `depth` | units of this style (across all sizes/colours) stocked at this fixture — a **realistic per-style size-curve allocation**: units are distributed as a bell over the style's distinct sizes (modal sizes deeper, thin tail sizes may be 0), then split across colours. NOT a flat per-size count. Total units = count of EPC rows for this style. |
 | `handle`, `image`, `n_images` | Shopify handle + **real product image URL** + image count |
 
 > Same `ean` appears in multiple stores — that's the same *product* stocked in different stores.
@@ -178,7 +197,8 @@ One row per **physical unit** (one RFID tag = one sellable item). This is the in
 | Column | Notes |
 |---|---|
 | `epc` | 24-hex **SGTIN-96** tag, scanner-decodable back to its EAN |
-| `ean`, `item_cd`, `category`, `fixture` | denormalized from the assortment row |
+| `ean`, `item_cd`, `category` | denormalized from the assortment row |
+| `fixture` | the zone code where this unit is physically located — either a customer-facing floor fixture (e.g. `GF-R1-U2`, `PW-01`) **or** a `backroom_rack` (e.g. `BR-01`…`BR-08`). ~18% of every style's units are staged in back-of-house on backroom racks; the rest are on the sales floor. |
 | `store_id` | owning store |
 
 **EPC encoding** — validated Decathlon SGTIN-96 (`filter=1`, `partition=6`, EAN-derived
@@ -342,6 +362,6 @@ adjective agreement are approximate). Example, one SKU across regions:
 - **Catalog import:** the format/endpoint for bulk product ingest incl. **images** and per-region
   price/currency/locale (ties to the `CATALOG-IMPORT-ONBOARDING` core gap).
 - **EPC/item provisioning:** bulk item + `item_identifier` + `thing_location` ingest at chain scale
-  (~277k tags) and the EPC-encoding-config surface (ties to the EPC-encoding onboarding gap).
+  (~102k tags, ~18% on backroom racks) and the EPC-encoding-config surface (ties to the EPC-encoding onboarding gap).
 
 Once published, twin maps these files onto the schema and seeds M8trxDemo (gated prod write).

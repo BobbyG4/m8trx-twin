@@ -1,6 +1,6 @@
 # Chain Dataset ↔ Core Import Contract — Reconciliation
 
-**Status:** v1, 2026-06-11 (Twin Session 5). Twin-side companion to `CHAIN-DATA-SPEC.md`.
+**Status:** v2, 2026-06-22 (Twin Session 7). Twin-side companion to `CHAIN-DATA-SPEC.md`.
 **Maps:** `reference/data/chain/*` → core's **`~/IdeaProjects/m8trx-shared/twin/insights/IMPORT-CONTRACT.md`**
 (backend-authored, code-derived, *not yet smoke-tested* — confirm payloads against the running API
 before locking any serializer).
@@ -43,11 +43,11 @@ the envelope shape the contract recommends.
 |---|---|---|---|---|
 | `chain-manifest.json → stores[]` (10 retail) | site/space provisioning input | §1 config-FK anchor — provisioned via GraphQL/REST | provision sites → config map | ⚠ **PARTIAL** — provisioning *format* not in this contract (assumes existing onboarding) |
 | `chain-manifest.json → office_sites[]` (4 office) | HQ + regional site rows, `site_type=office` | §1 anchor but **site_id only** — no `space_id/zone_id/fixture_id` (no space/inventory/sensors) | provision site row → config map | ⚠ **PARTIAL** — needs a `site_type=office` provisioning path |
-| `stores/<id>/layout.json` (per-store UNIQUE floor: 11 area + N `zone_type='fixture'`, N ~42–78) | space + zone provisioning (retail only) | §1 config FKs `space_id`, `zone_id` (fixtures ARE zones — no `fixture_id`) | instantiate each store's own space + its zones → config map | ✅ **COVERED (data)** — matches core's zone model; provisioning *format* still core's |
-| `stores/*/assortment.csv` (SKUs) | catalog/product master (incl. `brand`, `classification_key`) | natural key `sku` → `item.id`; `brand`→`product.brand`; `classification_key`→`product.classification_id` | `POST /api/v2/inventory/skus/bulk` (atom #26) + attribs/images | ⚠ **PARTIAL** — bulk SKU exists; **images** are the open `CATALOG-IMPORT-ONBOARDING` gap |
+| `stores/<id>/layout.json` (per-store UNIQUE floor: 12–17 area zones + N `zone_type='fixture'`, N ~39–115+; area zones include department bands `D-0N` + BOH `Z-05` with `backroom_rack`/`receiving_dock` fixtures) | space + zone provisioning (retail only) | §1 config FKs `space_id`, `zone_id` (fixtures ARE zones — no `fixture_id`) | instantiate each store's own space + its zones → config map | ✅ **COVERED (data)** — matches core's zone model; provisioning *format* still core's |
+| `stores/*/assortment.csv` (SKUs) | catalog/product master (incl. `brand`, `classification_key`, `department`) | natural key `sku` → `item.id`; `brand`→`product.brand`; `classification_key`→`product.classification_id`; `department` — sport-universe band for planogram placement | `POST /api/v2/inventory/skus/bulk` (atom #26) + attribs/images | ⚠ **PARTIAL** — bulk SKU exists; **images** are the open `CATALOG-IMPORT-ONBOARDING` gap |
 | `classification.csv` (5 roots + 90 leaves) | product taxonomy + `attributes_schema` | natural key `classification_key` → `product_classification` (`attributes_schema` JSON) | core loader (CORE-REQ-001) | 📦 **DELIVERED** (CORE-REQ-001 §2) — awaiting core re-seed |
 | `display_lookup.csv` (405 rows) | raw→display attribute coding (colour) | `(attribute_name, raw_value, locale)` → `display_lookup` (`visual` JSON) | core loader (CORE-REQ-001) | 📦 **DELIVERED** (CORE-REQ-001 §3) — awaiting core re-seed |
-| `stores/*/epcs.csv` (277,515 units) | opening inventory | §2/§5 "inventory position **derived from scans**"; EPC→`item.id` via EpcResolver | raw `POST /api/v2/scans` (#14) or `inventoryReceive` (#25) → `thing_location` derived | ✅ **COVERED** mechanism — gated on `SERVICE-BEARER-INVENTORY` for the API path |
+| `stores/*/epcs.csv` (102,675 units; ~18% on `backroom_rack` fixtures in Z-05) | opening inventory | §2/§5 "inventory position **derived from scans**"; EPC→`item.id` via EpcResolver | raw `POST /api/v2/scans` (#14) or `inventoryReceive` (#25) → `thing_location` derived | ✅ **COVERED** mechanism — gated on `SERVICE-BEARER-INVENTORY` for the API path |
 | `staff/roster.csv` + `org-chart.json` | user / org provisioning | **not addressed** (contract is operational-pulse scope) | — | ❌ **OPEN** — needs a user/role/org provisioning contract |
 
 ---

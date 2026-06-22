@@ -1,12 +1,13 @@
 # Deploy Handoff — Decathlon Chain → M8trxDemo
 
-**For:** backend deploy session. **Date:** 2026-06-11. **Source:** Twin Session 5.
-**One-line:** provision the M8trxDemo tenant as a 14-site Decathlon chain with 251 users + full
-catalog/inventory, from the files in this folder.
+**For:** backend deploy session. **Source:** Twin. **Latest:** RESEED 2026-06-22 (Session 7).
+**One-line:** M8trxDemo is a 14-site Decathlon chain. It was first seeded 2026-06-11; this doc's
+**RESEED** section is the authoritative current instruction (per-store departmentalized layouts,
+realistic size-curve inventory, lean back-of-house, site coordinates).
 
 ---
 
-## ✅ SEEDED — 2026-06-11 (core deploy session)
+## ✅ SEEDED — 2026-06-11 (history)
 
 Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944e`). Verified at DB + RLS-path (zenven) + UI smoke.
 
@@ -17,94 +18,87 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 | Catalog | 2,586 products + 2,586 images |
 | Inventory | 277,515 EPCs → thing/item/item_identifier (1:1), `in_stock`, **site-level** |
 
-**Roles:** HQ + regional office → `member`; store mgr/assistant → `site-manager`; floor → `staff`; nobody platform-admin.
-**Method:** direct `psql` to `mother:5448` (REST/Hasura write paths were tenant/role-blocked — full notes in CC memory `project_m8trxdemo_seed`). Reversible via tenant-delete; pre-seed backup `mother:/tmp/m8trx_v2_2026-06-11_pre-chain-seed.dump`.
+**Method:** direct `psql` to `mother:5448` (REST/Hasura write paths were tenant/role-blocked — notes in CC memory `project_m8trxdemo_seed`). Reversible via tenant-delete; pre-seed backup `mother:/tmp/m8trx_v2_2026-06-11_pre-chain-seed.dump`.
 
-**Carried limitations:** currency displays **USD** (EUR/KRW preserved in `product.display_attributes.prices`); inventory is **site-level only** (no `thing_location`/fixture pins); commerce dashboards blank until `commerce_projection` writer ships (**TWIN-REQ-002**).
-
-**⚠ LAYOUT SUPERSEDED — FULL RE-SEED NEEDED (2026-06-22):** the 2026-06-11 seed (10 spaces from a shared template) had **overlapping fixtures** and is replaced by **10 UNIQUE per-store layouts** (`stores/<id>/layout.json`, parametric, 0 overlaps asserted). Re-provision each store's own spaces/zones/fixtures + re-receive the **277,515 items** at the new fixture-zones via scan/receive (`thing_location` = fixture centroid). Old fixture codes/positions on mother no longer match — full re-provision, not a patch.
+**Superseded by the RESEED below.** The 2026-06-11 inventory (277,515 EPCs, flat per-size depth, site-level, shared overlapping layout) is fully replaced.
 
 ---
 
-> Read **[CHAIN-DATA-SPEC.md](CHAIN-DATA-SPEC.md)** for the column-by-column data dictionary, and
-> **[IMPORT-MAPPING.md](IMPORT-MAPPING.md)** for how each file maps onto the core import contract.
-> All paths below are relative to `~/IdeaProjects/m8trx-twin/reference/data/chain/`.
+## ⚠ RESEED — 2026-06-22 (AUTHORITATIVE — execute this)
 
----
+> Read **[CHAIN-DATA-SPEC.md](CHAIN-DATA-SPEC.md)** for the column-by-column dictionary, **[SEED-PLAYBOOK.md](SEED-PLAYBOOK.md)** for the 5 data-modeling corrections (read before importing), and **[IMPORT-MAPPING.md](IMPORT-MAPPING.md)** for the import-contract mapping. Paths are relative to `~/IdeaProjects/m8trx-twin/reference/data/chain/`.
 
-## Totals
+### What changed since the live seed
+
+| Layer | On mother now (2026-06-11) | This reseed | Action |
+|---|---|---|---|
+| **Tenant / Users** | M8trxDemo · 251 users | unchanged | **keep** |
+| **Sites** | 14, no coordinates | +`latitude`/`longitude` on all 14 (geocoded to address) | **UPDATE 14 rows** |
+| **Spaces / zones** | 10 shared-template, overlapping fixtures, single "Main Floor" | 10 **unique** floors, **sport-universe department bands**, real **back-of-house** (dock + racks), mother-canonical geometry | **drop + recreate** |
+| **Catalog** | 2,586 products, USD, no coding | +`brand` +`classification_key` +`department` + `classification.csv` + `display_lookup.csv` (CORE-REQ-001) | **enrich** (not re-create) |
+| **Inventory** | 277,515 EPCs, flat per-size depth, **site-level** | **102,675 EPCs**, realistic **size curves**, placed at **department + BOH fixture-zones**; EPC strings all changed | **re-import** |
+
+### Reseed mechanism — in-place, no tenant-delete
+
+Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
+
+1. **Sites** — `UPDATE site SET latitude=…, longitude=…` for all 14 (values in `chain-manifest.json` `stores[]` / `office_sites[]`). Nothing else on the site row changes.
+2. **Spaces** — **drop** each retail site's existing space (cascade its zones/fixtures/scan_events/thing_locations) and **recreate** from `stores/<id>/layout.json`. Office sites still get no space.
+3. **Inventory** — the 277,515 old items no longer match (EPC strings changed with the new depths). **Delete the old items and re-import** the 102,675 from `stores/<id>/epcs.csv`, placed at their fixture-zone via scan/receive.
+
+> Why re-import not re-locate: fixing the size-curve realism regenerated every serial, so EPC strings differ from 2026-06-11. The item set is genuinely new.
+
+### Totals (this reseed)
 
 | | |
 |---|---|
-| Sites | **14** (10 retail + 4 office) |
-| Users | **251** (250 staff + 1 tenant-admin) · 30 inactive |
-| Catalog | 22,944 store-SKU rows (2,586 distinct master SKUs, real images) |
-| Inventory | **277,515 EPCs** (scanner-decodable SGTIN-96) |
-| Layout | each retail site's OWN unique floor · 11 area zones + N `zone_type='fixture'` (N ~42–78, varies by tier+seed) |
+| Sites | **14** (10 retail + 4 office) · all with lat/long |
+| Users | **251** (unchanged) |
+| Catalog | **2,586** products (tenant-scoped) + coding layer · USD display, EUR/KRW in `display_attributes.prices` |
+| Inventory | **102,675 EPCs** · ~18.4k (18%) staged in back-of-house, ~84.3k on the floor |
+| Per store | flagship ~14.6–15k · large ~9.5–9.8k · medium ~4.7–5.0k EPCs (exact in manifest) |
+| Layout | per store: 10 base area zones + **2–7 department bands** + **N fixture-zones** + BOH (1 dock + 4–8 racks). 0 overlaps asserted. |
 | Spread | 5 IANA timezones (UTC-8 → +9) · 3 currencies (USD/EUR/KRW) |
 
----
+### Deploy order
 
-## Deploy order
+**1. Tenant** — `M8trxDemo`, exists. Admin login `zenvendemo@gmail.com` (real Google mailbox → OAuth).
 
-### 1. Tenant
-`M8trxDemo`. Tenant-admin login = **`zenvendemo@gmail.com`** (real Google mailbox → OAuth sign-in).
+**2. Sites (14)** — `chain-manifest.json`. Rows exist; **UPDATE `latitude`/`longitude`** on all 14 from the manifest (`stores[]` + `office_sites[]`). The logical id → real `site_id` config-map is what everything else joins on.
 
-### 2. Sites (14) — `chain-manifest.json`
-Provision sites first; the logical id → real `site_id` binding is the **config map** everything
-else joins on.
+**2b. Spaces / zones / fixtures (retail only)** — `stores/<id>/layout.json`. Drop + recreate per store. Each floor =
+- **Area zones**: `entry_exit` (EAS entrance), `checkout`, 3 `try_on_zone`, `Stockroom` (BOH, `customer_accessible=false`), service/specialty `region`s, **+ 2–7 sport-universe `region` department bands** (e.g. "Hiking, Trekking & Camping", "Running & Trail", "Cycling" — `name`, `properties`, and a `department` key).
+- **Fixture-zones** (`zone_type='fixture'`): gondolas, perimeter bays, specialty, checkout, circular feature displays, **+ BOH** `receiving_dock` + `backroom_rack`. **Fixtures ARE zones, not the `fixture` table** (corrections §1). Each floor fixture carries `in_area_zone` (its department band) + `department`.
+- Geometry: **mother-canonical** — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0.
 
-- **`stores[]`** — 10 **retail** sites. Each: `id`, `address`, `timezone` (IANA), `currency`,
-  `locale`, `tier`, `sqm`. These get space/zones/fixtures/inventory.
-- **`office_sites[]`** — 4 **office** sites (HQ + US/FR/KR regional). `site_type=office`,
-  `has_space=has_inventory=has_sensors=false` — **provision a site row only**, no space/zone/fixture.
+**3. Users (251)** — `staff/users.csv`. **Already seeded; unchanged** — no action unless re-provisioning from scratch.
 
-### 2b. Spaces / zones / fixtures (retail only) — `stores/<id>/layout.json` (per-store, unique)
-Each of the 10 retail sites instantiates **its own unique space** → 11 area zones (incl. 3
-try-on, EAS entrance, checkout, stockroom) + **N `zone_type='fixture'` zones** (N varies per store,
-~42–78, from that store's `layout.json`). **Fixtures are zones, not a separate table** (core's
-`fixture` table is unused — corrections doc §1). Office sites
-get no space. The `fixture` codes in `epcs.csv` resolve to the **fixture-zone of the same code**
-`(store_id, code)` — so provision spaces **before** inventory (step 5), and place items at the
-**fixture-zone** via scan/receive (step 5).
+**4. Catalog** — `stores/<id>/assortment.csv` (×10). **Enrich** the existing 2,586 products:
+- New columns per SKU: `brand` (authoritative, ← Shopify vendor), `classification_key`, `department`.
+- Load the chain-level coding tables into the CORE-REQ-001 SurfaceProfile: **`classification.csv`** (5 roots + 90 leaves, `attributes_schema`, `lifecycle_type`) and **`display_lookup.csv`** (colour raw→canonical family ×3 locales + swatch).
+- Per-region prices in `display_attributes.prices`; single-currency (USD) display until core adds per-region pricing (corrections §3). Images = real Shopify `image` URLs (image-pipeline gap below).
 
-| Site | Type | City | TZ | Cur |
-|---|---|---|---|---|
-| dec-us-denver / -nyc / -sf | retail | Denver / New York / San Francisco | MT / ET / PT | USD |
-| dec-fr-paris / -lyon / -lille / -marseille / -bordeaux | retail | (France) | Europe/Paris | EUR |
-| dec-kr-seoul / -busan | retail | Seoul / Busan | Asia/Seoul | KRW |
-| dec-hq-global | office | Villeneuve-d'Ascq, FR | Europe/Paris | — |
-| dec-us-region | office | New York, NY | America/New_York | — |
-| dec-fr-region | office | Paris, FR | Europe/Paris | — |
-| dec-kr-region | office | Seoul, KR | Asia/Seoul | — |
+**5. Inventory** — `stores/<id>/epcs.csv` (×10). One row per unit: `epc` (SGTIN-96), `ean`, `item_cd`, `category`, `fixture`, `store_id`. The `fixture` code resolves to the **fixture-zone of the same `(store_id, code)`** — floor OR `backroom_rack`. **Place via raw scan/receive → let the platform derive `thing_location`** (corrections §2). This finally lifts inventory from site-level to fixture-level (incl. backroom stock).
 
-### 3. Users (251) — `staff/users.csv`  ← the file under active test
-Columns: `email, display_name, name_local, role, role_label, site, region, timezone, status,
-status_reason, tenant_admin`.
-- 250 staff are **site-bound** (`site` = a retail or office id); only the tenant-admin is blank/tenant-scoped.
-- **30 inactive** accounts (varied `status_reason`: terminated / resigned / on_long_leave /
-  deactivated / account_locked) — deliberately included to exercise inactive/orphaned states.
-- `role` is a **descriptive key for you to map → perms-v3 capabilities** (twin emits no capabilities).
-- Reporting hierarchy (optional) lives in `staff/roster.csv` (`manager_id`) + `staff/org-chart.json`.
+### Item-placement path
 
-### 4. Catalog — `stores/<id>/assortment.csv` (×10)
-Per-store SKU list: `ean`, `item_cd` (sku), localized `name_local` + `price_local`/`currency`/`locale`,
-`fixture` code, real Shopify `image` URL. Master FR/KO name map: `localization/name-localization.csv`.
+Prefer the **API receive/scan** path (one step → `scan_event` + derived `thing_location` + audit). It is still blocked by the service-bearer gap (#4 below). Until that lands, use the **direct-DB escape hatch but write BOTH `thing_location` AND `scan_event` at the fixture-zone** — the 2026-06-11 round wrote `thing_location` only and the UI (which reads `scan_event`) stayed blank, forcing a fix-up.
 
-### 5. Inventory — `stores/<id>/epcs.csv` (×10)
-One row per physical unit: `epc` (SGTIN-96), `ean`, `item_cd`, `category`, `fixture`, `store_id`.
-**Load as raw scan/receive → let the platform derive `thing_location`** (per import contract §2).
-Direct-DB only for historical backfill, and only then owning FK pre-resolution + past timestamps +
-projection backfill + no audit.
+### Acceptance checks (run post-reseed)
 
----
+- [ ] 14 sites have non-null `latitude`/`longitude`; geo map plots all 14.
+- [ ] Each retail space has its department bands + `Stockroom` with `receiving_dock`/`backroom_rack`; canvas renders fixtures (0 overlaps; circular fixtures render round, not bounding boxes).
+- [ ] Every `epcs.csv` `fixture` resolves to a fixture-zone in that store's space (twin asserts 0 orphans pre-handoff).
+- [ ] Item count on mother = **102,675**; ~18% sit at `backroom_rack` zones (back-of-house stock visible).
+- [ ] `GetItemsAtLocation` returns a realistic **size curve** per shoe style (modal sizes deeper, tails thin) — not a flat pile of one size.
+- [ ] `brand` / `classification_key` / `department` populated; Discover/Things surface shows coded attributes + colour families.
 
-## Still on backend (blocks a *full* seed — see IMPORT-MAPPING.md)
+### Still on backend (gaps)
 
 | # | Gap | Affects | Tracked as |
 |---|---|---|---|
-| 1 | **User/role/org provisioning format** | step 3 (users) — the live one | request |
-| 2 | Site + **space/zone/fixture** provisioning (incl. `site_type=office`) | steps 2 / 2b | request |
+| 1 | User/role/org provisioning format | step 3 (only if re-provisioning) | request |
+| 2 | Site + space/zone/fixture provisioning (incl. `managed`-no-space office) | steps 2 / 2b | request |
 | 3 | Catalog import **with images** + per-region price/currency/locale | step 4 | `CATALOG-IMPORT-ONBOARDING` |
 | 4 | Service bearer on inventory endpoints | step 5 (API receive/scan path) | `SERVICE-BEARER-INVENTORY` |
 | 5 | `commerce_projection` writer | commerce dashboards | **TWIN-REQ-002** (filed) |
@@ -112,9 +106,11 @@ projection backfill + no audit.
 ---
 
 ## Notes
+
 - **Disposable + deterministic.** Regenerate byte-identical any time:
-  `python3 scripts/build_layout.py && python3 scripts/localize_names.py && python3 scripts/build_chain.py && python3 scripts/build_staff_roster.py`.
-- EPC scheme reference: `reference/data/EPC-ENCODING-DECATHLON.md` (validated against 169k real tags).
-- Demo data — "realistic, not accurate": addresses/prices/headcounts/names are plausible, not audited.
-- One open twin-side item at seed time: build the config-map binding logical ids
-  (`dec-us-denver`, `GF-R1-U2`) → provisioned UUIDs once sites exist.
+  `python3 scripts/build_layout.py && python3 scripts/localize_names.py && python3 scripts/build_chain.py && python3 scripts/build_staff_roster.py && python3 scripts/render_floorplans.py`.
+- **Inventory density is a knob** — `TIER_SCALE` in `build_chain.py` (currently ~2×, ≈102k EPCs). Dial down for leaner; size curves hold at any scale.
+- EPC scheme: `reference/data/EPC-ENCODING-DECATHLON.md` (validated against 169k real tags).
+- Floor-plan SVGs (visual QA): `reference/data/floor-plans/<id>.svg` + `_comparison.svg` (departments tinted, BOH shaded).
+- Demo data — "realistic, not accurate": addresses/coords/prices/headcounts/depths are plausible, not audited.
+- One open twin-side item: build the config-map binding logical ids (`dec-us-denver`, `GF-R1-U2`) → provisioned UUIDs once sites/spaces exist.
