@@ -29,7 +29,7 @@ data and surfaced gaps that reshaped the reseed dataset before it ships. Net: th
   Running, Simond→Climbing, Wedze→Snow, Van Rysel/Riverside/Rockrider→Cycling, Itiwit→Water) — so
   `brand` (CORE-REQ-001) drives departmentalization for free. Catalog is mountain/outdoor-heavy.
 - **Build:** `sport_universe.py` (brand→universe + tier scaling). `build_layout.py` carves the hall
-  into department `region` bands (flagship 7 / large 4–5 / medium 2–3), replacing the single
+  into department `region` bands (flagship 6–7 / large 4–5 / medium 2–3 — count = min(7 universes, gondola rows), so Denver/SF 6, NYC/Paris 7), replacing the single
   "Main Sales Floor"; fixtures carry `in_area_zone` = department + a `department` key. `build_chain.py`
   places each SKU in its department; universes a small store lacks fold into **General**. **Zero core
   change** (just more `region` zones + `in_area_zone` repointing).

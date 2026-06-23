@@ -9,7 +9,7 @@
 
 **Session 7 (2026-06-22 · Twin) — OPEN (reseed pending)**
 Reseed-dataset realism overhaul. Carved the floor into **sport-universe departments** from `brand`
-(flagship 7 / large 4–5 / medium 2–3; new `sport_universe.py`; Decathlon's real "univers" model,
+(flagship 6–7 / large 4–5 / medium 2–3 — capped by gondola rows, so Denver/SF 6, NYC/Paris 7; new `sport_universe.py`; Decathlon's real "univers" model,
 decided after web research on departments + back-of-house), made the **Stockroom a real lean
 back-of-house** (receiving dock + racks; 18% of each style staged → a from-location for restock),
 and fixed Bob's **flat-depth "88-pair shoe"** with realistic **size curves** (new `size_curve.py`;
