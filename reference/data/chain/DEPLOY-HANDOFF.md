@@ -2,7 +2,7 @@
 
 **For:** backend deploy session. **Source:** Twin. **Latest:** RESEED 2026-06-22 (Session 7).
 **One-line:** M8trxDemo is a 14-site Decathlon chain. It was first seeded 2026-06-11; this doc's
-**RESEED** section is the authoritative current instruction (per-store departmentalized layouts,
+**RESEED** section is the authoritative current instruction (per-store **multi-space** layouts — site→spaces→zones,
 realistic size-curve inventory, lean back-of-house, site coordinates).
 
 ---
@@ -34,7 +34,9 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 |---|---|---|---|
 | **Tenant / Users** | M8trxDemo · 251 users | unchanged | **keep** |
 | **Sites** | 14, no coordinates, no functional-role column | +`latitude`/`longitude` + **`site_category`** (`store`×10 / `office`×4 — CORE-REQ-002) on all 14 | **UPDATE 14 rows** |
-| **Spaces / zones** | 10 shared-template, overlapping fixtures, single "Main Floor" | 10 **unique** floors, **sport-universe department bands**, real **back-of-house** (dock + racks), mother-canonical geometry | **drop + recreate** |
+| **Spaces / zones** | 10 floors, overlapping fixtures, **single "Main Floor" space per site** | each site → **3 spaces** (Sales Floor / Back Room / Fitting Rooms), each its own SRF; departments are `region` zones *in* the Sales Floor; mother-canonical geometry | **drop + recreate (now N spaces/site)** |
+
+> **⚠ FORMAT CHANGED 2026-06-23 (loaders):** `layout.json` top-level is now **`spaces[]`** (zones live under a space, not flat); manifest `stores[].space` → **`stores[].spaces[]`** + `space_counts`. Per the canonical ruling `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md` (site → spaces → zones). `assortment.csv`/`epcs.csv` are **unchanged** — `fixture` codes still resolve, now via `spaces[].zones[]`. Pass-2 assembly columns (`srf_to_site_transform`, `site_frame_anchor_space`) emitted `null` (dormant).
 | **Catalog** | 2,586 products, USD, no coding | +`brand` +`classification_key` +`department` + `classification.csv` + `display_lookup.csv` (CORE-REQ-001) | **enrich** (not re-create) |
 | **Inventory** | 277,515 EPCs, flat per-size depth, **site-level** | **102,675 EPCs**, realistic **size curves**, placed at **department + BOH fixture-zones**; EPC strings all changed | **re-import** |
 
@@ -43,7 +45,7 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
 
 1. **Sites** — `UPDATE site SET latitude=…, longitude=…, site_category=…` for all 14 (values in `chain-manifest.json`: `stores[]`→`store`, `office_sites[]`→`office`). **`site_category`** (CORE-REQ-002, core **mig 146** — apply with backup) sets the functional role authoritatively, so core stops inferring it from space-presence. Ownership `site_type` stays `managed` (untouched). Nothing else on the site row changes.
-2. **Spaces** — **drop** each retail site's existing space (cascade its zones/fixtures/scan_events/thing_locations) and **recreate** from `stores/<id>/layout.json`. Office sites still get no space.
+2. **Spaces** — **drop** each retail site's existing space(s) (cascade zones/fixtures/scan_events/thing_locations) and **recreate the 3 spaces** from `stores/<id>/layout.json` `spaces[]`: Sales Floor (`sales_floor`), Back Room (`stockroom`), Fitting Rooms (`fitting_room`); zones hang under each space. Pass-1: `srf_to_site_transform` / `site_frame_anchor_space` are `null` (DORMANT — Pass 2 site-assembly). Office sites still get no space.
 3. **Inventory** — the 277,515 old items no longer match (EPC strings changed with the new depths). **Delete the old items and re-import** the 102,675 from `stores/<id>/epcs.csv`, placed at their fixture-zone via scan/receive.
 
 > Why re-import not re-locate: fixing the size-curve realism regenerated every serial, so EPC strings differ from 2026-06-11. The item set is genuinely new.
@@ -57,7 +59,7 @@ Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
 | Catalog | **2,586** products (tenant-scoped) + coding layer · USD display, EUR/KRW in `display_attributes.prices` |
 | Inventory | **102,675 EPCs** · ~18.4k (18%) staged in back-of-house, ~84.3k on the floor |
 | Per store | flagship ~14.6–15k · large ~9.5–9.8k · medium ~4.7–5.0k EPCs (exact in manifest) |
-| Layout | per store: 10 base area zones + **2–7 department bands** + **N fixture-zones** + BOH (1 dock + 4–8 racks). 0 overlaps asserted. |
+| Layout | per store: **3 spaces** — Sales Floor (entrance/checkout/2–7 `region` department bands/fixtures/try-on), Back Room (dock + 4–8 racks), Fitting Rooms (stalls). Each space its own SRF; 0 overlaps asserted/space. |
 | Spread | 5 IANA timezones (UTC-8 → +9) · 3 currencies (USD/EUR/KRW) |
 
 ### Deploy order
@@ -66,10 +68,12 @@ Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
 
 **2. Sites (14)** — `chain-manifest.json`. Rows exist; **UPDATE `latitude`/`longitude`** on all 14 from the manifest (`stores[]` + `office_sites[]`). The logical id → real `site_id` config-map is what everything else joins on.
 
-**2b. Spaces / zones / fixtures (retail only)** — `stores/<id>/layout.json`. Drop + recreate per store. Each floor =
-- **Area zones**: `entry_exit` (EAS entrance), `checkout`, 3 `try_on_zone`, `Stockroom` (BOH, `customer_accessible=false`), service/specialty `region`s, **+ 2–7 sport-universe `region` department bands** (e.g. "Hiking, Trekking & Camping", "Running & Trail", "Cycling" — `name`, `properties`, and a `department` key).
-- **Fixture-zones** (`zone_type='fixture'`): gondolas, perimeter bays, specialty, checkout, circular feature displays, **+ BOH** `receiving_dock` + `backroom_rack`. **Fixtures ARE zones, not the `fixture` table** (corrections §1). Each floor fixture carries `in_area_zone` (its department band) + `department`.
-- Geometry: **mother-canonical** — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0.
+**2b. Spaces / zones / fixtures (retail only)** — `stores/<id>/layout.json` → top-level **`spaces[]`** (3 per store). **A site has many spaces** (`SPATIAL-HIERARCHY.md`). Drop + recreate per store. Each space carries its own SRF frame (SW-origin local mm) + `space_type`; zones hang under it. Pass-1 assembly columns (`site_frame_anchor_space`, `srf_to_site_transform`) emit `null` — DORMANT until Pass 2.
+- **Sales Floor** (`space_type=sales_floor`): `entry_exit` entrance + an `eas_gate` `crossing_slices`; `checkout`; **2–7 sport-universe `region` department bands** (`name` + `department` key, e.g. "Hiking, Trekking & Camping" / "Running & Trail" / "Cycling"); footwear-bench + gait `try_on_zone`s; service/specialty `region`s; **fixtures** (`zone_type='fixture'`: gondolas, perimeter bays, GPS/accessories, checkout counters, circular feature displays) — each fixture carries `in_area_zone` (its dept) + `department`.
+- **Back Room** (`space_type=stockroom`, non-customer): `receiving_dock` + `backroom_rack` fixtures.
+- **Fitting Rooms** (`space_type=fitting_room`): the stalls as `try_on_zone`s.
+- **Fixtures ARE zones**, not the `fixture` table (corrections §1). `space_type` values are **proposed-canonical, pending Backend/Web ratification** (BW owns the enum).
+- Geometry: **mother-canonical** — circle = center `POINT Z` + `properties{centerX,centerY,radiusX,radiusY,rotation}`; polygon = `POLYGON Z` ring; SRID 0, mm, Z=0 (per space frame).
 
 **3. Users (251)** — `staff/users.csv`. **Already seeded; unchanged** — no action unless re-provisioning from scratch.
 
@@ -87,8 +91,8 @@ Prefer the **API receive/scan** path (one step → `scan_event` + derived `thing
 ### Acceptance checks (run post-reseed)
 
 - [ ] 14 sites have non-null `latitude`/`longitude` (geo map plots all 14) **and non-null `site_category`** — the 10 retail = `store`, the 4 offices = `office`.
-- [ ] Each retail space has its department bands + `Stockroom` with `receiving_dock`/`backroom_rack`; canvas renders fixtures (0 overlaps; circular fixtures render round, not bounding boxes).
-- [ ] Every `epcs.csv` `fixture` resolves to a fixture-zone in that store's space (twin asserts 0 orphans pre-handoff).
+- [ ] Each retail site has **3 spaces** (Sales Floor / Back Room / Fitting Rooms); Sales Floor carries the `region` department bands; Back Room has `receiving_dock`/`backroom_rack`; canvas renders fixtures per space (0 overlaps; circular fixtures render round, not bounding boxes).
+- [ ] Every `epcs.csv` `fixture` resolves to a fixture-zone in one of that store's spaces (`spaces[].zones[]`) — twin asserts 0 orphans pre-handoff; ~18% land in the Back Room space.
 - [ ] Item count on mother = **102,675**; ~18% sit at `backroom_rack` zones (back-of-house stock visible).
 - [ ] `GetItemsAtLocation` returns a realistic **size curve** per shoe style (modal sizes deeper, tails thin) — not a flat pile of one size.
 - [ ] `brand` / `classification_key` / `department` populated; Discover/Things surface shows coded attributes + colour families.

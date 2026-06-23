@@ -69,6 +69,35 @@ data and surfaced gaps that reshaped the reseed dataset before it ships. Net: th
 - **Build:** `lat`/`lon` on all 14 sites in `chain_config.py` (geocoded to each actual address),
   emitted in the manifest. Reseed adds an `UPDATE site SET latitude/longitude` on the 14 rows.
 
+### 7. CORE-REQ-002 — `site_category` (inverse brief, core→twin; commit `bf1915c`)
+- Core mig 146 adds `site.site_category` (functional role `store|office|warehouse`); twin supplies the
+  per-site value so the reseed sets it authoritatively (vs core inferring role from space-presence).
+- Build: `site_category` in `build_chain` manifest (store×10 / office×4). **Twin's `site_type`
+  (retail/office) is descriptive — NOT core's ownership `site.site_type` (stays `managed`).** Brief →
+  `delivered` (`m8trx-shared/twin/requirements/CORE-REQ-002-site-category.md`, committed `091981a`).
+
+### 8. ★ SPATIAL HIERARCHY corrected → `site → spaces → zones` (Pass 1; commit `c480446`)
+- **The single-space build was wrong.** A site has MANY spaces (Sales Floor / Back Room / Fitting
+  Rooms…). Canonical ruling: `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md` (grounded in `7a. Data
+  Model`: `space.site_id` non-unique; the Session-14 site-assembly layer was skipped by the build).
+- **Root cause** (post-mortem, Coordinator-adjudicated): twin inherited a single-space model from the
+  2026-06-11 corrections doc (which spoke of "*the* space" / one "Main Floor" example), and this
+  session's audit flagged space-cardinality as UNCONFIRMED but it was downgraded to a deferred
+  enhancement instead of a blocking unknown. Also: **`region` was NOT invented** — `zone_type='region'`
+  is spec (enum l.336); the word is overloaded 3 ways (region *table* = site-group above site /
+  `zone_type='region'` = area below space / geo-region analytics). No phantom tier between site & space.
+- **Fix (Pass 1):** `build_layout` partitions the flat floor into **3 SRF-independent spaces** —
+  Sales Floor (`sales_floor`) / Back Room (`stockroom`) / Fitting Rooms (`fitting_room`); departments
+  stay `region` zones *in* the Sales Floor; entrance = `entry_exit` + `eas_gate` crossing; fitting
+  stalls = `try_on_zone`. `build_chain` traverses `spaces[]`. Each space its own SRF (SW-origin local
+  frame). Assembly columns (`srf_to_site_transform`, `site_frame_anchor_space`, `space_connection`)
+  **DORMANT — Pass 2**. `space_type` provisional pending Backend/Web ratification.
+- **Verified:** 0 overlaps/space; 102,675 EPCs place to the right space (Denver 12,220 Sales Floor +
+  2,785 Back Room, 0 orphans); deterministic. `layout.json`→`spaces[]`; manifest→`stores[].spaces[]`;
+  `assortment`/`epcs` unchanged. Docs synced (DEPLOY-HANDOFF / CHAIN-DATA-SPEC / IMPORT-MAPPING / STATUS / TRACK).
+- **Pass 2 (PENDING):** site assembly — fill `srf_to_site_transform` + designate `site_frame_anchor_space`
+  + wire `space_connection` (FR-SPATIAL-26). Columns already emitted dormant → zero rework.
+
 ## Verification (all green, deterministic)
 - 0 fixture overlaps + 0 OOB asserted per store (`build_layout`).
 - 102,675 EPCs globally unique; SGTIN-96 round-trip clean (sampled); 0 orphan fixture codes.
@@ -86,4 +115,5 @@ data and surfaced gaps that reshaped the reseed dataset before it ships. Net: th
    stays OPEN** to amend the twin dataset if the seed surfaces issues.
 2. Verify post-reseed: geo plots 14 · circular fixtures round · per-style size curves · departments +
    backroom stock visible.
-3. Deferred: backroom-as-separate-space (core multi-space question); image pipeline; the "play."
+3. **Spatial Pass 2** — site assembly (transforms + `space_connection`). *(Backroom-as-separate-space is now RESOLVED — Back Room is its own space per the ruling.)*
+4. Deferred: image pipeline; the "play."

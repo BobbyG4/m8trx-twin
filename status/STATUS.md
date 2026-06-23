@@ -4,15 +4,16 @@
 
 ## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-22 — Session 7, **OPEN**: reseed pending)
 
-**Session 7 = reseed-dataset realism overhaul. Sport-universe departments + lean back-of-house + realistic size curves + site geo; reseed hand-off rewritten. All committed + deterministic. The RESEED ITSELF HAS NOT RUN on mother — session kept OPEN to amend the dataset if the seed surfaces issues.**
+**Session 7 = reseed-dataset realism overhaul + spatial-hierarchy correction. Site→spaces→zones (Pass 1), sport-universe departments, lean back-of-house, realistic size curves, site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten. All committed + deterministic. The RESEED ITSELF HAS NOT RUN on mother — session kept OPEN to amend the dataset if the seed surfaces issues.**
 
+- **★ SPATIAL HIERARCHY corrected → `site → spaces → zones` (Pass 1)** — the single-space build was the error; **a site has MANY spaces** (canonical ruling `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`, grounded in `7a. Data Model`). Each store now = **3 spaces** — Sales Floor (`sales_floor`) / Back Room (`stockroom`) / Fitting Rooms (`fitting_room`) — each its own SRF frame; **departments are `region` zones *within* the Sales Floor** (NOT spaces). `layout.json`→`spaces[]`; manifest→`stores[].spaces[]`; `assortment`/`epcs` unchanged (fixture resolves via `spaces[].zones[]`). **Pass 1 = structure (assembly columns `srf_to_site_transform`/`site_frame_anchor_space` DORMANT); Pass 2 = site assembly (transforms + `space_connection`) — PENDING.** `space_type` provisional pending Backend/Web ratification. Commit `c480446`.
 - **Sport-universe DEPARTMENTS** — floor carved into Decathlon "univers" bands from `brand` (CORE-REQ-001 payoff): flagship 6–7 / large 4–5 / medium 2–3 (count = min(7 universes, gondola rows); e.g. Denver/SF 6, NYC/Paris 7). `sport_universe.py` (brand→universe, e.g. Quechua/Forclaz→Hiking, Kiprun→Running, Simond→Climbing, Wedze→Snow, Van Rysel→Cycling); `build_layout.py` emits department `region` bands (replacing the single "Main Sales Floor"); `build_chain.py` places each SKU in its department (absent universes fold to *General* in small stores). Decided after research — Decathlon's real organizing unit is the sport universe w/ a "Sport Leader" each.
 - **Lean BACK-OF-HOUSE** — Stockroom (Z-05) is now real: `receiving_dock` + `backroom_rack` fixtures; **18% of each style staged to the backroom** (a real from-location for restock/receiving/stocktake). Decathlon-honest (lean ~10–15% footprint; their stores minimise BOH).
 - **Realistic SIZE CURVES** — `size_curve.py`: per-STYLE depth budget × size-curve allocation (bell over distinct sizes, split across colours, color-aware). **Fixes the flat-depth bug** Bob caught (the "89 of one size" — actually 88-pair styles). Footwear now ~40 pairs/style, ~5 facings/modal size, thin tails. **Inventory 277,515 → 102,675 EPCs** (the old number was the bug inflating depth; with 464 styles, realistic depth can't be 277k). Density knob `TIER_SCALE` in `build_chain.py` (~2×) — Bob chose higher for testing variety + realism.
 - **SITE GEO** — lat/long on all 14 sites (geocoded to address) in `chain_config.py` → populates `site.latitude/longitude` (was **0/14 populated** on mother; geo map had nothing to plot). Reseed adds an `UPDATE site` on the 14 existing rows.
 - **Reseed hand-off REWRITTEN** — `reference/data/chain/DEPLOY-HANDOFF.md` §RESEED-2026-06-22 is the authoritative instruction (in-place mechanism); `CHAIN-DATA-SPEC.md` + `IMPORT-MAPPING.md` synced.
 
-**Commits:** twin `17872e5` (realism feat) · `be0f712` (reseed hand-off + spec sync). **Session 6 detail:** `status/session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md`.
+**Commits:** twin `17872e5` (realism) · `be0f712` (hand-off+spec) · `bf1915c` (site_category CORE-REQ-002) · `c480446` (site→spaces→zones Pass 1) + spec/status sync. **Session 6 detail:** `status/session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md`.
 
 ### What's LIVE on mother (still the 2026-06-11 seed — reseed PENDING)
 
@@ -28,7 +29,7 @@
 
 | Asset | State |
 |---|---|
-| Layouts | 10 per-store floors · **2–7 sport-universe department bands** + **lean BOH** (dock + racks) · mother-canonical geometry · 0 overlaps asserted |
+| Layouts | 10 per-store sites, each **3 spaces** (Sales Floor / Back Room / Fitting Rooms — own SRF each) · Sales Floor carries 2–7 `region` department bands + fixtures · Back Room = dock + racks · 0 overlaps/space · Pass-2 assembly dormant |
 | Catalog | 2,586 products + **`brand`/`classification_key`/`department`** + `classification.csv` + `display_lookup.csv` |
 | Inventory | **102,675 EPCs** · realistic size curves · ~18% (~18.4k) back-of-house · at department + BOH fixture-zones (EPC strings all CHANGED → full re-import, not re-locate) |
 | Sites | 14 with **lat/long** (geocoded to address) |
@@ -37,7 +38,7 @@
 
 ### Immediate next steps (ranked)
 
-1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long **+ `site_category`** (14 rows; CORE-REQ-002, core mig 146); drop+recreate the per-store **departmentalized** spaces + **BOH**; enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long **+ `site_category`** (14 rows; CORE-REQ-002, core mig 146); drop+recreate the per-store **3 spaces** (Sales Floor / Back Room / Fitting Rooms — `spaces[]`, each own SRF, Pass-2 assembly dormant); enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
 2. **Verify post-reseed** — geo map plots 14 sites; circular fixtures render round (not bounding boxes); size curves show per-style (not a flat pile); departments + backroom stock visible.
 3. **Resolve the image pipeline** with backend — Shopify hot-link vs **cache bytes**. *(parallel; see Blocked on core)*
 4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake (**BOH now gives it a from-location**) → LP/EAS, item-movement throughout.

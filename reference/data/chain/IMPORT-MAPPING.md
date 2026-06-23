@@ -1,6 +1,6 @@
 # Chain Dataset ↔ Core Import Contract — Reconciliation
 
-**Status:** v2, 2026-06-22 (Twin Session 7). Twin-side companion to `CHAIN-DATA-SPEC.md`.
+**Status:** v3, 2026-06-23 (Twin Session 7). Twin-side companion to `CHAIN-DATA-SPEC.md`.
 **Maps:** `reference/data/chain/*` → core's **`~/IdeaProjects/m8trx-shared/twin/insights/IMPORT-CONTRACT.md`**
 (backend-authored, code-derived, *not yet smoke-tested* — confirm payloads against the running API
 before locking any serializer).
@@ -15,6 +15,8 @@ inventory, org/staff). The import contract is mostly about **runtime event-grain
 
 1. **§1 config-FK anchor** — `site_id / space_id / zone_id / fixture_id / sensor_id` are acquired
    *once at provisioning* and held in a config map. Our dataset is the **input** to that provisioning.
+   Each retail site now provisions **3 spaces** (Sales Floor / Back Room / Fitting Rooms), yielding
+   3 `space_id`s per site; zones live under a space, so `zone_id` lookup traverses `spaces[].zones[]`.
 2. **§2 grain rule** — opening inventory is expressed as **raw scan/receive events**, and the
    platform *derives* `thing_location`. We must **not** write Layer-2 projections (or `thing_location`)
    directly.
@@ -41,14 +43,14 @@ the envelope shape the contract recommends.
 
 | Chain artifact | What it is | Contract treatment | Import path | Status |
 |---|---|---|---|---|
-| `chain-manifest.json → stores[]` (10 retail) | site/space provisioning input | §1 config-FK anchor — provisioned via GraphQL/REST | provision sites → config map | ⚠ **PARTIAL** — provisioning *format* not in this contract (assumes existing onboarding) |
+| `chain-manifest.json → stores[]` (10 retail; each entry now has `spaces[]` array of 3 spaces + `space_counts` aggregate + `site_footprint_mm` + `template`) | site/space provisioning input | §1 config-FK anchor — provisioned via GraphQL/REST | provision sites + 3 spaces each → config map | ⚠ **PARTIAL** — provisioning *format* not in this contract (assumes existing onboarding) |
 | `chain-manifest.json → office_sites[]` (4 office) | HQ + regional site rows, `site_type=office` | §1 anchor but **site_id only** — no `space_id/zone_id/fixture_id` (no space/inventory/sensors) | provision site row → config map | ⚠ **PARTIAL** — needs a `site_type=office` provisioning path |
 | `chain-manifest.json` site field — `site_category` (`store`×10 / `office`×4) | functional role per site (CORE-REQ-002) | → **`site.site_category`** (core mig 146). **NOT** twin's descriptive `site_type`; core's ownership `site.site_type` stays `managed` | set by the reseed's 14-row site UPDATE (alongside `latitude`/`longitude`) | 📦 **DELIVERED** (CORE-REQ-002) — awaiting core re-seed |
-| `stores/<id>/layout.json` (per-store UNIQUE floor: 12–17 area zones + N `zone_type='fixture'`, N ~39–115+; area zones include department bands `D-0N` + BOH `Z-05` with `backroom_rack`/`receiving_dock` fixtures) | space + zone provisioning (retail only) | §1 config FKs `space_id`, `zone_id` (fixtures ARE zones — no `fixture_id`) | instantiate each store's own space + its zones → config map | ✅ **COVERED (data)** — matches core's zone model; provisioning *format* still core's |
+| `stores/<id>/layout.json` (per-store UNIQUE floor: 3 spaces → zones. Sales Floor: 11–15 area zones incl. department bands `D-0N` + `checkout`/`entry_exit`/`try_on_zone`, plus N fixture-zones (~30–115+). Back Room: `receiving_dock` + `backroom_rack` fixtures. Fitting Rooms: `try_on_zone` stalls. Pass 1: `srf_to_site_transform` + `site_frame_anchor_space` emitted null — DORMANT Pass 2.) | space + zone provisioning (retail only) | §1 config FKs: **3 `space_id`s per site** + `zone_id` per zone (fixtures ARE zones — no `fixture_id`). `zone_id` resolution traverses `spaces[].zones[]`. | instantiate each store's 3 spaces + their zones → config map | ✅ **COVERED (data)** — matches core's zone model; provisioning *format* still core's |
 | `stores/*/assortment.csv` (SKUs) | catalog/product master (incl. `brand`, `classification_key`, `department`) | natural key `sku` → `item.id`; `brand`→`product.brand`; `classification_key`→`product.classification_id`; `department` — sport-universe band for planogram placement | `POST /api/v2/inventory/skus/bulk` (atom #26) + attribs/images | ⚠ **PARTIAL** — bulk SKU exists; **images** are the open `CATALOG-IMPORT-ONBOARDING` gap |
 | `classification.csv` (5 roots + 90 leaves) | product taxonomy + `attributes_schema` | natural key `classification_key` → `product_classification` (`attributes_schema` JSON) | core loader (CORE-REQ-001) | 📦 **DELIVERED** (CORE-REQ-001 §2) — awaiting core re-seed |
 | `display_lookup.csv` (405 rows) | raw→display attribute coding (colour) | `(attribute_name, raw_value, locale)` → `display_lookup` (`visual` JSON) | core loader (CORE-REQ-001) | 📦 **DELIVERED** (CORE-REQ-001 §3) — awaiting core re-seed |
-| `stores/*/epcs.csv` (102,675 units; ~18% on `backroom_rack` fixtures in Z-05) | opening inventory | §2/§5 "inventory position **derived from scans**"; EPC→`item.id` via EpcResolver | raw `POST /api/v2/scans` (#14) or `inventoryReceive` (#25) → `thing_location` derived | ✅ **COVERED** mechanism — gated on `SERVICE-BEARER-INVENTORY` for the API path |
+| `stores/*/epcs.csv` (102,675 units; ~18% on `backroom_rack` fixtures in the Back Room space) | opening inventory | §2/§5 "inventory position **derived from scans**"; EPC→`item.id` via EpcResolver; `fixture` code resolves via `spaces[].zones[]` in layout.json | raw `POST /api/v2/scans` (#14) or `inventoryReceive` (#25) → `thing_location` derived | ✅ **COVERED** mechanism — gated on `SERVICE-BEARER-INVENTORY` for the API path |
 | `staff/roster.csv` + `org-chart.json` | user / org provisioning | **not addressed** (contract is operational-pulse scope) | — | ❌ **OPEN** — needs a user/role/org provisioning contract |
 
 ---
@@ -71,7 +73,7 @@ the envelope shape the contract recommends.
 
 | # | Gap | Blocks | Tracked as |
 |---|---|---|---|
-| 1 | **Org/site/store + regional-node provisioning format** (how `dec-xx-region` + sites/spaces/zones/fixtures are created and yield the config map) | binding our logical keys to UUIDs | — (request; contract assumes it exists) |
+| 1 | **Org/site/store + regional-node provisioning format** (how `dec-xx-region` + sites / **3 spaces per retail site** / zones / fixtures are created and yield the config map) | binding our logical keys to UUIDs | — (request; contract assumes it exists) |
 | 2 | **Catalog import incl. images** + per-region price/currency/locale | product imagery on inventory surfaces | `CATALOG-IMPORT-ONBOARDING` |
 | 3 | **User/role/org + staff provisioning** (the `roster.csv`) | seeding the 250-person org | — (not covered by event-grain contract) |
 | 4 | **Service bearer on inventory endpoints** | the API receive/scan path for opening stock | `SERVICE-BEARER-INVENTORY` |

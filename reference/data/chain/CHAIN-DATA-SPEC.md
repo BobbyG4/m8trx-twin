@@ -1,6 +1,6 @@
 # Decathlon Chain Dataset — Data Spec & Handoff
 
-**Status:** v2, generated 2026-06-22 (Twin Session 7). Deterministic, regenerable.
+**Status:** v3, generated 2026-06-23 (Twin Session 7). Deterministic, regenerable.
 **Purpose:** populate the **M8trxDemo** tenant as a realistic multi-store retail chain so every
 m8trx surface (web / backend / edge) is exercised against chain-scale data — real timezones,
 currencies, org hierarchy, staff, inventory, and location — instead of one store or office boxes.
@@ -107,12 +107,15 @@ Top level: `chain`, `generated`, `note`, `hq{}`, `layout_reference`, `epc_encodi
 | `currency`, `locale` | ISO currency + BCP-47 locale for the store's market |
 | `tier`, `tier_label` | Flagship / Large / Medium — drives SKU breadth + stock depth |
 | `sqm` | selling-floor area (nominal — flagship 600 / large 520 / medium 420) |
-| `space` | the site's **one space**: `name`, `template` (→ `stores/<id>/layout.json`), `sqm`, `footprint_mm`, `zones_total`, `area_zones`, `fixture_zones`, `try_on_zones` (3), `departments`, `backroom_racks`, `gondola_grid` — **counts vary per store** (flagship ~120–143 zones / medium ~51–56) |
+| `spaces[]` | array of the site's **3 spaces** (Sales Floor / Back Room / Fitting Rooms). Each entry: `code`, `space_type` (`sales_floor`\|`stockroom`\|`fitting_room` — **proposed-canonical, pending BW ratification**; see `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`), `name`, `footprint_mm` (own SW-origin SRF), `site_frame_anchor_space` (null — DORMANT Pass 2), `srf_to_site_transform` (null — DORMANT Pass 2), `counts{zones_total,area_zones,fixture_zones,try_on_zones}` |
+| `space_counts` | aggregate across all 3 spaces: `spaces`, `zones_total`, `area_zones`, `fixture_zones`, `try_on_zones`, `departments`, `backroom_racks`, `gondola_rows`, `gondola_units` — **counts vary per store** (flagship ~118–141 total zones / medium ~49–54) |
+| `site_footprint_mm` | nominal pre-assembly `{width,depth}` bounding the site; each space carries its own SRF frame |
+| `template` | path to `stores/<id>/layout.json` |
 | `departments[]` | top-level list of `{code, key, label}` sport-universe bands for this store (flagship 6–7 / large 4–5 / medium 2–3) |
 | `sku_count`, `epc_count` | actual rows in the store's two files |
 | `epc_by_category` | piece counts per planogram bucket |
 | `epc_by_department` | piece counts per sport-universe department key |
-| `boh_epc` | back-of-house EPC count (~18% of store total, staged on `backroom_rack` fixtures in Z-05) |
+| `boh_epc` | back-of-house EPC count (~18% of store total, staged on `backroom_rack` fixtures in the Back Room space) |
 | `files` | relative paths to the store's assortment/EPC CSVs |
 
 Each `office_sites[]` entry (HQ + 3 regional): `id`, `site_type="office"`, **`site_category="office"`**,
@@ -128,37 +131,63 @@ Each retail store has its **own** Decathlon-City floor, generated parametrically
 side all vary by tier+seed; 0 overlaps + 0 out-of-bounds asserted). Office sites get no layout.
 `STORE-LAYOUT.md` documents the shared grammar; `scripts/render_floorplans.py` renders each to SVG.
 
-> **Fixtures are zones.** Per core's model (corrections doc §1), a fixture is a `zone` with
-> `zone_type='fixture'` — **not** a row in the `fixture` table (unused). So each store's `zones[]` is
-> a unified list: 11 area zones + N fixture-zones, all children of the store's one space. The
-> `fixture` codes in that store's `epcs.csv` resolve to the **fixture-zone of the same `code`**, keyed
-> `(store_id, code)`. Codes (`GF-R1-U2`, `PW-01`, `GPS-01`…) repeat across stores but geometry differs.
+> **Spatial model: site → spaces[] → zones.** Each retail site has **3 spaces** (Sales Floor,
+> Back Room, Fitting Rooms); zones live **under a space**, not flat. Each space is its own
+> Spatial Reference Frame (SRF) with SW-corner origin. Pass 1 (current): spaces stand independently.
+> Pass 2 (later): fills `srf_to_site_transform` + `site_frame_anchor_space` + `space_connection`
+> for unified site assembly. Assembly columns are emitted now as `null` (DORMANT).
+> Canonical reference: `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`.
+
+> **Fixtures are zones.** Per core's model, a fixture is a `zone` with `zone_type='fixture'` —
+> **not** a row in the `fixture` table (unused). The `fixture` codes in `epcs.csv` resolve to the
+> **fixture-zone of the same `code`**, keyed `(store_id, code)` — now via `spaces[].zones[]`
+> (one extra level). Codes (`GF-R1-U2`, `PW-01`, `GPS-01`…) repeat across stores but geometry differs.
+
+**Top-level keys:** `store_id`, `tier`, `name`, `source`, `spatial_model` (description string),
+`site_footprint_mm{width,depth}`, `coordinate_units`, `geometry`, `counts` (aggregate incl.
+`spaces`), `departments[]`, `spaces[]`, `crossing_slices[]`, `sensors[]`.
 
 - **`departments[]`** (top-level, mirrors `chain-manifest.json`): `[{code, key, label}]` — the
   sport-universe bands for this store (flagship 6–7 / large 4–5 / medium 2–3).
-- **`zones[]`** — each: `code`, `name`, `zone_type`, `parent` (`"space"`), `area_sqm`, plus the
-  **mother-canonical geometry** (SRID 0, mm, Z=0): `geometry_type` (`polygon`|`circle`), `geometry`
-  (WKT — `POLYGON Z` ring for polygons, center-only `POINT Z` for circles), `properties` (`{}` for
-  polygons; `{centerX,centerY,radiusX,radiusY,rotation}` for circles/ellipses). `rect_mm{x1,y1,x2,y2}`
-  is a twin-side bounding-box convenience. (Round racks + promo islands use `circle`; see STORE-LAYOUT.md § Geometry format.)
-  - **Area zones** (12–17, varies by store): `zone_type` ∈ `entry_exit` / `checkout` / `region` / `try_on_zone`;
-    try-on zones add `try_on_profile` (`footwear_bench`/`equipment_test`/`apparel_room`); plus
-    `customer_accessible`. Non-department area zones use `Z-0N` codes; department band zones use `D-0N` codes.
-    - **Department bands** (`zone_type='region'`, codes `D-01`…`D-0N`): the main selling-floor bands,
-      each with a `department` key (e.g. `"hike_camp"`) and a name (e.g. `"Hiking, Trekking & Camping"`).
-      Replaces the old single "Main Sales Floor" region.
-    - **Stockroom (Z-05)**: `zone_type='region'`, `customer_accessible=false` — the back-of-house holding
-      area. Contains `receiving_dock` (code `RCV-01`) and `backroom_rack` (codes `BR-01`…`BR-0N`) fixtures.
-  - **Fixture-zones** (varies, ~39 medium → ~115+ flagship): `zone_type='fixture'`, plus `in_area_zone`
-    (points at their department band `D-0N` for floor fixtures, `Z-05` for BOH fixtures) and
-    `fixture_category` (`gondola_front`/`perimeter_west`/`gps_case`/`backroom_rack`/`receiving_dock`/…).
-    Floor fixtures carry a `department` field (sport-universe key). GPS cases + checkout/service
-    counters exist but are unstocked (no watch SKUs; non-merchandise).
-- **`counts`** — `zones_total`, `area_zones`, `fixture_zones`, `try_on_zones` (3), `departments`,
-  `backroom_racks`, `gondola_rows`, `gondola_units`. **`footprint_mm`** — this store's `{width, depth}`.
+- **`spaces[]`** — 3 entries per retail store:
+  - Each space: `code`, `space_type` (`sales_floor`|`stockroom`|`fitting_room` — proposed-canonical,
+    pending BW ratification), `name`, `footprint_mm{width,depth,origin}`, `coordinate_units`,
+    `geometry`, `site_frame_anchor_space` (null — DORMANT Pass 2), `srf_to_site_transform`
+    (null — DORMANT Pass 2), `counts{zones_total,area_zones,fixture_zones,try_on_zones}`, `zones[]`.
+  - **Sales Floor** (`code=SF`): contains all selling-floor and service area zones.
+  - **Back Room** (`code=BR`, `space_type=stockroom`): `receiving_dock` (`RCV-01`) +
+    `backroom_rack` fixtures (`BR-01`…`BR-0N`), all `zone_type='fixture'`.
+  - **Fitting Rooms** (`code=FT`, `space_type=fitting_room`): stalls as `zone_type='try_on_zone'`
+    with `try_on_profile='apparel_room'`.
+- **`zones[]`** (nested under each space) — each: `code`, `name`, `zone_type`, `parent` (`"space"`),
+  `area_sqm`, plus the **mother-canonical geometry** (SRID 0, mm, Z=0): `geometry_type`
+  (`polygon`|`circle`), `geometry` (WKT — `POLYGON Z` ring for polygons, center-only `POINT Z`
+  for circles), `properties` (`{}` for polygons; `{centerX,centerY,radiusX,radiusY,rotation}` for
+  circles/ellipses). `rect_mm{x1,y1,x2,y2}` is a twin-side bounding-box convenience.
+  (Round racks + promo islands use `circle`; see STORE-LAYOUT.md § Geometry format.)
+  - **Area zones in Sales Floor** (varies per store): `zone_type` ∈ `entry_exit` / `checkout` /
+    `region` / `try_on_zone`; try-on zones add `try_on_profile` (`footwear_bench`/`equipment_test`);
+    plus `customer_accessible`. Non-department area zones use `Z-0N` codes; department bands use
+    `D-0N` codes.
+    - **Department bands** (`zone_type='region'`, codes `D-01`…`D-0N`): the sport-universe selling
+      bands (NOT spaces — `zone_type='region'`), each with a `department` key (e.g. `"hike_camp"`).
+    - **Entrance** (`zone_type='entry_exit'`) + EAS gate as a `crossing_slices[]` entry (`CS-01`).
+    - **Footwear bench** (`try_on_profile='footwear_bench'`) + **Gait Analysis**
+      (`try_on_profile='equipment_test'`): `zone_type='try_on_zone'` in Sales Floor.
+  - **Fixture-zones in Sales Floor** (varies, ~30 medium → ~115 flagship): `zone_type='fixture'`,
+    plus `in_area_zone` (points at `D-0N` department band) and `fixture_category`
+    (`gondola_front`/`perimeter_west`/`gps_case`/`checkout_counter`/…). Floor fixtures carry a
+    `department` field. GPS cases + checkout counters are unstocked (non-merchandise).
+  - **Back Room zones** (`space_type=stockroom`): `zone_type='fixture'` — 1× `receiving_dock`
+    (`RCV-01`) + N× `backroom_rack` (`BR-01`…`BR-0N`).
+  - **Fitting Room zones** (`space_type=fitting_room`): stalls as `zone_type='try_on_zone'`,
+    `try_on_profile='apparel_room'`.
+- **`counts`** (top-level aggregate) — `spaces`, `zones_total`, `area_zones`, `fixture_zones`,
+  `try_on_zones`, `departments`, `backroom_racks`, `gondola_rows`, `gondola_units`.
+  **`site_footprint_mm`** — nominal pre-assembly `{width,depth}`.
 - **`crossing_slices[]`** (1) — `CS-01` main entrance EAS gate (traffic/EAS).
 - **`sensors[]`** (5) — 3 Xovis 3D cameras + RFID overhead + EAS gate (planned placement).
-- **Geometry:** millimeters, origin SW corner, footprint 24,000 × 25,000 mm, rectangles → `POLYGON Z` SRID 0.
+- **Geometry:** millimeters, SW-corner origin per space SRF, rectangles → `POLYGON Z` SRID 0.
 
 ---
 
@@ -200,7 +229,7 @@ One row per **physical unit** (one RFID tag = one sellable item). This is the in
 |---|---|
 | `epc` | 24-hex **SGTIN-96** tag, scanner-decodable back to its EAN |
 | `ean`, `item_cd`, `category` | denormalized from the assortment row |
-| `fixture` | the zone code where this unit is physically located — either a customer-facing floor fixture (e.g. `GF-R1-U2`, `PW-01`) **or** a `backroom_rack` (e.g. `BR-01`…`BR-08`). ~18% of every style's units are staged in back-of-house on backroom racks; the rest are on the sales floor. |
+| `fixture` | the zone code where this unit is physically located — either a customer-facing floor fixture (e.g. `GF-R1-U2`, `PW-01`) **or** a `backroom_rack` (e.g. `BR-01`…`BR-08`). ~18% of every style's units are staged in back-of-house on backroom racks; the rest are on the sales floor. Resolves via `spaces[].zones[]` in `layout.json` (keyed `(store_id, code)`). |
 | `store_id` | owning store |
 
 **EPC encoding** — validated Decathlon SGTIN-96 (`filter=1`, `partition=6`, EAN-derived
@@ -346,10 +375,12 @@ adjective agreement are approximate). Example, one SKU across regions:
 1. **FR/KO product-name polish** — names are machine-glossed (~97% type coverage). A future pass
    could fix adjective agreement/word order and clear the ~3% residual English nouns, or harvest
    authentic FR/KO names from the live decathlon.fr / decathlon.co.kr catalogs. Not ingest-blocking.
-2. **Per-store distinct layouts** — ✅ **DONE (2026-06-22).** Each retail store now has its own
-   parametric floor (`stores/<id>/layout.json`): footprint, gondola grid, aisles, specialty mix +
-   checkout side vary by tier+seed (flagship ~600 m²/5–6 rows → medium ~400 m²/3–4 rows), 0 overlaps
-   asserted, layout-driven planogram in `build_chain.py`. Render: `scripts/render_floorplans.py`.
+2. **Per-store distinct layouts + multi-space hierarchy** — ✅ **DONE (2026-06-23).** Each retail
+   store has its own parametric floor (`stores/<id>/layout.json`) with the canonical `site → 3
+   spaces → zones` structure (Sales Floor, Back Room, Fitting Rooms — each its own SRF). Footprint,
+   gondola grid, aisles, specialty mix + checkout side vary by tier+seed. Pass 2 (site assembly
+   transforms) is DORMANT — `srf_to_site_transform` emitted as null. 0 overlaps asserted, layout-
+   driven planogram in `build_chain.py`. Render: `scripts/render_floorplans.py`.
 3. **Watches/GPS** — the US master has no sports-watch SKUs, so watch fixtures are unstocked
    (same limitation noted for Denver in Session 4). The LP/EAS demo anchor needs a watch SKU source.
 
