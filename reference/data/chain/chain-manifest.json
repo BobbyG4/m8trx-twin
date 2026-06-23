@@ -28,6 +28,7 @@
     {
       "id": "dec-us-denver",
       "site_type": "retail",
+      "site_category": "store",
       "region": "US",
       "country": "United States",
       "city": "Denver",
@@ -119,6 +120,7 @@
     {
       "id": "dec-us-nyc",
       "site_type": "retail",
+      "site_category": "store",
       "region": "US",
       "country": "United States",
       "city": "New York",
@@ -216,6 +218,7 @@
     {
       "id": "dec-us-sf",
       "site_type": "retail",
+      "site_category": "store",
       "region": "US",
       "country": "United States",
       "city": "San Francisco",
@@ -307,6 +310,7 @@
     {
       "id": "dec-fr-paris",
       "site_type": "retail",
+      "site_category": "store",
       "region": "FR",
       "country": "France",
       "city": "Paris",
@@ -404,6 +408,7 @@
     {
       "id": "dec-fr-lyon",
       "site_type": "retail",
+      "site_category": "store",
       "region": "FR",
       "country": "France",
       "city": "Lyon",
@@ -489,6 +494,7 @@
     {
       "id": "dec-fr-lille",
       "site_type": "retail",
+      "site_category": "store",
       "region": "FR",
       "country": "France",
       "city": "Villeneuve-d'Ascq",
@@ -568,6 +574,7 @@
     {
       "id": "dec-fr-marseille",
       "site_type": "retail",
+      "site_category": "store",
       "region": "FR",
       "country": "France",
       "city": "Marseille",
@@ -641,6 +648,7 @@
     {
       "id": "dec-fr-bordeaux",
       "site_type": "retail",
+      "site_category": "store",
       "region": "FR",
       "country": "France",
       "city": "Bordeaux",
@@ -714,6 +722,7 @@
     {
       "id": "dec-kr-seoul",
       "site_type": "retail",
+      "site_category": "store",
       "region": "KR",
       "country": "South Korea",
       "city": "Seoul",
@@ -799,6 +808,7 @@
     {
       "id": "dec-kr-busan",
       "site_type": "retail",
+      "site_category": "store",
       "region": "KR",
       "country": "South Korea",
       "city": "Busan",
@@ -869,6 +879,7 @@
       "id": "dec-hq-global",
       "site_type": "office",
       "office_role": "global_hq",
+      "site_category": "office",
       "region": "FR",
       "country": "France",
       "city": "Villeneuve-d'Ascq",
@@ -886,6 +897,7 @@
       "id": "dec-us-region",
       "site_type": "office",
       "office_role": "regional_hq",
+      "site_category": "office",
       "region": "US",
       "country": "United States",
       "city": "New York",
@@ -903,6 +915,7 @@
       "id": "dec-fr-region",
       "site_type": "office",
       "office_role": "regional_hq",
+      "site_category": "office",
       "region": "FR",
       "country": "France",
       "city": "Paris",
@@ -920,6 +933,7 @@
       "id": "dec-kr-region",
       "site_type": "office",
       "office_role": "regional_hq",
+      "site_category": "office",
       "region": "KR",
       "country": "South Korea",
       "city": "Seoul",

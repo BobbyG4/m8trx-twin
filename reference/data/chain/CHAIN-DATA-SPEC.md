@@ -50,8 +50,9 @@ source of truth all builders read.
 SKUs) · **102,675 EPCs** (~18.4k back-of-house, ~84.3k on floor) · 251 users (250 staff +
 tenant-admin). **5 distinct IANA timezones** spanning UTC-8 → UTC+9.
 
-Every site carries a **`site_type`** and **`latitude`/`longitude`** (WGS84 decimal degrees,
-geocoded to the address). **Office sites** (HQ + 3 regional) have a real address + timezone but
+Every site carries a **`site_type`**, a **`site_category`** (functional role — CORE-REQ-002), and
+**`latitude`/`longitude`** (WGS84 decimal degrees, geocoded to the address). **Office sites**
+(HQ + 3 regional) have a real address + timezone but
 **no space, zones, fixtures, inventory, or sensors**
 (`has_space=has_inventory=has_sensors=false`) — staff bind to them exactly like a retail site:
 
@@ -96,7 +97,8 @@ Top level: `chain`, `generated`, `note`, `hq{}`, `layout_reference`, `epc_encodi
 | Field | Meaning |
 |---|---|
 | `id` | stable site key, used as `store_id` FK in `epcs.csv` and `site` in users/roster |
-| `site_type` | `retail` for all `stores[]` entries |
+| `site_type` | twin discriminator: `retail` for `stores[]` — **descriptive, NOT core's ownership `site.site_type`** (that stays `managed`, core-set) |
+| `site_category` | **functional role → `site.site_category`** (CORE-REQ-002, core mig 146): `store` for all `stores[]`. Allowed: `store` · `office` · `warehouse` |
 | `has_space` / `has_inventory` / `has_sensors` | all `true` for retail |
 | `region` | `US` / `FR` / `KR` |
 | `country`, `city`, `state`, `address` | location (real-anchored) |
@@ -113,8 +115,8 @@ Top level: `chain`, `generated`, `note`, `hq{}`, `layout_reference`, `epc_encodi
 | `boh_epc` | back-of-house EPC count (~18% of store total, staged on `backroom_rack` fixtures in Z-05) |
 | `files` | relative paths to the store's assortment/EPC CSVs |
 
-Each `office_sites[]` entry (HQ + 3 regional): `id`, `site_type="office"`, `office_role`
-(`global_hq`/`regional_hq`), `region`, `country`, `city`, `address`, `latitude`, `longitude`,
+Each `office_sites[]` entry (HQ + 3 regional): `id`, `site_type="office"`, **`site_category="office"`**,
+`office_role` (`global_hq`/`regional_hq`), `region`, `country`, `city`, `address`, `latitude`, `longitude`,
 `timezone`, `has_space=has_inventory=has_sensors=false`, `sku_count=epc_count=0`. Office sites
 have **no** store dir, no `space/zone/fixture` rows — they provision as a **site row only** and
 exist to host staff (HQ + regional org). They are valid `site` targets in `users.csv`.

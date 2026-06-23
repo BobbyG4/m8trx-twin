@@ -34,7 +34,7 @@
 
 ## Open Work (priority order)
 
-1. **★ RUN the reseed (gating)** — hand-off written (`DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session executes in-place: site lat/long UPDATE, per-store **departmentalized** spaces + **BOH** (drop+recreate), catalog enrich (coding layer), **re-import 102,675 items** at department/BOH fixture-zones via scan/receive (corrections §2; direct-DB BOTH `thing_location` + `scan_event` until service-bearer lands). **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+1. **★ RUN the reseed (gating)** — hand-off written (`DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session executes in-place: site lat/long **+ `site_category`** UPDATE (CORE-REQ-002, core mig 146), per-store **departmentalized** spaces + **BOH** (drop+recreate), catalog enrich (coding layer), **re-import 102,675 items** at department/BOH fixture-zones via scan/receive (corrections §2; direct-DB BOTH `thing_location` + `scan_event` until service-bearer lands). **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
 2. **Verify post-reseed** — geo map plots 14 sites · circular fixtures render round · size curves per-style (not flat) · departments + backroom stock visible.
 3. **Resolve image pipeline** with backend — link vs cached bytes (parallel).
 4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**
@@ -48,6 +48,7 @@
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ✅ ABSORBED (mig 127) | — |
 | TWIN-REQ-002 `commerce_projection` writer | 📨 FILED, AWAITING ABSORPTION (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | ✅ ABSORBED 2026-06-21 (core merged-commit `eb39526`; mother loaded + verified) | — |
+| CORE-REQ-002 `site_category` functional role (**inverse, core→twin**) | 📦 DELIVERED 2026-06-23 (manifest + spec; rides the reseed; core mig 146) | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ## Key Docs

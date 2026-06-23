@@ -33,7 +33,7 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 | Layer | On mother now (2026-06-11) | This reseed | Action |
 |---|---|---|---|
 | **Tenant / Users** | M8trxDemo · 251 users | unchanged | **keep** |
-| **Sites** | 14, no coordinates | +`latitude`/`longitude` on all 14 (geocoded to address) | **UPDATE 14 rows** |
+| **Sites** | 14, no coordinates, no functional-role column | +`latitude`/`longitude` + **`site_category`** (`store`×10 / `office`×4 — CORE-REQ-002) on all 14 | **UPDATE 14 rows** |
 | **Spaces / zones** | 10 shared-template, overlapping fixtures, single "Main Floor" | 10 **unique** floors, **sport-universe department bands**, real **back-of-house** (dock + racks), mother-canonical geometry | **drop + recreate** |
 | **Catalog** | 2,586 products, USD, no coding | +`brand` +`classification_key` +`department` + `classification.csv` + `display_lookup.csv` (CORE-REQ-001) | **enrich** (not re-create) |
 | **Inventory** | 277,515 EPCs, flat per-size depth, **site-level** | **102,675 EPCs**, realistic **size curves**, placed at **department + BOH fixture-zones**; EPC strings all changed | **re-import** |
@@ -42,7 +42,7 @@ Provisioned into **M8trxDemo** (`tenant_id = ecfa6903-5c50-439f-8f80-185982de944
 
 Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
 
-1. **Sites** — `UPDATE site SET latitude=…, longitude=…` for all 14 (values in `chain-manifest.json` `stores[]` / `office_sites[]`). Nothing else on the site row changes.
+1. **Sites** — `UPDATE site SET latitude=…, longitude=…, site_category=…` for all 14 (values in `chain-manifest.json`: `stores[]`→`store`, `office_sites[]`→`office`). **`site_category`** (CORE-REQ-002, core **mig 146** — apply with backup) sets the functional role authoritatively, so core stops inferring it from space-presence. Ownership `site_type` stays `managed` (untouched). Nothing else on the site row changes.
 2. **Spaces** — **drop** each retail site's existing space (cascade its zones/fixtures/scan_events/thing_locations) and **recreate** from `stores/<id>/layout.json`. Office sites still get no space.
 3. **Inventory** — the 277,515 old items no longer match (EPC strings changed with the new depths). **Delete the old items and re-import** the 102,675 from `stores/<id>/epcs.csv`, placed at their fixture-zone via scan/receive.
 
@@ -86,7 +86,7 @@ Prefer the **API receive/scan** path (one step → `scan_event` + derived `thing
 
 ### Acceptance checks (run post-reseed)
 
-- [ ] 14 sites have non-null `latitude`/`longitude`; geo map plots all 14.
+- [ ] 14 sites have non-null `latitude`/`longitude` (geo map plots all 14) **and non-null `site_category`** — the 10 retail = `store`, the 4 offices = `office`.
 - [ ] Each retail space has its department bands + `Stockroom` with `receiving_dock`/`backroom_rack`; canvas renders fixtures (0 overlaps; circular fixtures render round, not bounding boxes).
 - [ ] Every `epcs.csv` `fixture` resolves to a fixture-zone in that store's space (twin asserts 0 orphans pre-handoff).
 - [ ] Item count on mother = **102,675**; ~18% sit at `backroom_rack` zones (back-of-house stock visible).

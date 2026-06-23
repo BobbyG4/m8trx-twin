@@ -315,7 +315,9 @@ def main():
                 rt_ok += 1
         region = REGIONS[store["region"]]
         manifest_stores.append({
-            "id": store["id"], "site_type": "retail", "region": store["region"],
+            "id": store["id"], "site_type": "retail",
+            "site_category": store.get("site_category", "store"),   # CORE-REQ-002 (→ site.site_category)
+            "region": store["region"],
             "country": region["country"], "city": store["city"], "state": store.get("state", ""),
             "address": store["address"], "latitude": store["lat"], "longitude": store["lon"],
             "timezone": store["tz"], "currency": region["currency"],
@@ -342,6 +344,7 @@ def main():
 
     office_sites = [{
         "id": o["id"], "site_type": "office", "office_role": o["office_role"],
+        "site_category": o.get("site_category", "office"),         # CORE-REQ-002 (→ site.site_category)
         "region": o["region"], "country": o["country"], "city": o["city"],
         "address": o["address"], "latitude": o["lat"], "longitude": o["lon"], "timezone": o["tz"],
         "has_space": False, "has_inventory": False, "has_sensors": False,

@@ -37,7 +37,7 @@
 
 ### Immediate next steps (ranked)
 
-1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long (14 rows); drop+recreate the per-store **departmentalized** spaces + **BOH**; enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long **+ `site_category`** (14 rows; CORE-REQ-002, core mig 146); drop+recreate the per-store **departmentalized** spaces + **BOH**; enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
 2. **Verify post-reseed** — geo map plots 14 sites; circular fixtures render round (not bounding boxes); size curves show per-style (not a flat pile); departments + backroom stock visible.
 3. **Resolve the image pipeline** with backend — Shopify hot-link vs **cache bytes**. *(parallel; see Blocked on core)*
 4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake (**BOH now gives it a from-location**) → LP/EAS, item-movement throughout.
@@ -95,6 +95,7 @@
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
+| CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | 📦 **DELIVERED** 2026-06-23 (manifest + spec; rides the reseed; core mig 146) | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 > TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).
