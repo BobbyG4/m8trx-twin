@@ -85,14 +85,15 @@ def store_fixtures(layout):
     """(floor, boh_racks) for THIS store. floor = [(code, role, department)] (customer-facing
     stocking locations); boh_racks = [code] backroom racks. Receiving dock isn't a stock location."""
     floor, boh = [], []
-    for z in layout["zones"]:
-        if z.get("zone_type") != "fixture":
-            continue
-        role = z["fixture_category"]
-        if role == "backroom_rack":
-            boh.append(z["code"])
-        elif role not in BOH_ROLES:
-            floor.append((z["code"], role, z.get("department", "general")))
+    for sp in layout["spaces"]:                      # site → spaces → zones (Pass 1)
+        for z in sp["zones"]:
+            if z.get("zone_type") != "fixture":
+                continue
+            role = z["fixture_category"]
+            if role == "backroom_rack":
+                boh.append(z["code"])
+            elif role not in BOH_ROLES:
+                floor.append((z["code"], role, z.get("department", "general")))
     return sorted(floor), sorted(boh)
 
 # ── validated Decathlon SGTIN-96 encoder (EPC-ENCODING-DECATHLON.md) ───────────
@@ -278,7 +279,8 @@ def build_store(store, styles_all, global_used, global_epcs, name_map):
             "by_department": dict(Counter(v["department"] for v in rows if v["depth"] > 0)),
             "boh_epc": sum(1 for e in epcs if e["fixture"] in boh_codes),
             "rows": rows, "epcs": epcs, "layout": layout,
-            "fixture_codes": {z["code"] for z in layout["zones"] if z.get("zone_type") == "fixture"}}
+            "fixture_codes": {z["code"] for sp in layout["spaces"] for z in sp["zones"]
+                              if z.get("zone_type") == "fixture"}}
 
 
 def main():
@@ -324,15 +326,14 @@ def main():
             "locale": region["locale"], "tier": store["tier"],
             "tier_label": TIERS[store["tier"]]["label"], "sqm": store["sqm"],
             "has_space": True, "has_inventory": True, "has_sensors": True,
-            "space": {"name": "Main Floor", "template": f"stores/{store['id']}/layout.json",
-                      "sqm": store["sqm"], "footprint_mm": res["layout"]["footprint_mm"],
-                      "zones_total": res["layout"]["counts"]["zones_total"],
-                      "area_zones": res["layout"]["counts"]["area_zones"],
-                      "fixture_zones": res["layout"]["counts"]["fixture_zones"],
-                      "try_on_zones": res["layout"]["counts"]["try_on_zones"],
-                      "departments": res["layout"]["counts"].get("departments"),
-                      "backroom_racks": res["layout"]["counts"].get("backroom_racks"),
-                      "gondola_grid": f"{res['layout']['counts']['gondola_rows']}×{res['layout']['counts']['gondola_units']}"},
+            "template": f"stores/{store['id']}/layout.json",
+            "site_footprint_mm": res["layout"]["site_footprint_mm"],
+            "space_counts": res["layout"]["counts"],         # aggregate: spaces, zones, departments, etc.
+            "spaces": [{"code": sp["code"], "space_type": sp["space_type"], "name": sp["name"],
+                        "footprint_mm": sp["footprint_mm"],
+                        "site_frame_anchor_space": sp["site_frame_anchor_space"],   # Pass 2 (dormant)
+                        "srf_to_site_transform": sp["srf_to_site_transform"],       # Pass 2 (dormant)
+                        "counts": sp["counts"]} for sp in res["layout"]["spaces"]],
             "departments": res["layout"].get("departments", []),
             "sku_count": res["sku_count"], "epc_count": res["epc_count"],
             "epc_by_category": res["by_category"],
@@ -393,9 +394,9 @@ def main():
     retail_ids = {s["id"] for s in manifest_stores}
     for o in office_sites:
         assert o["has_space"] is False and o["has_inventory"] is False, f"{o['id']} must not have space/inventory"
-        assert "space" not in o and o["epc_count"] == 0 and o["sku_count"] == 0, f"{o['id']} leaked retail layout"
+        assert "spaces" not in o and o["epc_count"] == 0 and o["sku_count"] == 0, f"{o['id']} leaked retail layout"
         assert o["id"] not in retail_ids, f"{o['id']} collides with a retail site"
-    assert all("space" in s for s in manifest_stores), "a retail site is missing its space"
+    assert all(s.get("spaces") and len(s["spaces"]) == 3 for s in manifest_stores), "a retail site is missing its 3 spaces"
     print(f"office sites: {len(office_sites)} site-row-only (no space/zone/fixture/inventory) — OK")
     print(f"\nwrote {OUT}/chain-manifest.json + regions.json + {len(STORES)} store dirs")
 

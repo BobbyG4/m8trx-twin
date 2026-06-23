@@ -1,69 +1,74 @@
-<svg viewBox="0 0 900.0 945.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
-<title>dec-kr-busan — medium floor (324 m² footprint) — 39 fixtures, 0 overlaps</title>
-<rect x="0" y="0" width="900.0" height="900.0" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
-<rect x="230.0" y="750.0" width="240.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="233.0" y="761.0" font-size="8" fill="#334155" font-weight="400">Z-01</text>
-<rect x="550.0" y="700.0" width="350.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="711.0" font-size="8" fill="#334155" font-weight="400">Z-02</text>
-<rect x="0.0" y="150.0" width="150.0" height="600.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-03</text>
-<rect x="0.0" y="0.0" width="900.0" height="150.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="11.0" font-size="8" fill="#334155" font-weight="400">Stockroom</text>
-<rect x="550.0" y="500.0" width="350.0" height="200.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="511.0" font-size="8" fill="#334155" font-weight="400">Z-11</text>
-<rect x="550.0" y="150.0" width="350.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="553.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-10</text>
-<rect x="150.0" y="150.0" width="136.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-06</text>
-<rect x="286.0" y="150.0" width="80.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="289.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-07</text>
-<rect x="366.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="369.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-09</text>
-<rect x="458.0" y="150.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="461.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-08</text>
-<rect x="150.0" y="625.0" width="400.0" height="125.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="636.0" font-size="8" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
-<rect x="150.0" y="500.0" width="400.0" height="125.0" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="511.0" font-size="8" fill="#334155" font-weight="600">General / Multi-sport</text>
-<rect x="231.7" y="676.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="231.7" y="646.7" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="368.3" y="676.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="368.3" y="646.7" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="231.7" y="573.4" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="231.7" y="543.4" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="368.3" y="573.4" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="368.3" y="543.4" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="670.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="590.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="510.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="535.0" y="670.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="535.0" y="590.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="535.0" y="510.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="386.7" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="223.0" y="386.7" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="273.4" width="53.0" height="103.4" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="223.0" y="273.4" width="53.0" height="103.4" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="160.1" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="223.0" y="160.1" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="296.0" y="415.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="296.0" y="330.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="296.0" y="245.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="296.0" y="160.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="376.0" y="160.0" width="72.0" height="330.0" fill="#14b8a6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="468.0" y="160.0" width="72.0" height="330.0" fill="#10b981" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="330.0" width="160.0" height="160.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="730.0" y="330.0" width="160.0" height="160.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="160.0" width="160.0" height="160.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="730.0" y="160.0" width="160.0" height="160.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="710.0" width="160.0" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="730.0" y="710.0" width="160.0" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="557.5" y="867.5" width="335.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<circle cx="350.0" cy="810.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="10.0" y="10.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="165.0" y="80.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="527.5" y="80.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="165.0" y="20.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="527.5" y="20.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<text x="6" y="916.0" font-size="11" fill="#0f172a">dec-kr-busan · medium · 18000×18000mm · 2×2 gondolas · 51 zones · 0 overlaps</text>
-<text x="6" y="932.0" font-size="9" fill="#64748b">tinted bands = sport-universe depts · blue=gondolas · purple=walls · dark grey band (top) = back-of-house (dock+racks) · entrance=bottom</text>
+<svg viewBox="0 0 916.0 1398.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
+<title>dec-kr-busan — medium (324 m² site · 3 spaces)</title>
+<text x="8" y="20" font-size="11" font-weight="600" fill="#0f172a">Sales Floor · sales_floor · 18000×15000mm · 40 zones</text>
+<rect x="8" y="24" width="900.0" height="750.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="238.0" y="624.0" width="240.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="241.0" y="634.0" font-size="7.5" fill="#334155" font-weight="400">Z-01</text>
+<rect x="558.0" y="574.0" width="350.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="561.0" y="584.0" font-size="7.5" fill="#334155" font-weight="400">Z-02</text>
+<rect x="8.0" y="24.0" width="150.0" height="600.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="11.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-03</text>
+<rect x="558.0" y="374.0" width="350.0" height="200.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="561.0" y="384.0" font-size="7.5" fill="#334155" font-weight="400">Z-11</text>
+<rect x="158.0" y="24.0" width="136.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-06</text>
+<rect x="294.0" y="24.0" width="80.0" height="350.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="297.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-07</text>
+<rect x="374.0" y="24.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="377.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-09</text>
+<rect x="466.0" y="24.0" width="92.0" height="350.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="469.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-08</text>
+<rect x="158.0" y="499.0" width="400.0" height="125.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="509.0" font-size="7.5" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
+<rect x="158.0" y="374.0" width="400.0" height="125.0" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="384.0" font-size="7.5" fill="#334155" font-weight="600">General / Multi-sport</text>
+<rect x="239.7" y="550.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="239.7" y="520.7" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="376.3" y="550.7" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="376.3" y="520.7" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="239.7" y="447.4" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="239.7" y="417.4" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="376.3" y="447.4" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="376.3" y="417.4" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="544.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="464.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="384.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="543.0" y="544.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="543.0" y="464.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="543.0" y="384.0" width="5.0" height="70.0" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="260.7" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="231.0" y="260.7" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="147.4" width="53.0" height="103.4" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="231.0" y="147.4" width="53.0" height="103.4" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="34.0" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="231.0" y="34.0" width="53.0" height="103.3" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="304.0" y="289.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="304.0" y="204.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="304.0" y="119.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="304.0" y="34.0" width="60.0" height="75.0" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="384.0" y="34.0" width="72.0" height="330.0" fill="#14b8a6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="476.0" y="34.0" width="72.0" height="330.0" fill="#10b981" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="568.0" y="584.0" width="160.0" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="738.0" y="584.0" width="160.0" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="565.5" y="741.5" width="335.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<circle cx="358.0" cy="684.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
+<text x="8" y="808.0" font-size="11" font-weight="600" fill="#0f172a">Back Room · stockroom · 18000×3000mm · 5 zones</text>
+<rect x="8" y="812.0" width="900.0" height="150.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="18.0" y="822.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="173.0" y="892.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="535.5" y="892.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="173.0" y="832.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="535.5" y="832.0" width="352.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<text x="8" y="996.0" font-size="11" font-weight="600" fill="#0f172a">Fitting Rooms · fitting_room · 7000×7000mm · 4 zones</text>
+<rect x="8" y="1000.0" width="350.0" height="350.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="18.0" y="1180.0" width="160.0" height="160.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="21.0" y="1190.0" font-size="7.5" fill="#334155" font-weight="400">FR-01</text>
+<rect x="188.0" y="1180.0" width="160.0" height="160.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="191.0" y="1190.0" font-size="7.5" fill="#334155" font-weight="400">FR-02</text>
+<rect x="18.0" y="1010.0" width="160.0" height="160.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="21.0" y="1020.0" font-size="7.5" fill="#334155" font-weight="400">FR-03</text>
+<rect x="188.0" y="1010.0" width="160.0" height="160.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="191.0" y="1020.0" font-size="7.5" fill="#334155" font-weight="400">FR-04</text>
+<text x="8" y="1384.0" font-size="9.5" fill="#0f172a">dec-kr-busan · medium · 3 spaces · 2 depts · 49 zones · 0 overlaps/space</text>
+<text x="8" y="1395.0" font-size="8" fill="#64748b">spaces = independent SRF frames (Pass 1; site-assembly = Pass 2) · tinted = depts · blue=gondolas · purple=walls · grey=BOH</text>
 </svg>

@@ -1,20 +1,22 @@
 {
   "store_id": "dec-kr-seoul",
   "tier": "large",
-  "name": "dec-kr-seoul — large floor (564 m² footprint)",
+  "name": "dec-kr-seoul — large (564 m² site · 3 spaces)",
   "source": "scripts/build_layout.py (parametric, per-store seed=sha256(store_id))",
-  "footprint_mm": {
+  "spatial_model": "site -> spaces (each its own SRF) -> zones. PASS 1: spaces stand independently; assembly columns (srf_to_site_transform, site_frame_anchor_space, space_connection) DORMANT — Pass 2 lights them.",
+  "site_footprint_mm": {
     "width": 23500,
     "depth": 24000,
-    "origin": "SW corner (0,0)"
+    "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
   },
   "coordinate_units": "millimeters",
   "geometry": "rectangles -> POLYGON Z, SRID 0",
   "counts": {
-    "zones_total": 102,
-    "area_zones": 15,
-    "fixture_zones": 87,
-    "try_on_zones": 3,
+    "spaces": 3,
+    "zones_total": 100,
+    "area_zones": 17,
+    "fixture_zones": 83,
+    "try_on_zones": 6,
     "departments": 5,
     "backroom_racks": 6,
     "gondola_rows": 5,
@@ -47,1936 +49,1967 @@
       "label": "General / Multi-sport"
     }
   ],
-  "zones": [
+  "spaces": [
     {
-      "code": "Z-01",
-      "name": "Entrance",
-      "zone_type": "entry_exit",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((5800 0 0, 14200 0 0, 14200 3000 0, 5800 3000 0, 5800 0 0))",
-      "properties": {},
-      "area_sqm": 25.2,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 5800,
-        "y1": 0,
-        "x2": 14200,
-        "y2": 3000
-      }
+      "code": "SF",
+      "space_type": "sales_floor",
+      "name": "Sales Floor",
+      "footprint_mm": {
+        "width": 23500,
+        "depth": 21000,
+        "origin": "SW corner (0,0)"
+      },
+      "coordinate_units": "millimeters",
+      "geometry": "rectangles -> POLYGON Z, SRID 0",
+      "site_frame_anchor_space": null,
+      "srf_to_site_transform": null,
+      "counts": {
+        "zones_total": 89,
+        "area_zones": 13,
+        "fixture_zones": 76,
+        "try_on_zones": 2
+      },
+      "zones": [
+        {
+          "code": "Z-01",
+          "name": "Entrance",
+          "zone_type": "entry_exit",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((5800 0 0, 14200 0 0, 14200 3000 0, 5800 3000 0, 5800 0 0))",
+          "properties": {},
+          "area_sqm": 25.2,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 5800,
+            "y1": 0,
+            "x2": 14200,
+            "y2": 3000
+          }
+        },
+        {
+          "code": "Z-02",
+          "name": "Checkout Area",
+          "zone_type": "checkout",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((17000 0 0, 23500 0 0, 23500 4000 0, 17000 4000 0, 17000 0 0))",
+          "properties": {},
+          "area_sqm": 26.0,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 17000,
+            "y1": 0,
+            "x2": 23500,
+            "y2": 4000
+          }
+        },
+        {
+          "code": "Z-03",
+          "name": "Non-Retail Left Strip",
+          "zone_type": "region",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((0 3000 0, 3000 3000 0, 3000 21000 0, 0 21000 0, 0 3000 0))",
+          "properties": {},
+          "area_sqm": 54.0,
+          "customer_accessible": false,
+          "rect_mm": {
+            "x1": 0,
+            "y1": 3000,
+            "x2": 3000,
+            "y2": 21000
+          }
+        },
+        {
+          "code": "Z-11",
+          "name": "Service Cluster",
+          "zone_type": "region",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((17000 4000 0, 23500 4000 0, 23500 14500 0, 17000 14500 0, 17000 4000 0))",
+          "properties": {},
+          "area_sqm": 68.2,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 17000,
+            "y1": 4000,
+            "x2": 23500,
+            "y2": 14500
+          }
+        },
+        {
+          "code": "Z-06",
+          "name": "GPS & Accessories",
+          "zone_type": "region",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 14500 0, 7760 14500 0, 7760 21000 0, 3000 21000 0, 3000 14500 0))",
+          "properties": {},
+          "area_sqm": 30.9,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 14500,
+            "x2": 7760,
+            "y2": 21000
+          }
+        },
+        {
+          "code": "Z-07",
+          "name": "Accessories Wall",
+          "zone_type": "region",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((7760 14500 0, 10560 14500 0, 10560 21000 0, 7760 21000 0, 7760 14500 0))",
+          "properties": {},
+          "area_sqm": 18.2,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 7760,
+            "y1": 14500,
+            "x2": 10560,
+            "y2": 21000
+          }
+        },
+        {
+          "code": "Z-09",
+          "name": "Gait Analysis",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((10560 14500 0, 13780 14500 0, 13780 21000 0, 10560 21000 0, 10560 14500 0))",
+          "properties": {},
+          "area_sqm": 20.9,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 10560,
+            "y1": 14500,
+            "x2": 13780,
+            "y2": 21000
+          },
+          "try_on_profile": "equipment_test"
+        },
+        {
+          "code": "Z-08",
+          "name": "Footwear Bench",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13780 14500 0, 17000 14500 0, 17000 21000 0, 13780 21000 0, 13780 14500 0))",
+          "properties": {},
+          "area_sqm": 20.9,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 13780,
+            "y1": 14500,
+            "x2": 17000,
+            "y2": 21000
+          },
+          "try_on_profile": "footwear_bench"
+        },
+        {
+          "code": "D-01",
+          "name": "Hiking, Trekking & Camping",
+          "zone_type": "region",
+          "parent": "space",
+          "department": "hike_camp",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 3000 0, 17000 3000 0, 17000 5575 0, 3000 5575 0, 3000 3000 0))",
+          "properties": {},
+          "area_sqm": 36.0,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 3000,
+            "x2": 17000,
+            "y2": 5575
+          }
+        },
+        {
+          "code": "D-02",
+          "name": "Running & Trail",
+          "zone_type": "region",
+          "parent": "space",
+          "department": "running",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 5575 0, 17000 5575 0, 17000 7692 0, 3000 7692 0, 3000 5575 0))",
+          "properties": {},
+          "area_sqm": 29.6,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 5575,
+            "x2": 17000,
+            "y2": 7692
+          }
+        },
+        {
+          "code": "D-03",
+          "name": "Climbing & Mountaineering",
+          "zone_type": "region",
+          "parent": "space",
+          "department": "climb",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 7692 0, 17000 7692 0, 17000 9808 0, 3000 9808 0, 3000 7692 0))",
+          "properties": {},
+          "area_sqm": 29.6,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 7692,
+            "x2": 17000,
+            "y2": 9808
+          }
+        },
+        {
+          "code": "D-04",
+          "name": "Snow & Ski",
+          "zone_type": "region",
+          "parent": "space",
+          "department": "snow",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 9808 0, 17000 9808 0, 17000 11925 0, 3000 11925 0, 3000 9808 0))",
+          "properties": {},
+          "area_sqm": 29.6,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 9808,
+            "x2": 17000,
+            "y2": 11925
+          }
+        },
+        {
+          "code": "D-05",
+          "name": "General / Multi-sport",
+          "zone_type": "region",
+          "parent": "space",
+          "department": "general",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3000 11925 0, 17000 11925 0, 17000 14500 0, 3000 14500 0, 3000 11925 0))",
+          "properties": {},
+          "area_sqm": 36.0,
+          "customer_accessible": true,
+          "rect_mm": {
+            "x1": 3000,
+            "y1": 11925,
+            "x2": 17000,
+            "y2": 14500
+          }
+        },
+        {
+          "code": "GF-R5-U1",
+          "name": "Gondola R5 Front U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 3916 0, 6266 3916 0, 6266 4516 0, 4266 4516 0, 4266 3916 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 3916,
+            "x2": 6266,
+            "y2": 4516
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GB-R5-U1",
+          "name": "Gondola R5 Back U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 4516 0, 6266 4516 0, 6266 5116 0, 4266 5116 0, 4266 4516 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 4516,
+            "x2": 6266,
+            "y2": 5116
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GF-R5-U2",
+          "name": "Gondola R5 Front U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 3916 0, 8633 3916 0, 8633 4516 0, 6633 4516 0, 6633 3916 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 3916,
+            "x2": 8633,
+            "y2": 4516
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GB-R5-U2",
+          "name": "Gondola R5 Back U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 4516 0, 8633 4516 0, 8633 5116 0, 6633 5116 0, 6633 4516 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 4516,
+            "x2": 8633,
+            "y2": 5116
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GF-R5-U3",
+          "name": "Gondola R5 Front U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 3916 0, 11000 3916 0, 11000 4516 0, 9000 4516 0, 9000 3916 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 3916,
+            "x2": 11000,
+            "y2": 4516
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GB-R5-U3",
+          "name": "Gondola R5 Back U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 4516 0, 11000 4516 0, 11000 5116 0, 9000 5116 0, 9000 4516 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 4516,
+            "x2": 11000,
+            "y2": 5116
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GF-R5-U4",
+          "name": "Gondola R5 Front U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 3916 0, 13366 3916 0, 13366 4516 0, 11366 4516 0, 11366 3916 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 3916,
+            "x2": 13366,
+            "y2": 4516
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GB-R5-U4",
+          "name": "Gondola R5 Back U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 4516 0, 13366 4516 0, 13366 5116 0, 11366 5116 0, 11366 4516 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 4516,
+            "x2": 13366,
+            "y2": 5116
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GF-R5-U5",
+          "name": "Gondola R5 Front U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 3916 0, 15733 3916 0, 15733 4516 0, 13733 4516 0, 13733 3916 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 3916,
+            "x2": 15733,
+            "y2": 4516
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GB-R5-U5",
+          "name": "Gondola R5 Back U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 4516 0, 15733 4516 0, 15733 5116 0, 13733 5116 0, 13733 4516 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 4516,
+            "x2": 15733,
+            "y2": 5116
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "GF-R4-U1",
+          "name": "Gondola R4 Front U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 6033 0, 6266 6033 0, 6266 6633 0, 4266 6633 0, 4266 6033 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 6033,
+            "x2": 6266,
+            "y2": 6633
+          },
+          "department": "running"
+        },
+        {
+          "code": "GB-R4-U1",
+          "name": "Gondola R4 Back U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 6633 0, 6266 6633 0, 6266 7233 0, 4266 7233 0, 4266 6633 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 6633,
+            "x2": 6266,
+            "y2": 7233
+          },
+          "department": "running"
+        },
+        {
+          "code": "GF-R4-U2",
+          "name": "Gondola R4 Front U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 6033 0, 8633 6033 0, 8633 6633 0, 6633 6633 0, 6633 6033 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 6033,
+            "x2": 8633,
+            "y2": 6633
+          },
+          "department": "running"
+        },
+        {
+          "code": "GB-R4-U2",
+          "name": "Gondola R4 Back U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 6633 0, 8633 6633 0, 8633 7233 0, 6633 7233 0, 6633 6633 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 6633,
+            "x2": 8633,
+            "y2": 7233
+          },
+          "department": "running"
+        },
+        {
+          "code": "GF-R4-U3",
+          "name": "Gondola R4 Front U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 6033 0, 11000 6033 0, 11000 6633 0, 9000 6633 0, 9000 6033 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 6033,
+            "x2": 11000,
+            "y2": 6633
+          },
+          "department": "running"
+        },
+        {
+          "code": "GB-R4-U3",
+          "name": "Gondola R4 Back U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 6633 0, 11000 6633 0, 11000 7233 0, 9000 7233 0, 9000 6633 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 6633,
+            "x2": 11000,
+            "y2": 7233
+          },
+          "department": "running"
+        },
+        {
+          "code": "GF-R4-U4",
+          "name": "Gondola R4 Front U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 6033 0, 13366 6033 0, 13366 6633 0, 11366 6633 0, 11366 6033 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 6033,
+            "x2": 13366,
+            "y2": 6633
+          },
+          "department": "running"
+        },
+        {
+          "code": "GB-R4-U4",
+          "name": "Gondola R4 Back U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 6633 0, 13366 6633 0, 13366 7233 0, 11366 7233 0, 11366 6633 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 6633,
+            "x2": 13366,
+            "y2": 7233
+          },
+          "department": "running"
+        },
+        {
+          "code": "GF-R4-U5",
+          "name": "Gondola R4 Front U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 6033 0, 15733 6033 0, 15733 6633 0, 13733 6633 0, 13733 6033 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 6033,
+            "x2": 15733,
+            "y2": 6633
+          },
+          "department": "running"
+        },
+        {
+          "code": "GB-R4-U5",
+          "name": "Gondola R4 Back U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 6633 0, 15733 6633 0, 15733 7233 0, 13733 7233 0, 13733 6633 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 6633,
+            "x2": 15733,
+            "y2": 7233
+          },
+          "department": "running"
+        },
+        {
+          "code": "GF-R3-U1",
+          "name": "Gondola R3 Front U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 8150 0, 6266 8150 0, 6266 8750 0, 4266 8750 0, 4266 8150 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 8150,
+            "x2": 6266,
+            "y2": 8750
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GB-R3-U1",
+          "name": "Gondola R3 Back U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 8750 0, 6266 8750 0, 6266 9350 0, 4266 9350 0, 4266 8750 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 8750,
+            "x2": 6266,
+            "y2": 9350
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GF-R3-U2",
+          "name": "Gondola R3 Front U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 8150 0, 8633 8150 0, 8633 8750 0, 6633 8750 0, 6633 8150 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 8150,
+            "x2": 8633,
+            "y2": 8750
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GB-R3-U2",
+          "name": "Gondola R3 Back U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 8750 0, 8633 8750 0, 8633 9350 0, 6633 9350 0, 6633 8750 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 8750,
+            "x2": 8633,
+            "y2": 9350
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GF-R3-U3",
+          "name": "Gondola R3 Front U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 8150 0, 11000 8150 0, 11000 8750 0, 9000 8750 0, 9000 8150 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 8150,
+            "x2": 11000,
+            "y2": 8750
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GB-R3-U3",
+          "name": "Gondola R3 Back U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 8750 0, 11000 8750 0, 11000 9350 0, 9000 9350 0, 9000 8750 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 8750,
+            "x2": 11000,
+            "y2": 9350
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GF-R3-U4",
+          "name": "Gondola R3 Front U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 8150 0, 13366 8150 0, 13366 8750 0, 11366 8750 0, 11366 8150 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 8150,
+            "x2": 13366,
+            "y2": 8750
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GB-R3-U4",
+          "name": "Gondola R3 Back U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 8750 0, 13366 8750 0, 13366 9350 0, 11366 9350 0, 11366 8750 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 8750,
+            "x2": 13366,
+            "y2": 9350
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GF-R3-U5",
+          "name": "Gondola R3 Front U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 8150 0, 15733 8150 0, 15733 8750 0, 13733 8750 0, 13733 8150 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 8150,
+            "x2": 15733,
+            "y2": 8750
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GB-R3-U5",
+          "name": "Gondola R3 Back U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 8750 0, 15733 8750 0, 15733 9350 0, 13733 9350 0, 13733 8750 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 8750,
+            "x2": 15733,
+            "y2": 9350
+          },
+          "department": "climb"
+        },
+        {
+          "code": "GF-R2-U1",
+          "name": "Gondola R2 Front U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 10266 0, 6266 10266 0, 6266 10866 0, 4266 10866 0, 4266 10266 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 10266,
+            "x2": 6266,
+            "y2": 10866
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GB-R2-U1",
+          "name": "Gondola R2 Back U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 10866 0, 6266 10866 0, 6266 11466 0, 4266 11466 0, 4266 10866 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 10866,
+            "x2": 6266,
+            "y2": 11466
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GF-R2-U2",
+          "name": "Gondola R2 Front U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 10266 0, 8633 10266 0, 8633 10866 0, 6633 10866 0, 6633 10266 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 10266,
+            "x2": 8633,
+            "y2": 10866
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GB-R2-U2",
+          "name": "Gondola R2 Back U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 10866 0, 8633 10866 0, 8633 11466 0, 6633 11466 0, 6633 10866 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 10866,
+            "x2": 8633,
+            "y2": 11466
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GF-R2-U3",
+          "name": "Gondola R2 Front U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 10266 0, 11000 10266 0, 11000 10866 0, 9000 10866 0, 9000 10266 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 10266,
+            "x2": 11000,
+            "y2": 10866
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GB-R2-U3",
+          "name": "Gondola R2 Back U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 10866 0, 11000 10866 0, 11000 11466 0, 9000 11466 0, 9000 10866 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 10866,
+            "x2": 11000,
+            "y2": 11466
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GF-R2-U4",
+          "name": "Gondola R2 Front U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 10266 0, 13366 10266 0, 13366 10866 0, 11366 10866 0, 11366 10266 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 10266,
+            "x2": 13366,
+            "y2": 10866
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GB-R2-U4",
+          "name": "Gondola R2 Back U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 10866 0, 13366 10866 0, 13366 11466 0, 11366 11466 0, 11366 10866 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 10866,
+            "x2": 13366,
+            "y2": 11466
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GF-R2-U5",
+          "name": "Gondola R2 Front U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 10266 0, 15733 10266 0, 15733 10866 0, 13733 10866 0, 13733 10266 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 10266,
+            "x2": 15733,
+            "y2": 10866
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GB-R2-U5",
+          "name": "Gondola R2 Back U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 10866 0, 15733 10866 0, 15733 11466 0, 13733 11466 0, 13733 10866 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 10866,
+            "x2": 15733,
+            "y2": 11466
+          },
+          "department": "snow"
+        },
+        {
+          "code": "GF-R1-U1",
+          "name": "Gondola R1 Front U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 12383 0, 6266 12383 0, 6266 12983 0, 4266 12983 0, 4266 12383 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 12383,
+            "x2": 6266,
+            "y2": 12983
+          },
+          "department": "general"
+        },
+        {
+          "code": "GB-R1-U1",
+          "name": "Gondola R1 Back U1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((4266 12983 0, 6266 12983 0, 6266 13583 0, 4266 13583 0, 4266 12983 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 4266,
+            "y1": 12983,
+            "x2": 6266,
+            "y2": 13583
+          },
+          "department": "general"
+        },
+        {
+          "code": "GF-R1-U2",
+          "name": "Gondola R1 Front U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 12383 0, 8633 12383 0, 8633 12983 0, 6633 12983 0, 6633 12383 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 12383,
+            "x2": 8633,
+            "y2": 12983
+          },
+          "department": "general"
+        },
+        {
+          "code": "GB-R1-U2",
+          "name": "Gondola R1 Back U2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((6633 12983 0, 8633 12983 0, 8633 13583 0, 6633 13583 0, 6633 12983 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 6633,
+            "y1": 12983,
+            "x2": 8633,
+            "y2": 13583
+          },
+          "department": "general"
+        },
+        {
+          "code": "GF-R1-U3",
+          "name": "Gondola R1 Front U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 12383 0, 11000 12383 0, 11000 12983 0, 9000 12983 0, 9000 12383 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 12383,
+            "x2": 11000,
+            "y2": 12983
+          },
+          "department": "general"
+        },
+        {
+          "code": "GB-R1-U3",
+          "name": "Gondola R1 Back U3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9000 12983 0, 11000 12983 0, 11000 13583 0, 9000 13583 0, 9000 12983 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 9000,
+            "y1": 12983,
+            "x2": 11000,
+            "y2": 13583
+          },
+          "department": "general"
+        },
+        {
+          "code": "GF-R1-U4",
+          "name": "Gondola R1 Front U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 12383 0, 13366 12383 0, 13366 12983 0, 11366 12983 0, 11366 12383 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 12383,
+            "x2": 13366,
+            "y2": 12983
+          },
+          "department": "general"
+        },
+        {
+          "code": "GB-R1-U4",
+          "name": "Gondola R1 Back U4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((11366 12983 0, 13366 12983 0, 13366 13583 0, 11366 13583 0, 11366 12983 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 11366,
+            "y1": 12983,
+            "x2": 13366,
+            "y2": 13583
+          },
+          "department": "general"
+        },
+        {
+          "code": "GF-R1-U5",
+          "name": "Gondola R1 Front U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_front",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 12383 0, 15733 12383 0, 15733 12983 0, 13733 12983 0, 13733 12383 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 12383,
+            "x2": 15733,
+            "y2": 12983
+          },
+          "department": "general"
+        },
+        {
+          "code": "GB-R1-U5",
+          "name": "Gondola R1 Back U5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "gondola_back",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13733 12983 0, 15733 12983 0, 15733 13583 0, 13733 13583 0, 13733 12983 0))",
+          "properties": {},
+          "area_sqm": 1.2,
+          "rect_mm": {
+            "x1": 13733,
+            "y1": 12983,
+            "x2": 15733,
+            "y2": 13583
+          },
+          "department": "general"
+        },
+        {
+          "code": "PW-01",
+          "name": "West Wall Bay 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "perimeter_west",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 3200 0, 3300 3200 0, 3300 5260 0, 3200 5260 0, 3200 3200 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 3200,
+            "x2": 3300,
+            "y2": 5260
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "PW-02",
+          "name": "West Wall Bay 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "perimeter_west",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 5460 0, 3300 5460 0, 3300 7520 0, 3200 7520 0, 3200 5460 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 5460,
+            "x2": 3300,
+            "y2": 7520
+          },
+          "department": "running"
+        },
+        {
+          "code": "PW-03",
+          "name": "West Wall Bay 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "perimeter_west",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 7720 0, 3300 7720 0, 3300 9780 0, 3200 9780 0, 3200 7720 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 7720,
+            "x2": 3300,
+            "y2": 9780
+          },
+          "department": "climb"
+        },
+        {
+          "code": "PW-04",
+          "name": "West Wall Bay 4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "perimeter_west",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 9980 0, 3300 9980 0, 3300 12040 0, 3200 12040 0, 3200 9980 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 9980,
+            "x2": 3300,
+            "y2": 12040
+          },
+          "department": "snow"
+        },
+        {
+          "code": "PW-05",
+          "name": "West Wall Bay 5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "perimeter_west",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 12240 0, 3300 12240 0, 3300 14300 0, 3200 14300 0, 3200 12240 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 12240,
+            "x2": 3300,
+            "y2": 14300
+          },
+          "department": "general"
+        },
+        {
+          "code": "PE-01",
+          "name": "East Wall Bay 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-01",
+          "fixture_category": "perimeter_east",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16700 3200 0, 16800 3200 0, 16800 5260 0, 16700 5260 0, 16700 3200 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 16700,
+            "y1": 3200,
+            "x2": 16800,
+            "y2": 5260
+          },
+          "department": "hike_camp"
+        },
+        {
+          "code": "PE-02",
+          "name": "East Wall Bay 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-02",
+          "fixture_category": "perimeter_east",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16700 5460 0, 16800 5460 0, 16800 7520 0, 16700 7520 0, 16700 5460 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 16700,
+            "y1": 5460,
+            "x2": 16800,
+            "y2": 7520
+          },
+          "department": "running"
+        },
+        {
+          "code": "PE-03",
+          "name": "East Wall Bay 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-03",
+          "fixture_category": "perimeter_east",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16700 7720 0, 16800 7720 0, 16800 9780 0, 16700 9780 0, 16700 7720 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 16700,
+            "y1": 7720,
+            "x2": 16800,
+            "y2": 9780
+          },
+          "department": "climb"
+        },
+        {
+          "code": "PE-04",
+          "name": "East Wall Bay 4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-04",
+          "fixture_category": "perimeter_east",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16700 9980 0, 16800 9980 0, 16800 12040 0, 16700 12040 0, 16700 9980 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 16700,
+            "y1": 9980,
+            "x2": 16800,
+            "y2": 12040
+          },
+          "department": "snow"
+        },
+        {
+          "code": "PE-05",
+          "name": "East Wall Bay 5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "D-05",
+          "fixture_category": "perimeter_east",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16700 12240 0, 16800 12240 0, 16800 14300 0, 16700 14300 0, 16700 12240 0))",
+          "properties": {},
+          "area_sqm": 0.2,
+          "rect_mm": {
+            "x1": 16700,
+            "y1": 12240,
+            "x2": 16800,
+            "y2": 14300
+          },
+          "department": "general"
+        },
+        {
+          "code": "GPS-01",
+          "name": "GPS Display Case 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-06",
+          "fixture_category": "gps_case",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 14700 0, 5280 14700 0, 5280 17650 0, 3200 17650 0, 3200 14700 0))",
+          "properties": {},
+          "area_sqm": 6.1,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 14700,
+            "x2": 5280,
+            "y2": 17650
+          }
+        },
+        {
+          "code": "GPS-02",
+          "name": "GPS Display Case 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-06",
+          "fixture_category": "gps_case",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((5480 14700 0, 7560 14700 0, 7560 17650 0, 5480 17650 0, 5480 14700 0))",
+          "properties": {},
+          "area_sqm": 6.1,
+          "rect_mm": {
+            "x1": 5480,
+            "y1": 14700,
+            "x2": 7560,
+            "y2": 17650
+          }
+        },
+        {
+          "code": "GPS-03",
+          "name": "GPS Display Case 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-06",
+          "fixture_category": "gps_case",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3200 17850 0, 5280 17850 0, 5280 20800 0, 3200 20800 0, 3200 17850 0))",
+          "properties": {},
+          "area_sqm": 6.1,
+          "rect_mm": {
+            "x1": 3200,
+            "y1": 17850,
+            "x2": 5280,
+            "y2": 20800
+          }
+        },
+        {
+          "code": "GPS-04",
+          "name": "GPS Display Case 4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-06",
+          "fixture_category": "gps_case",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((5480 17850 0, 7560 17850 0, 7560 20800 0, 5480 20800 0, 5480 17850 0))",
+          "properties": {},
+          "area_sqm": 6.1,
+          "rect_mm": {
+            "x1": 5480,
+            "y1": 17850,
+            "x2": 7560,
+            "y2": 20800
+          }
+        },
+        {
+          "code": "ACC-01",
+          "name": "Accessories Bay 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-07",
+          "fixture_category": "accessories_wall",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((7960 14700 0, 10360 14700 0, 10360 16075 0, 7960 16075 0, 7960 14700 0))",
+          "properties": {},
+          "area_sqm": 3.3,
+          "rect_mm": {
+            "x1": 7960,
+            "y1": 14700,
+            "x2": 10360,
+            "y2": 16075
+          }
+        },
+        {
+          "code": "ACC-02",
+          "name": "Accessories Bay 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-07",
+          "fixture_category": "accessories_wall",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((7960 16275 0, 10360 16275 0, 10360 17650 0, 7960 17650 0, 7960 16275 0))",
+          "properties": {},
+          "area_sqm": 3.3,
+          "rect_mm": {
+            "x1": 7960,
+            "y1": 16275,
+            "x2": 10360,
+            "y2": 17650
+          }
+        },
+        {
+          "code": "ACC-03",
+          "name": "Accessories Bay 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-07",
+          "fixture_category": "accessories_wall",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((7960 17850 0, 10360 17850 0, 10360 19225 0, 7960 19225 0, 7960 17850 0))",
+          "properties": {},
+          "area_sqm": 3.3,
+          "rect_mm": {
+            "x1": 7960,
+            "y1": 17850,
+            "x2": 10360,
+            "y2": 19225
+          }
+        },
+        {
+          "code": "ACC-04",
+          "name": "Accessories Bay 4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-07",
+          "fixture_category": "accessories_wall",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((7960 19425 0, 10360 19425 0, 10360 20800 0, 7960 20800 0, 7960 19425 0))",
+          "properties": {},
+          "area_sqm": 3.3,
+          "rect_mm": {
+            "x1": 7960,
+            "y1": 19425,
+            "x2": 10360,
+            "y2": 20800
+          }
+        },
+        {
+          "code": "GA-01",
+          "name": "Treadmill 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-09",
+          "fixture_category": "gait_treadmill",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((10760 14700 0, 13580 14700 0, 13580 20800 0, 10760 20800 0, 10760 14700 0))",
+          "properties": {},
+          "area_sqm": 17.2,
+          "rect_mm": {
+            "x1": 10760,
+            "y1": 14700,
+            "x2": 13580,
+            "y2": 20800
+          }
+        },
+        {
+          "code": "FB-01",
+          "name": "Footwear Bench Seat",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-08",
+          "fixture_category": "footwear_bench",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((13980 14700 0, 16800 14700 0, 16800 20800 0, 13980 20800 0, 13980 14700 0))",
+          "properties": {},
+          "area_sqm": 17.2,
+          "rect_mm": {
+            "x1": 13980,
+            "y1": 14700,
+            "x2": 16800,
+            "y2": 20800
+          }
+        },
+        {
+          "code": "CO-01",
+          "name": "Checkout Counter 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-02",
+          "fixture_category": "checkout",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((17200 1000 0, 19100 1000 0, 19100 3800 0, 17200 3800 0, 17200 1000 0))",
+          "properties": {},
+          "area_sqm": 5.3,
+          "rect_mm": {
+            "x1": 17200,
+            "y1": 1000,
+            "x2": 19100,
+            "y2": 3800
+          }
+        },
+        {
+          "code": "CO-02",
+          "name": "Checkout Counter 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-02",
+          "fixture_category": "checkout",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((19300 1000 0, 21200 1000 0, 21200 3800 0, 19300 3800 0, 19300 1000 0))",
+          "properties": {},
+          "area_sqm": 5.3,
+          "rect_mm": {
+            "x1": 19300,
+            "y1": 1000,
+            "x2": 21200,
+            "y2": 3800
+          }
+        },
+        {
+          "code": "CO-03",
+          "name": "Checkout Counter 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-02",
+          "fixture_category": "checkout",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((21400 1000 0, 23300 1000 0, 23300 3800 0, 21400 3800 0, 21400 1000 0))",
+          "properties": {},
+          "area_sqm": 5.3,
+          "rect_mm": {
+            "x1": 21400,
+            "y1": 1000,
+            "x2": 23300,
+            "y2": 3800
+          }
+        },
+        {
+          "code": "CO-IR",
+          "name": "Impulse Rack",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-02",
+          "fixture_category": "impulse_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((17150 150 0, 23350 150 0, 23350 650 0, 17150 650 0, 17150 150 0))",
+          "properties": {},
+          "area_sqm": 3.1,
+          "rect_mm": {
+            "x1": 17150,
+            "y1": 150,
+            "x2": 23350,
+            "y2": 650
+          }
+        },
+        {
+          "code": "PI-01",
+          "name": "Promo Island 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-01",
+          "fixture_category": "promo_island",
+          "geometry_type": "circle",
+          "geometry": "POINT Z (8100 1800 0)",
+          "properties": {
+            "centerX": 8100,
+            "centerY": 1800,
+            "radiusX": 700,
+            "radiusY": 700,
+            "rotation": 0
+          },
+          "area_sqm": 2.0,
+          "rect_mm": {
+            "x1": 7400,
+            "y1": 1100,
+            "x2": 8800,
+            "y2": 2500
+          }
+        },
+        {
+          "code": "RR-02",
+          "name": "Apparel Round Rack 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-01",
+          "fixture_category": "round_rack",
+          "geometry_type": "circle",
+          "geometry": "POINT Z (11900 1800 0)",
+          "properties": {
+            "centerX": 11900,
+            "centerY": 1800,
+            "radiusX": 700,
+            "radiusY": 700,
+            "rotation": 0
+          },
+          "area_sqm": 2.0,
+          "rect_mm": {
+            "x1": 11200,
+            "y1": 1100,
+            "x2": 12600,
+            "y2": 2500
+          }
+        }
+      ],
+      "crossing_slices": [
+        {
+          "code": "CS-01",
+          "name": "Main Entrance Gate",
+          "zone_code": "Z-01",
+          "y": 600,
+          "x_start": 5800,
+          "x_end": 14200,
+          "eas_gate": true
+        }
+      ],
+      "sensors": [
+        {
+          "type": "rfid_overhead",
+          "zone_code": "Z-06",
+          "coverage": "GPS display cases"
+        },
+        {
+          "type": "eas_gate",
+          "zone_code": "Z-01",
+          "coverage": "main entrance"
+        }
+      ]
     },
     {
-      "code": "Z-02",
-      "name": "Checkout Area",
-      "zone_type": "checkout",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17000 0 0, 23500 0 0, 23500 4000 0, 17000 4000 0, 17000 0 0))",
-      "properties": {},
-      "area_sqm": 26.0,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 17000,
-        "y1": 0,
-        "x2": 23500,
-        "y2": 4000
-      }
+      "code": "BR",
+      "space_type": "stockroom",
+      "name": "Back Room",
+      "footprint_mm": {
+        "width": 23500,
+        "depth": 3000,
+        "origin": "SW corner (0,0)"
+      },
+      "coordinate_units": "millimeters",
+      "geometry": "rectangles -> POLYGON Z, SRID 0",
+      "site_frame_anchor_space": null,
+      "srf_to_site_transform": null,
+      "counts": {
+        "zones_total": 7,
+        "area_zones": 0,
+        "fixture_zones": 7,
+        "try_on_zones": 0
+      },
+      "zones": [
+        {
+          "code": "RCV-01",
+          "name": "Receiving Dock",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "receiving_dock",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((200 200 0, 2800 200 0, 2800 2800 0, 200 2800 0, 200 200 0))",
+          "properties": {},
+          "area_sqm": 6.8,
+          "rect_mm": {
+            "x1": 200,
+            "y1": 200,
+            "x2": 2800,
+            "y2": 2800
+          }
+        },
+        {
+          "code": "BR-01",
+          "name": "Backroom Rack 1",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3300 400 0, 9766 400 0, 9766 1400 0, 3300 1400 0, 3300 400 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 3300,
+            "y1": 400,
+            "x2": 9766,
+            "y2": 1400
+          },
+          "department": "boh"
+        },
+        {
+          "code": "BR-02",
+          "name": "Backroom Rack 2",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9966 400 0, 16433 400 0, 16433 1400 0, 9966 1400 0, 9966 400 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 9966,
+            "y1": 400,
+            "x2": 16433,
+            "y2": 1400
+          },
+          "department": "boh"
+        },
+        {
+          "code": "BR-03",
+          "name": "Backroom Rack 3",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16633 400 0, 23100 400 0, 23100 1400 0, 16633 1400 0, 16633 400 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 16633,
+            "y1": 400,
+            "x2": 23100,
+            "y2": 1400
+          },
+          "department": "boh"
+        },
+        {
+          "code": "BR-04",
+          "name": "Backroom Rack 4",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3300 1600 0, 9766 1600 0, 9766 2600 0, 3300 2600 0, 3300 1600 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 3300,
+            "y1": 1600,
+            "x2": 9766,
+            "y2": 2600
+          },
+          "department": "boh"
+        },
+        {
+          "code": "BR-05",
+          "name": "Backroom Rack 5",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((9966 1600 0, 16433 1600 0, 16433 2600 0, 9966 2600 0, 9966 1600 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 9966,
+            "y1": 1600,
+            "x2": 16433,
+            "y2": 2600
+          },
+          "department": "boh"
+        },
+        {
+          "code": "BR-06",
+          "name": "Backroom Rack 6",
+          "zone_type": "fixture",
+          "parent": "space",
+          "in_area_zone": "Z-05",
+          "fixture_category": "backroom_rack",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((16633 1600 0, 23100 1600 0, 23100 2600 0, 16633 2600 0, 16633 1600 0))",
+          "properties": {},
+          "area_sqm": 6.5,
+          "rect_mm": {
+            "x1": 16633,
+            "y1": 1600,
+            "x2": 23100,
+            "y2": 2600
+          },
+          "department": "boh"
+        }
+      ]
     },
     {
-      "code": "Z-03",
-      "name": "Non-Retail Left Strip",
-      "zone_type": "region",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((0 3000 0, 3000 3000 0, 3000 21000 0, 0 21000 0, 0 3000 0))",
-      "properties": {},
-      "area_sqm": 54.0,
-      "customer_accessible": false,
-      "rect_mm": {
-        "x1": 0,
-        "y1": 3000,
-        "x2": 3000,
-        "y2": 21000
-      }
-    },
-    {
-      "code": "Z-05",
-      "name": "Stockroom",
-      "zone_type": "region",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((0 21000 0, 23500 21000 0, 23500 24000 0, 0 24000 0, 0 21000 0))",
-      "properties": {},
-      "area_sqm": 70.5,
-      "customer_accessible": false,
-      "rect_mm": {
-        "x1": 0,
-        "y1": 21000,
-        "x2": 23500,
-        "y2": 24000
-      }
-    },
-    {
-      "code": "Z-11",
-      "name": "Service Cluster",
-      "zone_type": "region",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17000 4000 0, 23500 4000 0, 23500 14500 0, 17000 14500 0, 17000 4000 0))",
-      "properties": {},
-      "area_sqm": 68.2,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 17000,
-        "y1": 4000,
-        "x2": 23500,
-        "y2": 14500
-      }
-    },
-    {
-      "code": "Z-10",
+      "code": "FT",
+      "space_type": "fitting_room",
       "name": "Fitting Rooms",
-      "zone_type": "try_on_zone",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17000 14500 0, 23500 14500 0, 23500 21000 0, 17000 21000 0, 17000 14500 0))",
-      "properties": {},
-      "area_sqm": 42.2,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 17000,
-        "y1": 14500,
-        "x2": 23500,
-        "y2": 21000
-      },
-      "try_on_profile": "apparel_room"
-    },
-    {
-      "code": "Z-06",
-      "name": "GPS & Accessories",
-      "zone_type": "region",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 14500 0, 7760 14500 0, 7760 21000 0, 3000 21000 0, 3000 14500 0))",
-      "properties": {},
-      "area_sqm": 30.9,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 14500,
-        "x2": 7760,
-        "y2": 21000
-      }
-    },
-    {
-      "code": "Z-07",
-      "name": "Accessories Wall",
-      "zone_type": "region",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((7760 14500 0, 10560 14500 0, 10560 21000 0, 7760 21000 0, 7760 14500 0))",
-      "properties": {},
-      "area_sqm": 18.2,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 7760,
-        "y1": 14500,
-        "x2": 10560,
-        "y2": 21000
-      }
-    },
-    {
-      "code": "Z-09",
-      "name": "Gait Analysis",
-      "zone_type": "try_on_zone",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((10560 14500 0, 13780 14500 0, 13780 21000 0, 10560 21000 0, 10560 14500 0))",
-      "properties": {},
-      "area_sqm": 20.9,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 10560,
-        "y1": 14500,
-        "x2": 13780,
-        "y2": 21000
-      },
-      "try_on_profile": "equipment_test"
-    },
-    {
-      "code": "Z-08",
-      "name": "Footwear Bench",
-      "zone_type": "try_on_zone",
-      "parent": "space",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13780 14500 0, 17000 14500 0, 17000 21000 0, 13780 21000 0, 13780 14500 0))",
-      "properties": {},
-      "area_sqm": 20.9,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 13780,
-        "y1": 14500,
-        "x2": 17000,
-        "y2": 21000
-      },
-      "try_on_profile": "footwear_bench"
-    },
-    {
-      "code": "D-01",
-      "name": "Hiking, Trekking & Camping",
-      "zone_type": "region",
-      "parent": "space",
-      "department": "hike_camp",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 3000 0, 17000 3000 0, 17000 5575 0, 3000 5575 0, 3000 3000 0))",
-      "properties": {},
-      "area_sqm": 36.0,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 3000,
-        "x2": 17000,
-        "y2": 5575
-      }
-    },
-    {
-      "code": "D-02",
-      "name": "Running & Trail",
-      "zone_type": "region",
-      "parent": "space",
-      "department": "running",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 5575 0, 17000 5575 0, 17000 7692 0, 3000 7692 0, 3000 5575 0))",
-      "properties": {},
-      "area_sqm": 29.6,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 5575,
-        "x2": 17000,
-        "y2": 7692
-      }
-    },
-    {
-      "code": "D-03",
-      "name": "Climbing & Mountaineering",
-      "zone_type": "region",
-      "parent": "space",
-      "department": "climb",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 7692 0, 17000 7692 0, 17000 9808 0, 3000 9808 0, 3000 7692 0))",
-      "properties": {},
-      "area_sqm": 29.6,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 7692,
-        "x2": 17000,
-        "y2": 9808
-      }
-    },
-    {
-      "code": "D-04",
-      "name": "Snow & Ski",
-      "zone_type": "region",
-      "parent": "space",
-      "department": "snow",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 9808 0, 17000 9808 0, 17000 11925 0, 3000 11925 0, 3000 9808 0))",
-      "properties": {},
-      "area_sqm": 29.6,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 9808,
-        "x2": 17000,
-        "y2": 11925
-      }
-    },
-    {
-      "code": "D-05",
-      "name": "General / Multi-sport",
-      "zone_type": "region",
-      "parent": "space",
-      "department": "general",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3000 11925 0, 17000 11925 0, 17000 14500 0, 3000 14500 0, 3000 11925 0))",
-      "properties": {},
-      "area_sqm": 36.0,
-      "customer_accessible": true,
-      "rect_mm": {
-        "x1": 3000,
-        "y1": 11925,
-        "x2": 17000,
-        "y2": 14500
-      }
-    },
-    {
-      "code": "GF-R5-U1",
-      "name": "Gondola R5 Front U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 3916 0, 6266 3916 0, 6266 4516 0, 4266 4516 0, 4266 3916 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 3916,
-        "x2": 6266,
-        "y2": 4516
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GB-R5-U1",
-      "name": "Gondola R5 Back U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 4516 0, 6266 4516 0, 6266 5116 0, 4266 5116 0, 4266 4516 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 4516,
-        "x2": 6266,
-        "y2": 5116
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GF-R5-U2",
-      "name": "Gondola R5 Front U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 3916 0, 8633 3916 0, 8633 4516 0, 6633 4516 0, 6633 3916 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 3916,
-        "x2": 8633,
-        "y2": 4516
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GB-R5-U2",
-      "name": "Gondola R5 Back U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 4516 0, 8633 4516 0, 8633 5116 0, 6633 5116 0, 6633 4516 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 4516,
-        "x2": 8633,
-        "y2": 5116
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GF-R5-U3",
-      "name": "Gondola R5 Front U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 3916 0, 11000 3916 0, 11000 4516 0, 9000 4516 0, 9000 3916 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 3916,
-        "x2": 11000,
-        "y2": 4516
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GB-R5-U3",
-      "name": "Gondola R5 Back U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 4516 0, 11000 4516 0, 11000 5116 0, 9000 5116 0, 9000 4516 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 4516,
-        "x2": 11000,
-        "y2": 5116
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GF-R5-U4",
-      "name": "Gondola R5 Front U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 3916 0, 13366 3916 0, 13366 4516 0, 11366 4516 0, 11366 3916 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 3916,
-        "x2": 13366,
-        "y2": 4516
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GB-R5-U4",
-      "name": "Gondola R5 Back U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 4516 0, 13366 4516 0, 13366 5116 0, 11366 5116 0, 11366 4516 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 4516,
-        "x2": 13366,
-        "y2": 5116
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GF-R5-U5",
-      "name": "Gondola R5 Front U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 3916 0, 15733 3916 0, 15733 4516 0, 13733 4516 0, 13733 3916 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 3916,
-        "x2": 15733,
-        "y2": 4516
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GB-R5-U5",
-      "name": "Gondola R5 Back U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 4516 0, 15733 4516 0, 15733 5116 0, 13733 5116 0, 13733 4516 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 4516,
-        "x2": 15733,
-        "y2": 5116
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "GF-R4-U1",
-      "name": "Gondola R4 Front U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 6033 0, 6266 6033 0, 6266 6633 0, 4266 6633 0, 4266 6033 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 6033,
-        "x2": 6266,
-        "y2": 6633
-      },
-      "department": "running"
-    },
-    {
-      "code": "GB-R4-U1",
-      "name": "Gondola R4 Back U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 6633 0, 6266 6633 0, 6266 7233 0, 4266 7233 0, 4266 6633 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 6633,
-        "x2": 6266,
-        "y2": 7233
-      },
-      "department": "running"
-    },
-    {
-      "code": "GF-R4-U2",
-      "name": "Gondola R4 Front U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 6033 0, 8633 6033 0, 8633 6633 0, 6633 6633 0, 6633 6033 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 6033,
-        "x2": 8633,
-        "y2": 6633
-      },
-      "department": "running"
-    },
-    {
-      "code": "GB-R4-U2",
-      "name": "Gondola R4 Back U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 6633 0, 8633 6633 0, 8633 7233 0, 6633 7233 0, 6633 6633 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 6633,
-        "x2": 8633,
-        "y2": 7233
-      },
-      "department": "running"
-    },
-    {
-      "code": "GF-R4-U3",
-      "name": "Gondola R4 Front U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 6033 0, 11000 6033 0, 11000 6633 0, 9000 6633 0, 9000 6033 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 6033,
-        "x2": 11000,
-        "y2": 6633
-      },
-      "department": "running"
-    },
-    {
-      "code": "GB-R4-U3",
-      "name": "Gondola R4 Back U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 6633 0, 11000 6633 0, 11000 7233 0, 9000 7233 0, 9000 6633 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 6633,
-        "x2": 11000,
-        "y2": 7233
-      },
-      "department": "running"
-    },
-    {
-      "code": "GF-R4-U4",
-      "name": "Gondola R4 Front U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 6033 0, 13366 6033 0, 13366 6633 0, 11366 6633 0, 11366 6033 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 6033,
-        "x2": 13366,
-        "y2": 6633
-      },
-      "department": "running"
-    },
-    {
-      "code": "GB-R4-U4",
-      "name": "Gondola R4 Back U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 6633 0, 13366 6633 0, 13366 7233 0, 11366 7233 0, 11366 6633 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 6633,
-        "x2": 13366,
-        "y2": 7233
-      },
-      "department": "running"
-    },
-    {
-      "code": "GF-R4-U5",
-      "name": "Gondola R4 Front U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 6033 0, 15733 6033 0, 15733 6633 0, 13733 6633 0, 13733 6033 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 6033,
-        "x2": 15733,
-        "y2": 6633
-      },
-      "department": "running"
-    },
-    {
-      "code": "GB-R4-U5",
-      "name": "Gondola R4 Back U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 6633 0, 15733 6633 0, 15733 7233 0, 13733 7233 0, 13733 6633 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 6633,
-        "x2": 15733,
-        "y2": 7233
-      },
-      "department": "running"
-    },
-    {
-      "code": "GF-R3-U1",
-      "name": "Gondola R3 Front U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 8150 0, 6266 8150 0, 6266 8750 0, 4266 8750 0, 4266 8150 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 8150,
-        "x2": 6266,
-        "y2": 8750
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GB-R3-U1",
-      "name": "Gondola R3 Back U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 8750 0, 6266 8750 0, 6266 9350 0, 4266 9350 0, 4266 8750 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 8750,
-        "x2": 6266,
-        "y2": 9350
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GF-R3-U2",
-      "name": "Gondola R3 Front U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 8150 0, 8633 8150 0, 8633 8750 0, 6633 8750 0, 6633 8150 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 8150,
-        "x2": 8633,
-        "y2": 8750
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GB-R3-U2",
-      "name": "Gondola R3 Back U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 8750 0, 8633 8750 0, 8633 9350 0, 6633 9350 0, 6633 8750 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 8750,
-        "x2": 8633,
-        "y2": 9350
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GF-R3-U3",
-      "name": "Gondola R3 Front U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 8150 0, 11000 8150 0, 11000 8750 0, 9000 8750 0, 9000 8150 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 8150,
-        "x2": 11000,
-        "y2": 8750
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GB-R3-U3",
-      "name": "Gondola R3 Back U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 8750 0, 11000 8750 0, 11000 9350 0, 9000 9350 0, 9000 8750 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 8750,
-        "x2": 11000,
-        "y2": 9350
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GF-R3-U4",
-      "name": "Gondola R3 Front U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 8150 0, 13366 8150 0, 13366 8750 0, 11366 8750 0, 11366 8150 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 8150,
-        "x2": 13366,
-        "y2": 8750
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GB-R3-U4",
-      "name": "Gondola R3 Back U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 8750 0, 13366 8750 0, 13366 9350 0, 11366 9350 0, 11366 8750 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 8750,
-        "x2": 13366,
-        "y2": 9350
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GF-R3-U5",
-      "name": "Gondola R3 Front U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 8150 0, 15733 8150 0, 15733 8750 0, 13733 8750 0, 13733 8150 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 8150,
-        "x2": 15733,
-        "y2": 8750
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GB-R3-U5",
-      "name": "Gondola R3 Back U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 8750 0, 15733 8750 0, 15733 9350 0, 13733 9350 0, 13733 8750 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 8750,
-        "x2": 15733,
-        "y2": 9350
-      },
-      "department": "climb"
-    },
-    {
-      "code": "GF-R2-U1",
-      "name": "Gondola R2 Front U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 10266 0, 6266 10266 0, 6266 10866 0, 4266 10866 0, 4266 10266 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 10266,
-        "x2": 6266,
-        "y2": 10866
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GB-R2-U1",
-      "name": "Gondola R2 Back U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 10866 0, 6266 10866 0, 6266 11466 0, 4266 11466 0, 4266 10866 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 10866,
-        "x2": 6266,
-        "y2": 11466
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GF-R2-U2",
-      "name": "Gondola R2 Front U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 10266 0, 8633 10266 0, 8633 10866 0, 6633 10866 0, 6633 10266 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 10266,
-        "x2": 8633,
-        "y2": 10866
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GB-R2-U2",
-      "name": "Gondola R2 Back U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 10866 0, 8633 10866 0, 8633 11466 0, 6633 11466 0, 6633 10866 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 10866,
-        "x2": 8633,
-        "y2": 11466
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GF-R2-U3",
-      "name": "Gondola R2 Front U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 10266 0, 11000 10266 0, 11000 10866 0, 9000 10866 0, 9000 10266 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 10266,
-        "x2": 11000,
-        "y2": 10866
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GB-R2-U3",
-      "name": "Gondola R2 Back U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 10866 0, 11000 10866 0, 11000 11466 0, 9000 11466 0, 9000 10866 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 10866,
-        "x2": 11000,
-        "y2": 11466
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GF-R2-U4",
-      "name": "Gondola R2 Front U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 10266 0, 13366 10266 0, 13366 10866 0, 11366 10866 0, 11366 10266 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 10266,
-        "x2": 13366,
-        "y2": 10866
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GB-R2-U4",
-      "name": "Gondola R2 Back U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 10866 0, 13366 10866 0, 13366 11466 0, 11366 11466 0, 11366 10866 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 10866,
-        "x2": 13366,
-        "y2": 11466
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GF-R2-U5",
-      "name": "Gondola R2 Front U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 10266 0, 15733 10266 0, 15733 10866 0, 13733 10866 0, 13733 10266 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 10266,
-        "x2": 15733,
-        "y2": 10866
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GB-R2-U5",
-      "name": "Gondola R2 Back U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 10866 0, 15733 10866 0, 15733 11466 0, 13733 11466 0, 13733 10866 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 10866,
-        "x2": 15733,
-        "y2": 11466
-      },
-      "department": "snow"
-    },
-    {
-      "code": "GF-R1-U1",
-      "name": "Gondola R1 Front U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 12383 0, 6266 12383 0, 6266 12983 0, 4266 12983 0, 4266 12383 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 12383,
-        "x2": 6266,
-        "y2": 12983
-      },
-      "department": "general"
-    },
-    {
-      "code": "GB-R1-U1",
-      "name": "Gondola R1 Back U1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((4266 12983 0, 6266 12983 0, 6266 13583 0, 4266 13583 0, 4266 12983 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 4266,
-        "y1": 12983,
-        "x2": 6266,
-        "y2": 13583
-      },
-      "department": "general"
-    },
-    {
-      "code": "GF-R1-U2",
-      "name": "Gondola R1 Front U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 12383 0, 8633 12383 0, 8633 12983 0, 6633 12983 0, 6633 12383 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 12383,
-        "x2": 8633,
-        "y2": 12983
-      },
-      "department": "general"
-    },
-    {
-      "code": "GB-R1-U2",
-      "name": "Gondola R1 Back U2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((6633 12983 0, 8633 12983 0, 8633 13583 0, 6633 13583 0, 6633 12983 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 6633,
-        "y1": 12983,
-        "x2": 8633,
-        "y2": 13583
-      },
-      "department": "general"
-    },
-    {
-      "code": "GF-R1-U3",
-      "name": "Gondola R1 Front U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 12383 0, 11000 12383 0, 11000 12983 0, 9000 12983 0, 9000 12383 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 12383,
-        "x2": 11000,
-        "y2": 12983
-      },
-      "department": "general"
-    },
-    {
-      "code": "GB-R1-U3",
-      "name": "Gondola R1 Back U3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9000 12983 0, 11000 12983 0, 11000 13583 0, 9000 13583 0, 9000 12983 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 9000,
-        "y1": 12983,
-        "x2": 11000,
-        "y2": 13583
-      },
-      "department": "general"
-    },
-    {
-      "code": "GF-R1-U4",
-      "name": "Gondola R1 Front U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 12383 0, 13366 12383 0, 13366 12983 0, 11366 12983 0, 11366 12383 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 12383,
-        "x2": 13366,
-        "y2": 12983
-      },
-      "department": "general"
-    },
-    {
-      "code": "GB-R1-U4",
-      "name": "Gondola R1 Back U4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((11366 12983 0, 13366 12983 0, 13366 13583 0, 11366 13583 0, 11366 12983 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 11366,
-        "y1": 12983,
-        "x2": 13366,
-        "y2": 13583
-      },
-      "department": "general"
-    },
-    {
-      "code": "GF-R1-U5",
-      "name": "Gondola R1 Front U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_front",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 12383 0, 15733 12383 0, 15733 12983 0, 13733 12983 0, 13733 12383 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 12383,
-        "x2": 15733,
-        "y2": 12983
-      },
-      "department": "general"
-    },
-    {
-      "code": "GB-R1-U5",
-      "name": "Gondola R1 Back U5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "gondola_back",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13733 12983 0, 15733 12983 0, 15733 13583 0, 13733 13583 0, 13733 12983 0))",
-      "properties": {},
-      "area_sqm": 1.2,
-      "rect_mm": {
-        "x1": 13733,
-        "y1": 12983,
-        "x2": 15733,
-        "y2": 13583
-      },
-      "department": "general"
-    },
-    {
-      "code": "PW-01",
-      "name": "West Wall Bay 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "perimeter_west",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 3200 0, 3300 3200 0, 3300 5260 0, 3200 5260 0, 3200 3200 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 3200,
-        "x2": 3300,
-        "y2": 5260
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "PW-02",
-      "name": "West Wall Bay 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "perimeter_west",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 5460 0, 3300 5460 0, 3300 7520 0, 3200 7520 0, 3200 5460 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 5460,
-        "x2": 3300,
-        "y2": 7520
-      },
-      "department": "running"
-    },
-    {
-      "code": "PW-03",
-      "name": "West Wall Bay 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "perimeter_west",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 7720 0, 3300 7720 0, 3300 9780 0, 3200 9780 0, 3200 7720 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 7720,
-        "x2": 3300,
-        "y2": 9780
-      },
-      "department": "climb"
-    },
-    {
-      "code": "PW-04",
-      "name": "West Wall Bay 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "perimeter_west",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 9980 0, 3300 9980 0, 3300 12040 0, 3200 12040 0, 3200 9980 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 9980,
-        "x2": 3300,
-        "y2": 12040
-      },
-      "department": "snow"
-    },
-    {
-      "code": "PW-05",
-      "name": "West Wall Bay 5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "perimeter_west",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 12240 0, 3300 12240 0, 3300 14300 0, 3200 14300 0, 3200 12240 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 12240,
-        "x2": 3300,
-        "y2": 14300
-      },
-      "department": "general"
-    },
-    {
-      "code": "PE-01",
-      "name": "East Wall Bay 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-01",
-      "fixture_category": "perimeter_east",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16700 3200 0, 16800 3200 0, 16800 5260 0, 16700 5260 0, 16700 3200 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 16700,
-        "y1": 3200,
-        "x2": 16800,
-        "y2": 5260
-      },
-      "department": "hike_camp"
-    },
-    {
-      "code": "PE-02",
-      "name": "East Wall Bay 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-02",
-      "fixture_category": "perimeter_east",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16700 5460 0, 16800 5460 0, 16800 7520 0, 16700 7520 0, 16700 5460 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 16700,
-        "y1": 5460,
-        "x2": 16800,
-        "y2": 7520
-      },
-      "department": "running"
-    },
-    {
-      "code": "PE-03",
-      "name": "East Wall Bay 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-03",
-      "fixture_category": "perimeter_east",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16700 7720 0, 16800 7720 0, 16800 9780 0, 16700 9780 0, 16700 7720 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 16700,
-        "y1": 7720,
-        "x2": 16800,
-        "y2": 9780
-      },
-      "department": "climb"
-    },
-    {
-      "code": "PE-04",
-      "name": "East Wall Bay 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-04",
-      "fixture_category": "perimeter_east",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16700 9980 0, 16800 9980 0, 16800 12040 0, 16700 12040 0, 16700 9980 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 16700,
-        "y1": 9980,
-        "x2": 16800,
-        "y2": 12040
-      },
-      "department": "snow"
-    },
-    {
-      "code": "PE-05",
-      "name": "East Wall Bay 5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "D-05",
-      "fixture_category": "perimeter_east",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16700 12240 0, 16800 12240 0, 16800 14300 0, 16700 14300 0, 16700 12240 0))",
-      "properties": {},
-      "area_sqm": 0.2,
-      "rect_mm": {
-        "x1": 16700,
-        "y1": 12240,
-        "x2": 16800,
-        "y2": 14300
-      },
-      "department": "general"
-    },
-    {
-      "code": "GPS-01",
-      "name": "GPS Display Case 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-06",
-      "fixture_category": "gps_case",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 14700 0, 5280 14700 0, 5280 17650 0, 3200 17650 0, 3200 14700 0))",
-      "properties": {},
-      "area_sqm": 6.1,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 14700,
-        "x2": 5280,
-        "y2": 17650
-      }
-    },
-    {
-      "code": "GPS-02",
-      "name": "GPS Display Case 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-06",
-      "fixture_category": "gps_case",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((5480 14700 0, 7560 14700 0, 7560 17650 0, 5480 17650 0, 5480 14700 0))",
-      "properties": {},
-      "area_sqm": 6.1,
-      "rect_mm": {
-        "x1": 5480,
-        "y1": 14700,
-        "x2": 7560,
-        "y2": 17650
-      }
-    },
-    {
-      "code": "GPS-03",
-      "name": "GPS Display Case 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-06",
-      "fixture_category": "gps_case",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3200 17850 0, 5280 17850 0, 5280 20800 0, 3200 20800 0, 3200 17850 0))",
-      "properties": {},
-      "area_sqm": 6.1,
-      "rect_mm": {
-        "x1": 3200,
-        "y1": 17850,
-        "x2": 5280,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "GPS-04",
-      "name": "GPS Display Case 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-06",
-      "fixture_category": "gps_case",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((5480 17850 0, 7560 17850 0, 7560 20800 0, 5480 20800 0, 5480 17850 0))",
-      "properties": {},
-      "area_sqm": 6.1,
-      "rect_mm": {
-        "x1": 5480,
-        "y1": 17850,
-        "x2": 7560,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "ACC-01",
-      "name": "Accessories Bay 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-07",
-      "fixture_category": "accessories_wall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((7960 14700 0, 10360 14700 0, 10360 16075 0, 7960 16075 0, 7960 14700 0))",
-      "properties": {},
-      "area_sqm": 3.3,
-      "rect_mm": {
-        "x1": 7960,
-        "y1": 14700,
-        "x2": 10360,
-        "y2": 16075
-      }
-    },
-    {
-      "code": "ACC-02",
-      "name": "Accessories Bay 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-07",
-      "fixture_category": "accessories_wall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((7960 16275 0, 10360 16275 0, 10360 17650 0, 7960 17650 0, 7960 16275 0))",
-      "properties": {},
-      "area_sqm": 3.3,
-      "rect_mm": {
-        "x1": 7960,
-        "y1": 16275,
-        "x2": 10360,
-        "y2": 17650
-      }
-    },
-    {
-      "code": "ACC-03",
-      "name": "Accessories Bay 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-07",
-      "fixture_category": "accessories_wall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((7960 17850 0, 10360 17850 0, 10360 19225 0, 7960 19225 0, 7960 17850 0))",
-      "properties": {},
-      "area_sqm": 3.3,
-      "rect_mm": {
-        "x1": 7960,
-        "y1": 17850,
-        "x2": 10360,
-        "y2": 19225
-      }
-    },
-    {
-      "code": "ACC-04",
-      "name": "Accessories Bay 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-07",
-      "fixture_category": "accessories_wall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((7960 19425 0, 10360 19425 0, 10360 20800 0, 7960 20800 0, 7960 19425 0))",
-      "properties": {},
-      "area_sqm": 3.3,
-      "rect_mm": {
-        "x1": 7960,
-        "y1": 19425,
-        "x2": 10360,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "GA-01",
-      "name": "Treadmill 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-09",
-      "fixture_category": "gait_treadmill",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((10760 14700 0, 13580 14700 0, 13580 20800 0, 10760 20800 0, 10760 14700 0))",
-      "properties": {},
-      "area_sqm": 17.2,
-      "rect_mm": {
-        "x1": 10760,
-        "y1": 14700,
-        "x2": 13580,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "FB-01",
-      "name": "Footwear Bench Seat",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-08",
-      "fixture_category": "footwear_bench",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((13980 14700 0, 16800 14700 0, 16800 20800 0, 13980 20800 0, 13980 14700 0))",
-      "properties": {},
-      "area_sqm": 17.2,
-      "rect_mm": {
-        "x1": 13980,
-        "y1": 14700,
-        "x2": 16800,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "FR-01",
-      "name": "Fitting Stall 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-10",
-      "fixture_category": "fitting_stall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17200 14700 0, 20150 14700 0, 20150 17650 0, 17200 17650 0, 17200 14700 0))",
-      "properties": {},
-      "area_sqm": 8.7,
-      "rect_mm": {
-        "x1": 17200,
-        "y1": 14700,
-        "x2": 20150,
-        "y2": 17650
-      }
-    },
-    {
-      "code": "FR-02",
-      "name": "Fitting Stall 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-10",
-      "fixture_category": "fitting_stall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((20350 14700 0, 23300 14700 0, 23300 17650 0, 20350 17650 0, 20350 14700 0))",
-      "properties": {},
-      "area_sqm": 8.7,
-      "rect_mm": {
-        "x1": 20350,
-        "y1": 14700,
-        "x2": 23300,
-        "y2": 17650
-      }
-    },
-    {
-      "code": "FR-03",
-      "name": "Fitting Stall 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-10",
-      "fixture_category": "fitting_stall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17200 17850 0, 20150 17850 0, 20150 20800 0, 17200 20800 0, 17200 17850 0))",
-      "properties": {},
-      "area_sqm": 8.7,
-      "rect_mm": {
-        "x1": 17200,
-        "y1": 17850,
-        "x2": 20150,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "FR-04",
-      "name": "Fitting Stall 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-10",
-      "fixture_category": "fitting_stall",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((20350 17850 0, 23300 17850 0, 23300 20800 0, 20350 20800 0, 20350 17850 0))",
-      "properties": {},
-      "area_sqm": 8.7,
-      "rect_mm": {
-        "x1": 20350,
-        "y1": 17850,
-        "x2": 23300,
-        "y2": 20800
-      }
-    },
-    {
-      "code": "CO-01",
-      "name": "Checkout Counter 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-02",
-      "fixture_category": "checkout",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17200 1000 0, 19100 1000 0, 19100 3800 0, 17200 3800 0, 17200 1000 0))",
-      "properties": {},
-      "area_sqm": 5.3,
-      "rect_mm": {
-        "x1": 17200,
-        "y1": 1000,
-        "x2": 19100,
-        "y2": 3800
-      }
-    },
-    {
-      "code": "CO-02",
-      "name": "Checkout Counter 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-02",
-      "fixture_category": "checkout",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((19300 1000 0, 21200 1000 0, 21200 3800 0, 19300 3800 0, 19300 1000 0))",
-      "properties": {},
-      "area_sqm": 5.3,
-      "rect_mm": {
-        "x1": 19300,
-        "y1": 1000,
-        "x2": 21200,
-        "y2": 3800
-      }
-    },
-    {
-      "code": "CO-03",
-      "name": "Checkout Counter 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-02",
-      "fixture_category": "checkout",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((21400 1000 0, 23300 1000 0, 23300 3800 0, 21400 3800 0, 21400 1000 0))",
-      "properties": {},
-      "area_sqm": 5.3,
-      "rect_mm": {
-        "x1": 21400,
-        "y1": 1000,
-        "x2": 23300,
-        "y2": 3800
-      }
-    },
-    {
-      "code": "CO-IR",
-      "name": "Impulse Rack",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-02",
-      "fixture_category": "impulse_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((17150 150 0, 23350 150 0, 23350 650 0, 17150 650 0, 17150 150 0))",
-      "properties": {},
-      "area_sqm": 3.1,
-      "rect_mm": {
-        "x1": 17150,
-        "y1": 150,
-        "x2": 23350,
-        "y2": 650
-      }
-    },
-    {
-      "code": "PI-01",
-      "name": "Promo Island 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-01",
-      "fixture_category": "promo_island",
-      "geometry_type": "circle",
-      "geometry": "POINT Z (8100 1800 0)",
-      "properties": {
-        "centerX": 8100,
-        "centerY": 1800,
-        "radiusX": 700,
-        "radiusY": 700,
-        "rotation": 0
-      },
-      "area_sqm": 2.0,
-      "rect_mm": {
-        "x1": 7400,
-        "y1": 1100,
-        "x2": 8800,
-        "y2": 2500
-      }
-    },
-    {
-      "code": "RR-02",
-      "name": "Apparel Round Rack 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-01",
-      "fixture_category": "round_rack",
-      "geometry_type": "circle",
-      "geometry": "POINT Z (11900 1800 0)",
-      "properties": {
-        "centerX": 11900,
-        "centerY": 1800,
-        "radiusX": 700,
-        "radiusY": 700,
-        "rotation": 0
-      },
-      "area_sqm": 2.0,
-      "rect_mm": {
-        "x1": 11200,
-        "y1": 1100,
-        "x2": 12600,
-        "y2": 2500
-      }
-    },
-    {
-      "code": "RCV-01",
-      "name": "Receiving Dock",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "receiving_dock",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((200 21200 0, 2800 21200 0, 2800 23800 0, 200 23800 0, 200 21200 0))",
-      "properties": {},
-      "area_sqm": 6.8,
-      "rect_mm": {
-        "x1": 200,
-        "y1": 21200,
-        "x2": 2800,
-        "y2": 23800
-      }
-    },
-    {
-      "code": "BR-01",
-      "name": "Backroom Rack 1",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3300 21400 0, 9766 21400 0, 9766 22400 0, 3300 22400 0, 3300 21400 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 3300,
-        "y1": 21400,
-        "x2": 9766,
-        "y2": 22400
-      },
-      "department": "boh"
-    },
-    {
-      "code": "BR-02",
-      "name": "Backroom Rack 2",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9966 21400 0, 16433 21400 0, 16433 22400 0, 9966 22400 0, 9966 21400 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 9966,
-        "y1": 21400,
-        "x2": 16433,
-        "y2": 22400
-      },
-      "department": "boh"
-    },
-    {
-      "code": "BR-03",
-      "name": "Backroom Rack 3",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16633 21400 0, 23100 21400 0, 23100 22400 0, 16633 22400 0, 16633 21400 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 16633,
-        "y1": 21400,
-        "x2": 23100,
-        "y2": 22400
-      },
-      "department": "boh"
-    },
-    {
-      "code": "BR-04",
-      "name": "Backroom Rack 4",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((3300 22600 0, 9766 22600 0, 9766 23600 0, 3300 23600 0, 3300 22600 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 3300,
-        "y1": 22600,
-        "x2": 9766,
-        "y2": 23600
-      },
-      "department": "boh"
-    },
-    {
-      "code": "BR-05",
-      "name": "Backroom Rack 5",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((9966 22600 0, 16433 22600 0, 16433 23600 0, 9966 23600 0, 9966 22600 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 9966,
-        "y1": 22600,
-        "x2": 16433,
-        "y2": 23600
-      },
-      "department": "boh"
-    },
-    {
-      "code": "BR-06",
-      "name": "Backroom Rack 6",
-      "zone_type": "fixture",
-      "parent": "space",
-      "in_area_zone": "Z-05",
-      "fixture_category": "backroom_rack",
-      "geometry_type": "polygon",
-      "geometry": "POLYGON Z ((16633 22600 0, 23100 22600 0, 23100 23600 0, 16633 23600 0, 16633 22600 0))",
-      "properties": {},
-      "area_sqm": 6.5,
-      "rect_mm": {
-        "x1": 16633,
-        "y1": 22600,
-        "x2": 23100,
-        "y2": 23600
-      },
-      "department": "boh"
-    }
-  ],
-  "crossing_slices": [
-    {
-      "code": "CS-01",
-      "name": "Main Entrance Gate",
-      "zone_code": "Z-01",
-      "y": 600,
-      "x_start": 5800,
-      "x_end": 14200,
-      "eas_gate": true
-    }
-  ],
-  "sensors": [
-    {
-      "type": "rfid_overhead",
-      "zone_code": "Z-06",
-      "coverage": "GPS display cases"
-    },
-    {
-      "type": "eas_gate",
-      "zone_code": "Z-01",
-      "coverage": "main entrance"
+      "footprint_mm": {
+        "width": 6500,
+        "depth": 6500,
+        "origin": "SW corner (0,0)"
+      },
+      "coordinate_units": "millimeters",
+      "geometry": "rectangles -> POLYGON Z, SRID 0",
+      "site_frame_anchor_space": null,
+      "srf_to_site_transform": null,
+      "counts": {
+        "zones_total": 4,
+        "area_zones": 4,
+        "fixture_zones": 0,
+        "try_on_zones": 4
+      },
+      "zones": [
+        {
+          "code": "FR-01",
+          "name": "Fitting Stall 1",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "in_area_zone": "Z-10",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((200 200 0, 3150 200 0, 3150 3150 0, 200 3150 0, 200 200 0))",
+          "properties": {},
+          "area_sqm": 8.7,
+          "rect_mm": {
+            "x1": 200,
+            "y1": 200,
+            "x2": 3150,
+            "y2": 3150
+          },
+          "try_on_profile": "apparel_room"
+        },
+        {
+          "code": "FR-02",
+          "name": "Fitting Stall 2",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "in_area_zone": "Z-10",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3350 200 0, 6300 200 0, 6300 3150 0, 3350 3150 0, 3350 200 0))",
+          "properties": {},
+          "area_sqm": 8.7,
+          "rect_mm": {
+            "x1": 3350,
+            "y1": 200,
+            "x2": 6300,
+            "y2": 3150
+          },
+          "try_on_profile": "apparel_room"
+        },
+        {
+          "code": "FR-03",
+          "name": "Fitting Stall 3",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "in_area_zone": "Z-10",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((200 3350 0, 3150 3350 0, 3150 6300 0, 200 6300 0, 200 3350 0))",
+          "properties": {},
+          "area_sqm": 8.7,
+          "rect_mm": {
+            "x1": 200,
+            "y1": 3350,
+            "x2": 3150,
+            "y2": 6300
+          },
+          "try_on_profile": "apparel_room"
+        },
+        {
+          "code": "FR-04",
+          "name": "Fitting Stall 4",
+          "zone_type": "try_on_zone",
+          "parent": "space",
+          "in_area_zone": "Z-10",
+          "geometry_type": "polygon",
+          "geometry": "POLYGON Z ((3350 3350 0, 6300 3350 0, 6300 6300 0, 3350 6300 0, 3350 3350 0))",
+          "properties": {},
+          "area_sqm": 8.7,
+          "rect_mm": {
+            "x1": 3350,
+            "y1": 3350,
+            "x2": 6300,
+            "y2": 6300
+          },
+          "try_on_profile": "apparel_room"
+        }
+      ]
     }
   ]
 }

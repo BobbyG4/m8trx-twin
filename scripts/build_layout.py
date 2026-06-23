@@ -117,6 +117,72 @@ def _overlap(a, b):
             * max(0, min(a["y2"], b["y2"]) - max(a["y1"], b["y1"])))
 
 
+# ── PASS 1 site→spaces→zones (SPATIAL-HIERARCHY.md): split the flat floor into SRF-independent
+# spaces. Each space is its own coordinate frame (SW origin 0,0); zones rebase into it. Site
+# assembly (srf_to_site_transform / site_frame_anchor_space / space_connection) stays DORMANT — Pass 2.
+def _rebase(z, ox, oy):
+    """Shift a zone into a space-local frame (subtract the space's SW origin); regenerate geometry."""
+    r = z["rect_mm"]
+    x1, y1, x2, y2 = r["x1"] - ox, r["y1"] - oy, r["x2"] - ox, r["y2"] - oy
+    shape = "circle" if z.get("geometry_type") == "circle" else "rect"
+    rot = z["properties"].get("rotation", 0) if shape == "circle" else 0
+    gtype, geom, props, (bx1, by1, bx2, by2) = geometry_for(x1, y1, x2, y2, shape, rot)
+    nz = dict(z)
+    nz.update(geometry_type=gtype, geometry=geom, properties=props,
+              rect_mm={"x1": bx1, "y1": by1, "x2": bx2, "y2": by2}, area_sqm=asqm(bx1, by1, bx2, by2))
+    return nz
+
+
+def _space(code, space_type, name, src_zones, ox, oy, w, d):
+    """One space: rebase its zones into a SW-origin local frame, assert clean, count.
+    Pass-2 site-assembly columns emitted DORMANT (null) — each space stands in its own SRF."""
+    zones = [_rebase(z, ox, oy) for z in src_zones]
+    fxs = [z for z in zones if z["zone_type"] == "fixture"]
+    overlaps = [(fxs[i]["code"], fxs[j]["code"]) for i in range(len(fxs)) for j in range(i + 1, len(fxs))
+                if _overlap(fxs[i], fxs[j]) > 0]
+    assert not overlaps, f"{code}: OVERLAPS {overlaps[:6]}"
+    oob = [z["code"] for z in zones
+           if not (0 <= z["rect_mm"]["x1"] and z["rect_mm"]["x2"] <= w
+                   and 0 <= z["rect_mm"]["y1"] and z["rect_mm"]["y2"] <= d)]
+    assert not oob, f"{code}: out-of-bounds {oob[:6]}"
+    return {
+        "code": code, "space_type": space_type, "name": name,
+        "footprint_mm": {"width": w, "depth": d, "origin": "SW corner (0,0)"},
+        "coordinate_units": "millimeters", "geometry": "rectangles -> POLYGON Z, SRID 0",
+        # Pass 2 (site assembly) — DORMANT until calibration/placement data exists:
+        "site_frame_anchor_space": None, "srf_to_site_transform": None,
+        "counts": {"zones_total": len(zones),
+                   "area_zones": sum(1 for z in zones if z["zone_type"] != "fixture"),
+                   "fixture_zones": len(fxs),
+                   "try_on_zones": sum(1 for z in zones if z["zone_type"] == "try_on_zone")},
+        "zones": zones,
+    }
+
+
+def assemble_spaces(zones, W, D, east_x1, spec_y1, spec_y2):
+    """Partition the store's flat zone list into 3 SRF-independent spaces:
+      Sales Floor (own frame; entrance/checkout/departments/try-on stay as ZONES here),
+      Back Room/stockroom (was area-zone Z-05 → now a space), Fitting Rooms (was Z-10 → now a space)."""
+    sales, backroom, fitting = [], [], []
+    for z in zones:
+        code = z["code"]
+        if code == "RCV-01" or code.startswith("BR-"):
+            backroom.append(z)
+        elif code.startswith("FR-"):                       # fitting stalls → try_on_zone in the Fitting space
+            nz = dict(z); nz["zone_type"] = "try_on_zone"; nz["try_on_profile"] = "apparel_room"
+            nz.pop("fixture_category", None)
+            fitting.append(nz)
+        elif code in ("Z-05", "Z-10"):                     # these area-zones BECOME the spaces — drop
+            continue
+        else:
+            sales.append(z)
+    return [
+        _space("SF", "sales_floor", "Sales Floor", sales, 0, 0, W, spec_y2),
+        _space("BR", "stockroom", "Back Room", backroom, 0, spec_y2, W, D - spec_y2),
+        _space("FT", "fitting_room", "Fitting Rooms", fitting, east_x1, spec_y1, W - east_x1, spec_y2 - spec_y1),
+    ]
+
+
 def generate(store):
     sid, tier = store["id"], store["tier"]
     rng = random.Random(store_seed(sid))
@@ -306,23 +372,33 @@ def generate(store):
     by_cat = {}
     for f in fx:
         by_cat[f["fixture_category"]] = by_cat.get(f["fixture_category"], 0) + 1
+
+    # ── PASS 1: partition the flat floor into SRF-independent SPACES (site → spaces → zones) ──
+    spaces = assemble_spaces(zones, W, D, east_x1, spec_y1, spec_y2)
+    sf = spaces[0]                                          # Sales Floor — entrance + EAS live here
+    sf["crossing_slices"] = [{"code": "CS-01", "name": "Main Entrance Gate", "zone_code": "Z-01",
+                              "y": 600, "x_start": ent_x1, "x_end": ent_x1 + ent_w, "eas_gate": True}]
+    sf["sensors"] = [{"type": "rfid_overhead", "zone_code": "Z-06", "coverage": "GPS display cases"},
+                     {"type": "eas_gate", "zone_code": "Z-01", "coverage": "main entrance"}]
+
+    agg = lambda k: sum(s["counts"].get(k, 0) for s in spaces)
     template = {
         "store_id": sid, "tier": tier,
-        "name": f"{sid} — {tier} floor ({asqm(0,0,W,D):.0f} m² footprint)",
+        "name": f"{sid} — {tier} ({asqm(0, 0, W, D):.0f} m² site · {len(spaces)} spaces)",
         "source": "scripts/build_layout.py (parametric, per-store seed=sha256(store_id))",
-        "footprint_mm": {"width": W, "depth": D, "origin": "SW corner (0,0)"},
+        "spatial_model": ("site -> spaces (each its own SRF) -> zones. PASS 1: spaces stand "
+                          "independently; assembly columns (srf_to_site_transform, "
+                          "site_frame_anchor_space, space_connection) DORMANT — Pass 2 lights them."),
+        "site_footprint_mm": {"width": W, "depth": D,
+                              "note": "nominal pre-assembly bounds; each space carries its own SRF frame"},
         "coordinate_units": "millimeters", "geometry": "rectangles -> POLYGON Z, SRID 0",
-        "counts": {"zones_total": len(zones), "area_zones": len(area_zones), "fixture_zones": len(fx),
-                   "try_on_zones": sum(1 for a in area_zones if a["zone_type"] == "try_on_zone"),
-                   "departments": nb, "backroom_racks": n_rack,
+        "counts": {"spaces": len(spaces), "zones_total": agg("zones_total"),
+                   "area_zones": agg("area_zones"), "fixture_zones": agg("fixture_zones"),
+                   "try_on_zones": agg("try_on_zones"), "departments": nb, "backroom_racks": n_rack,
                    "gondola_rows": rows, "gondola_units": units},
         "departments": [{"code": dept_code[di], "key": dept_keys[di], "label": su.label_for(dept_keys[di])}
                         for di in range(nb)],
-        "zones": zones,
-        "crossing_slices": [{"code": "CS-01", "name": "Main Entrance Gate", "zone_code": "Z-01",
-                             "y": 600, "x_start": ent_x1, "x_end": ent_x1 + ent_w, "eas_gate": True}],
-        "sensors": [{"type": "rfid_overhead", "zone_code": "Z-06", "coverage": "GPS display cases"},
-                    {"type": "eas_gate", "zone_code": "Z-01", "coverage": "main entrance"}],
+        "spaces": spaces,
     }
     return template, by_cat
 
@@ -339,10 +415,12 @@ def main():
             json.dump(tmpl, f, indent=2, ensure_ascii=False)
         c = tmpl["counts"]
         tot_fx += c["fixture_zones"]
-        print(f"  {store['id']:<18} {store['tier']:<9} {tmpl['footprint_mm']['width']}×{tmpl['footprint_mm']['depth']}mm  "
-              f"{c['gondola_rows']}×{c['gondola_units']} gond  {c['departments']} depts  {c['backroom_racks']} racks  "
+        fp = tmpl["site_footprint_mm"]
+        print(f"  {store['id']:<18} {store['tier']:<9} {fp['width']}×{fp['depth']}mm  "
+              f"{c['spaces']} spaces  {c['gondola_rows']}×{c['gondola_units']} gond  {c['departments']} depts  "
               f"{c['zones_total']:>3} zones ({c['fixture_zones']} fx)  0 overlaps")
-    print(f"\nwrote {len(retail)} layouts ({tot_fx} fixture-zones total). All asserted overlap-free + in-bounds.")
+    print(f"\nwrote {len(retail)} layouts ({tot_fx} fixture-zones total). 3 spaces/site, each its own SRF; "
+          f"all asserted overlap-free + in-bounds (per space).")
 
 
 if __name__ == "__main__":

@@ -1,71 +1,75 @@
-<svg viewBox="0 0 950.0 1020.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
-<title>dec-fr-marseille — medium floor (370 m² footprint) — 39 fixtures, 0 overlaps</title>
-<rect x="0" y="0" width="950.0" height="975.0" fill="#f8fafc" stroke="#1e293b" stroke-width="2"/>
-<rect x="235.0" y="825.0" width="255.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="238.0" y="836.0" font-size="8" fill="#334155" font-weight="400">Z-01</text>
-<rect x="575.0" y="775.0" width="375.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="786.0" font-size="8" fill="#334155" font-weight="400">Z-02</text>
-<rect x="0.0" y="150.0" width="150.0" height="675.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-03</text>
-<rect x="0.0" y="0.0" width="950.0" height="150.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="3.0" y="11.0" font-size="8" fill="#334155" font-weight="400">Stockroom</text>
-<rect x="575.0" y="450.0" width="375.0" height="325.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="461.0" font-size="8" fill="#334155" font-weight="400">Z-11</text>
-<rect x="575.0" y="150.0" width="375.0" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="578.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-10</text>
-<rect x="150.0" y="150.0" width="144.5" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-06</text>
-<rect x="294.5" y="150.0" width="85.0" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="297.5" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-07</text>
-<rect x="379.5" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="382.5" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-09</text>
-<rect x="477.2" y="150.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="480.2" y="161.0" font-size="8" fill="#334155" font-weight="400">Z-08</text>
-<rect x="150.0" y="691.9" width="425.0" height="133.1" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="702.9" font-size="8" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
-<rect x="150.0" y="583.1" width="425.0" height="108.8" fill="#dbeafe" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="594.1" font-size="8" fill="#334155" font-weight="600">Running & Trail</text>
-<rect x="150.0" y="450.0" width="425.0" height="133.1" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
-<text x="153.0" y="461.0" font-size="8" fill="#334155" font-weight="600">General / Multi-sport</text>
-<rect x="240.0" y="746.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="240.0" y="716.2" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="746.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="716.2" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="240.0" y="637.5" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="240.0" y="607.5" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="637.5" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="607.5" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="240.0" y="528.8" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="240.0" y="498.8" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="528.8" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="385.0" y="498.8" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="703.4" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="581.7" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="460.0" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="703.4" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="581.7" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="560.0" y="460.0" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="305.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="227.2" y="305.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="160.0" y="160.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="227.2" y="160.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="304.5" y="353.4" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="304.5" y="256.7" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="304.5" y="160.0" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="389.5" y="160.0" width="77.8" height="280.0" fill="#14b8a6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="487.2" y="160.0" width="77.8" height="280.0" fill="#10b981" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="585.0" y="305.0" width="172.5" height="135.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="767.5" y="305.0" width="172.5" height="135.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="585.0" y="160.0" width="172.5" height="135.0" fill="#ec4899" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="585.0" y="785.0" width="172.5" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="767.5" y="785.0" width="172.5" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="582.5" y="942.5" width="360.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<circle cx="362.5" cy="885.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="10.0" y="10.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="165.0" y="80.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="552.5" y="80.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="165.0" y="20.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<rect x="552.5" y="20.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
-<text x="6" y="991.0" font-size="11" fill="#0f172a">dec-fr-marseille · medium · 19000×19500mm · 3×2 gondolas · 52 zones · 0 overlaps</text>
-<text x="6" y="1007.0" font-size="9" fill="#64748b">tinted bands = sport-universe depts · blue=gondolas · purple=walls · dark grey band (top) = back-of-house (dock+racks) · entrance=bottom</text>
+<svg viewBox="0 0 966.0 1423.0" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif" role="img">
+<title>dec-fr-marseille — medium (370 m² site · 3 spaces)</title>
+<text x="8" y="20" font-size="11" font-weight="600" fill="#0f172a">Sales Floor · sales_floor · 19000×16500mm · 42 zones</text>
+<rect x="8" y="24" width="950.0" height="825.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="243.0" y="699.0" width="255.0" height="150.0" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="246.0" y="709.0" font-size="7.5" fill="#334155" font-weight="400">Z-01</text>
+<rect x="583.0" y="649.0" width="375.0" height="200.0" fill="#e2e8f0" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="586.0" y="659.0" font-size="7.5" fill="#334155" font-weight="400">Z-02</text>
+<rect x="8.0" y="24.0" width="150.0" height="675.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="11.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-03</text>
+<rect x="583.0" y="324.0" width="375.0" height="325.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="586.0" y="334.0" font-size="7.5" fill="#334155" font-weight="400">Z-11</text>
+<rect x="158.0" y="24.0" width="144.5" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-06</text>
+<rect x="302.5" y="24.0" width="85.0" height="300.0" fill="#ffffff" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="305.5" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-07</text>
+<rect x="387.5" y="24.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="390.5" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-09</text>
+<rect x="485.2" y="24.0" width="97.8" height="300.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="488.2" y="34.0" font-size="7.5" fill="#334155" font-weight="400">Z-08</text>
+<rect x="158.0" y="565.9" width="425.0" height="133.1" fill="#dcfce7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="575.9" font-size="7.5" fill="#334155" font-weight="600">Hiking, Trekking & Camping</text>
+<rect x="158.0" y="457.1" width="425.0" height="108.8" fill="#dbeafe" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="467.1" font-size="7.5" fill="#334155" font-weight="600">Running & Trail</text>
+<rect x="158.0" y="324.0" width="425.0" height="133.1" fill="#f1f5f9" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="161.0" y="334.0" font-size="7.5" fill="#334155" font-weight="600">General / Multi-sport</text>
+<rect x="248.0" y="620.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="248.0" y="590.2" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="620.2" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="590.2" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="248.0" y="511.5" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="248.0" y="481.5" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="511.5" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="481.5" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="248.0" y="402.8" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="248.0" y="372.8" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="402.8" width="100.0" height="30.0" fill="#2563eb" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="393.0" y="372.8" width="100.0" height="30.0" fill="#3b82f6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="577.4" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="455.7" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="334.0" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="568.0" y="577.4" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="568.0" y="455.7" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="568.0" y="334.0" width="5.0" height="111.7" fill="#7c3aed" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="179.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="235.2" y="179.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="168.0" y="34.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="235.2" y="34.0" width="57.2" height="135.0" fill="#dc2626" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="312.5" y="227.4" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="312.5" y="130.7" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="312.5" y="34.0" width="65.0" height="86.7" fill="#f59e0b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="397.5" y="34.0" width="77.8" height="280.0" fill="#14b8a6" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="495.2" y="34.0" width="77.8" height="280.0" fill="#10b981" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="593.0" y="659.0" width="172.5" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="775.5" y="659.0" width="172.5" height="140.0" fill="#64748b" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="590.5" y="816.5" width="360.0" height="25.0" fill="#94a3b8" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<circle cx="370.5" cy="759.0" r="35.0" fill="#fb923c" fill-opacity="0.8" stroke="#1e293b" stroke-width="0.4"/>
+<text x="8" y="883.0" font-size="11" font-weight="600" fill="#0f172a">Back Room · stockroom · 19000×3000mm · 5 zones</text>
+<rect x="8" y="887.0" width="950.0" height="150.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="18.0" y="897.0" width="130.0" height="130.0" fill="#334155" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="173.0" y="967.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="560.5" y="967.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="173.0" y="907.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<rect x="560.5" y="907.0" width="377.5" height="50.0" fill="#475569" fill-opacity="0.72" stroke="#1e293b" stroke-width="0.4"/>
+<text x="8" y="1071.0" font-size="11" font-weight="600" fill="#0f172a">Fitting Rooms · fitting_room · 7500×6000mm · 3 zones</text>
+<rect x="8" y="1075.0" width="375.0" height="300.0" fill="#f8fafc" stroke="#1e293b" stroke-width="1.5"/>
+<rect x="18.0" y="1230.0" width="172.5" height="135.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="21.0" y="1240.0" font-size="7.5" fill="#334155" font-weight="400">FR-01</text>
+<rect x="200.5" y="1230.0" width="172.5" height="135.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="203.5" y="1240.0" font-size="7.5" fill="#334155" font-weight="400">FR-02</text>
+<rect x="18.0" y="1085.0" width="172.5" height="135.0" fill="#fef3c7" fill-opacity="0.85" stroke="#cbd5e1" stroke-width="1"/>
+<text x="21.0" y="1095.0" font-size="7.5" fill="#334155" font-weight="400">FR-03</text>
+<text x="8" y="1409.0" font-size="9.5" fill="#0f172a">dec-fr-marseille · medium · 3 spaces · 3 depts · 50 zones · 0 overlaps/space</text>
+<text x="8" y="1420.0" font-size="8" fill="#64748b">spaces = independent SRF frames (Pass 1; site-assembly = Pass 2) · tinted = depts · blue=gondolas · purple=walls · grey=BOH</text>
 </svg>

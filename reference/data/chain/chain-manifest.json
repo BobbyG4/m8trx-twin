@@ -45,23 +45,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-us-denver/layout.json",
-        "sqm": 600,
-        "footprint_mm": {
-          "width": 28500,
-          "depth": 26000,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 143,
-        "area_zones": 16,
-        "fixture_zones": 127,
-        "try_on_zones": 3,
+      "template": "stores/dec-us-denver/layout.json",
+      "site_footprint_mm": {
+        "width": 28500,
+        "depth": 26000,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 141,
+        "area_zones": 17,
+        "fixture_zones": 124,
+        "try_on_zones": 5,
         "departments": 6,
         "backroom_racks": 8,
-        "gondola_grid": "6×7"
+        "gondola_rows": 6,
+        "gondola_units": 7
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 28500,
+            "depth": 23000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 129,
+            "area_zones": 14,
+            "fixture_zones": 115,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 28500,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 9,
+            "area_zones": 0,
+            "fixture_zones": 9,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 6500,
+            "depth": 7000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -137,23 +193,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-us-nyc/layout.json",
-        "sqm": 600,
-        "footprint_mm": {
-          "width": 24000,
-          "depth": 29500,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 132,
-        "area_zones": 17,
-        "fixture_zones": 115,
-        "try_on_zones": 3,
+      "template": "stores/dec-us-nyc/layout.json",
+      "site_footprint_mm": {
+        "width": 24000,
+        "depth": 29500,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 130,
+        "area_zones": 18,
+        "fixture_zones": 112,
+        "try_on_zones": 5,
         "departments": 7,
         "backroom_racks": 8,
-        "gondola_grid": "7×5"
+        "gondola_rows": 7,
+        "gondola_units": 5
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 24000,
+            "depth": 26500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 118,
+            "area_zones": 15,
+            "fixture_zones": 103,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 24000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 9,
+            "area_zones": 0,
+            "fixture_zones": 9,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 6500,
+            "depth": 6000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -235,23 +347,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-us-sf/layout.json",
-        "sqm": 600,
-        "footprint_mm": {
-          "width": 25000,
-          "depth": 29500,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 120,
-        "area_zones": 16,
-        "fixture_zones": 104,
-        "try_on_zones": 3,
+      "template": "stores/dec-us-sf/layout.json",
+      "site_footprint_mm": {
+        "width": 25000,
+        "depth": 29500,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 118,
+        "area_zones": 17,
+        "fixture_zones": 101,
+        "try_on_zones": 5,
         "departments": 6,
         "backroom_racks": 8,
-        "gondola_grid": "6×5"
+        "gondola_rows": 6,
+        "gondola_units": 5
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 25000,
+            "depth": 26500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 106,
+            "area_zones": 14,
+            "fixture_zones": 92,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 25000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 9,
+            "area_zones": 0,
+            "fixture_zones": 9,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 6500,
+            "depth": 6000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -327,23 +495,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-fr-paris/layout.json",
-        "sqm": 600,
-        "footprint_mm": {
-          "width": 24000,
-          "depth": 27500,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 130,
-        "area_zones": 17,
-        "fixture_zones": 113,
-        "try_on_zones": 3,
+      "template": "stores/dec-fr-paris/layout.json",
+      "site_footprint_mm": {
+        "width": 24000,
+        "depth": 27500,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 128,
+        "area_zones": 18,
+        "fixture_zones": 110,
+        "try_on_zones": 5,
         "departments": 7,
         "backroom_racks": 8,
-        "gondola_grid": "7×5"
+        "gondola_rows": 7,
+        "gondola_units": 5
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 24000,
+            "depth": 24500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 116,
+            "area_zones": 15,
+            "fixture_zones": 101,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 24000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 9,
+            "area_zones": 0,
+            "fixture_zones": 9,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7000,
+            "depth": 7000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -425,23 +649,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-fr-lyon/layout.json",
-        "sqm": 520,
-        "footprint_mm": {
-          "width": 21000,
-          "depth": 24000,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 83,
-        "area_zones": 15,
-        "fixture_zones": 68,
-        "try_on_zones": 3,
+      "template": "stores/dec-fr-lyon/layout.json",
+      "site_footprint_mm": {
+        "width": 21000,
+        "depth": 24000,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 81,
+        "area_zones": 16,
+        "fixture_zones": 65,
+        "try_on_zones": 5,
         "departments": 5,
         "backroom_racks": 6,
-        "gondola_grid": "5×3"
+        "gondola_rows": 5,
+        "gondola_units": 3
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 21000,
+            "depth": 21000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 71,
+            "area_zones": 13,
+            "fixture_zones": 58,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 21000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 7,
+            "area_zones": 0,
+            "fixture_zones": 7,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7500,
+            "depth": 7000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -511,23 +791,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-fr-lille/layout.json",
-        "sqm": 520,
-        "footprint_mm": {
-          "width": 23000,
-          "depth": 24000,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 80,
-        "area_zones": 14,
-        "fixture_zones": 66,
-        "try_on_zones": 3,
+      "template": "stores/dec-fr-lille/layout.json",
+      "site_footprint_mm": {
+        "width": 23000,
+        "depth": 24000,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 78,
+        "area_zones": 15,
+        "fixture_zones": 63,
+        "try_on_zones": 5,
         "departments": 4,
         "backroom_racks": 6,
-        "gondola_grid": "4×4"
+        "gondola_rows": 4,
+        "gondola_units": 4
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 23000,
+            "depth": 21000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 68,
+            "area_zones": 12,
+            "fixture_zones": 56,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 23000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 7,
+            "area_zones": 0,
+            "fixture_zones": 7,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7000,
+            "depth": 6000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -591,23 +927,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-fr-marseille/layout.json",
-        "sqm": 420,
-        "footprint_mm": {
-          "width": 19000,
-          "depth": 19500,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 52,
-        "area_zones": 13,
-        "fixture_zones": 39,
-        "try_on_zones": 3,
+      "template": "stores/dec-fr-marseille/layout.json",
+      "site_footprint_mm": {
+        "width": 19000,
+        "depth": 19500,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 50,
+        "area_zones": 14,
+        "fixture_zones": 36,
+        "try_on_zones": 5,
         "departments": 3,
         "backroom_racks": 4,
-        "gondola_grid": "3×2"
+        "gondola_rows": 3,
+        "gondola_units": 2
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 19000,
+            "depth": 16500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 42,
+            "area_zones": 11,
+            "fixture_zones": 31,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 19000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 5,
+            "area_zones": 0,
+            "fixture_zones": 5,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7500,
+            "depth": 6000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 3,
+            "area_zones": 3,
+            "fixture_zones": 0,
+            "try_on_zones": 3
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -665,23 +1057,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-fr-bordeaux/layout.json",
-        "sqm": 420,
-        "footprint_mm": {
-          "width": 18000,
-          "depth": 20500,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 56,
-        "area_zones": 13,
-        "fixture_zones": 43,
-        "try_on_zones": 3,
+      "template": "stores/dec-fr-bordeaux/layout.json",
+      "site_footprint_mm": {
+        "width": 18000,
+        "depth": 20500,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 54,
+        "area_zones": 15,
+        "fixture_zones": 39,
+        "try_on_zones": 6,
         "departments": 3,
         "backroom_racks": 4,
-        "gondola_grid": "3×2"
+        "gondola_rows": 3,
+        "gondola_units": 2
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 18000,
+            "depth": 17500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 45,
+            "area_zones": 11,
+            "fixture_zones": 34,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 18000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 5,
+            "area_zones": 0,
+            "fixture_zones": 5,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7500,
+            "depth": 6000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 4,
+            "area_zones": 4,
+            "fixture_zones": 0,
+            "try_on_zones": 4
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -739,23 +1187,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-kr-seoul/layout.json",
-        "sqm": 520,
-        "footprint_mm": {
-          "width": 23500,
-          "depth": 24000,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 102,
-        "area_zones": 15,
-        "fixture_zones": 87,
-        "try_on_zones": 3,
+      "template": "stores/dec-kr-seoul/layout.json",
+      "site_footprint_mm": {
+        "width": 23500,
+        "depth": 24000,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 100,
+        "area_zones": 17,
+        "fixture_zones": 83,
+        "try_on_zones": 6,
         "departments": 5,
         "backroom_racks": 6,
-        "gondola_grid": "5×5"
+        "gondola_rows": 5,
+        "gondola_units": 5
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 23500,
+            "depth": 21000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 89,
+            "area_zones": 13,
+            "fixture_zones": 76,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 23500,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 7,
+            "area_zones": 0,
+            "fixture_zones": 7,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 6500,
+            "depth": 6500,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 4,
+            "area_zones": 4,
+            "fixture_zones": 0,
+            "try_on_zones": 4
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
@@ -825,23 +1329,79 @@
       "has_space": true,
       "has_inventory": true,
       "has_sensors": true,
-      "space": {
-        "name": "Main Floor",
-        "template": "stores/dec-kr-busan/layout.json",
-        "sqm": 420,
-        "footprint_mm": {
-          "width": 18000,
-          "depth": 18000,
-          "origin": "SW corner (0,0)"
-        },
-        "zones_total": 51,
-        "area_zones": 12,
-        "fixture_zones": 39,
-        "try_on_zones": 3,
+      "template": "stores/dec-kr-busan/layout.json",
+      "site_footprint_mm": {
+        "width": 18000,
+        "depth": 18000,
+        "note": "nominal pre-assembly bounds; each space carries its own SRF frame"
+      },
+      "space_counts": {
+        "spaces": 3,
+        "zones_total": 49,
+        "area_zones": 14,
+        "fixture_zones": 35,
+        "try_on_zones": 6,
         "departments": 2,
         "backroom_racks": 4,
-        "gondola_grid": "2×2"
+        "gondola_rows": 2,
+        "gondola_units": 2
       },
+      "spaces": [
+        {
+          "code": "SF",
+          "space_type": "sales_floor",
+          "name": "Sales Floor",
+          "footprint_mm": {
+            "width": 18000,
+            "depth": 15000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 40,
+            "area_zones": 10,
+            "fixture_zones": 30,
+            "try_on_zones": 2
+          }
+        },
+        {
+          "code": "BR",
+          "space_type": "stockroom",
+          "name": "Back Room",
+          "footprint_mm": {
+            "width": 18000,
+            "depth": 3000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 5,
+            "area_zones": 0,
+            "fixture_zones": 5,
+            "try_on_zones": 0
+          }
+        },
+        {
+          "code": "FT",
+          "space_type": "fitting_room",
+          "name": "Fitting Rooms",
+          "footprint_mm": {
+            "width": 7000,
+            "depth": 7000,
+            "origin": "SW corner (0,0)"
+          },
+          "site_frame_anchor_space": null,
+          "srf_to_site_transform": null,
+          "counts": {
+            "zones_total": 4,
+            "area_zones": 4,
+            "fixture_zones": 0,
+            "try_on_zones": 4
+          }
+        }
+      ],
       "departments": [
         {
           "code": "D-01",
