@@ -7,7 +7,7 @@
 
 ## Rolling Summary — Recent Sessions
 
-**Session 7 (2026-06-22 · Twin) — OPEN (reseed pending)**
+**Session 7 (2026-06-22 → closed 2026-06-24 · Twin) — RESEED IN FLIGHT (core mid-stream)**
 Reseed-dataset realism overhaul. Carved the floor into **sport-universe departments** from `brand`
 (flagship 6–7 / large 4–5 / medium 2–3 — capped by gondola rows, so Denver/SF 6, NYC/Paris 7; new `sport_universe.py`; Decathlon's real "univers" model,
 decided after web research on departments + back-of-house), made the **Stockroom a real lean
@@ -26,7 +26,7 @@ the single-space build was the error; a site has MANY spaces, so each store is n
 the Sales Floor; assembly columns dormant (Pass 2 = site assembly, pending). `layout.json`→`spaces[]`,
 manifest→`stores[].spaces[]`. Coordinator-adjudicated (`m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`);
 root cause = inherited single-space assumption + the overloaded word "region" (table=site-group /
-`zone_type`=area / geo). **Reseed NOT yet run on mother — session held OPEN to amend during the seed.**
+`zone_type`=area / geo). **Closed 2026-06-24; the reseed is now in flight on mother (core, mid-stream) — next session checks the result + amends the (regenerable) twin dataset if it surfaced issues.**
 
 **Session 6 (2026-06-22 · Twin)**
 Catalog-coding + store-layout overhaul. Delivered **CORE-REQ-001** (inverse core→twin) catalog
@@ -76,7 +76,7 @@ Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), Even
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
-| 7 | 2026-06-22 | **OPEN** — `site→spaces→zones` spatial-hierarchy correction (3 spaces/site, Pass 1) + sport-universe departments + lean BOH + size curves (88-pair fix, 277k→102k EPCs) + site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |
+| 7 | 2026-06-22→24 | **CLOSED · reseed in flight** — `site→spaces→zones` spatial-hierarchy correction (3 spaces/site, Pass 1) + sport-universe departments + lean BOH + size curves (88-pair fix, 277k→102k EPCs) + site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |
 | 6 | 2026-06-22 | CORE-REQ-001 catalog coding delivered + **ABSORBED** by core; MK/Hansae 2nd coding profile built (portability proof); jackson 2.18→2.21 (CVEs); 134-overlap layout bug fixed → 10 unique per-store layouts; mother-canonical zone geometry (circle POINT Z + properties / polygon POLYGON Z) | [→](session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md) |
 | 5 | 2026-06-11 | Multi-store chain dataset (14 sites, 251 users, 277k EPCs) seeded; backend corrections digested into playbook; fixtures-as-zones applied; Phase-2 activity + Wave-2/3 roadmap | [→](session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md) |
 | 4 | 2026-06-03 | Re-base on live catalogs — Denver (US, real+images) built; Seoul parked; EPC encoder validated; onboarding hand-off | [→](session-notes/2026-06-03-session-4-store-rebase-denver-real-catalog.md) |

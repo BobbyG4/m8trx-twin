@@ -1,6 +1,6 @@
 # Track: Twin
 
-**Last session:** Session 7 (2026-06-22, **OPEN** — reseed pending, session held to amend during the seed)
+**Last session:** Session 7 (2026-06-22 → **closed 2026-06-24**) · ★ **RESEED IN FLIGHT** on mother (core reseeding mid-stream) — next session checks result + amends the (regenerable) twin dataset if needed
 **Last session notes:** [→](../session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md)
 
 ---
@@ -35,7 +35,7 @@
 
 ## Open Work (priority order)
 
-1. **★ RUN the reseed (gating)** — hand-off written (`DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session executes in-place: site lat/long **+ `site_category`** UPDATE (CORE-REQ-002, core mig 146), per-store **3 spaces** (Sales Floor/Back Room/Fitting Rooms — `spaces[]`, own SRF each, Pass-2 assembly dormant) (drop+recreate), catalog enrich (coding layer), **re-import 102,675 items** at department/BOH fixture-zones via scan/receive (corrections §2; direct-DB BOTH `thing_location` + `scan_event` until service-bearer lands). **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+1. **★ Reseed IN FLIGHT — monitor + amend (gating)** — core reseeding mid-stream; hand-off `DEPLOY-HANDOFF.md` §RESEED-2026-06-22. On pickup: confirm it landed clean on mother, then run the post-reseed verification; amend the (regenerable) twin dataset if it surfaced issues. In-place: site lat/long **+ `site_category`** UPDATE (CORE-REQ-002, core mig 146), per-store **3 spaces** (Sales Floor/Back Room/Fitting Rooms — `spaces[]`, own SRF each, Pass-2 assembly dormant) (drop+recreate), catalog enrich (coding layer), **re-import 102,675 items** at department/BOH fixture-zones via scan/receive (corrections §2; direct-DB BOTH `thing_location` + `scan_event` until service-bearer lands). **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
 2. **Verify post-reseed** — geo map plots 14 sites · circular fixtures render round · size curves per-style (not flat) · departments + backroom stock visible.
 3. **Resolve image pipeline** with backend — link vs cached bytes (parallel).
 4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**

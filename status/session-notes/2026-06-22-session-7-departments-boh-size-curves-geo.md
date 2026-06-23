@@ -1,7 +1,7 @@
 # Session 7 — Reseed-dataset realism overhaul (departments · BOH · size curves · site geo)
 
-**Date:** 2026-06-22 · **Status:** **OPEN** (reseed not yet run on mother; session held to amend the dataset during the seed)
-**Commits:** `17872e5` (feat: realism overhaul) · `be0f712` (docs: reseed hand-off + spec sync)
+**Date:** 2026-06-22 → **closed 2026-06-24** · **Status:** **RESEED IN FLIGHT** — core reseeding M8trxDemo mid-stream against this committed dataset. **Next session, first:** confirm it landed clean on mother + amend the (regenerable) twin dataset if it surfaced issues; then run the post-reseed verification.
+**Commits (twin):** `17872e5` (realism feat) · `be0f712` (hand-off+spec) · `bf1915c` (site_category, CORE-REQ-002) · `11a4292` (flagship dept-count fix) · `c480446` (site→spaces→zones Pass 1) · `7bb74bb` (spaces doc sync + ruling mirror). **m8trx-shared:** `091981a` (CORE-REQ-002 delivered).
 
 ---
 

@@ -2,9 +2,17 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-22 — Session 7, **OPEN**: reseed pending)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-24 — Session 7 **CLOSED**; ★ RESEED IN FLIGHT, core reseeding mid-stream)
 
-**Session 7 = reseed-dataset realism overhaul + spatial-hierarchy correction. Site→spaces→zones (Pass 1), sport-universe departments, lean back-of-house, realistic size curves, site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten. All committed + deterministic. The RESEED ITSELF HAS NOT RUN on mother — session kept OPEN to amend the dataset if the seed surfaces issues.**
+> **PICK UP HERE:** Core is **reseeding M8trxDemo right now (mid-stream)** against the committed twin
+> dataset (spaces[] · 102,675 EPCs · coding · geo · site_category). **First action next session:** check
+> the reseed result on mother, and **amend the twin dataset if it surfaced issues** (fully regenerable:
+> `build_layout → localize_names → build_chain → build_staff_roster → render_floorplans`). Then run the
+> post-reseed verification checklist (geo plots 14 · spaces render · size curves per-style · departments
+> + backroom stock · coding on Discover). Format is **spaces[]** (see DEPLOY-HANDOFF §RESEED). Spatial
+> **Pass 2** (site assembly: transforms + space_connection) is the next build once calibration data exists.
+
+**Session 7 = reseed-dataset realism overhaul + spatial-hierarchy correction. Site→spaces→zones (Pass 1), sport-universe departments, lean back-of-house, realistic size curves, site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten. All committed + deterministic. **Session closed 2026-06-24; the reseed is now IN FLIGHT on mother (core, mid-stream)** against this dataset — next session checks the result + amends the (regenerable) twin dataset if it surfaced issues.**
 
 - **★ SPATIAL HIERARCHY corrected → `site → spaces → zones` (Pass 1)** — the single-space build was the error; **a site has MANY spaces** (canonical ruling `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`, grounded in `7a. Data Model`). Each store now = **3 spaces** — Sales Floor (`sales_floor`) / Back Room (`stockroom`) / Fitting Rooms (`fitting_room`) — each its own SRF frame; **departments are `region` zones *within* the Sales Floor** (NOT spaces). `layout.json`→`spaces[]`; manifest→`stores[].spaces[]`; `assortment`/`epcs` unchanged (fixture resolves via `spaces[].zones[]`). **Pass 1 = structure (assembly columns `srf_to_site_transform`/`site_frame_anchor_space` DORMANT); Pass 2 = site assembly (transforms + `space_connection`) — PENDING.** `space_type` provisional pending Backend/Web ratification. Commit `c480446`.
 - **Sport-universe DEPARTMENTS** — floor carved into Decathlon "univers" bands from `brand` (CORE-REQ-001 payoff): flagship 6–7 / large 4–5 / medium 2–3 (count = min(7 universes, gondola rows); e.g. Denver/SF 6, NYC/Paris 7). `sport_universe.py` (brand→universe, e.g. Quechua/Forclaz→Hiking, Kiprun→Running, Simond→Climbing, Wedze→Snow, Van Rysel→Cycling); `build_layout.py` emits department `region` bands (replacing the single "Main Sales Floor"); `build_chain.py` places each SKU in its department (absent universes fold to *General* in small stores). Decided after research — Decathlon's real organizing unit is the sport universe w/ a "Sport Leader" each.
@@ -38,7 +46,7 @@
 
 ### Immediate next steps (ranked)
 
-1. **★ RUN the reseed** (hand-off written: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). Backend deploy session, in-place: UPDATE site lat/long **+ `site_category`** (14 rows; CORE-REQ-002, core mig 146); drop+recreate the per-store **3 spaces** (Sales Floor / Back Room / Fitting Rooms — `spaces[]`, each own SRF, Pass-2 assembly dormant); enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
+1. **★ Reseed IN FLIGHT — monitor + amend** (core reseeding mid-stream; hand-off: `DEPLOY-HANDOFF.md` §RESEED-2026-06-22). In-place: UPDATE site lat/long **+ `site_category`** (14 rows; CORE-REQ-002, core mig 146); drop+recreate the per-store **3 spaces** (Sales Floor / Back Room / Fitting Rooms — `spaces[]`, each own SRF, Pass-2 assembly dormant); enrich catalog with the coding layer; **re-import the 102,675 items** (EPC strings changed → full re-import) at department/BOH fixture-zones via scan/receive (corrections §2; service-bearer still blocks the API path → direct-DB writing BOTH `thing_location` + `scan_event`). Then verify on mother (coding live on the Discover/Things surface; geo map populated) — this **applies the already-absorbed CORE-REQ-001 to the demo tenant** end-to-end. **Session 7 closed 2026-06-24; next session confirms the reseed landed clean and amends the (regenerable) twin dataset if it surfaced issues.**
 2. **Verify post-reseed** — geo map plots 14 sites; circular fixtures render round (not bounding boxes); size curves show per-style (not a flat pile); departments + backroom stock visible.
 3. **Resolve the image pipeline** with backend — Shopify hot-link vs **cache bytes**. *(parallel; see Blocked on core)*
 4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — runtime skeleton → TrafficGenerator → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake (**BOH now gives it a from-location**) → LP/EAS, item-movement throughout.
