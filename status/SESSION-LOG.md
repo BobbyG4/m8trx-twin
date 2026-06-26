@@ -7,6 +7,27 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 8 (2026-06-26 · Twin) — RE-RESEED v2 verified · static-seed gap audit · M8TRX Connect pivot**
+Short session. Picked up the reseed that was in flight from Session 7: core completed **RE-RESEED v2**
+and verified it on mother; I **cross-checked it against the committed dataset — 9/9 headline metrics
+byte-for-byte, zero drift → no amendment needed** (30 spaces · 929 zones · 53 try-on · 102,675 items ·
+84,266 floor / 18,409 BOH · 2,586 products · 95 classes), all read-only/local (posture held), and
+flipped STATUS + TRACK from "reseed in flight" → "live + verified" (incl. rewriting "What's LIVE on
+mother" off the stale 2026-06-11 seed; corrected the date 06-24 → 06-26 — it was still in flight at
+session start). Ran a **static-seed completeness audit**: structure is done; gaps are (a) data we have
+but the reseed didn't apply — **staff/org model** (250-person roster/roles/reporting unprovisioned),
+**per-region currency** (mother is USD-only), **localized names**; (b) thin/absent substrate —
+**sensor/reader topology** (only 2 stubs, none in BOH/fitting), empty **try-on profiles**, absent
+**LP/EAS substrate** (0 watch SKUs, no demo zone, no EAS tag); (c) blocked-on-core (images,
+service-bearer, commerce_projection). **Triaged a post-reseed login 500** — confirmed **NOT** caused by
+the (read-only) audit; root cause = the reseed's bulk mutations firing a **Hasura audit-trigger
+cascade** that exhausted the backend's Hikari pool (10/10 active, auth starved); flagged the
+**102,675-item dual-write (~205k rows)** as the likely amplifier; core's to fix (OPEN). **Closed on a
+strategic pivot:** Bob is standing up **M8TRX Connect** as the canonical path for future seeds **and**
+active interactions, with **parallel ERP/external simulators** (on a server) injecting the planned
+`ACTIVITY-PLAN` activities through Connect; Bob is authoring a Connect **API doc** to share next
+session. Bob switching MacBook Pro → iMac for a few days (repair); status + memory pushed for continuity.
+
 **Session 7 (2026-06-22 → closed 2026-06-24 · Twin) — RESEED IN FLIGHT (core mid-stream)**
 Reseed-dataset realism overhaul. Carved the floor into **sport-universe departments** from `brand`
 (flagship 6–7 / large 4–5 / medium 2–3 — capped by gondola rows, so Denver/SF 6, NYC/Paris 7; new `sport_universe.py`; Decathlon's real "univers" model,
@@ -61,14 +82,7 @@ email-dedup bug. Open: image pipeline (cache bytes vs hot-link) gates Wave-2 ima
 **Session 4 (2026-06-03 · Twin)**
 Store-data strategy re-based on **live regional catalogs**. Two-store model: **Denver (US)** built from the live US Decathlon Shopify catalog — 2,586 real SKUs, 35,912 EPCs, **100% real images**, real US names/prices/sizes; **Seoul (KR city) parked** (images need live-KR Algolia re-base; only 6% free overlap with US). **EPC encoder validated** clean-room against 169k real warehouse tags (filter 1 / partition 6; encode reproduces real tags bit-for-bit). US-calibrated operating model + benchmark research captured. Denver rides the Manhattan layout as-is (GPS watch cases empty — no US watches). Not yet seeded to mother (gated). Store renamed Manhattan→Denver on mother (manual; threw failures first). Closed with a hand-off: next session = **Coordinator-track onboarding-baseline plan** across core + twin.
 
-**Session 3 (2026-05-11 · Twin)**
-First code. Kotlin scaffolded, NATS smoke passed (140ms). Decathlon Manhattan store seeded: 160 zones + 3 try_on_zones + 920-SKU catalog on mother. Key gap found: service bearer auth fails on `InventoryActionController` (JWT-only). MapCanvas all-zones-same-green bug contracted to core web session (now fixed in core Session 70/71).
-
-**Session 2 (2026-05-10 · Twin)**
-Layer 4 Step A complete. Persona schema (3 kinds), Journey contract, DomainEvent taxonomy (15 events), Snapshot format, DB + graph plan (dedicated PG on mother, no standalone Hasura, embedded graphql-kotlin). Stack locked: Kotlin.
-
-**Session 1 (2026-05-09 · Twin)**
-Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), EventBus, Trinity generator catalog. TWIN-REQ-001 (`fitting_room` → `try_on_zone`) absorbed into core.
+> _Sessions 1–3 (Layer-4 schema lock · persona/journey/DomainEvents · first code + NATS + first store seed) trimmed from the rolling summary — see the Session Index below for rows + notes links._
 
 ---
 
@@ -76,6 +90,7 @@ Layer 4 architecture locked: Generator interface, Scheduler (3 rate modes), Even
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 8 | 2026-06-26 | **RE-RESEED v2 verified** (twin cross-check, zero drift) · static-seed gap audit (staff/org · currency · sensors · LP/EAS) · post-reseed login-500 = audit-cascade pool starvation (not the audit) · **pivot to M8TRX Connect** for seeds + activity injection | [→](session-notes/2026-06-26-session-8-reseed-verified-gap-audit-connect-pivot.md) |
 | 7 | 2026-06-22→24 | **CLOSED · reseed in flight** — `site→spaces→zones` spatial-hierarchy correction (3 spaces/site, Pass 1) + sport-universe departments + lean BOH + size curves (88-pair fix, 277k→102k EPCs) + site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |
 | 6 | 2026-06-22 | CORE-REQ-001 catalog coding delivered + **ABSORBED** by core; MK/Hansae 2nd coding profile built (portability proof); jackson 2.18→2.21 (CVEs); 134-overlap layout bug fixed → 10 unique per-store layouts; mother-canonical zone geometry (circle POINT Z + properties / polygon POLYGON Z) | [→](session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md) |
 | 5 | 2026-06-11 | Multi-store chain dataset (14 sites, 251 users, 277k EPCs) seeded; backend corrections digested into playbook; fixtures-as-zones applied; Phase-2 activity + Wave-2/3 roadmap | [→](session-notes/2026-06-11-session-5-chain-seed-corrections-playbook-roadmap.md) |

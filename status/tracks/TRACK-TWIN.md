@@ -1,7 +1,7 @@
 # Track: Twin
 
-**Last session:** Session 7 (2026-06-22 → **closed 2026-06-24**) · ★ **RESEED IN FLIGHT** on mother (core reseeding mid-stream) — next session checks result + amends the (regenerable) twin dataset if needed
-**Last session notes:** [→](../session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md)
+**Last session:** Session 8 (2026-06-26) · ✅ **RE-RESEED v2 VERIFIED** on mother (twin cross-check byte-for-byte, zero drift) · static-seed gap audit · post-reseed login-500 triaged (audit-cascade pool starvation — core's) · **pivot to M8TRX Connect** for seeds + activity injection
+**Last session notes:** [→](../session-notes/2026-06-26-session-8-reseed-verified-gap-audit-connect-pivot.md)
 
 ---
 
@@ -14,8 +14,10 @@
 **Layout (per-store, parametric):** footprint/grid/aisles/specialty/departments/BOH seeded off store_id (flagship ~675m² → medium ~370m²), 0 overlaps + 0 OOB asserted; mother-canonical zone geometry. SVGs (departments tinted, BOH shaded) via `render_floorplans.py`. *(Earlier 2026-06-22 work also fixed the original 134-overlap bug — twin source, not core's seed.)*
 **Catalog coding layer (CORE-REQ-001):** `assortment.csv` +`brand` +`classification_key` +`department`; `classification.csv` (5 roots + 90 leaves, `attributes_schema`, `lifecycle_type`) + `display_lookup.csv` (colour raw→canonical family ×3 locales, swatch). Decathlon normalisation model. **Absorbed in core**; applied to the demo tenant by the reseed.
 **MK/Hansae coding profile (built 2026-06-21):** the numeric-code model — `reference/data/mk-trend/` (`display_lookup.csv` 344, `classification.csv` 10 div + 63 items, `assortment-sample.csv` 2,610 SKUs round-tripping 100%) from the real MK Trend spec (`reference/hansaemk/`, ex-Zenven). Same grain as Decathlon → proves attribute-coding is vertical-portable. Config/parser `scripts/mk_coding.py` + `build_mk_attributes.py`; writeup `reference/data/mk-trend/MK-CODING-PROFILE.md`.
-**M8trxDemo on mother:** still the **2026-06-11 seed** — `tenant_id ecfa6903-5c50-439f-8f80-185982de944e`, 277,515 EPCs site-level, USD, **no coding layer, no site coords**. Reseed PENDING. Pre-seed backup on mother.
-**Reseed:** dataset READY + hand-off written (`DEPLOY-HANDOFF.md` §RESEED-2026-06-22). In-place: UPDATE site lat/long + `site_category` (14); drop+recreate the **3 spaces** per store (Sales Floor/Back Room/Fitting Rooms — `spaces[]`, each own SRF, Pass-2 assembly dormant); enrich catalog with the coding layer; **re-import 102,675 items** at department/BOH fixture-zones (EPC strings changed → full re-import, not re-locate). **Session held OPEN to amend the dataset if the seed surfaces issues.**
+**M8trxDemo on mother:** ✅ **RE-RESEED v2 (landed + verified 2026-06-26)** — `tenant_id ecfa6903-5c50-439f-8f80-185982de944e`; canonical `site → spaces → zones` live: **30 spaces** (10 stores × `sales_floor`/`stockroom`/`fitting_room`, own SRF each) · **929 zones** · **53 try-on** · **102,675 items** (84,266 floor / 18,409 BOH 17.9%, dual-written `thing_location`+`scan_event`) · catalog coding live (2,586 products / 95 classes / 2,586 images, USD) · geo + `site_category` on 14 sites · `space_type` Hasura-exposed · Hasura `is_consistent:true`. Pre-seed backup retained on mother.
+**Reseed:** ✅ **DONE + VERIFIED 2026-06-26** (RE-RESEED v2; hand-off `DEPLOY-HANDOFF.md` §RESEED-2026-06-22 executed by core). Twin-side cross-check vs the committed dataset passed **byte-for-byte** (9/9 headline metrics — spaces, zones, try-on, items, floor/BOH split, products, classes, Denver per-space) → **zero drift, no dataset amendment needed.** Recorded core-side at m8trx-shared `693f706`; Hasura `is_consistent:true`.
+**Static-seed audit (Session 8):** structural seed complete + verified; remaining gaps — (a) data present but unapplied: **staff/org model** unprovisioned (250-person roster/roles/reporting in `staff/`), **per-region currency** (mother USD-only — single shared US master), **localized names** (EN-only); (b) thin/absent substrate: **sensor/reader topology** (only 2 stubs, 0 in BOH/fitting), empty **try-on profiles** (`properties={}`), absent **LP/EAS substrate** (0 watch SKUs, no demo zone, no EAS tag); (c) blocked-on-core (images, service-bearer, commerce_projection). Full detail in session-notes.
+**★ Integration pivot (Session 8):** future seeds **and** active interactions route through **M8TRX Connect** (public webhook/HMAC front door), with parallel ERP/external simulators injecting `ACTIVITY-PLAN` activities. Bob authoring the Connect **API doc** (shares next session). Supersedes direct-DB seeding as the path — also sidesteps the bulk-reseed audit cascade + the service-bearer-inventory blocker. Posture win (front door).
 **EPC encoder:** VALIDATED (`EPC-ENCODING-DECATHLON.md`) — filter 1 / partition 6, round-trips real tags.
 
 ## Open hand-offs
@@ -32,16 +34,18 @@
 - **commerce_projection writer** — unfed; commerce dashboards blank on API path. **TWIN-REQ-002** (filed).
 - **No cold-start/manual location** — inventory location requires a scan/receive event (corrections §2). Core CLEANUP-TASKS.
 - **No EAS-alarm subscriber** — LP/theft analytics don't surface (API-SURFACE gap).
+- **Auth 500 / Hikari pool starvation (NEW, Session 8)** — post-reseed, the bulk-mutation Hasura **audit-trigger cascade** exhausted m8trx-services' `HikariPool-1` (10/10 active, 30 waiting) → auth/exchange 500 (reqId `3cc2943b`). Mother DB healthy (74/200); likely amplifier = the 102,675-item dual-write (~205k rows). **Core's to fix** (pool headroom / async-batch audit-ingest / quiesce triggers during bulk load) — **OPEN, core investigating.** Connect-based incremental seeding avoids the bulk direct-DB writes that trigger it. (Confirmed NOT caused by the twin session's read-only audit.)
 
 ## Open Work (priority order)
 
-1. **★ Reseed IN FLIGHT — monitor + amend (gating)** — core reseeding mid-stream; hand-off `DEPLOY-HANDOFF.md` §RESEED-2026-06-22. On pickup: confirm it landed clean on mother, then run the post-reseed verification; amend the (regenerable) twin dataset if it surfaced issues. In-place: site lat/long **+ `site_category`** UPDATE (CORE-REQ-002, core mig 146), per-store **3 spaces** (Sales Floor/Back Room/Fitting Rooms — `spaces[]`, own SRF each, Pass-2 assembly dormant) (drop+recreate), catalog enrich (coding layer), **re-import 102,675 items** at department/BOH fixture-zones via scan/receive (corrections §2; direct-DB BOTH `thing_location` + `scan_event` until service-bearer lands). **This session stays OPEN to amend the twin dataset if the seed surfaces issues.**
-2. **Verify post-reseed** — geo map plots 14 sites · circular fixtures render round · size curves per-style (not flat) · departments + backroom stock visible.
-3. **Resolve image pipeline** with backend — link vs cached bytes (parallel).
-4. **Full activity — the "play" (BEFORE Wave 2)** (`ACTIVITY-PLAN.md`) — orchestrator runtime skeleton → TrafficGenerator (people on map, NATS) → TransactionGenerator → try-on → staff shifts/journeys → restock/stocktake → LP/EAS; item-movement is the connective tissue. **Animate Wave 1 + light the analytics before expanding.**
-5. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout mechanism landed early; China←KR catalog, rest←US Shopify; onboard UI-first then API/Connect.
-6. **Connect simulator** — external vendor feeds (POS/catalog/shipment) via webhook/HMAC; pairs with Wave-2 API onboarding.
-7. **Spatial Pass 2 — site assembly** (when calibration/placement data exists): fill `srf_to_site_transform` + designate `site_frame_anchor_space` + wire `space_connection` adjacency (FR-SPATIAL-26) for a unified site view + cross-space routing. Columns already in schema/emitted dormant → zero rework.
+> ✅ **DONE 2026-06-26 (gating item cleared):** RE-RESEED v2 landed on mother + twin-side verification passed **byte-for-byte** (zero drift, no amendment). Core recorded it at m8trx-shared `693f706`. Static-seed gap audit delivered (see Current State + session-notes).
+
+1. **★ M8TRX Connect hookup (gated on Bob's Connect API doc)** — Connect is now the canonical path for **both** seeds/updates **and** active interactions. On pickup: ingest Bob's API document → design the connector contract for (a) future seeds and (b) activity injection; then **stand up the parallel ERP/external simulators** (mock POS/catalog/shipment/etc.) that inject `ACTIVITY-PLAN.md` activities through Connect. Subsumes the old "Connect simulator" item; routes through the public webhook/HMAC front door.
+2. **Full activity — the "play"** (`ACTIVITY-PLAN.md`) — realized **via Connect + simulators** (#1): traffic → transactions → try-on → staff shifts/journeys → restock/stocktake (**BOH gives it a from-location**) → LP/EAS; item-movement is the connective tissue. The Kotlin Layer-0..3 generators feed the simulators. **Animate Wave 1 + light the analytics before expanding.**
+3. **Close static-seed gaps via Connect** (Session 8 audit) — staff/org provisioning (candidate **TWIN-REQ-003**, hold for the API doc), per-region currency + localized names, sensor/reader topology (settle the zones-vs-readers event model), LP/EAS substrate (watch SKU source).
+4. **Spatial Pass 2 — site assembly** (when calibration/placement data exists): fill `srf_to_site_transform` + designate `site_frame_anchor_space` + wire `space_connection` adjacency (FR-SPATIAL-26) for a unified site view + cross-space routing. Columns already in schema/emitted dormant → zero rework.
+5. **Resolve image pipeline** with backend — link vs cached bytes (parallel).
+6. **Wave 2 — 10 international stores** (`EXPANSION-PLAN.md`) — parametric per-store layout mechanism landed early; China←KR catalog, rest←US Shopify; onboard via Connect.
 
 ## Active Requirements Filed to Core
 
@@ -50,7 +54,7 @@
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ✅ ABSORBED (mig 127) | — |
 | TWIN-REQ-002 `commerce_projection` writer | 📨 FILED, AWAITING ABSORPTION (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | ✅ ABSORBED 2026-06-21 (core merged-commit `eb39526`; mother loaded + verified) | — |
-| CORE-REQ-002 `site_category` functional role (**inverse, core→twin**) | 📦 DELIVERED 2026-06-23 (manifest + spec; rides the reseed; core mig 146) | — |
+| CORE-REQ-002 `site_category` functional role (**inverse, core→twin**) | ✅ LIVE on mother (RE-RESEED v2, 2026-06-26; core mig 146) | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ## Key Docs
