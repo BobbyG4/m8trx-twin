@@ -2,7 +2,7 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-27 — Session 9 · ★ M8TRX Connect P0 simulator harness BUILT + offline-verified · live runs gated on scoped key)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-27 — Session 9 CLOSED · ★ M8TRX Connect P0 harness BUILT + LIVE-VALIDATED · loop proven SOLD · §9 outbound loop = last P0 sim)
 
 > **PICK UP HERE:** Session 8 closed on a **pivot to M8TRX Connect**. ✅ The static seed is done —
 > **RE-RESEED v2 is live + VERIFIED on mother** (2026-06-26; twin cross-check byte-for-byte, zero drift —
@@ -14,15 +14,20 @@
 > provisioner + SFTP CSV formatter); `./gradlew connectSelfTest` is green (HMAC sign↔verify, DTO casing, full
 > receiver loop accept/dedupe/tamper-reject/failMode). Future **seeds AND active interactions** route through
 > Connect (public webhook/HMAC front door), with **parallel ERP/external simulators** injecting the
-> `ACTIVITY-PLAN` activities. **S9: inbound webhook plane VALIDATED live** — the `twin-pos` integration exists and
-> `WebhookClient`/`InboundPushDriver` push a `sale_event` → **200 ack** (curl + twin code, `./gradlew connectLiveSmoke`;
-> integrationId `5dfba5cd`). **Now gated on a Bearer service key** (`integration:manage` + `scan`/`inventory` scopes)
-> for the §6 data plane + §7 control plane — the `twin-pos` X-API-Key is webhook-ingest only (`401 INVALID_TOKEN` on
-> `/api/v2`). The ongoing 24/7-operation architecture is captured in `reference/connect/LIVE-OPERATIONS.md`.
-> First actions next: (1) get the Bearer key → exercise device driver (scans/receive) + provisioner + DLQ/health
-> (also answers the service-bearer→inventory 401);
-> (2) build the SFTP **sshj transport** (formatter done, transport deferred); (3) close the **static-seed gaps**
-> (staff/org · per-region currency/names · sensor topology · LP/EAS substrate) via Connect.
+> `ACTIVITY-PLAN` activities. **S9 CLOSE: inbound + Bearer planes LIVE-VALIDATED.** `sale_event` (EPC + SKU) → PROCESSED
+> against `twin-pos` (tenant `ecfa6903…`, integration `5dfba5cd`); and once a **Bearer service key** landed (issued
+> **out-of-band** — the `twin-pos` X-API-Key is webhook-ONLY, 401s on all `/api/v2`), twin **self-verified `state=sold`**
+> (2 Denver EPCs `…21C51C`/`…5756B1` SOLD, control in_stock) + all 3 scopes (`inventory:read` · `scan:submit` /scans 202 ·
+> `integration:manage` /health 200). **Full loop proven** (twin → Connect webhook → core moves inventory → twin reads it
+> back SOLD). ⚠ **The Bearer key is NOT in the repo** (protocol: no creds in files) — **re-supply it next session** to
+> `.env` as `M8TRX_TWIN_SERVICE_BEARER` before any `/api/v2` work (also needs `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos`,
+> `M8TRX_TWIN_WEBHOOK_KEY`). 24/7-operation architecture: `reference/connect/LIVE-OPERATIONS.md`. twin↔core coordination is
+> now an async mailbox `m8trx-shared/brainstorm/COMMS-CONNECT-TWIN-2026-06-27.md` (append-only, no creds in-file).
+> First actions next: (1) **re-supply the Bearer key**; (2) **§9 outbound receiver loop** — the LAST unexercised P0 sim:
+> stand up `OutboundReceiver` on the box's `192.168.55.x` LAN IP, provision an outbound `stocktake_result` channel via
+> `Provisioner`, agree a shared `hmac_secret` + dev→LAN egress with BACKEND (ready to trigger), verify sig+dedupe+2xx →
+> non-2xx retry/poison/DLQ; (3) **harness hardening** (`items/details` lookup, `DeviceDriver` runner, configurable receiver
+> bind); (4) build the SFTP **sshj transport** (formatter done) + start the `LIVE-OPERATIONS.md` runtime.
 > **Machine:** Bob on the **iMac** for a few days (MacBook Pro M4 repair) — `git pull` twin + m8trx-shared before starting.
 > ⚠ **Open incident:** post-reseed auth-500 (Hikari pool starvation from the reseed's audit-trigger cascade) — **core's to fix** (see Blocked on core).
 
@@ -63,7 +68,7 @@
 
 > ✅ **DONE 2026-06-26:** (1) RE-RESEED v2 landed + twin-verified byte-for-byte (zero drift; CORE-REQ-001 + CORE-REQ-002 now live end-to-end) and (2) static-seed gap audit delivered. Gating reseed item cleared.
 
-1. **★ M8TRX Connect — live hookup (webhook plane VALIDATED live S9)** — the canonical path for **both** seeds/updates **and** active interactions. ✅ **S9:** all 5 P0 simulators built + offline-verified, and the **inbound webhook plane is now validated against the live `twin-pos` integration** (`WebhookClient`/`InboundPushDriver` → 200 ack; `./gradlew connectLiveSmoke`). **Next:** get a **Bearer service key** (`integration:manage` + `scan`/`inventory`) to exercise the §6 device driver + §7 provisioner/health/DLQ (the `twin-pos` X-API-Key is webhook-only); then **stand up the parallel ERP/external simulators** injecting `ACTIVITY-PLAN.md` activities; build the SFTP **sshj transport** (CSV formatter done). Ongoing-ops architecture: `reference/connect/LIVE-OPERATIONS.md`; guide: `reference/connect/SIMULATOR-GUIDE.md`.
+1. **★ M8TRX Connect — finish P0 + start the runtime.** ✅ **S9:** all 5 P0 sims built + offline-verified; inbound webhook + Bearer plane **LIVE-validated** vs `twin-pos` (`sale_event` → PROCESSED; **self-verified SOLD** — 2 Denver EPCs; all 3 Bearer scopes). **Next:** (a) **re-supply the Bearer key** to `.env` (out-of-band; NOT in repo) — prereq for `/api/v2`; (b) **§9 outbound receiver loop** (last unexercised P0 sim — LAN-reachable `OutboundReceiver` + outbound channel via `Provisioner` + shared `hmac_secret` + dev→LAN egress + BACKEND test-trigger); (c) harness hardening (`items/details` in `ConnectClient`, `DeviceDriver` runner, configurable receiver bind); (d) start the `LIVE-OPERATIONS.md` runtime (per-site business-hours calendar + closed-loop inventory). Channel: `m8trx-shared/brainstorm/COMMS-CONNECT-TWIN-2026-06-27.md`. Guides: `reference/connect/{SIMULATOR-GUIDE,LIVE-OPERATIONS}.md`.
 2. **Full activity — the "play"** (`ACTIVITY-PLAN.md`) — realized via Connect + simulators (#1): traffic → transactions → try-on → staff/restock/stocktake (**BOH gives it a from-location**) → LP/EAS; item-movement the connective tissue. Kotlin Layer-0..3 generators feed the simulators.
 3. **Close static-seed gaps via Connect** (Session 8 audit) — staff/org provisioning (candidate **TWIN-REQ-003**, hold for the API doc) · per-region currency + localized names · sensor/reader topology (settle the zones-vs-readers event model) · LP/EAS substrate (watch SKU source).
 4. **Spatial Pass 2 — site assembly** (when calibration/placement data exists) — fill `srf_to_site_transform` + designate `site_frame_anchor_space` + wire `space_connection` adjacency (FR-SPATIAL-26). Columns already emitted dormant → zero rework.
@@ -76,7 +81,8 @@
 
 - **Auth 500 / Hikari pool starvation (NEW, Session 8)** — post-reseed, the bulk-mutation Hasura **audit-trigger cascade** exhausted m8trx-services' `HikariPool-1` (10/10 active, 30 waiting) → auth/exchange 500 (reqId `3cc2943b`). Mother DB healthy (74/200); likely amplifier = the 102,675-item dual-write (~205k rows). **Core's to fix** (pool headroom / async-batch audit-ingest / quiesce triggers during bulk load) — **OPEN, core investigating.** Connect-based incremental seeding avoids the bulk direct-DB writes that trigger it. *(Not caused by the twin session's read-only audit.)*
 - **Image pipeline (NEW)** — `image` = Shopify CDN hot-link; backend hit an issue; likely need cached bytes in M8TRX's own asset store. Confirm what the seed did + whether core can store/serve cached assets. Part of `CATALOG-IMPORT-ONBOARDING`.
-- **Service bearer not wired to inventory endpoints** — REST inventory 401; `ApiKeyService` injection. `SERVICE-BEARER-INVENTORY` (CLEANUP-TASKS).
+- **✅ Connect Bearer plane WORKS (S9)** — with an out-of-band service key, twin verified `inventory:read` + `scan:submit` + `integration:manage` on `/api/v2` (supersedes the old "service-bearer→inventory 401" — that was the wrong door). **Remaining gap (OI-1):** no **self-serve scoped-Bearer mint** — the integration API-Keys tab hardcodes `webhook:write`; scoped service keys are issued out-of-band (core KeyService re-mint). Connect doc §4 flags `/api/v2/connect/credentials` as `@MvpStub` (post-MVP). Tracked via channel OI-1.
+- **Connect `lookup` transform ↔ `integration_lookup` table (OI-2, NEW)** — the `lookup` field-transform reads the `integration_lookup` table, NOT `value_lookups` JSON; no UI to load rows. Optional (EPC path needs no `site_id`). Channel OI-2.
 - **Catalog import onboarding flow incl. images** — no tenant product-import path. `CATALOG-IMPORT-ONBOARDING`.
 - **commerce_projection writer** — unfed; commerce dashboards blank on API path. **TWIN-REQ-002** (filed 2026-06-11).
 - **No cold-start/manual location** — inventory location needs a scan/receive event (corrections §2). CLEANUP-TASKS.
@@ -123,7 +129,7 @@
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
-| CORE-REQ-003 build Connect simulators — **inverse, core→twin** | 🔨 **P0 harness BUILT + offline-verified** (S9, 2026-06-27, `com.m8trx.twin.connect`); live runs gated on scoped key | Activity injection / live demo loop |
+| CORE-REQ-003 build Connect simulators — **inverse, core→twin** | 🔨 **P0 harness BUILT + LIVE-VALIDATED** (S9, 2026-06-27 — inbound + Bearer planes proven vs `twin-pos`, SOLD self-verified, all 3 scopes); **§9 outbound loop = last sim** | Activity injection / live demo loop |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 > TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).

@@ -7,6 +7,27 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 9 (2026-06-27 · Twin) — M8TRX Connect P0 harness BUILT + LIVE-VALIDATED (loop proven SOLD) + async channel**
+Big session. Built the full **M8TRX Connect P0 simulator harness** (CORE-REQ-003) — new `com.m8trx.twin.connect`
+package (18 files): foundation (config · HMAC · typed `ConnectResponse` where non-2xx is data · `ConnectClient`
+Bearer gateway · `WebhookClient` · two-mapper camel/snake casing split · DTOs to the code-verified Connect §8
+shapes) + all 5 P0 sims (api-key bootstrap · inbound push driver · data-plane device driver · outbound receiver ·
+provisioner + SFTP CSV formatter); `./gradlew connectSelfTest` offline-green (HMAC · casing · receiver loop). Added
+the missing **`.editorconfig`** (intellij_idea/150 — ktlint had never actually passed; reformatted 4 pre-existing
+files). Then **validated live against the `twin-pos` integration**: inbound `sale_event` (EPC + SKU paths) →
+PROCESSED, and — once a **Bearer service key** landed (the `twin-pos` webhook key is webhook-ONLY; 401s on all
+`/api/v2`) — **self-verified the sales as `state=sold`** (2 Denver EPCs sold, control in_stock) plus all 3 Bearer
+scopes (read/scan/manage). Full loop proven: twin → Connect webhook → core moves inventory → twin reads it back
+SOLD. Captured **`LIVE-OPERATIONS.md`** (24/7 ongoing-operation design: per-site timezone calendar · daily
+lifecycle · closed-loop inventory · gentle pacing). Stashed the **10 mother site UUIDs** (`site_ids.csv`, for the
+§6 device driver). **Key friction:** first hand-rolled SQL key re-mint 401'd (hash-mismatch — manual run hashed a
+different string than the token; BACKEND's in-Postgres `digest()` re-mint fixed it); no self-serve scoped-Bearer
+mint (OI-1, core gap — out-of-band for now); the `lookup` transform reads the `integration_lookup` table, not
+`value_lookups` (OI-2). Switched twin↔core coordination to an **async mailbox**
+(`m8trx-shared/brainstorm/COMMS-CONNECT-TWIN-2026-06-27.md`, append-only, no creds in-file). **Session called for
+time:** Bearer key NOT persisted (re-supply next session); the **§9 outbound loop is the last P0 sim** to exercise.
+Commits twin `4741e7a`→`a746002`.
+
 **Session 8 (2026-06-26 · Twin) — RE-RESEED v2 verified · static-seed gap audit · M8TRX Connect pivot**
 Short session. Picked up the reseed that was in flight from Session 7: core completed **RE-RESEED v2**
 and verified it on mother; I **cross-checked it against the committed dataset — 9/9 headline metrics
@@ -79,10 +100,7 @@ simulator, reset-to-opening-state to-do), and an **EXPANSION-PLAN** (Wave 2 = 10
 varied layouts; Wave 3 = online + DCs + 3PL). Fixed a determinism bug (`hash()`→`sha256`) and an
 email-dedup bug. Open: image pipeline (cache bytes vs hot-link) gates Wave-2 images.
 
-**Session 4 (2026-06-03 · Twin)**
-Store-data strategy re-based on **live regional catalogs**. Two-store model: **Denver (US)** built from the live US Decathlon Shopify catalog — 2,586 real SKUs, 35,912 EPCs, **100% real images**, real US names/prices/sizes; **Seoul (KR city) parked** (images need live-KR Algolia re-base; only 6% free overlap with US). **EPC encoder validated** clean-room against 169k real warehouse tags (filter 1 / partition 6; encode reproduces real tags bit-for-bit). US-calibrated operating model + benchmark research captured. Denver rides the Manhattan layout as-is (GPS watch cases empty — no US watches). Not yet seeded to mother (gated). Store renamed Manhattan→Denver on mother (manual; threw failures first). Closed with a hand-off: next session = **Coordinator-track onboarding-baseline plan** across core + twin.
-
-> _Sessions 1–3 (Layer-4 schema lock · persona/journey/DomainEvents · first code + NATS + first store seed) trimmed from the rolling summary — see the Session Index below for rows + notes links._
+> _Sessions 1–4 (Layer-4 schema lock · persona/journey/DomainEvents · first code+NATS+store seed · live-catalog re-base/Denver + EPC-encoder validation) trimmed from the rolling summary — see the Session Index below for rows + notes links._
 
 ---
 
@@ -90,6 +108,7 @@ Store-data strategy re-based on **live regional catalogs**. Two-store model: **D
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 9 | 2026-06-27 | **Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` EPC+SKU → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs sold, control in_stock), all 3 scopes; `.editorconfig` added; `LIVE-OPERATIONS.md` (24/7 design); Bearer-key hash-mismatch fixed; async channel | [→](session-notes/2026-06-27-session-9-connect-p0-harness-live-validated.md) |
 | 8 | 2026-06-26 | **RE-RESEED v2 verified** (twin cross-check, zero drift) · static-seed gap audit (staff/org · currency · sensors · LP/EAS) · post-reseed login-500 = audit-cascade pool starvation (not the audit) · **pivot to M8TRX Connect** for seeds + activity injection | [→](session-notes/2026-06-26-session-8-reseed-verified-gap-audit-connect-pivot.md) |
 | 7 | 2026-06-22→24 | **CLOSED · reseed in flight** — `site→spaces→zones` spatial-hierarchy correction (3 spaces/site, Pass 1) + sport-universe departments + lean BOH + size curves (88-pair fix, 277k→102k EPCs) + site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |
 | 6 | 2026-06-22 | CORE-REQ-001 catalog coding delivered + **ABSORBED** by core; MK/Hansae 2nd coding profile built (portability proof); jackson 2.18→2.21 (CVEs); 134-overlap layout bug fixed → 10 unique per-store layouts; mother-canonical zone geometry (circle POINT Z + properties / polygon POLYGON Z) | [→](session-notes/2026-06-22-session-6-catalog-coding-perstore-layouts.md) |
