@@ -14,9 +14,13 @@
 > provisioner + SFTP CSV formatter); `./gradlew connectSelfTest` is green (HMAC sign↔verify, DTO casing, full
 > receiver loop accept/dedupe/tamper-reject/failMode). Future **seeds AND active interactions** route through
 > Connect (public webhook/HMAC front door), with **parallel ERP/external simulators** injecting the
-> `ACTIVITY-PLAN` activities. **Now gated on a live scoped service key + an inbound integration w/ `hmac_secret`**
-> (Bob, out-of-band — CORE-REQ-003 §"What twin needs"). First actions next: (1) wire the harness to the live dev
-> surface when the key lands (confirm the §6 Bearer path also closes the service-bearer→inventory 401);
+> `ACTIVITY-PLAN` activities. **S9: inbound webhook plane VALIDATED live** — the `twin-pos` integration exists and
+> `WebhookClient`/`InboundPushDriver` push a `sale_event` → **200 ack** (curl + twin code, `./gradlew connectLiveSmoke`;
+> integrationId `5dfba5cd`). **Now gated on a Bearer service key** (`integration:manage` + `scan`/`inventory` scopes)
+> for the §6 data plane + §7 control plane — the `twin-pos` X-API-Key is webhook-ingest only (`401 INVALID_TOKEN` on
+> `/api/v2`). The ongoing 24/7-operation architecture is captured in `reference/connect/LIVE-OPERATIONS.md`.
+> First actions next: (1) get the Bearer key → exercise device driver (scans/receive) + provisioner + DLQ/health
+> (also answers the service-bearer→inventory 401);
 > (2) build the SFTP **sshj transport** (formatter done, transport deferred); (3) close the **static-seed gaps**
 > (staff/org · per-region currency/names · sensor topology · LP/EAS substrate) via Connect.
 > **Machine:** Bob on the **iMac** for a few days (MacBook Pro M4 repair) — `git pull` twin + m8trx-shared before starting.
@@ -59,7 +63,7 @@
 
 > ✅ **DONE 2026-06-26:** (1) RE-RESEED v2 landed + twin-verified byte-for-byte (zero drift; CORE-REQ-001 + CORE-REQ-002 now live end-to-end) and (2) static-seed gap audit delivered. Gating reseed item cleared.
 
-1. **★ M8TRX Connect — live hookup (P0 harness built; gated on the scoped key)** — the canonical path for **both** seeds/updates **and** active interactions. ✅ **S9 done:** foundation + all 5 P0 simulators built + offline-verified (`com.m8trx.twin.connect`, CORE-REQ-003; `./gradlew connectSelfTest` green). **Next:** wire to the live dev surface when Bob drops the scoped service key + an inbound integration w/ `hmac_secret`; then **stand up parallel ERP/external simulators** (mock POS/catalog/shipment/etc.) injecting `ACTIVITY-PLAN.md` activities through Connect; build the SFTP **sshj transport** (CSV formatter done). Public webhook/HMAC front door; subsumes the old "Connect simulator." Guide: `reference/connect/SIMULATOR-GUIDE.md`.
+1. **★ M8TRX Connect — live hookup (webhook plane VALIDATED live S9)** — the canonical path for **both** seeds/updates **and** active interactions. ✅ **S9:** all 5 P0 simulators built + offline-verified, and the **inbound webhook plane is now validated against the live `twin-pos` integration** (`WebhookClient`/`InboundPushDriver` → 200 ack; `./gradlew connectLiveSmoke`). **Next:** get a **Bearer service key** (`integration:manage` + `scan`/`inventory`) to exercise the §6 device driver + §7 provisioner/health/DLQ (the `twin-pos` X-API-Key is webhook-only); then **stand up the parallel ERP/external simulators** injecting `ACTIVITY-PLAN.md` activities; build the SFTP **sshj transport** (CSV formatter done). Ongoing-ops architecture: `reference/connect/LIVE-OPERATIONS.md`; guide: `reference/connect/SIMULATOR-GUIDE.md`.
 2. **Full activity — the "play"** (`ACTIVITY-PLAN.md`) — realized via Connect + simulators (#1): traffic → transactions → try-on → staff/restock/stocktake (**BOH gives it a from-location**) → LP/EAS; item-movement the connective tissue. Kotlin Layer-0..3 generators feed the simulators.
 3. **Close static-seed gaps via Connect** (Session 8 audit) — staff/org provisioning (candidate **TWIN-REQ-003**, hold for the API doc) · per-region currency + localized names · sensor/reader topology (settle the zones-vs-readers event model) · LP/EAS substrate (watch SKU source).
 4. **Spatial Pass 2 — site assembly** (when calibration/placement data exists) — fill `srf_to_site_transform` + designate `site_frame_anchor_space` + wire `space_connection` adjacency (FR-SPATIAL-26). Columns already emitted dormant → zero rework.
