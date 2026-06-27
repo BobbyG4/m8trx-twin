@@ -35,13 +35,7 @@ interface AtomEmitters : AutoCloseable {
     fun personSessionClose(sessionId: UUID, exitTime: Instant? = null)
 
     /** POST /api/v2/scans */
-    fun rfidScanBatch(
-        siteId: UUID,
-        spaceId: UUID?,
-        zoneId: UUID?,
-        readerId: String,
-        reads: List<RfidRead>,
-    )
+    fun rfidScanBatch(siteId: UUID, spaceId: UUID?, zoneId: UUID?, readerId: String, reads: List<RfidRead>)
 
     /** POST /api/v2/sales */
     fun saleNative(siteId: UUID, externalSaleId: String, lineItems: List<SaleLineItem>, occurredAt: Instant? = null)
@@ -61,17 +55,9 @@ data class RfidRead(
     val antennaPort: Int? = null,
 )
 
-data class SaleLineItem(
-    val sku: String? = null,
-    val epc: String? = null,
-    val epcList: List<String>? = null,
-    val quantity: Int,
-)
+data class SaleLineItem(val sku: String? = null, val epc: String? = null, val epcList: List<String>? = null, val quantity: Int)
 
-data class SkuRecord(
-    val sku: String,
-    val attribs: Map<String, Any?> = emptyMap(),
-)
+data class SkuRecord(val sku: String, val attribs: Map<String, Any?> = emptyMap())
 
 private fun now() = System.currentTimeMillis()
 private fun newId() = UUID.randomUUID().toString()

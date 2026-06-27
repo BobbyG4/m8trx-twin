@@ -16,10 +16,7 @@ import java.util.UUID
  * REST Layer 0 — all calls against dev.m8trx.com / LAN main-server.
  * Auth: Authorization: Bearer <service api_key>.
  */
-class RestEmitter(
-    private val config: TwinConfig,
-    private val mapper: ObjectMapper = jacksonObjectMapper(),
-) {
+class RestEmitter(private val config: TwinConfig, private val mapper: ObjectMapper = jacksonObjectMapper()) {
     private val log = LoggerFactory.getLogger(RestEmitter::class.java)
     private val http = HttpClient.newHttpClient()
 
@@ -49,15 +46,18 @@ class RestEmitter(
             if (zoneId != null) put("zoneId", zoneId.toString())
             put("readerId", readerId)
             put("readerType", "RFID")
-            put("reads", reads.map { r ->
-                buildMap {
-                    put("identifier", r.identifier)
-                    if (r.rssi != null) put("rssi", r.rssi)
-                    if (r.readCount != null) put("readCount", r.readCount)
-                    if (r.timestamp != null) put("timestamp", r.timestamp.toString())
-                    if (r.antennaPort != null) put("antennaPort", r.antennaPort)
-                }
-            })
+            put(
+                "reads",
+                reads.map { r ->
+                    buildMap {
+                        put("identifier", r.identifier)
+                        if (r.rssi != null) put("rssi", r.rssi)
+                        if (r.readCount != null) put("readCount", r.readCount)
+                        if (r.timestamp != null) put("timestamp", r.timestamp.toString())
+                        if (r.antennaPort != null) put("antennaPort", r.antennaPort)
+                    }
+                },
+            )
         }
         val resp = post("/api/v2/scans", body)
         check(resp.statusCode() == 202) { "rfidScanBatch failed ${resp.statusCode()}: ${resp.body()}" }
@@ -68,14 +68,17 @@ class RestEmitter(
             put("siteId", siteId.toString())
             put("externalSaleId", externalSaleId)
             if (occurredAt != null) put("occurredAt", occurredAt.toString())
-            put("lineItems", lineItems.map { li ->
-                buildMap {
-                    if (li.sku != null) put("sku", li.sku)
-                    if (li.epc != null) put("epc", li.epc)
-                    if (li.epcList != null) put("epcList", li.epcList)
-                    put("quantity", li.quantity)
-                }
-            })
+            put(
+                "lineItems",
+                lineItems.map { li ->
+                    buildMap {
+                        if (li.sku != null) put("sku", li.sku)
+                        if (li.epc != null) put("epc", li.epc)
+                        if (li.epcList != null) put("epcList", li.epcList)
+                        put("quantity", li.quantity)
+                    }
+                },
+            )
         }
         val resp = post("/api/v2/sales", body)
         check(resp.statusCode() in 200..299) { "saleNative failed ${resp.statusCode()}: ${resp.body()}" }

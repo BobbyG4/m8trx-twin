@@ -10,13 +10,7 @@ import java.util.UUID
  * Each body class carries a `type` field matching the NATS event-type literal.
  */
 
-data class NatsEnvelope<T>(
-    val type: String,
-    val ts: Long,
-    val id: String,
-    val areaId: String?,
-    val body: T,
-)
+data class NatsEnvelope<T>(val type: String, val ts: Long, val id: String, val areaId: String?, val body: T)
 
 data class ObjLocation(
     val objectId: String,
@@ -31,11 +25,7 @@ data class ObjLocation(
     val type: String = "objLocation",
 )
 
-data class ObjEviction(
-    val objectId: String,
-    val layoutId: String,
-    val type: String = "objEviction",
-)
+data class ObjEviction(val objectId: String, val layoutId: String, val type: String = "objEviction")
 
 data class Crossing(
     val sliceId: UUID,
@@ -54,24 +44,8 @@ data class FittingRoomEntry(
     val type: String = "fittingRoomEntry",
 )
 
-data class FittingRoomExit(
-    val objectId: String,
-    val roomId: UUID,
-    val layoutId: String,
-    val type: String = "fittingRoomExit",
-)
+data class FittingRoomExit(val objectId: String, val roomId: UUID, val layoutId: String, val type: String = "fittingRoomExit")
 
-data class FittingRoomAddItem(
-    val roomId: UUID,
-    val epc: String,
-    val layoutId: String,
-    val type: String = "fittingRoomAddItem",
-)
+data class FittingRoomAddItem(val roomId: UUID, val epc: String, val layoutId: String, val type: String = "fittingRoomAddItem")
 
-data class AlarmEvent(
-    val gateId: String,
-    val alarmType: String,
-    val epcs: List<String>,
-    val layoutId: String,
-    val type: String = "alarmEvent",
-)
+data class AlarmEvent(val gateId: String, val alarmType: String, val epcs: List<String>, val layoutId: String, val type: String = "alarmEvent")

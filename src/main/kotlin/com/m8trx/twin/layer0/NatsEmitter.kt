@@ -11,11 +11,9 @@ import com.m8trx.twin.domain.FittingRoomExit
 import com.m8trx.twin.domain.NatsEnvelope
 import com.m8trx.twin.domain.ObjEviction
 import com.m8trx.twin.domain.ObjLocation
-import io.nats.client.Nats
 import io.nats.client.Connection
+import io.nats.client.Nats
 import org.slf4j.LoggerFactory
-import java.time.Instant
-import java.util.UUID
 
 /**
  * NATS Layer 0 publisher.
@@ -26,10 +24,7 @@ import java.util.UUID
  *
  * Domain mapping mirrors AreaEventPublisher.eventDomain().
  */
-class NatsEmitter(
-    private val config: TwinConfig,
-    private val mapper: ObjectMapper = jacksonObjectMapper(),
-) {
+class NatsEmitter(private val config: TwinConfig, private val mapper: ObjectMapper = jacksonObjectMapper()) {
     private val log = LoggerFactory.getLogger(NatsEmitter::class.java)
     private val conn: Connection = Nats.connect(config.natsUrl)
 
@@ -81,23 +76,17 @@ private fun domain(eventType: String): String = when (eventType) {
 }
 
 /** Extension to make NatsEmitter satisfy the NATS-side of AtomEmitters easily. */
-fun NatsEmitter.objLocation(body: ObjLocation, ts: Long, id: String) =
-    publish("objLocation", domain("objLocation"), body, ts, id)
+fun NatsEmitter.objLocation(body: ObjLocation, ts: Long, id: String) = publish("objLocation", domain("objLocation"), body, ts, id)
 
-fun NatsEmitter.objEviction(body: ObjEviction, ts: Long, id: String) =
-    publish("objEviction", domain("objEviction"), body, ts, id)
+fun NatsEmitter.objEviction(body: ObjEviction, ts: Long, id: String) = publish("objEviction", domain("objEviction"), body, ts, id)
 
-fun NatsEmitter.crossing(body: Crossing, ts: Long, id: String) =
-    publish("crossing", domain("crossing"), body, ts, id)
+fun NatsEmitter.crossing(body: Crossing, ts: Long, id: String) = publish("crossing", domain("crossing"), body, ts, id)
 
-fun NatsEmitter.fittingRoomEntry(body: FittingRoomEntry, ts: Long, id: String) =
-    publish("fittingRoomEntry", domain("fittingRoomEntry"), body, ts, id)
+fun NatsEmitter.fittingRoomEntry(body: FittingRoomEntry, ts: Long, id: String) = publish("fittingRoomEntry", domain("fittingRoomEntry"), body, ts, id)
 
-fun NatsEmitter.fittingRoomExit(body: FittingRoomExit, ts: Long, id: String) =
-    publish("fittingRoomExit", domain("fittingRoomExit"), body, ts, id)
+fun NatsEmitter.fittingRoomExit(body: FittingRoomExit, ts: Long, id: String) = publish("fittingRoomExit", domain("fittingRoomExit"), body, ts, id)
 
 fun NatsEmitter.fittingRoomAddItem(body: FittingRoomAddItem, ts: Long, id: String) =
     publish("fittingRoomAddItem", domain("fittingRoomAddItem"), body, ts, id)
 
-fun NatsEmitter.easAlarm(body: AlarmEvent, ts: Long, id: String) =
-    publish("alarmEvent", domain("alarmEvent"), body, ts, id)
+fun NatsEmitter.easAlarm(body: AlarmEvent, ts: Long, id: String) = publish("alarmEvent", domain("alarmEvent"), body, ts, id)
