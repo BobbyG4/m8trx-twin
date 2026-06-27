@@ -3,6 +3,8 @@
 **Status:** v1, drafted 2026-05-10. Authoritative for Layer 0 implementation.
 **Sources:** m8trx-services controllers + edge NATS taxonomy as of commit cb4d096 (m8trx-shared HEAD). When core ships a new public surface, update this doc in the same session you wire the new emitter.
 
+> ⚠ **2026-06-27:** the webhook ingester payload shapes in atoms **#22–#24** are **SUPERSEDED** by the code-verified **M8TRX Connect** contract — see **§ Webhook payload corrections** below before emitting them (a 4th ingester, `pricing_update`, was also added).
+
 This doc is the **mapping table between twin's Layer 0 atom names and core's public M8TRX surfaces** (REST endpoints + NATS subjects + webhook ingest paths). Twin's `AtomEmitters` interface is the in-process facade; each method below corresponds to one atom emit and dispatches against exactly one of these surfaces.
 
 **Relationship to other twin docs:**
@@ -69,6 +71,19 @@ Each row is one method on twin's `AtomEmitters` interface. Atom name uses lowerC
 | 28 | `auditEventInternal` | REST (internal) | `POST /api/v2/internal/audit-events` | Hasura-style payload `{ id, table, event:{ op, data:{ old, new }, sessionVariables }, trigger, createdAt }` | `X-Hasura-Audit-Sig: <shared-secret>` header. Twin MUST NOT call this — endpoint is for Hasura event triggers only | dedup on `hasura_event_id` | Listed for completeness so a future twin-session does not mistakenly emit it. Audit rows for twin's actions are produced automatically when twin's mutations land via Hasura-tracked tables (via the trigger chain) or via REST controllers carrying `@Audited` |
 
 **Atom count: 27 callable + 1 NOT-FOR-TWIN.** All of the v1 Generator catalog has at least one route.
+
+---
+
+## ⚠ Webhook payload corrections — 2026-06-27 (atoms #22–#24)
+
+The webhook ingester payload shapes in rows **#22–#24** above predate **M8TRX Connect** and are **SUPERSEDED by the code-verified contract** in `~/IdeaProjects/m8trx-shared/reference/connect/M8TRX-CONNECT-API.md` §8. Twin's Connect simulators (`com.m8trx.twin.connect`, CORE-REQ-003) emit the corrected shapes:
+
+- **`sale_event` (#22)** — one-of: `epc_list:[…]` **or** `epc:"…"` **or** (`sku` + `quantity`) — **flat**, NOT a nested `line_items[]`. Always carries `external_sale_id` + `site_id` + `occurred_at`.
+- **`product_catalog` (#23)** — one product per event: `sku` + `name` (any extra keys → `product.metadata`). NOT a `{ skus:[…] }` batch wrapper.
+- **`shipment_manifest` (#24)** — `external_shipment_id` + `destination_site_id` + `items:[{ sku, expected_quantity }]`. NOT `{ manifest_id, expected_items[] }`.
+- **`pricing_update` (NEW — 4th ingester, no row above)** — `sku` + `price_minor` (integer minor units).
+
+Auth/routing unchanged: `POST /v1/webhook/{tenantId}/{integrationKey}` on the `…/server/v1/webhook` base (NOT `/api/v2`); `X-API-Key` **or** HMAC `X-M8TRX-Signature`; `X-Data-Type` selects the ingester. **The Connect doc is authoritative for these four ingesters**; this table stays authoritative for the REST/NATS atoms. Build/run detail: `reference/connect/SIMULATOR-GUIDE.md`.
 
 ---
 

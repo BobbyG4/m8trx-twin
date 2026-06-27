@@ -2,17 +2,23 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-26 — Session 8 closed · ✅ RE-RESEED v2 VERIFIED · ★ pivot to M8TRX Connect for seeds + activity injection)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-27 — Session 9 · ★ M8TRX Connect P0 simulator harness BUILT + offline-verified · live runs gated on scoped key)
 
 > **PICK UP HERE:** Session 8 closed on a **pivot to M8TRX Connect**. ✅ The static seed is done —
 > **RE-RESEED v2 is live + VERIFIED on mother** (2026-06-26; twin cross-check byte-for-byte, zero drift —
 > 30 spaces · 929 zones · 53 try-on · 102,675 items dual-written · catalog coding · geo + `site_category`;
-> Hasura `is_consistent:true`; m8trx-shared `693f706`). **Next session is gated on Bob's M8TRX Connect API
-> document** (he's authoring it): future **seeds AND active interactions** route through Connect (the public
-> webhook/HMAC front door), with **parallel ERP/external simulators** injecting the `ACTIVITY-PLAN` activities.
-> First actions: (1) ingest the Connect API doc → design the connector contract (seeds + activity injection);
-> (2) stand up the simulators; (3) start closing the **static-seed gaps** the Session 8 audit surfaced
-> (staff/org · per-region currency/names · sensor topology · LP/EAS substrate) via that path.
+> Hasura `is_consistent:true`; m8trx-shared `693f706`). **Session 9 (2026-06-27): the M8TRX Connect API doc is
+> absorbed and the P0 simulator harness is BUILT + offline-verified** (`com.m8trx.twin.connect`, CORE-REQ-003) —
+> foundation (config · HMAC · `ConnectClient` Bearer · `WebhookClient` · two-mapper casing split) + all 5 P0
+> simulators (api-key bootstrap · inbound push driver · data-plane device driver · outbound receiver ·
+> provisioner + SFTP CSV formatter); `./gradlew connectSelfTest` is green (HMAC sign↔verify, DTO casing, full
+> receiver loop accept/dedupe/tamper-reject/failMode). Future **seeds AND active interactions** route through
+> Connect (public webhook/HMAC front door), with **parallel ERP/external simulators** injecting the
+> `ACTIVITY-PLAN` activities. **Now gated on a live scoped service key + an inbound integration w/ `hmac_secret`**
+> (Bob, out-of-band — CORE-REQ-003 §"What twin needs"). First actions next: (1) wire the harness to the live dev
+> surface when the key lands (confirm the §6 Bearer path also closes the service-bearer→inventory 401);
+> (2) build the SFTP **sshj transport** (formatter done, transport deferred); (3) close the **static-seed gaps**
+> (staff/org · per-region currency/names · sensor topology · LP/EAS substrate) via Connect.
 > **Machine:** Bob on the **iMac** for a few days (MacBook Pro M4 repair) — `git pull` twin + m8trx-shared before starting.
 > ⚠ **Open incident:** post-reseed auth-500 (Hikari pool starvation from the reseed's audit-trigger cascade) — **core's to fix** (see Blocked on core).
 
@@ -53,7 +59,7 @@
 
 > ✅ **DONE 2026-06-26:** (1) RE-RESEED v2 landed + twin-verified byte-for-byte (zero drift; CORE-REQ-001 + CORE-REQ-002 now live end-to-end) and (2) static-seed gap audit delivered. Gating reseed item cleared.
 
-1. **★ M8TRX Connect hookup (gated on Bob's Connect API doc)** — the canonical path for **both** seeds/updates **and** active interactions. Ingest the API doc → design the connector contract (seeds + activity injection) → **stand up parallel ERP/external simulators** (mock POS/catalog/shipment/etc.) injecting `ACTIVITY-PLAN.md` activities through Connect. Public webhook/HMAC front door; subsumes the old "Connect simulator."
+1. **★ M8TRX Connect — live hookup (P0 harness built; gated on the scoped key)** — the canonical path for **both** seeds/updates **and** active interactions. ✅ **S9 done:** foundation + all 5 P0 simulators built + offline-verified (`com.m8trx.twin.connect`, CORE-REQ-003; `./gradlew connectSelfTest` green). **Next:** wire to the live dev surface when Bob drops the scoped service key + an inbound integration w/ `hmac_secret`; then **stand up parallel ERP/external simulators** (mock POS/catalog/shipment/etc.) injecting `ACTIVITY-PLAN.md` activities through Connect; build the SFTP **sshj transport** (CSV formatter done). Public webhook/HMAC front door; subsumes the old "Connect simulator." Guide: `reference/connect/SIMULATOR-GUIDE.md`.
 2. **Full activity — the "play"** (`ACTIVITY-PLAN.md`) — realized via Connect + simulators (#1): traffic → transactions → try-on → staff/restock/stocktake (**BOH gives it a from-location**) → LP/EAS; item-movement the connective tissue. Kotlin Layer-0..3 generators feed the simulators.
 3. **Close static-seed gaps via Connect** (Session 8 audit) — staff/org provisioning (candidate **TWIN-REQ-003**, hold for the API doc) · per-region currency + localized names · sensor/reader topology (settle the zones-vs-readers event model) · LP/EAS substrate (watch SKU source).
 4. **Spatial Pass 2 — site assembly** (when calibration/placement data exists) — fill `srf_to_site_transform` + designate `site_frame_anchor_space` + wire `space_connection` adjacency (FR-SPATIAL-26). Columns already emitted dormant → zero rework.
@@ -113,6 +119,7 @@
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
+| CORE-REQ-003 build Connect simulators — **inverse, core→twin** | 🔨 **P0 harness BUILT + offline-verified** (S9, 2026-06-27, `com.m8trx.twin.connect`); live runs gated on scoped key | Activity injection / live demo loop |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 > TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).
