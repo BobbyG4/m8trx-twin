@@ -13,26 +13,30 @@ package com.m8trx.twin.connect.model.webhook
  */
 
 /**
- * `sale_event` — one-of attribution path: [epcList] OR [epc] OR ([sku] + [quantity]). Always
- * carries the receipt id + site + time. Use the factory helpers to build a well-formed one-of.
+ * `sale_event` — one-of attribution path: [epcList] OR [epc] OR ([sku] + [quantity]). Always carries
+ * the receipt id + time. [siteId] is required ONLY on the SKU path (the EPC paths attribute a
+ * specific item directly, Connect §8); use the factory helpers to build a well-formed one-of.
  */
 data class SaleEvent(
     val externalSaleId: String,
-    val siteId: String,
     val occurredAt: String,
+    val siteId: String? = null,
     val epcList: List<String>? = null,
     val epc: String? = null,
     val sku: String? = null,
     val quantity: Int? = null,
 ) {
     companion object {
-        fun byEpcList(externalSaleId: String, siteId: String, occurredAt: String, epcs: List<String>) =
-            SaleEvent(externalSaleId, siteId, occurredAt, epcList = epcs)
+        // EPC paths attribute a SPECIFIC item — no site_id needed.
+        fun byEpcList(externalSaleId: String, occurredAt: String, epcs: List<String>) =
+            SaleEvent(externalSaleId = externalSaleId, occurredAt = occurredAt, epcList = epcs)
 
-        fun byEpc(externalSaleId: String, siteId: String, occurredAt: String, epc: String) = SaleEvent(externalSaleId, siteId, occurredAt, epc = epc)
+        fun byEpc(externalSaleId: String, occurredAt: String, epc: String) =
+            SaleEvent(externalSaleId = externalSaleId, occurredAt = occurredAt, epc = epc)
 
-        fun bySku(externalSaleId: String, siteId: String, occurredAt: String, sku: String, quantity: Int) =
-            SaleEvent(externalSaleId, siteId, occurredAt, sku = sku, quantity = quantity)
+        // SKU path resolves N items by recency — requires site_id.
+        fun bySku(externalSaleId: String, occurredAt: String, siteId: String, sku: String, quantity: Int) =
+            SaleEvent(externalSaleId = externalSaleId, occurredAt = occurredAt, siteId = siteId, sku = sku, quantity = quantity)
     }
 }
 

@@ -42,3 +42,16 @@ tasks.register<JavaExec>("connectSelfTest") {
         },
     )
 }
+
+// Live smoke — fire one sale_event at the configured Connect webhook (env-driven; reads M8TRX_* vars).
+tasks.register<JavaExec>("connectLiveSmoke") {
+    group = "verification"
+    description = "Fire one live sale_event at the configured Connect webhook through the twin's WebhookClient."
+    mainClass.set("com.m8trx.twin.connect.ConnectLiveSmokeKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}

@@ -58,7 +58,7 @@ private fun hmacRoundTrip() {
 
 /** snake-case on the §8 webhook plane; camelCase on the bearer + §9 outbound plane. */
 private fun dtoCasingRoundTrip() {
-    val sale = SaleEvent.bySku("run1-sale-1", "site-1", "2026-06-27T10:00:00Z", "SKU-1", 2)
+    val sale = SaleEvent.bySku("run1-sale-1", "2026-06-27T10:00:00Z", "site-1", "SKU-1", 2)
     val saleJson = ConnectMappers.snake.writeValueAsString(sale)
     listOf("external_sale_id", "site_id", "occurred_at", "sku", "quantity").forEach {
         check(saleJson.contains("\"$it\"")) { "sale_event must serialize snake field $it: $saleJson" }
