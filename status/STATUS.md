@@ -28,7 +28,7 @@
 > `Provisioner`, agree a shared `hmac_secret` + dev→LAN egress with BACKEND (ready to trigger), verify sig+dedupe+2xx →
 > non-2xx retry/poison/DLQ; (3) **harness hardening** (`items/details` lookup, `DeviceDriver` runner, configurable receiver
 > bind); (4) build the SFTP **sshj transport** (formatter done) + start the `LIVE-OPERATIONS.md` runtime.
-> **Machine:** Bob on the **iMac** for a few days (MacBook Pro M4 repair) — `git pull` twin + m8trx-shared before starting.
+> **Machine + comms (next session):** back on the **MacBook Pro M4** (off the iMac). ⚠ The git-tracked channel had real push/pull friction today — **Bob + the sessions are standing up a LOCAL messaging system** to bypass git delays for twin↔core comms, so the mailbox mechanism will change (the shared-iMac-disk shortcut no longer applies once sessions run on different machines). Still `git pull` twin + m8trx-shared before starting.
 > ⚠ **Open incident:** post-reseed auth-500 (Hikari pool starvation from the reseed's audit-trigger cascade) — **core's to fix** (see Blocked on core).
 
 **Session 7 = reseed-dataset realism overhaul + spatial-hierarchy correction. Site→spaces→zones (Pass 1), sport-universe departments, lean back-of-house, realistic size curves, site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten. All committed + deterministic. **Session 7 closed 2026-06-24; RE-RESEED v2 landed + VERIFIED on mother 2026-06-26 (Session 8)** (core; recorded m8trx-shared `693f706`) — twin-side cross-check passed byte-for-byte (zero drift), no dataset amendment needed.**
