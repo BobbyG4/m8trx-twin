@@ -2,9 +2,22 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-27 — Session 9 CLOSED · ★ M8TRX Connect P0 harness BUILT + LIVE-VALIDATED · loop proven SOLD · §9 outbound loop = last P0 sim)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-29 — Session 10 CLOSED · ★ Toolchain currency pass CORE-REQ-004 GO + merged · NEXT: fully smoke realtime)
 
-> **PICK UP HERE:** Session 8 closed on a **pivot to M8TRX Connect**. ✅ The static seed is done —
+> **PICK UP HERE (Session 11):** **Fully smoke realtime** (Bob's call for next session). Toolchain is now
+> current (S10, CORE-REQ-004, PR #1 merged — Gradle 9.6.1 · Kotlin 2.4.0 · jackson 2.21.4 · jnats 2.25.3 ·
+> coroutines 1.11.0 · logback 1.5.37), so the generators are on the stack we ship on. **First actions:**
+> (1) **re-supply the Bearer key** to `.env` as `M8TRX_TWIN_SERVICE_BEARER` (out-of-band; NOT in repo) + set
+> `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos`, `M8TRX_TWIN_WEBHOOK_KEY`, `M8TRX_SITE_ID`;
+> (2) run **`./gradlew connectLiveSmoke`** — the live rung deferred from S10 (dev Connect reachable + LAN NATS
+> `192.168.55.29:4222` confirmed open from this host); expect `sale_event` → PROCESSED → self-verified SOLD;
+> (3) then the **§9 outbound receiver loop** (last unexercised P0 sim — see below). The S9 Connect-harness
+> priorities below still stand.
+>
+> _S10 was a self-contained toolchain pass — no seed/mother changes, no new core API gaps. Detail:
+> `status/session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md`._
+>
+> **Connect harness state (from S9):** Session 8 closed on a **pivot to M8TRX Connect**. ✅ The static seed is done —
 > **RE-RESEED v2 is live + VERIFIED on mother** (2026-06-26; twin cross-check byte-for-byte, zero drift —
 > 30 spaces · 929 zones · 53 try-on · 102,675 items dual-written · catalog coding · geo + `site_category`;
 > Hasura `is_consistent:true`; m8trx-shared `693f706`). **Session 9 (2026-06-27): the M8TRX Connect API doc is
@@ -130,6 +143,7 @@
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
 | CORE-REQ-003 build Connect simulators — **inverse, core→twin** | 🔨 **P0 harness BUILT + LIVE-VALIDATED** (S9, 2026-06-27 — inbound + Bearer planes proven vs `twin-pos`, SOLD self-verified, all 3 scopes); **§9 outbound loop = last sim** | Activity injection / live demo loop |
+| CORE-REQ-004 toolchain assessment — **inverse, core→twin** | ✅ **DONE** 2026-06-29 (GO; PR #1 merged — Gradle 9.6.1 · Kotlin 2.4.0 · jackson 2.21.4 P0 CVE · jnats 2.25.3 · coroutines 1.11.0 · logback 1.5.37); deliverable in `status/briefs/` | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 > TWIN-REQ-002 brief: `~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md` (filed by core 2026-06-11, formalizing the insight at CLAUDE.md §Insights). P1 — blocks the commerce story on the API path until core ships the writer (feed-raw-let-platform-derive per `twin/insights/IMPORT-CONTRACT.md` §2).

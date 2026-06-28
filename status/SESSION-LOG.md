@@ -7,6 +7,22 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 10 (2026-06-29 · Twin) — Toolchain currency pass (CORE-REQ-004): Jackson CVE P0 + Gradle 9 / Kotlin 2.4 / ecosystem align — GO, merged**
+Short, tightly-scoped. Core filed **CORE-REQ-004** (core→twin) asking twin to pull its generator toolchain
+current — **build-once-while-greenfield**, mirroring the services SB4+Gradle9 pull-forward (S185). Twin is the
+simplest of the three (no Spring Boot / Compose / AGP), so this was leaf-dep currency + Gradle/Kotlin, not a
+framework migration. **Verdict GO** — every bump landed clean, committed per step, **PR #1 merged to main**:
+**P0 jackson 2.21.3→2.21.4** (CVE-2026-54512/13/15; exposure confirmed low — no default-typing vector in `src/`),
+jnats 2.20.6→**2.25.3** (NATS wire-align w/ edge+services), coroutines 1.9.0→**1.11.0**, Kotlin 2.3.20→**2.4.0** GA
+(twin has no Compose lock → ahead of core's 2.3.21), Gradle 8.14.4→**9.6.1** (no deprecations, Gradle-10-ready),
+logback 1.5.18→**1.5.37**, ktlint **held 12.2.0** (survives clean — no `.editorconfig` pass needed). One source
+fold-in: `setSerializationInclusion`→`setDefaultPropertyInclusion`. Caught two stack-watch snapshot drifts via
+Maven-Central cross-check (logback real latest .37 not .18; Kotlin `<release>` is a beta — took 2.4.0 GA).
+**Verification ladder green through the offline rung** (`clean build` + `ktlintCheck` + `connectSelfTest`: HMAC,
+DTO casing round-trips on Connect §6/§8/§9 shapes, OutboundReceiver loop). **Live-smoke rung GATED, not forced** —
+dev Connect reachable + LAN NATS open, but Bearer/tenant/slug not in `.env` (no-creds-in-repo); folds into next
+session's full realtime smoke. No new core API gaps. Commits `63cb26a`→`6308590`, merge `68b74e6`.
+
 **Session 9 (2026-06-27 · Twin) — M8TRX Connect P0 harness BUILT + LIVE-VALIDATED (loop proven SOLD) + async channel**
 Big session. Built the full **M8TRX Connect P0 simulator harness** (CORE-REQ-003) — new `com.m8trx.twin.connect`
 package (18 files): foundation (config · HMAC · typed `ConnectResponse` where non-2xx is data · `ConnectClient`
@@ -86,21 +102,7 @@ twin emit **mother-canonical zone geometry** (circle = center `POINT Z` + `prope
 re-receive 277k EPCs at new fixtures (mother still on the old overlapping layout). ⚠ committed prod
 Hasura admin secret in `scripts/seed_store.py` (Bob to rotate later).
 
-**Session 5 (2026-06-11 · Twin)**
-Pivoted from the onboarding-baseline plan to **building the multi-store chain dataset**. Shipped
-**Wave 1** under `reference/data/chain/`: 14 sites (10 retail + 4 office), 251 users (30 inactive,
-tenant-admin `zenvendemo@gmail.com`), 2,586-SKU catalog, **277,515 EPCs**, one shared 160-zone
-layout, localized USD/EUR/KRW · EN/FR/KO. Deterministic builders (`build_layout` / `localize_names` /
-`build_chain` / `build_staff_roster`, sha256 seeds). **Backend seeded it to M8trxDemo** (tenant
-`ecfa6903…`, site-level) and filed **IMPORT-CONTRACT** + a **5-point corrections** doc + **TWIN-REQ-002**
-(`commerce_projection` writer). Biggest correction: **fixtures are zones (`zone_type='fixture'`), not a
-separate table** — applied it (unified 160-zone template, canvas-ready). Captured the lot in a reusable
-**SEED-PLAYBOOK**, a Phase-2 **ACTIVITY-PLAN** (customers/staff/item-movement → analytics, Connect
-simulator, reset-to-opening-state to-do), and an **EXPANSION-PLAN** (Wave 2 = 10 international stores,
-varied layouts; Wave 3 = online + DCs + 3PL). Fixed a determinism bug (`hash()`→`sha256`) and an
-email-dedup bug. Open: image pipeline (cache bytes vs hot-link) gates Wave-2 images.
-
-> _Sessions 1–4 (Layer-4 schema lock · persona/journey/DomainEvents · first code+NATS+store seed · live-catalog re-base/Denver + EPC-encoder validation) trimmed from the rolling summary — see the Session Index below for rows + notes links._
+> _Sessions 1–5 (Layer-4 schema lock · persona/journey/DomainEvents · first code+NATS+store seed · live-catalog re-base/Denver + EPC-encoder validation · multi-store chain dataset Wave 1) trimmed from the rolling summary — see the Session Index below for rows + notes links._
 
 ---
 
@@ -108,6 +110,7 @@ email-dedup bug. Open: image pipeline (cache bytes vs hot-link) gates Wave-2 ima
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 10 | 2026-06-29 | **Toolchain currency pass (CORE-REQ-004) — GO, merged (PR #1)** — jackson 2.21.4 (P0 CVE, low exposure) · jnats 2.25.3 · coroutines 1.11.0 · Kotlin 2.4.0 · Gradle 9.6.1 (no deprecations) · logback 1.5.37 · ktlint held 12.2.0; offline verify green; live-smoke gated on creds → next session | [→](session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md) |
 | 9 | 2026-06-27 | **Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` EPC+SKU → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs sold, control in_stock), all 3 scopes; `.editorconfig` added; `LIVE-OPERATIONS.md` (24/7 design); Bearer-key hash-mismatch fixed; async channel | [→](session-notes/2026-06-27-session-9-connect-p0-harness-live-validated.md) |
 | 8 | 2026-06-26 | **RE-RESEED v2 verified** (twin cross-check, zero drift) · static-seed gap audit (staff/org · currency · sensors · LP/EAS) · post-reseed login-500 = audit-cascade pool starvation (not the audit) · **pivot to M8TRX Connect** for seeds + activity injection | [→](session-notes/2026-06-26-session-8-reseed-verified-gap-audit-connect-pivot.md) |
 | 7 | 2026-06-22→24 | **CLOSED · reseed in flight** — `site→spaces→zones` spatial-hierarchy correction (3 spaces/site, Pass 1) + sport-universe departments + lean BOH + size curves (88-pair fix, 277k→102k EPCs) + site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten | [→](session-notes/2026-06-22-session-7-departments-boh-size-curves-geo.md) |

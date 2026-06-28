@@ -1,13 +1,14 @@
 # Track: Twin
 
-**Last session:** Session 9 (2026-06-27) · ✅ **M8TRX Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` (EPC+SKU) → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs), all 3 scopes; `LIVE-OPERATIONS.md` (24/7 design); async channel; Bearer-key hash-mismatch fixed. ⚠ **Bearer key NOT persisted — re-supply next session.**
-**Last session notes:** [→](../session-notes/2026-06-27-session-9-connect-p0-harness-live-validated.md)
+**Last session:** Session 10 (2026-06-29) · ✅ **Toolchain currency pass (CORE-REQ-004) — GO, merged (PR #1)** — jackson 2.21.4 (P0 CVE, exposure confirmed low) · jnats 2.25.3 · coroutines 1.11.0 · Kotlin 2.4.0 · **Gradle 9.6.1** (no deprecations) · logback 1.5.37 · ktlint held 12.2.0; offline verify green (`connectSelfTest`); live-smoke gated on creds → folds into next session's full realtime smoke. **No new core API gaps.**
+**Prev session:** Session 9 (2026-06-27) · ✅ **M8TRX Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs), all 3 scopes. ⚠ **Bearer key NOT persisted — re-supply next session.**
+**Last session notes:** [→](../session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md)
 
 ---
 
 ## Current State
 
-**m8trx-twin:** main branch, Kotlin scaffold compiles, NATS smoke passed. No event emit yet (runtime not built).
+**m8trx-twin:** main branch, clean. **Toolchain current (S10):** Gradle 9.6.1 · Kotlin 2.4.0 · jackson 2.21.4 · jnats 2.25.3 · coroutines 1.11.0 · logback 1.5.37 · ktlint 12.2.0 · JVM 21. Connect P0 harness built + offline-green; inbound + Bearer planes live-validated (S9). `connectLiveSmoke` ready but creds not in `.env`.
 **Chain dataset (Wave 1):** built + committed under `reference/data/chain/` — **14 sites** (10 retail + 4 office, all with lat/long), **251 users**, **2,586-SKU** catalog, **102,675 EPCs**, **10 UNIQUE per-store departmentalized layouts**, localized USD/EUR/KRW · EN/FR/KO. Deterministic builders (`build_layout`/`localize_names`/`build_chain`/`build_staff_roster`/`size_curve`/`sport_universe`/`render_floorplans`, sha256 seeds).
 **Realism overhaul (Session 7, 2026-06-22, committed `17872e5` + `be0f712`):** (a) **sport-universe DEPARTMENTS** from `brand` — flagship 6–7 / large 4–5 / medium 2–3 (count = min(7 universes, gondola rows); Denver/SF 6, NYC/Paris 7) (`sport_universe.py`; `build_layout` emits department `region` bands replacing the single "Main Sales Floor"; `build_chain` places SKUs by department, absent universes → *General* in small stores); (b) **lean BACK-OF-HOUSE** — Stockroom (Z-05) = real `receiving_dock` + `backroom_rack`; 18% of each style staged; (c) **realistic SIZE CURVES** (`size_curve.py`) — per-style bell, color-aware; fixes the flat-depth "88-pair shoe" Bob caught; **277,515 → 102,675 EPCs** (old total was the bug; density knob `TIER_SCALE` ~2× = testing variety + realism); (d) **SITE GEO** — lat/long on 14 sites (was 0/14 on mother).
 **★ Spatial hierarchy corrected → `site → spaces → zones` (Pass 1, committed `c480446`):** the single-space build was the error — a site has MANY spaces (ruling `m8trx-shared/reference/dev/SPATIAL-HIERARCHY.md`, grounded in `7a. Data Model`). Each store now = **3 spaces** (Sales Floor `sales_floor` / Back Room `stockroom` / Fitting Rooms `fitting_room`), each its own SRF; **departments are `region` zones *in* the Sales Floor** (not spaces). `layout.json`→`spaces[]`, manifest→`stores[].spaces[]`; `assortment`/`epcs` unchanged (fixture resolves via `spaces[].zones[]`). Pass-1 = structure (assembly cols `srf_to_site_transform`/`site_frame_anchor_space` DORMANT); **Pass 2 = site assembly (transforms + `space_connection`) PENDING.** `space_type` provisional pending Backend/Web ratification.
@@ -63,6 +64,7 @@
 | CORE-REQ-001 catalog attribute enrichment (**inverse, core→twin**) | ✅ ABSORBED 2026-06-21 (core merged-commit `eb39526`; mother loaded + verified) | — |
 | CORE-REQ-002 `site_category` functional role (**inverse, core→twin**) | ✅ LIVE on mother (RE-RESEED v2, 2026-06-26; core mig 146) | — |
 | CORE-REQ-003 build Connect simulators (**inverse, core→twin**) | 🔨 P0 harness BUILT + offline-verified (S9, 2026-06-27); live runs gated on scoped key | Activity injection / live demo loop |
+| CORE-REQ-004 toolchain assessment (**inverse, core→twin**) | ✅ DONE 2026-06-29 (GO; PR #1 merged — full stack current, P0 jackson CVE cleared); deliverable `status/briefs/TWIN-TOOLCHAIN-ASSESSMENT-CORE-REQ-004-2026-06-29.md` | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 
 ## Key Docs
