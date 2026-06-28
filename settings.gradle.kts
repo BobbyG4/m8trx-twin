@@ -3,7 +3,7 @@ rootProject.name = "m8trx-twin"
 dependencyResolutionManagement {
     versionCatalogs {
         create("deps") {
-            version("kotlin", "2.3.20")
+            version("kotlin", "2.4.0")
             version("ktlint", "12.2.0")
             version("jnats", "2.25.3")
             version("jackson", "2.21.4")
