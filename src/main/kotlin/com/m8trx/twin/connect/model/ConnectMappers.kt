@@ -29,6 +29,6 @@ object ConnectMappers {
             .configureCommon()
 
     private fun ObjectMapper.configureCommon(): ObjectMapper = this
-        .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+        .setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
         .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
 }
