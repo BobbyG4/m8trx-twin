@@ -36,3 +36,16 @@ data class ReceiveItem(val epc: String)
 data class ItemReceiveResult(val received: Int = 0, val created: Int = 0, val errors: List<ReceiveError> = emptyList())
 
 data class ReceiveError(val epc: String? = null, val reason: String? = null)
+
+/** `POST /api/v2/inventory/items/details` request — look up current item state by EPC (inventory:read). */
+data class ItemDetailsRequest(val epcs: List<String>)
+
+/** `POST /api/v2/inventory/items/details` response element — the item's current server-side state. */
+data class ItemDetail(
+    val epc: String,
+    val itemId: String? = null,
+    val sku: String? = null,
+    val state: String? = null,
+    val attribsType: String? = null,
+    val imageUrl: String? = null,
+)

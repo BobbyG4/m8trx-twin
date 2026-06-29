@@ -6,6 +6,7 @@ import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.CreateApiKeyRequest
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
+import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import com.m8trx.twin.connect.model.bearer.ItemReceiveRequest
 import com.m8trx.twin.connect.model.bearer.ScanBatch
 import com.m8trx.twin.connect.model.bearer.TestRequest
@@ -34,6 +35,8 @@ class ConnectClient(
     fun submitScans(batch: ScanBatch): ConnectResponse = send("POST", "/scans", batch)
 
     fun receiveItems(req: ItemReceiveRequest): ConnectResponse = send("POST", "/inventory/items/receive", req)
+
+    fun itemDetails(req: ItemDetailsRequest): ConnectResponse = send("POST", "/inventory/items/details", req)
 
     // ── Control plane (§7) ────────────────────────────────────────────────────
     fun createIntegration(req: CreateIntegrationRequest): ConnectResponse = send("POST", "/integrations", req)
