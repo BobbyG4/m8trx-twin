@@ -84,6 +84,19 @@ tasks.register<JavaExec>("connectSaleStream") {
     )
 }
 
+// Self-verify (Connect §6 read-side) — read back EPC state via the Bearer (inventory:read); read-only.
+tasks.register<JavaExec>("connectSelfVerify") {
+    group = "verification"
+    description = "Read back server-side EPC state (sold/in_stock) via /api/v2/inventory/items/details — closes the loop, fires nothing."
+    mainClass.set("com.m8trx.twin.connect.ConnectSelfVerifyKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
 // catalog mix across all 10 stores on the webhook plane (no Bearer needed).
 tasks.register<JavaExec>("connectChainActivity") {

@@ -29,7 +29,7 @@ data class ConnectConfig(
     val outboundVerifySecret: String?,
 ) {
     fun requireBearer(): String = serviceBearer
-        ?: error("M8TRX_TWIN_SERVICE_BEARER is not set — provisioned out-of-band (CORE-REQ-003 §'What twin needs')")
+        ?: error("M8TRX_TWIN_BEARER is not set — the minted m8trx_<hex> service Bearer, provisioned out-of-band")
 
     fun requireTenantId(): String = tenantId
         ?: error("M8TRX_TENANT_ID is not set")
@@ -52,7 +52,7 @@ data class ConnectConfig(
             webhookBase = env("M8TRX_CONNECT_WEBHOOK_BASE", "https://dev.m8trx.com/server/v1/webhook"),
             tenantId = optEnv("M8TRX_TENANT_ID"),
             integrationSlug = optEnv("M8TRX_CONNECT_INTEGRATION_SLUG"),
-            serviceBearer = optEnv("M8TRX_TWIN_SERVICE_BEARER"),
+            serviceBearer = optEnv("M8TRX_TWIN_BEARER") ?: optEnv("M8TRX_TWIN_SERVICE_BEARER"),
             webhookApiKey = optEnv("M8TRX_TWIN_WEBHOOK_KEY"),
             inboundHmacSecret = optEnv("M8TRX_CONNECT_INBOUND_HMAC_SECRET"),
             outboundVerifySecret = optEnv("M8TRX_CONNECT_OUTBOUND_VERIFY_SECRET"),
