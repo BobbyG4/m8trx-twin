@@ -55,3 +55,45 @@ tasks.register<JavaExec>("connectLiveSmoke") {
         },
     )
 }
+
+// Multi-site behavioral smoke (BACKEND S188 hand-off) — fires TWO sale_events: a normal EPC sale
+// (→ PROCESS) and an unknown external store_id (→ QUARANTINE + unmapped integration_site_xref row).
+tasks.register<JavaExec>("connectMultiSiteSmoke") {
+    group = "verification"
+    description = "Fire the multi-site smoke pair (normal EPC → PROCESS, store_id SMOKE-9999 → QUARANTINE) at the Connect webhook."
+    mainClass.set("com.m8trx.twin.connect.MultiSiteSmokeKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Live sale-stream driver (COORD S11 hand-off) — drive a realistic, paced EPC sale_event stream
+// through the proven webhook plane from seeded in-stock Denver floor inventory (fills cockpit + analytics).
+tasks.register<JavaExec>("connectSaleStream") {
+    group = "verification"
+    description = "Drive a paced live sale_event stream at the Connect webhook from seeded Denver floor EPCs (webhook-plane only)."
+    mainClass.set("com.m8trx.twin.connect.SaleStreamKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
+// catalog mix across all 10 stores on the webhook plane (no Bearer needed).
+tasks.register<JavaExec>("connectChainActivity") {
+    group = "verification"
+    description = "Drive a multi-store webhook-plane activity mix (sale/restock/pricing/catalog) at the Connect webhook."
+    mainClass.set("com.m8trx.twin.connect.ChainActivityStreamKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
