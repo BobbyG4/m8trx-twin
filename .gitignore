@@ -13,6 +13,9 @@ target/
 __pycache__/
 *.pyc
 
+# Local twin runtime state — sold-EPC exclude list etc. (never committed; mother is the source of truth)
+.twin-state/
+
 # Obsidian vault working state (per Multi-Session Protocol § Lane #5)
 .obsidian/
 .space/

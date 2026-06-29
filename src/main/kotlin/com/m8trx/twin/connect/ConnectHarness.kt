@@ -18,6 +18,8 @@ import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Offline self-test harness for the M8TRX Connect simulators (CORE-REQ-003).
@@ -37,6 +39,7 @@ fun main() {
     dtoCasingRoundTrip()
     outboundReceiverLoopback()
     dryRunAndFormatterChecks()
+    saleStreamEpcLoader()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -65,6 +68,15 @@ private fun dtoCasingRoundTrip() {
     }
     check(!saleJson.contains("epc_list")) { "null one-of fields must be omitted (NON_NULL): $saleJson" }
     check(!saleJson.contains("externalSaleId")) { "webhook plane must not leak camelCase: $saleJson" }
+
+    // External-store path (Connect multi-site) — store_id/store_name present, site_id omitted (one-of).
+    val storeSale = SaleEvent.byStore("run1-sale-2", "2026-06-27T10:00:00Z", "SMOKE-9999", "Smoke Test", "SKU-1", 1)
+    val storeJson = ConnectMappers.snake.writeValueAsString(storeSale)
+    listOf("store_id", "store_name", "sku", "quantity").forEach {
+        check(storeJson.contains("\"$it\"")) { "sale_event store path must serialize snake field $it: $storeJson" }
+    }
+    check(!storeJson.contains("site_id")) { "store path must omit site_id (NON_NULL one-of): $storeJson" }
+    check(!storeJson.contains("storeId")) { "webhook plane must not leak camelCase: $storeJson" }
 
     val shipJson = ConnectMappers.snake.writeValueAsString(ShipmentManifest("ext-1", "site-1", listOf(ShipmentLine("SKU-1", 5))))
     listOf("external_shipment_id", "destination_site_id", "items", "expected_quantity").forEach {
@@ -154,6 +166,22 @@ private fun dryRunAndFormatterChecks() {
     check(quoted.contains("\"x,y\"")) { "SFTP CSV must quote comma fields: $quoted" }
     check(quoted.contains("\"he said \"\"hi\"\"\"")) { "SFTP CSV must double internal quotes: $quoted" }
     log.info("[PASS] dry-run request shapes + SFTP CSV formatter")
+}
+
+/** The sale-stream EPC loader (SaleStream.loadFloorEpcs): floor-only, artifacts excluded, distinct. */
+private fun saleStreamEpcLoader() {
+    val denver = Path.of("reference/data/chain/stores/dec-us-denver/epcs.csv")
+    if (!Files.exists(denver)) {
+        log.warn("[SKIP] sale-stream EPC loader — {} not found (run from repo root)", denver)
+        return
+    }
+    val excl = setOf("3039606303C19FC0008F4287")
+    val epcs = loadFloorEpcs(denver, excl)
+    check(epcs.isNotEmpty()) { "loadFloorEpcs returned no floor EPCs" }
+    check(epcs.toSet().size == epcs.size) { "loadFloorEpcs must return distinct EPCs" }
+    check(excl.none { it in epcs }) { "loadFloorEpcs must drop excluded EPCs" }
+    check(epcs.none { it.isBlank() }) { "loadFloorEpcs must drop blank EPCs" }
+    log.info("[PASS] sale-stream EPC loader: {} floor EPCs (distinct, BOH + artifacts excluded)", epcs.size)
 }
 
 private fun post(http: HttpClient, url: String, body: ByteArray, signature: String?): HttpResponse<String> {
