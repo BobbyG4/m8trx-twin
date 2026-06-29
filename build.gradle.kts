@@ -83,3 +83,17 @@ tasks.register<JavaExec>("connectSaleStream") {
         },
     )
 }
+
+// Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
+// catalog mix across all 10 stores on the webhook plane (no Bearer needed).
+tasks.register<JavaExec>("connectChainActivity") {
+    group = "verification"
+    description = "Drive a multi-store webhook-plane activity mix (sale/restock/pricing/catalog) at the Connect webhook."
+    mainClass.set("com.m8trx.twin.connect.ChainActivityStreamKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}

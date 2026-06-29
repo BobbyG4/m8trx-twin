@@ -105,7 +105,7 @@ fun main() {
 }
 
 /** Per-sale gap: mean = window/n, jittered ±50%, floored at 50ms so a tight window still flows. */
-private fun jitterGapMs(durationSec: Int, n: Int, rng: Random): Long {
+internal fun jitterGapMs(durationSec: Int, n: Int, rng: Random): Long {
     if (n <= 1) return 0
     val meanMs = durationSec.toDouble() * 1000 / n
     val jittered = meanMs * (0.5 + rng.nextDouble())
@@ -113,13 +113,13 @@ private fun jitterGapMs(durationSec: Int, n: Int, rng: Random): Long {
 }
 
 /** Prior-sold EPCs from the local sold-log (empty if none yet) — inventory is finite + monotonic. */
-private fun readPriorSold(soldLog: Path): Set<String> {
+internal fun readPriorSold(soldLog: Path): Set<String> {
     if (!Files.exists(soldLog)) return emptySet()
     return Files.readAllLines(soldLog).map { it.trim() }.filter { it.isNotEmpty() }.toSet()
 }
 
 /** Append a sold EPC so later runs never re-sell it (the in_stock read-side lives on mother, not here). */
-private fun appendSold(soldLog: Path, epc: String) {
+internal fun appendSold(soldLog: Path, epc: String) {
     soldLog.parent?.let { Files.createDirectories(it) }
     Files.writeString(soldLog, "$epc\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND)
 }
