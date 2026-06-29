@@ -84,6 +84,20 @@ tasks.register<JavaExec>("connectSaleStream") {
     )
 }
 
+// Multi-site scan sweep (S11) — §6 RFID scan-presence stream via the Bearer (scan:submit).
+// SAFE: dry-run by default (plans batches, sends nothing); M8TRX_SCAN_LIVE=true to actually POST /scans.
+tasks.register<JavaExec>("connectScanSweep") {
+    group = "verification"
+    description = "Plan/drive a multi-site RFID scan-presence stream (§6 POST /scans). Dry-run unless M8TRX_SCAN_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ScanStreamKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Self-verify (Connect §6 read-side) — read back EPC state via the Bearer (inventory:read); read-only.
 tasks.register<JavaExec>("connectSelfVerify") {
     group = "verification"
