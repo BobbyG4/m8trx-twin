@@ -87,6 +87,20 @@ Auth/routing unchanged: `POST /v1/webhook/{tenantId}/{integrationKey}` on the `�
 
 ---
 
+## ✅ Bearer service-plane live + read-side self-verify — 2026-06-30
+
+The service-principal Bearer plane is **live-verified** (services #51/#52, closing OI-1/C1). A minted `principal_kind='service'` key (`m8trx_<hex>`; scopes `integration:manage` + `scan:submit` + `inventory:create` + `inventory:read`, tenant-wide) now returns **200** on `/api/v2` — this **supersedes any earlier "service-bearer → 401 INVALID_TOKEN" notes**. Header: `Authorization: Bearer m8trx_<hex>` (env `M8TRX_TWIN_BEARER`).
+
+**New read-side atom — `inventoryItemsDetails` (twin self-verify):**
+
+| # | Atom | Layer | Route | Body / Response | Auth | Idempotency | Notes |
+|---|------|-------|-------|-----------------|------|-------------|-------|
+| 29 | `inventoryItemsDetails` | REST | `POST /api/v2/inventory/items/details` | `{ epcs:[String] }` → `[{ epc, itemId:UUID, sku, attribs:Object, attribsType, state, imageUrl }]` (one element per resolved EPC; unknown EPCs omitted) | Bearer — `inventory:read` | Idempotent read | **Read-side self-verify** — twin reads its own item state back after firing (e.g. confirm `state=sold` post-sale) with **zero psql**. Code-verified live 2026-06-30 vs M8trxDemo (20/20 recent sales read back `sold`); the closed-loop check behind the `connectSelfVerify` task |
+
+This closes C1/OI-1: twin's webhook-plane generators are now self-validating through the public read API, no psql. (The earlier blocker — no self-serve scoped-Bearer mint; `/api/v2/connect/credentials` = `501 @MvpStub` — was resolved core-side by un-stubbing service-key issuance.)
+
+---
+
 ## Sequencing notes (scenario authors, read this)
 
 These are NOT enforced by core — twin's orchestrator must respect them. Wrong order produces `refusedItemIds`, 404s, or audit rows that look anomalous in the dashboard.
