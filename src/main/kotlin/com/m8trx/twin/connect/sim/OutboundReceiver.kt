@@ -29,6 +29,7 @@ class OutboundReceiver(
     private val verifySecret: String,
     private val port: Int = 0,
     private val path: String = "/hooks/m8trx",
+    private val bindHost: String = "127.0.0.1",
     @Volatile var failMode: Boolean = false,
 ) {
     private val log = LoggerFactory.getLogger(OutboundReceiver::class.java)
@@ -44,13 +45,13 @@ class OutboundReceiver(
 
     /** Start listening; returns the bound port (useful when [port] is 0 = ephemeral). */
     fun start(): Int {
-        val s = HttpServer.create(InetSocketAddress("127.0.0.1", port), 0)
+        val s = HttpServer.create(InetSocketAddress(bindHost, port), 0)
         s.createContext(path, ::handle)
         s.executor = null // serial — deterministic for the simulator
         s.start()
         server = s
         val bound = s.address.port
-        log.info("OutboundReceiver listening on http://127.0.0.1:{}{}", bound, path)
+        log.info("OutboundReceiver listening on http://{}:{}{}", bindHost, bound, path)
         return bound
     }
 

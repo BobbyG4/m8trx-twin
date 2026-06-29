@@ -30,6 +30,20 @@ ktlint {
     outputToConsole.set(true)
 }
 
+// Outbound receiver runner (Connect §9, C3) — stands up OutboundReceiver on a LAN-reachable address
+// for M8TRX's OutboundWebhookDispatcher to POST a signed stocktake_result. Blocks until killed.
+tasks.register<JavaExec>("connectOutboundReceiver") {
+    group = "verification"
+    description = "Run the §9 OutboundReceiver on a LAN address (verify sig + dedupe + 200/401/500). Blocks until killed."
+    mainClass.set("com.m8trx.twin.connect.ConnectOutboundReceiverKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Offline self-tests for the M8TRX Connect simulators (CORE-REQ-003) — no core dependency.
 tasks.register<JavaExec>("connectSelfTest") {
     group = "verification"
