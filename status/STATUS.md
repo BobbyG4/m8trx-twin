@@ -2,47 +2,34 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-29 — Session 10 CLOSED · ★ Toolchain currency pass CORE-REQ-004 GO + merged · NEXT: fully smoke realtime)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 11 CLOSED · ★ ALL 5 P0 Connect sims LIVE-exercised end-to-end · C3 outbound loop CLOSED · 5 core bugs caught + fixed)
 
-> **PICK UP HERE (Session 11):** **Fully smoke realtime** (Bob's call for next session). Toolchain is now
-> current (S10, CORE-REQ-004, PR #1 merged — Gradle 9.6.1 · Kotlin 2.4.0 · jackson 2.21.4 · jnats 2.25.3 ·
-> coroutines 1.11.0 · logback 1.5.37), so the generators are on the stack we ship on. **First actions:**
-> (1) **re-supply the Bearer key** to `.env` as `M8TRX_TWIN_SERVICE_BEARER` (out-of-band; NOT in repo) + set
-> `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos`, `M8TRX_TWIN_WEBHOOK_KEY`, `M8TRX_SITE_ID`;
-> (2) run **`./gradlew connectLiveSmoke`** — the live rung deferred from S10 (dev Connect reachable + LAN NATS
-> `192.168.55.29:4222` confirmed open from this host); expect `sale_event` → PROCESSED → self-verified SOLD;
-> (3) then the **§9 outbound receiver loop** (last unexercised P0 sim — see below). The S9 Connect-harness
-> priorities below still stand.
+> **PICK UP HERE (Session 12):** The **entire M8TRX Connect surface is now live-validated** against dev — inbound
+> (sales + catalog/pricing/shipment) · Bearer self-verify (closed loop) · outbound `stocktake_result` (C3: happy
+> path + retry→heal). **CORE-REQ-003 is exercised end-to-end.** **First actions:** (1) **merge PR #6**
+> (`feature/connect-outbound-receiver` `020679a` — the LAN-bind §9 outbound receiver runner; main is at `0cb4d3b`);
+> (2) **start the `LIVE-OPERATIONS.md` runtime** (`reference/connect/`) — per-site business-hours calendar + closed-loop
+> daily lifecycle, now that every primitive is proven (sales-deplete + restock/receive-replenish + scans + self-verify);
+> (3) get the **`twin-outbound` (`fcffa62d`) test integration deleted** by BACKEND/admin — twin can't (`DELETE /integrations/{id}`
+> is `CONNECT_NOT_EXPOSED`, admin-JWT-only), or repurpose it. Detail:
+> `status/session-notes/2026-06-29-session-11-connect-live-validation.md`.
 >
-> _S10 was a self-contained toolchain pass — no seed/mother changes, no new core API gaps. Detail:
-> `status/session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md`._
+> **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working
+> service Bearer — scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`, tenant-wide) ·
+> `M8TRX_TWIN_WEBHOOK_KEY` (twin-pos X-API-Key) · `M8TRX_CONNECT_OUTBOUND_VERIFY_SECRET` (aacd…, the C3 HMAC, set
+> core-side too). `M8TRX_TENANT_ID=ecfa6903-5c50-439f-8f80-185982de944e` · `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos` ·
+> integration `5dfba5cd`. ConnectConfig reads `M8TRX_TWIN_BEARER` first (`M8TRX_TWIN_SERVICE_BEARER` is now a fallback alias).
+> Keys-tab throwaway test keys were **revoked** (confirmed 401).
 >
-> **Connect harness state (from S9):** Session 8 closed on a **pivot to M8TRX Connect**. ✅ The static seed is done —
-> **RE-RESEED v2 is live + VERIFIED on mother** (2026-06-26; twin cross-check byte-for-byte, zero drift —
-> 30 spaces · 929 zones · 53 try-on · 102,675 items dual-written · catalog coding · geo + `site_category`;
-> Hasura `is_consistent:true`; m8trx-shared `693f706`). **Session 9 (2026-06-27): the M8TRX Connect API doc is
-> absorbed and the P0 simulator harness is BUILT + offline-verified** (`com.m8trx.twin.connect`, CORE-REQ-003) —
-> foundation (config · HMAC · `ConnectClient` Bearer · `WebhookClient` · two-mapper casing split) + all 5 P0
-> simulators (api-key bootstrap · inbound push driver · data-plane device driver · outbound receiver ·
-> provisioner + SFTP CSV formatter); `./gradlew connectSelfTest` is green (HMAC sign↔verify, DTO casing, full
-> receiver loop accept/dedupe/tamper-reject/failMode). Future **seeds AND active interactions** route through
-> Connect (public webhook/HMAC front door), with **parallel ERP/external simulators** injecting the
-> `ACTIVITY-PLAN` activities. **S9 CLOSE: inbound + Bearer planes LIVE-VALIDATED.** `sale_event` (EPC + SKU) → PROCESSED
-> against `twin-pos` (tenant `ecfa6903…`, integration `5dfba5cd`); and once a **Bearer service key** landed (issued
-> **out-of-band** — the `twin-pos` X-API-Key is webhook-ONLY, 401s on all `/api/v2`), twin **self-verified `state=sold`**
-> (2 Denver EPCs `…21C51C`/`…5756B1` SOLD, control in_stock) + all 3 scopes (`inventory:read` · `scan:submit` /scans 202 ·
-> `integration:manage` /health 200). **Full loop proven** (twin → Connect webhook → core moves inventory → twin reads it
-> back SOLD). ⚠ **The Bearer key is NOT in the repo** (protocol: no creds in files) — **re-supply it next session** to
-> `.env` as `M8TRX_TWIN_SERVICE_BEARER` before any `/api/v2` work (also needs `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos`,
-> `M8TRX_TWIN_WEBHOOK_KEY`). 24/7-operation architecture: `reference/connect/LIVE-OPERATIONS.md`. twin↔core coordination is
-> now an async mailbox `m8trx-shared/brainstorm/COMMS-CONNECT-TWIN-2026-06-27.md` (append-only, no creds in-file).
-> First actions next: (1) **re-supply the Bearer key**; (2) **§9 outbound receiver loop** — the LAST unexercised P0 sim:
-> stand up `OutboundReceiver` on the box's `192.168.55.x` LAN IP, provision an outbound `stocktake_result` channel via
-> `Provisioner`, agree a shared `hmac_secret` + dev→LAN egress with BACKEND (ready to trigger), verify sig+dedupe+2xx →
-> non-2xx retry/poison/DLQ; (3) **harness hardening** (`items/details` lookup, `DeviceDriver` runner, configurable receiver
-> bind); (4) build the SFTP **sshj transport** (formatter done) + start the `LIVE-OPERATIONS.md` runtime.
-> **Machine + comms (next session):** back on the **MacBook Pro M4** (off the iMac). ⚠ The git-tracked channel had real push/pull friction today — **Bob + the sessions are standing up a LOCAL messaging system** to bypass git delays for twin↔core comms, so the mailbox mechanism will change (the shared-iMac-disk shortcut no longer applies once sessions run on different machines). Still `git pull` twin + m8trx-shared before starting.
-> ⚠ **Open incident:** post-reseed auth-500 (Hikari pool starvation from the reseed's audit-trigger cascade) — **core's to fix** (see Blocked on core).
+> **Connect harness — all 6 live drivers built + exercised** (`com.m8trx.twin.connect`, gradle `connect*` tasks, `connectSelfTest` green):
+> `connectMultiSiteSmoke` · `connectSaleStream` (+ sold-EPC persistence `.twin-state/`) · `connectChainActivity`
+> (sale/restock/pricing/catalog × all 10 stores) · `connectSelfVerify` (items/details read-back, the closed loop) ·
+> `connectScanSweep` (DRY-RUN default; `M8TRX_SCAN_LIVE=true` for live §6 scans — hold for BACKEND reader-topology) ·
+> `connectOutboundReceiver` (§9 LAN receiver; PR #6). **Comms:** `twin` seat on Slack `#m8trx-dev` (`@m8trx_twin`,
+> dormant-wake Monitor) — coordinator seat retired, Bob drives Backend↔Twin directly. Helpers: `m8trx-shared/brainstorm/comms/slack-*.sh`.
+>
+> ⚠ **Dedup-replay gap (NEW finding, filed for Bob/core CLEANUP):** a *failed* outbound event's content-hash blocks a
+> same-payload retry + escapes map-and-replay (not quarantined). The post-reseed auth-500 (Hikari) incident is still core's (see Blocked on core).
 
 **Session 7 = reseed-dataset realism overhaul + spatial-hierarchy correction. Site→spaces→zones (Pass 1), sport-universe departments, lean back-of-house, realistic size curves, site geo + `site_category` (CORE-REQ-002); reseed hand-off rewritten. All committed + deterministic. **Session 7 closed 2026-06-24; RE-RESEED v2 landed + VERIFIED on mother 2026-06-26 (Session 8)** (core; recorded m8trx-shared `693f706`) — twin-side cross-check passed byte-for-byte (zero drift), no dataset amendment needed.**
 
