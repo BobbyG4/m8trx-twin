@@ -2,16 +2,21 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 11 CLOSED · ★ ALL 5 P0 Connect sims LIVE-exercised end-to-end · C3 outbound loop CLOSED · 5 core bugs caught + fixed)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 12 CLOSED · ★ Planogram Mode 3 driver LIVE-PROVEN end-to-end · twin drove a real 28-target directive → landed → resolved (triple-verified) · 6th core bug caught)
 
-> **PICK UP HERE (Session 12):** The **entire M8TRX Connect surface is now live-validated** against dev — inbound
-> (sales + catalog/pricing/shipment) · Bearer self-verify (closed loop) · outbound `stocktake_result` (C3: happy
-> path + retry→heal). **CORE-REQ-003 exercised end-to-end; ALL PRs merged — main at `f25cbcc`** (PR #6 outbound
-> receiver landed). **First actions:** (1) **start the `LIVE-OPERATIONS.md` runtime** (`reference/connect/`) — per-site
-> business-hours calendar + closed-loop daily lifecycle, now that every primitive is proven (sales-deplete +
-> restock/receive-replenish + scans + self-verify); (2) get the **`twin-outbound` (`fcffa62d`) test integration deleted**
-> by BACKEND/admin — twin can't (`DELETE /integrations/{id}` is `CONNECT_NOT_EXPOSED`, admin-JWT-only), or repurpose it. Detail:
-> `status/session-notes/2026-06-29-session-11-connect-live-validation.md`.
+> **PICK UP HERE (Session 13):** **Planogram Mode 3 is LIVE-PROVEN end-to-end** — the twin drove a real 28-target
+> `directive_kind='planogram'` directive into M8trxDemo → landed (`compliance_directive a3b2bbde` + `_site` + 28
+> `_target`) → operator-mapped → **28 targets resolved** (triple-verified: twin fire + Backend readback #64/#65/#66 +
+> COORD independent on mother). **PR #7 merged; main `ae5fcf2`.** Driver: `build_planogram.py` (10× `planogram.json`) +
+> `PlanogramDirectiveDriver` + `connectPlanogramDrive` (dry-run default). **First actions:** **(1)** settle the
+> **wrong-zone mapping** with Backend — the smoke's operator mapping pointed `GB-R3-U1` at the wrong zone
+> ("Gondola R6 Front U1" = code `GF-R6-U1`, not the real "Gondola R3 Back U1"); pick **(a)** twin sends vendor codes +
+> supplies the code→zone map from `layout.json` / **(b)** twin sends zone *names* → auto-resolve. **Load-bearing for the
+> live-compliance demo** (else compliance scores a zone with no matching inventory). **(2)** run the **live-compliance
+> demo** once the mapping's right — re-fire correct → activate (`effective_date=today`) → sale-stream tap → watch
+> compliance move. **(3)** scale to the **full Denver** directive (2,504 targets). **Gated on Backend:** FR-PLN-08
+> compliance-check task-gen needs the **Notifications spine** (Triad Slice-1) — Backend has more to build before full
+> demo-ready. Detail: `status/session-notes/2026-06-30-session-12-planogram-mode3-driver-live.md`.
 >
 > **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working
 > service Bearer — scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`, tenant-wide) ·
@@ -20,11 +25,11 @@
 > integration `5dfba5cd`. ConnectConfig reads `M8TRX_TWIN_BEARER` first (`M8TRX_TWIN_SERVICE_BEARER` is now a fallback alias).
 > Keys-tab throwaway test keys were **revoked** (confirmed 401).
 >
-> **Connect harness — all 6 live drivers built + exercised** (`com.m8trx.twin.connect`, gradle `connect*` tasks, `connectSelfTest` green):
+> **Connect harness — all 7 `connect*` drivers built + exercised** (`com.m8trx.twin.connect`, gradle `connect*` tasks, `connectSelfTest` 7 cases green):
 > `connectMultiSiteSmoke` · `connectSaleStream` (+ sold-EPC persistence `.twin-state/`) · `connectChainActivity`
 > (sale/restock/pricing/catalog × all 10 stores) · `connectSelfVerify` (items/details read-back, the closed loop) ·
 > `connectScanSweep` (DRY-RUN default; `M8TRX_SCAN_LIVE=true` for live §6 scans — hold for BACKEND reader-topology) ·
-> `connectOutboundReceiver` (§9 LAN receiver; PR #6). **Comms:** `twin` seat on Slack `#m8trx-dev` (`@m8trx_twin`,
+> `connectOutboundReceiver` (§9 LAN receiver; PR #6) · **`connectPlanogramDrive`** (Mode-3 `directive_kind='planogram'`, dry-run default; PR #7, LIVE-PROVEN). **Comms:** `twin` seat on Slack `#m8trx-dev` (`@m8trx_twin`,
 > dormant-wake Monitor) — coordinator seat retired, Bob drives Backend↔Twin directly. Helpers: `m8trx-shared/brainstorm/comms/slack-*.sh`.
 >
 > ⚠ **Dedup-replay gap (NEW finding, filed for Bob/core CLEANUP):** a *failed* outbound event's content-hash blocks a
@@ -78,6 +83,7 @@
 
 ### Blocked on core
 
+- **Planogram Mode 3 demo tail (NEW, S12)** — directive→targets→**resolved** is LIVE-PROVEN, but **FR-PLN-08 compliance-check task-gen + push** ride the **Notifications spine** (Triad Slice-1), which Backend defers behind the 07-30 critical path. Also OPEN: the **wrong-zone fixture mapping** ((a)/(b) decision with Backend — `GB-R3-U1` mapped to `GF-R6-U1`'s zone) + **no `/api/v2` compliance read-back** for twin self-verify (candidate TWIN-REQ, drafted `status/briefs/`). ✅ Partial OI-2 close: `POST /api/v2/compliance/fixture-codes` now loads `fixture_code_mapping` (operator-side).
 - **Auth 500 / Hikari pool starvation (NEW, Session 8)** — post-reseed, the bulk-mutation Hasura **audit-trigger cascade** exhausted m8trx-services' `HikariPool-1` (10/10 active, 30 waiting) → auth/exchange 500 (reqId `3cc2943b`). Mother DB healthy (74/200); likely amplifier = the 102,675-item dual-write (~205k rows). **Core's to fix** (pool headroom / async-batch audit-ingest / quiesce triggers during bulk load) — **OPEN, core investigating.** Connect-based incremental seeding avoids the bulk direct-DB writes that trigger it. *(Not caused by the twin session's read-only audit.)*
 - **Image pipeline (NEW)** — `image` = Shopify CDN hot-link; backend hit an issue; likely need cached bytes in M8TRX's own asset store. Confirm what the seed did + whether core can store/serve cached assets. Part of `CATALOG-IMPORT-ONBOARDING`.
 - **✅ Connect Bearer plane WORKS (S9)** — with an out-of-band service key, twin verified `inventory:read` + `scan:submit` + `integration:manage` on `/api/v2` (supersedes the old "service-bearer→inventory 401" — that was the wrong door). **Remaining gap (OI-1):** no **self-serve scoped-Bearer mint** — the integration API-Keys tab hardcodes `webhook:write`; scoped service keys are issued out-of-band (core KeyService re-mint). Connect doc §4 flags `/api/v2/connect/credentials` as `@MvpStub` (post-MVP). Tracked via channel OI-1.
@@ -128,7 +134,7 @@
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
-| CORE-REQ-003 build Connect simulators — **inverse, core→twin** | 🔨 **P0 harness BUILT + LIVE-VALIDATED** (S9, 2026-06-27 — inbound + Bearer planes proven vs `twin-pos`, SOLD self-verified, all 3 scopes); **§9 outbound loop = last sim** | Activity injection / live demo loop |
+| CORE-REQ-003 build Connect simulators — **inverse, core→twin** | ✅ **DONE** (S11 — all 5 P0 sims live end-to-end) + **Planogram Mode 3 driver LIVE-PROVEN** (S12, PR #7 — directive→targets→resolved, triple-verified) | — |
 | CORE-REQ-004 toolchain assessment — **inverse, core→twin** | ✅ **DONE** 2026-06-29 (GO; PR #1 merged — Gradle 9.6.1 · Kotlin 2.4.0 · jackson 2.21.4 P0 CVE · jnats 2.25.3 · coroutines 1.11.0 · logback 1.5.37); deliverable in `status/briefs/` | — |
 | `inventory:sell` capability split | PRE-EXISTING in CLEANUP-TASKS | Cashier persona |
 

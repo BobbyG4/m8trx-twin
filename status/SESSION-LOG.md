@@ -7,6 +7,24 @@
 
 ## Rolling Summary — Recent Sessions
 
+**Session 12 (2026-06-30 · Twin) — Planogram-directive driver (Connect Mode 3) built + LIVE-PROVEN end-to-end; twin's 6th core bug caught**
+Picked up the S193 planogram track — the twin is the **MVP external driver** that drives M8TRX's internal planogram
+through Connect (Mode 3, `directive_kind='planogram'`). Key realization: **the twin's dataset already IS a planogram**
+(`assortment.csv` SKU→fixture→depth), so the directive mirrors the seeded floor (**84,266 floor units = the reseed split
+exactly**) → compliant-by-construction. Built the full driver in the idle window — document generator
+(`build_planogram.py` → 10 `planogram.json`), Kotlin `PlanogramDirectiveDriver` + DTOs + `connectPlanogramDrive`,
+lifecycle beat into `LIVE-OPERATIONS.md` §11, compliance-read-back gap (§12 + TWIN-REQ draft) — **PR #7 merged**. Then,
+**in-session**, Backend applied `mig 152a` (directive-channel schema) + shipped the **as-built Mode-3 ingest (#64)** whose
+shape *superseded* the §6.1 sketch (the S9 lesson — confirm against the real ingester); **adapted the driver and fired
+live** — Denver `GB-R3-U1` slice (28 targets) → 200 ack → server-verified PROCESSED (`compliance_directive a3b2bbde` +
+`_site` + 28 `_target`). Backend then shipped the **fixture-code→zone resolver (#65/#66)**; an operator mapped the code,
+all **28 targets resolved**, and **COORD independently verified the full loop on mother** (triple-confirmed). Twin's
+behavioral smoke **caught a 6th core bug** (resolver queried non-existent `zone.site_id`; zone→site is via space).
+**Open:** the smoke's operator mapping pointed `GB-R3-U1` at the *wrong* zone ("Gondola R6 Front U1" = code `GF-R6-U1`,
+not the real "Gondola R3 Back U1") — load-bearing for a live-compliance demo; (a)/(b) fix-path put to Backend. **Backend
+has more to build before demo-ready** (FR-PLN-08 task-gen needs the Notifications spine). Commits `4265cbe`→`ae5fcf2`;
+main `ae5fcf2` (PR #7 merged).
+
 **Session 11 (2026-06-29→30 · Twin) — M8TRX Connect LIVE-validation marathon: all 5 P0 sims exercised end-to-end; 5 core bugs caught + fixed**
 The big one. Drove the entire Connect surface live against dev, coordinating with BACKEND over Slack `#m8trx-dev` (the
 `twin` seat; coordinator seat retired mid-session — Bob now drives Backend↔Twin direct). **Inbound:** multi-site
@@ -128,6 +146,7 @@ Hasura admin secret in `scripts/seed_store.py` (Bob to rotate later).
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
+| 12 | 2026-06-30 | **Planogram Mode-3 driver built + LIVE-PROVEN end-to-end** — twin drove a real 28-target planogram directive into M8trxDemo → landed → operator-mapped → **28 targets resolved** (triple-verified: twin fire + Backend readback + COORD independent); built `build_planogram.py` + `PlanogramDirectiveDriver` (PR #7); adapted to as-built ingest #64; **6th core bug caught** (`zone.site_id`); open: wrong-zone mapping ((a)/(b) path to Backend) | [→](session-notes/2026-06-30-session-12-planogram-mode3-driver-live.md) |
 | 11 | 2026-06-29→30 | **Connect LIVE-validation marathon — all 5 P0 sims exercised end-to-end** — multi-site smoke (canary closed) · sale-stream (121 Denver sales) · chain-activity (×10 stores) · Bearer self-verify (closed loop, items/details) · **C3 outbound loop CLOSED** (happy + retry/heal); **5 core bugs caught + fixed** (cross-site leak · 3 ingesters #56 · pricing CHECK #57 · site_id=NULL #50 · dedup-replay gap filed); PRs #2–6 all merged | [→](session-notes/2026-06-29-session-11-connect-live-validation.md) |
 | 10 | 2026-06-29 | **Toolchain currency pass (CORE-REQ-004) — GO, merged (PR #1)** — jackson 2.21.4 (P0 CVE, low exposure) · jnats 2.25.3 · coroutines 1.11.0 · Kotlin 2.4.0 · Gradle 9.6.1 (no deprecations) · logback 1.5.37 · ktlint held 12.2.0; offline verify green; live-smoke gated on creds → next session | [→](session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md) |
 | 9 | 2026-06-27 | **Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` EPC+SKU → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs sold, control in_stock), all 3 scopes; `.editorconfig` added; `LIVE-OPERATIONS.md` (24/7 design); Bearer-key hash-mismatch fixed; async channel | [→](session-notes/2026-06-27-session-9-connect-p0-harness-live-validated.md) |
