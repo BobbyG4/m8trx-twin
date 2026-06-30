@@ -6,12 +6,11 @@
 
 > **PICK UP HERE (Session 12):** The **entire M8TRX Connect surface is now live-validated** against dev — inbound
 > (sales + catalog/pricing/shipment) · Bearer self-verify (closed loop) · outbound `stocktake_result` (C3: happy
-> path + retry→heal). **CORE-REQ-003 is exercised end-to-end.** **First actions:** (1) **merge PR #6**
-> (`feature/connect-outbound-receiver` `020679a` — the LAN-bind §9 outbound receiver runner; main is at `0cb4d3b`);
-> (2) **start the `LIVE-OPERATIONS.md` runtime** (`reference/connect/`) — per-site business-hours calendar + closed-loop
-> daily lifecycle, now that every primitive is proven (sales-deplete + restock/receive-replenish + scans + self-verify);
-> (3) get the **`twin-outbound` (`fcffa62d`) test integration deleted** by BACKEND/admin — twin can't (`DELETE /integrations/{id}`
-> is `CONNECT_NOT_EXPOSED`, admin-JWT-only), or repurpose it. Detail:
+> path + retry→heal). **CORE-REQ-003 exercised end-to-end; ALL PRs merged — main at `f25cbcc`** (PR #6 outbound
+> receiver landed). **First actions:** (1) **start the `LIVE-OPERATIONS.md` runtime** (`reference/connect/`) — per-site
+> business-hours calendar + closed-loop daily lifecycle, now that every primitive is proven (sales-deplete +
+> restock/receive-replenish + scans + self-verify); (2) get the **`twin-outbound` (`fcffa62d`) test integration deleted**
+> by BACKEND/admin — twin can't (`DELETE /integrations/{id}` is `CONNECT_NOT_EXPOSED`, admin-JWT-only), or repurpose it. Detail:
 > `status/session-notes/2026-06-29-session-11-connect-live-validation.md`.
 >
 > **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working

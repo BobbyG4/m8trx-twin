@@ -21,8 +21,8 @@ the **retry→heal** (failMode=500 → scheduled → flip back to 200 → healed
 surfaced** (all hidden behind 200 acks — caught by insisting on server-side verification): cross-site read leak (fixed) ·
 3 inbound ingesters written vs a non-existent schema (services #56) · pricing `price_source` CHECK reject (#57) ·
 `integration_event.site_id=NULL` on NoScope sales (#50, +121 backfilled) · the dedup-shadows-failed-retry gap (filed for
-Bob/core). Shipped **PRs #2–#5 merged** (smoke+stream+chain · self-verify read-side · scan-sweep · API-surface doc) +
-**#6 open** (outbound receiver `020679a`). 6 live `connect*` drivers; `connectSelfTest` green throughout. Detail:
+Bob/core). Shipped **PRs #2–#6 all merged** (smoke+stream+chain · self-verify read-side · scan-sweep · API-surface doc · outbound
+receiver `020679a`); main at `f25cbcc`. 6 live `connect*` drivers; `connectSelfTest` green throughout. Detail:
 [→](session-notes/2026-06-29-session-11-connect-live-validation.md).
 
 **Session 10 (2026-06-29 · Twin) — Toolchain currency pass (CORE-REQ-004): Jackson CVE P0 + Gradle 9 / Kotlin 2.4 / ecosystem align — GO, merged**
@@ -128,7 +128,7 @@ Hasura admin secret in `scripts/seed_store.py` (Bob to rotate later).
 
 | # | Date | Summary | Notes |
 |---|------|---------|-------|
-| 11 | 2026-06-29→30 | **Connect LIVE-validation marathon — all 5 P0 sims exercised end-to-end** — multi-site smoke (canary closed) · sale-stream (121 Denver sales) · chain-activity (×10 stores) · Bearer self-verify (closed loop, items/details) · **C3 outbound loop CLOSED** (happy + retry/heal); **5 core bugs caught + fixed** (cross-site leak · 3 ingesters #56 · pricing CHECK #57 · site_id=NULL #50 · dedup-replay gap filed); PRs #2–5 merged, #6 open | [→](session-notes/2026-06-29-session-11-connect-live-validation.md) |
+| 11 | 2026-06-29→30 | **Connect LIVE-validation marathon — all 5 P0 sims exercised end-to-end** — multi-site smoke (canary closed) · sale-stream (121 Denver sales) · chain-activity (×10 stores) · Bearer self-verify (closed loop, items/details) · **C3 outbound loop CLOSED** (happy + retry/heal); **5 core bugs caught + fixed** (cross-site leak · 3 ingesters #56 · pricing CHECK #57 · site_id=NULL #50 · dedup-replay gap filed); PRs #2–6 all merged | [→](session-notes/2026-06-29-session-11-connect-live-validation.md) |
 | 10 | 2026-06-29 | **Toolchain currency pass (CORE-REQ-004) — GO, merged (PR #1)** — jackson 2.21.4 (P0 CVE, low exposure) · jnats 2.25.3 · coroutines 1.11.0 · Kotlin 2.4.0 · Gradle 9.6.1 (no deprecations) · logback 1.5.37 · ktlint held 12.2.0; offline verify green; live-smoke gated on creds → next session | [→](session-notes/2026-06-29-session-10-toolchain-currency-core-req-004.md) |
 | 9 | 2026-06-27 | **Connect P0 harness BUILT + LIVE-VALIDATED** — 5 sims (`com.m8trx.twin.connect`), offline self-tests green; live vs `twin-pos`: `sale_event` EPC+SKU → PROCESSED, **self-verified SOLD** via Bearer (2 Denver EPCs sold, control in_stock), all 3 scopes; `.editorconfig` added; `LIVE-OPERATIONS.md` (24/7 design); Bearer-key hash-mismatch fixed; async channel | [→](session-notes/2026-06-27-session-9-connect-p0-harness-live-validated.md) |
 | 8 | 2026-06-26 | **RE-RESEED v2 verified** (twin cross-check, zero drift) · static-seed gap audit (staff/org · currency · sensors · LP/EAS) · post-reseed login-500 = audit-cascade pool starvation (not the audit) · **pivot to M8TRX Connect** for seeds + activity injection | [→](session-notes/2026-06-26-session-8-reseed-verified-gap-audit-connect-pivot.md) |
