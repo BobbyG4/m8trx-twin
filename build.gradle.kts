@@ -125,6 +125,22 @@ tasks.register<JavaExec>("connectSelfVerify") {
     )
 }
 
+// Planogram-directive drive (Mode 3 — PLANOGRAM-RESOLVED-DESIGN §6) — posts each store's
+// m8trx_standard planogram as a directive_kind='planogram' envelope at the inbound-directive channel.
+// SAFE: dry-run by default (builds + logs the envelope, sends nothing). M8TRX_PLANOGRAM_LIVE=true to
+// send — additionally gated on core shipping the channel (mig 152a / fork #11).
+tasks.register<JavaExec>("connectPlanogramDrive") {
+    group = "verification"
+    description = "Drive store planogram directives (Mode 3, directive_kind='planogram'). Dry-run unless M8TRX_PLANOGRAM_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ConnectPlanogramDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
 // catalog mix across all 10 stores on the webhook plane (no Bearer needed).
 tasks.register<JavaExec>("connectChainActivity") {

@@ -11,6 +11,13 @@ object WebhookDataType {
     const val PRODUCT_CATALOG = "product_catalog"
     const val SHIPMENT_MANIFEST = "shipment_manifest"
     const val PRICING_UPDATE = "pricing_update"
+
+    /**
+     * The §6.1 / fork-#11 inbound-DIRECTIVE channel routing header (`mig 152a`). The body carries a
+     * `directive_kind` discriminator (planogram | compliance | fulfillment). PENDING the as-built
+     * channel — confirm this header/route against the live ingester when `mig 152a` lands.
+     */
+    const val DIRECTIVE = "directive"
 }
 
 /**
