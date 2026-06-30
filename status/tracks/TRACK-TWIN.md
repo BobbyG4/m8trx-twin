@@ -1,8 +1,10 @@
 # Track: Twin
 
-**Last session:** Session 12 (2026-06-30) · **Coordinator/planning detour** — Task/Calendar/Notification triad + Planogram designs · model-wide historical-retention audit · **Mode-3-MVP correction**. **No twin code** — all 5 design artifacts authored into core `m8trx-shared/status/active/` (Bob-directed; twin main unchanged at `f25cbcc`). Designed over the **~80%-present existing schema** (4 gaps + 3 service layers; planogram = zero net-new tables). F7 resolved (per-fixture deviation junction + a live/replay two-layer model). Retention audit: **prose-not-DDL** (3/38 hypertables; zero continuous aggregates) → A/B before-after + as-of reconstruction **BROKEN**; Pass-1 cheap-insurance fix specced. **★ planogram-via-Connect is MVP — `mig 152a`→MVP, fork #10 superseded** (backend roadmap edit — Bob carries, option A).
-**Prev session:** Session 11 (2026-06-29→30) · ✅ M8TRX Connect LIVE-validation marathon — all 5 P0 sims end-to-end; 5 core bugs caught + fixed; PRs #2–6 merged; main `f25cbcc`.
-**Last session notes:** [→](../session-notes/2026-06-30-session-12-coordinator-triad-planogram-retention-audit.md)
+**Last session:** Session 11 (2026-06-29→30) · ✅ **M8TRX Connect LIVE-validation marathon — all 5 P0 sims exercised end-to-end** — multi-site smoke (canary closed) · sale-stream (121 Denver sales) · chain-activity (×10 stores) · Bearer self-verify (closed loop, `items/details`) · **C3 outbound loop CLOSED** (happy path + retry→heal). **5 core bugs caught + fixed** (cross-site read leak · 3 ingesters vs non-existent schema #56 · pricing `price_source` CHECK #57 · `integration_event.site_id=NULL` #50+backfill · dedup-replay gap filed). **PRs #2–6 all merged** (incl. outbound receiver `020679a`); main `f25cbcc`.
+**Prev session:** Session 10 (2026-06-29) · ✅ Toolchain currency pass (CORE-REQ-004) — GO, merged (PR #1).
+**Last session notes:** [→](../session-notes/2026-06-29-session-11-connect-live-validation.md)
+
+> **Coordinator note (m8trx-shared S193, 2026-06-30):** a coordinator session (designs in `m8trx-shared/status/active/`, *not* a twin session — the phantom "Twin S12" was reverted) established that **planogram-via-Connect is MVP and the twin is the MVP external driver**. Future twin work includes building the **planogram-directive driver** (`directive_kind='planogram'` over Connect). See `m8trx-shared/status/active/{PLANOGRAM-RESOLVED-DESIGN,CONNECT-PLANOGRAM-MVP-SCOPE-CORRECTION}-2026-06-30.md`. Memory: [[project_mode3_planogram_connect_is_mvp]] (m8trx-shared namespace).
 
 ---
 
