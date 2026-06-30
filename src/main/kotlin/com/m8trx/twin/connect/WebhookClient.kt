@@ -13,11 +13,12 @@ object WebhookDataType {
     const val PRICING_UPDATE = "pricing_update"
 
     /**
-     * The §6.1 / fork-#11 inbound-DIRECTIVE channel routing header (`mig 152a`). The body carries a
-     * `directive_kind` discriminator (planogram | compliance | fulfillment). PENDING the as-built
-     * channel — confirm this header/route against the live ingester when `mig 152a` lands.
+     * Mode-3 planogram directive routing header (AS-BUILT ingest, services #64). Routes the flat directive
+     * envelope (`name` + `external_directive_id` + `targets[]`) to the planogram landing
+     * (`compliance_directive` + `compliance_target`s) — rides the existing twin-pos webhook auth, no
+     * dedicated channel needed to fire.
      */
-    const val DIRECTIVE = "directive"
+    const val PLANOGRAM_DIRECTIVE = "planogram_directive"
 }
 
 /**

@@ -5,9 +5,9 @@ import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.ChannelConfig
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
 import com.m8trx.twin.connect.model.outbound.StocktakeResult
-import com.m8trx.twin.connect.model.webhook.DirectiveEnvelope
+import com.m8trx.twin.connect.model.webhook.DirectiveTarget
+import com.m8trx.twin.connect.model.webhook.PlanogramDirective
 import com.m8trx.twin.connect.model.webhook.PlanogramDocument
-import com.m8trx.twin.connect.model.webhook.PlanogramLine
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
 import com.m8trx.twin.connect.model.webhook.SaleEvent
 import com.m8trx.twin.connect.model.webhook.ShipmentLine
@@ -15,6 +15,7 @@ import com.m8trx.twin.connect.model.webhook.ShipmentManifest
 import com.m8trx.twin.connect.setup.ApiKeyBootstrap
 import com.m8trx.twin.connect.setup.Provisioner
 import com.m8trx.twin.connect.sim.OutboundReceiver
+import com.m8trx.twin.connect.sim.PlanogramDirectiveDriver
 import com.m8trx.twin.connect.sim.SftpDropDriver
 import org.slf4j.LoggerFactory
 import java.net.URI
@@ -189,57 +190,54 @@ private fun saleStreamEpcLoader() {
 }
 
 /**
- * Mode-3 planogram directive (§6.1): snake_case on the inbound plane, round-trips, and the DTO
- * deserializes the REAL builder output (proves `build_planogram.py` ⇄ the driver DTO agree).
+ * Mode-3 planogram directive (AS-BUILT ingest #64): snake_case on the inbound plane, round-trips, and the
+ * driver maps the REAL builder output (`build_planogram.py` → planogram.json) to the as-built directive.
  */
 private fun planogramDirectiveCasing() {
-    val line = PlanogramLine(
-        fixtureCode = "GB-R3-U1",
-        fixtureName = "Gondola R3 Back U1",
-        spaceType = "sales_floor",
-        department = "snow",
-        sku = "2456185",
-        ean = "3608449847032",
-        name = "Wedze Women's BL100 Ski Base Layer Bottom",
-        lineItemType = "product_placement",
-        requiredQty = 4,
-        facings = 1,
-        positionSequence = 1,
+    val directive = PlanogramDirective(
+        name = "Twin planogram — dec-us-denver (smoke)",
+        externalDirectiveId = "TWIN-PLN-TEST-1",
+        effectiveDate = "2026-07-01T00:00:00Z",
+        targets = listOf(
+            DirectiveTarget(
+                siteId = "site-uuid-1",
+                rawFixtureCode = "GB-R3-U1",
+                rawItemIdentifier = "3608449847032",
+                requiredQuantity = 4,
+                facingCount = 1,
+                positionSequence = 1,
+                displayLevel = 2,
+            ),
+            DirectiveTarget(siteId = "site-uuid-1", rawFixtureCode = "WALL-A2", requiredQuantity = 8),
+        ),
     )
-    val doc = PlanogramDocument(
-        format = "m8trx_standard",
-        version = "v1",
-        directiveRef = "PLN-test-deadbeef",
-        storeId = "dec-us-denver",
-        siteRef = "dec-us-denver",
-        sourceDigest = "deadbeef",
-        lines = listOf(line),
-    )
-    val envelope = DirectiveEnvelope.planogram(integrationId = "twin-pos", doc = doc, effectiveDate = "2026-08-01T00:00:00")
-    val json = ConnectMappers.snake.writeValueAsString(envelope)
+    val json = ConnectMappers.snake.writeValueAsString(directive)
     listOf(
-        "directive_kind", "integration_id", "source_format", "site_ref", "effective_date", "payload",
-        "fixture_code", "line_item_type", "required_qty", "position_sequence", "source_digest",
+        "external_directive_id", "effective_date", "targets", "site_id", "raw_fixture_code",
+        "raw_item_identifier", "required_quantity", "facing_count", "position_sequence", "display_level",
     ).forEach {
-        check(json.contains("\"$it\"")) { "directive envelope must serialize snake field $it: $json" }
+        check(json.contains("\"$it\"")) { "planogram_directive must serialize snake field $it: $json" }
     }
-    check(json.contains("\"directive_kind\":\"planogram\"")) { "directive_kind must be planogram: $json" }
-    listOf("directiveKind", "requiredQty", "lineItemType", "fixtureCode").forEach {
+    listOf("externalDirectiveId", "rawFixtureCode", "requiredQuantity", "facingCount").forEach {
         check(!json.contains(it)) { "inbound plane must not leak camelCase $it: $json" }
     }
-    check(ConnectMappers.snake.readValue<DirectiveEnvelope>(json) == envelope) { "directive envelope must round-trip" }
+    check(json.contains("\"raw_item_identifier\":\"3608449847032\"")) { "first target keeps its EAN: $json" }
+    check(ConnectMappers.snake.readValue<PlanogramDirective>(json) == directive) { "planogram_directive must round-trip" }
 
-    // the DTO must deserialize the REAL builder output (build_planogram.py → planogram.json)
+    // map the REAL Denver doc → directive (proves build_planogram.py ⇄ the as-built mapping agree)
     val denver = Path.of("reference/data/chain/stores/dec-us-denver/planogram.json")
     if (Files.exists(denver)) {
-        val loaded = ConnectMappers.snake.readValue<PlanogramDocument>(Files.readAllBytes(denver))
-        check(loaded.format == "m8trx_standard") { "loaded planogram.json format must be m8trx_standard, got ${loaded.format}" }
-        check(loaded.lines.isNotEmpty()) { "loaded planogram.json must carry lines" }
-        check(loaded.lines.all { it.requiredQty > 0 }) { "every placement must require > 0 units" }
-        check(loaded.lines.all { it.fixtureCode.isNotBlank() && it.sku.isNotBlank() }) { "every line needs a fixture_code + sku" }
-        log.info("[PASS] planogram directive: snake casing + round-trip + loaded {} real Denver lines", loaded.lines.size)
+        val doc = ConnectMappers.snake.readValue<PlanogramDocument>(Files.readAllBytes(denver))
+        val driver = PlanogramDirectiveDriver(WebhookClient(ConnectConfig.fromEnv()))
+        val mapped = driver.toDirective(doc, siteId = "denver-uuid", fixtures = setOf("GB-R3-U1"))
+        check(mapped.targets.isNotEmpty()) { "GB-R3-U1 slice must produce targets" }
+        check(mapped.targets.all { it.siteId == "denver-uuid" && it.rawFixtureCode == "GB-R3-U1" && it.requiredQuantity > 0 }) {
+            "mapped targets must carry the site UUID + fixture + a positive qty"
+        }
+        check(mapped.targets.all { it.rawItemIdentifier?.length == 13 }) { "EAN raw_item_identifier must be 13 digits" }
+        log.info("[PASS] planogram directive (as-built #64): casing + round-trip + mapped {} Denver GB-R3-U1 targets", mapped.targets.size)
     } else {
-        log.warn("[PASS] planogram directive: snake casing + round-trip (Denver planogram.json absent — run scripts/build_planogram.py)")
+        log.warn("[PASS] planogram directive (as-built #64): casing + round-trip (Denver planogram.json absent — run scripts/build_planogram.py)")
     }
 }
 

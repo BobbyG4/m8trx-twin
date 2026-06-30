@@ -1,52 +1,57 @@
 package com.m8trx.twin.connect.model.webhook
 
 /**
- * Mode-3 Connect inbound DIRECTIVE envelope + the m8trx_standard planogram document it carries.
+ * Mode-3 planogram directive — the **AS-BUILT** ingest shape (services #64, BACKEND 2026-06-30), which
+ * SUPERSEDES the earlier `PLANOGRAM-RESOLVED-DESIGN` §6.1 envelope sketch (the S9 lesson: confirm against
+ * the real ingester, not the doc).
  *
- * The twin is the MVP external driver that posts a planogram directive over the ONE shared
- * inbound-directive Connect channel (fork #11), discriminated by [directiveKind]. Built to the
- * `PLANOGRAM-RESOLVED-DESIGN-2026-06-30` §6.1 envelope contract; the channel + site-resolution are a
- * named Connect transport DEPENDENCY (`mig 152a` / fork #11), NOT designed here. Serialized snake_case
- * on the inbound plane via [com.m8trx.twin.connect.model.ConnectMappers.snake], exactly like the §8
- * ingester payloads.
+ * Routing: POST to the existing inbound webhook `/v1/webhook/{tenant}/twin-pos` with header
+ * `X-Data-Type: planogram_directive` ([com.m8trx.twin.connect.WebhookDataType.PLANOGRAM_DIRECTIVE]) — rides
+ * the existing twin-pos auth; no dedicated channel needed to fire. Serialized snake_case on the inbound
+ * plane via [com.m8trx.twin.connect.model.ConnectMappers.snake].
  *
- * Wire shape (snake): `directive_kind`, `integration_id`, `source_format`, `site_ref`,
- * `effective_date`, `payload`. Connect resolves `site_ref → site_id` via `integration_site_xref`
- * (INHERITS); the per-site fixture-code resolution (`fixture_code → zone_id`) is core-side and
- * NON-inheriting (R5) — the twin sends the raw `fixture_code`, which on the demo tenant matches
- * `zone.name`/`code` and resolves by exact-name match (resolver step 1, no mapping rows needed).
+ * Lands as: `compliance_directive` (source=api_push, status=pending) + `compliance_directive_site` (per
+ * distinct `site_id`) + one `compliance_target` per placement (`mapping_status=pending_zone_mapping` — the
+ * `raw_fixture_code → zone` resolver is a LATER slice).
+ *
+ * Wire (snake): `name`, `external_directive_id`, `effective_date`, `targets[]`.
  */
-data class DirectiveEnvelope(
-    val directiveKind: String, // "planogram" | "compliance" | "fulfillment" (fork #11 discriminator)
-    val integrationId: String,
-    val sourceFormat: String, // → directive_format_profile.schema_fingerprint match (e.g. "m8trx_standard")
-    val siteRef: String, // Connect resolves → site_id via integration_site_xref
-    val effectiveDate: String, // ISO-8601 → compliance_directive.effective_date
-    val payload: PlanogramDocument,
-) {
-    companion object {
-        fun planogram(integrationId: String, doc: PlanogramDocument, effectiveDate: String) = DirectiveEnvelope(
-            directiveKind = "planogram",
-            integrationId = integrationId,
-            sourceFormat = doc.format,
-            siteRef = doc.siteRef,
-            effectiveDate = effectiveDate,
-            payload = doc,
-        )
-    }
-}
+data class PlanogramDirective(
+    val name: String,
+    val externalDirectiveId: String, // idempotency key — re-send replaces this directive's sites/targets
+    val effectiveDate: String?, // optional; the ingester defaults to now
+    val targets: List<DirectiveTarget>,
+)
 
 /**
- * The m8trx_standard planogram document (emitted by `scripts/build_planogram.py`). Each [PlanogramLine]
- * maps to a `compliance_target` row (PLANOGRAM-RESOLVED-DESIGN §1): `fixture_code → zone_id`,
- * `sku → product_id`, `required_qty → required_quantity`, `facings → facing_count`,
- * `position_sequence → position_sequence`. Doc-level builder metadata (`units_per_facing`, `notes`,
- * `counts`) is intentionally NOT modelled — unknown keys drop on read (the snake mapper tolerates them),
- * keeping the wire payload lean.
+ * One placement. [siteId] is per-target (a directive is multi-site) and is the **real M8TRX site UUID** —
+ * NOT a `site_ref` (this slice does no xref resolution). [rawItemIdentifier] (the EAN) + the presentation
+ * fields are optional; [rawFixtureCode] is carried **unresolved** (`pending_zone_mapping`).
+ *
+ * Wire (snake): `site_id`, `raw_fixture_code`, `raw_item_identifier`, `required_quantity`, `facing_count`,
+ * `position_sequence`, `display_level`.
+ */
+data class DirectiveTarget(
+    val siteId: String,
+    val rawFixtureCode: String,
+    val rawItemIdentifier: String? = null,
+    val requiredQuantity: Int,
+    val facingCount: Int? = null,
+    val positionSequence: Int? = null,
+    val displayLevel: Int? = null,
+)
+
+/**
+ * The twin's internal **m8trx_standard** planogram document (emitted by `scripts/build_planogram.py` →
+ * `stores/<id>/planogram.json`). This is the twin's SOURCE format; the driver maps it to the as-built
+ * [PlanogramDirective] (resolving the real site UUID) at send time. Kept distinct from the wire shape so
+ * the committed document carries no env/tenant-specific UUIDs and stays rich (`fixture_name`, `department`…).
+ * Doc-level builder metadata (`units_per_facing`, `notes`, `counts`) is dropped on read (snake mapper
+ * tolerates unknown keys).
  */
 data class PlanogramDocument(
-    val format: String, // "m8trx_standard"
-    val version: String, // "v1"
+    val format: String,
+    val version: String,
     val directiveRef: String,
     val storeId: String,
     val siteRef: String,
@@ -62,7 +67,7 @@ data class PlanogramLine(
     val sku: String,
     val ean: String,
     val name: String,
-    val lineItemType: String, // "product_placement" | "fixture_relocation"
+    val lineItemType: String,
     val requiredQty: Int,
     val facings: Int,
     val positionSequence: Int,
