@@ -8,7 +8,10 @@ planogram track defined by the S193 coordinator designs. Grounds the twin's role
 > (`scripts/build_planogram.py` → 10× `stores/<id>/planogram.json`, deterministic, 84,266 floor units =
 > exact reseed match) and the Kotlin `PlanogramDirectiveDriver` + DTOs + `connectPlanogramDrive` gradle
 > task (built to the §6.1 contract; `connectSelfTest` green incl. the new directive-casing case; dry-run
-> drives all 10 stores clean). **T3 + T4 next** (idle-window-doable). T5 + T6 gated on Backend (B1/B2/B3).
+> drives all 10 stores clean). **T3 + T4 also DONE** — the planogram lifecycle beat is in `LIVE-OPERATIONS.md`
+> §11, and the compliance read-back gap is confirmed + drafted (§12 + `status/briefs/TWIN-REQ-DRAFT-…`).
+> **T5 + T6 gated on Backend** — and **B1 (`mig 152a`) is APPLYING on mother 2026-06-30** (this session's DDL
+> window); the twin driver fires the moment COORD calls GREEN.
 
 **Source designs (core, `m8trx-shared/status/active/`, read-only for twin):**
 - `PLANOGRAM-RESOLVED-DESIGN-2026-06-30.md` — 3 ingestion modes; **§6 = Mode 3 (Connect inbound) = the twin's target**.
@@ -84,7 +87,7 @@ snake_case on the wire via the `snake` mapper, factory helpers, built to the cod
 
 | # | Blocker | Owner / phase | Blocks (twin) | Status |
 |---|---|---|---|---|
-| B1 | **Inbound-directive channel** — `mig 152a` (family + `directive_kind` + direction flags) + fork #11 | Backend, **Phase 1 Lane B** | the twin can't POST `directive_kind='planogram'` until the channel accepts it | NOT BUILT (pulled into MVP per scope-correction; transport framework VERIFIED S192) |
+| B1 | **Inbound-directive channel** — `mig 152a` (family + `directive_kind` + direction flags) + fork #11 | Backend, **Phase 1 Lane B** | the twin can't POST `directive_kind='planogram'` until the channel accepts it | **APPLYING 2026-06-30** — in the `157/158/152a/156` DDL batch on mother; COORD to call GREEN. Twin driver ready to fire on GREEN. |
 | B2 | **Triad Slice-1** — rule-engine + scheduler + recipient-resolution + `user_device_token` + `task.assigned_to_role` | Backend, **Phase 1 Lane A** (critical path) | a landed directive won't generate tasks / drift / completion-push until this exists | NOT BUILT |
 | B3 | **Planogram core** — Modes 1+2 + lifecycle/scoring (the `compliance_directive` landing + processing tail) | Backend, **Phase 2** (after triad) | even a directive that lands won't become targets/scoring until the tail exists | NOT BUILT (depends on B2) |
 
@@ -165,8 +168,8 @@ It plugs into the `LIVE-OPERATIONS.md` runtime as a daily-lifecycle beat once B2
 |---|---|---|---|
 | T1 | **Planogram document generator** (§5a) — `planogram.json` per store from committed data | nothing | ✅ **DONE** (`scripts/build_planogram.py`; 10 stores; 84,266 floor units = reseed match; deterministic) |
 | T2 | **`PlanogramDirectiveDriver` + DTOs + offline self-test** (§5b) — built to §6.1 contract | T1 | ✅ **DONE** (`DirectivePayloads.kt` · `sim/PlanogramDirectiveDriver.kt` · `ConnectPlanogramDrive.kt` · `connectPlanogramDrive`; `connectSelfTest` green; dry-run drives 10/10) |
-| T3 | **Lifecycle-arc design** into LIVE-OPERATIONS / ACTIVITY-PLAN (§7) | nothing | next (idle-window-doable) |
-| T4 | **Self-verify read-back design** + API-surface check (§5d, §6.1) | `/api/v2` reachable | next (read-only probe) |
+| T3 | **Lifecycle-arc design** into LIVE-OPERATIONS / ACTIVITY-PLAN (§7) | nothing | ✅ **DONE** (`LIVE-OPERATIONS.md` §11 — the directive beat woven into the daily lifecycle; §4 replenishment = the remediation execution) |
+| T4 | **Self-verify read-back design** + API-surface check (§5d, §6.1) | `/api/v2` reachable | ✅ **DONE** — gap confirmed (no compliance read-back on `/api/v2`); draft `status/briefs/TWIN-REQ-DRAFT-planogram-compliance-readback-2026-06-30.md` |
 | T5 | **Live Mode-3 drive** — fire the directive at the real channel; verify landing | **B1** (channel) | gated — when core ships `mig 152a` |
 | T6 | **Live lifecycle validation** — run the §7 play end-to-end; catch bugs behind the ack | **B1+B2+B3** | gated — when triad + planogram core land |
 

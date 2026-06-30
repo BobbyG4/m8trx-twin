@@ -157,3 +157,58 @@ Two surfaces, two credentials (validated against the live `twin-pos` integration
 
 Doc-first while the live test path is shaken out — lock the **inventory-conservation** and **pacing**
 decisions (§4, §5) before writing the runtime.
+
+---
+
+## 11. The planogram compliance lifecycle (the directive beat)
+
+*Added 2026-06-30 (Session 12). The planogram track (S193 coordinator designs) gives the daemon a new,
+**low-frequency** beat that layers ONTO the daily lifecycle (§2) — it does not run beside it. Twin-side
+build plan: `status/active/PLANOGRAM-DIRECTIVE-DRIVER-PLAN-2026-06-30.md`.*
+
+A **planogram directive** turns §4's inventory target from an implicit "size-curve depth" into an
+**explicit, platform-scored intent.** The twin is the external planogram tool (Connect Mode 3,
+`directive_kind='planogram'`, `sim/PlanogramDirectiveDriver`); the directive it posts is built from the
+seeded floor (`scripts/build_planogram.py`, `required_qty` = the on-floor EPC count per fixture×SKU), so the
+store is **compliant by construction at activation** and the daily play is what drives drift.
+
+**Cadence — this is NOT a per-tick event.** A directive is published **once per planogram epoch** (a seasonal
+reset, a VM change, or the demo's opening beat), not on the sale/scan trickle. The §5 pacing/token-bucket
+discipline governs the high-frequency stream (sales, scans, receives); a directive is a single signed POST per
+site per epoch. Keep the two cadences separate in the runtime.
+
+**The arc (one planogram epoch), woven into the daily lifecycle:**
+
+| # | Beat | Who | Driver / mechanism | Phase (§2) | Status |
+|---|------|-----|--------------------|-----------|--------|
+| 1 | **Publish** the directive (per epoch / on planogram change) | twin | `connectPlanogramDrive` → §6.1 envelope at the inbound-directive channel | epoch start | **gated B1** (`mig 152a` / fork #11) |
+| 2 | **Activate** at `effective_date` 00:00 site-local → compliant baseline | core | scheduler Z-04 | PRE-OPEN | gated B2/B3 |
+| 3 | **Drift** — OPEN-hours sales deplete directive-governed fixtures below `required_qty`; scan sweeps surface the gap | twin | `connectSaleStream` + `connectScanSweep` | OPEN | **live today** |
+| 4 | **Remediate** — non-compliance → replenishment / remove-excess / relocate tasks; overnight drift → 09:00 alert | core | rule-engine + scheduler Z-01 | OPEN / next PRE-OPEN | gated B2/B3 |
+| 5 | **Heal** — PRE-OPEN replenishment tops fixtures back to `required_qty` | twin | §4 closed-loop restock (`shipment_manifest` + `items/receive`) | PRE-OPEN | **live today** |
+| 6 | **Self-verify** — read compliance state / dual-score back to ~100% | twin | compliance read-back atom | any | gated B3 + **read-back gap** (§12 / TWIN-REQ) |
+
+**The unification (the point):** **§4's pre-open replenishment IS beat 5 — the remediation execution.** §4
+already tops each SKU "back toward its target depth (the size-curve facings from the seed)"; the directive
+simply makes that target **explicit and auditable** — the platform now scores the store against a *published
+intent* instead of an implicit depth. No new restock mechanism; the directive gives the existing one a
+contract to be measured against.
+
+**What's live vs gated:** beats **3 + 5 run today** (sale-stream + scan-sweep + replenishment are proven
+drivers). Beats **1/2/4/6** light up as Backend lands **B1** (`mig 152a` directive channel — drafted/staged
+2026-06-30), **B2** (Triad Slice-1 — `user_device_token`/`task.assigned_to_role` in the same DDL window),
+and **B3** (planogram-domain processing tail). Until then the daemon drives 3+5 and the compliance scoring
+simply isn't computed yet — **activating the directive beat is additive, not a rewrite of the runtime.**
+
+---
+
+## 12. Compliance read-back — the loop-closer gap (T4 finding)
+
+Beat 6 (self-verify) needs a **public `/api/v2` read-back** for compliance/directive state — the exact analog
+of `inventory/items/details` (#29), which lets the twin confirm `state=sold` after a sale with zero psql. The
+mapped Connect surface (`M8TRX-API-SURFACE.md`) exposes inventory / scan / sale / stocktake / fitting-room
+reads **but no compliance/directive read** — the planogram design routes compliance status to the **VM Web
+dashboard** (FR-PLN-10, FR-COMP-15 via the reporting hierarchy), not to the external system that *posted* the
+directive. Mode 3 is inbound-only; there is no Connect/Bearer way for the driver to confirm its directive
+landed or read the resulting compliance. **Candidate TWIN-REQ** (see `status/briefs/`) — file it to ship
+WITH the planogram domain (B3), mirroring how `inventory/items/details` closed the SOLD loop.
