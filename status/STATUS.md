@@ -2,9 +2,20 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 11 CLOSED · ★ ALL 5 P0 Connect sims LIVE-exercised end-to-end · C3 outbound loop CLOSED · 5 core bugs caught + fixed)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 12 CLOSED · coordinator/planning detour: triad + planogram designs + model-wide retention audit + Mode-3-MVP correction authored into core `m8trx-shared/status/active/` · twin code UNCHANGED at `f25cbcc` · the S11 Connect-runtime continuation was deferred → still next)
 
-> **PICK UP HERE (Session 12):** The **entire M8TRX Connect surface is now live-validated** against dev — inbound
+> **S12 (coordinator detour, 2026-06-30) — no twin implementation.** Authored 5 design artifacts into core
+> `m8trx-shared/status/active/`: the **Task/Calendar/Notification triad**, **Planogram** (3 ingestion modes),
+> the **historical-retention audit**, the **`CONNECT-PLANOGRAM-MVP-SCOPE-CORRECTION`**, and the **`PROPOSED-9A-9B-FR-EDITS`**
+> checklist (all `…-2026-06-30.md`). F7 resolved (per-fixture deviation junction + live/replay two-layer); retention
+> found **prose-not-DDL** (A/B + as-of BROKEN). **★ planogram-via-Connect is MVP** (`mig 152a`→MVP, fork #10 superseded).
+> **Open items are Bob's / backend's, NOT twin implementation:** FR-TRAFFIC-31 routing ratification · the `mig 152a`→MVP +
+> fork-#10-superseded roadmap edits (v2 §9 + this STATUS — **Bob carries, option A**) · the `9a`/`9b` FR-edit checklist ·
+> retention Pass-1 migration (core). Memory captured ([[project_mode3_planogram_connect_is_mvp]],
+> [[project_core_retention_is_prose_not_ddl]], [[reference_f7_deviation_per_fixture_junction]]). Detail:
+> `status/session-notes/2026-06-30-session-12-coordinator-triad-planogram-retention-audit.md`.
+>
+> **PICK UP HERE (Session 13) — resume the twin implementation track:** The **entire M8TRX Connect surface is now live-validated** against dev — inbound
 > (sales + catalog/pricing/shipment) · Bearer self-verify (closed loop) · outbound `stocktake_result` (C3: happy
 > path + retry→heal). **CORE-REQ-003 exercised end-to-end; ALL PRs merged — main at `f25cbcc`** (PR #6 outbound
 > receiver landed). **First actions:** (1) **start the `LIVE-OPERATIONS.md` runtime** (`reference/connect/`) — per-site
