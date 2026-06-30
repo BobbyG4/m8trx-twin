@@ -5,6 +5,9 @@ import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.ChannelConfig
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
 import com.m8trx.twin.connect.model.outbound.StocktakeResult
+import com.m8trx.twin.connect.model.webhook.DirectiveEnvelope
+import com.m8trx.twin.connect.model.webhook.PlanogramDocument
+import com.m8trx.twin.connect.model.webhook.PlanogramLine
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
 import com.m8trx.twin.connect.model.webhook.SaleEvent
 import com.m8trx.twin.connect.model.webhook.ShipmentLine
@@ -40,6 +43,7 @@ fun main() {
     outboundReceiverLoopback()
     dryRunAndFormatterChecks()
     saleStreamEpcLoader()
+    planogramDirectiveCasing()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -182,6 +186,61 @@ private fun saleStreamEpcLoader() {
     check(excl.none { it in epcs }) { "loadFloorEpcs must drop excluded EPCs" }
     check(epcs.none { it.isBlank() }) { "loadFloorEpcs must drop blank EPCs" }
     log.info("[PASS] sale-stream EPC loader: {} floor EPCs (distinct, BOH + artifacts excluded)", epcs.size)
+}
+
+/**
+ * Mode-3 planogram directive (§6.1): snake_case on the inbound plane, round-trips, and the DTO
+ * deserializes the REAL builder output (proves `build_planogram.py` ⇄ the driver DTO agree).
+ */
+private fun planogramDirectiveCasing() {
+    val line = PlanogramLine(
+        fixtureCode = "GB-R3-U1",
+        fixtureName = "Gondola R3 Back U1",
+        spaceType = "sales_floor",
+        department = "snow",
+        sku = "2456185",
+        ean = "3608449847032",
+        name = "Wedze Women's BL100 Ski Base Layer Bottom",
+        lineItemType = "product_placement",
+        requiredQty = 4,
+        facings = 1,
+        positionSequence = 1,
+    )
+    val doc = PlanogramDocument(
+        format = "m8trx_standard",
+        version = "v1",
+        directiveRef = "PLN-test-deadbeef",
+        storeId = "dec-us-denver",
+        siteRef = "dec-us-denver",
+        sourceDigest = "deadbeef",
+        lines = listOf(line),
+    )
+    val envelope = DirectiveEnvelope.planogram(integrationId = "twin-pos", doc = doc, effectiveDate = "2026-08-01T00:00:00")
+    val json = ConnectMappers.snake.writeValueAsString(envelope)
+    listOf(
+        "directive_kind", "integration_id", "source_format", "site_ref", "effective_date", "payload",
+        "fixture_code", "line_item_type", "required_qty", "position_sequence", "source_digest",
+    ).forEach {
+        check(json.contains("\"$it\"")) { "directive envelope must serialize snake field $it: $json" }
+    }
+    check(json.contains("\"directive_kind\":\"planogram\"")) { "directive_kind must be planogram: $json" }
+    listOf("directiveKind", "requiredQty", "lineItemType", "fixtureCode").forEach {
+        check(!json.contains(it)) { "inbound plane must not leak camelCase $it: $json" }
+    }
+    check(ConnectMappers.snake.readValue<DirectiveEnvelope>(json) == envelope) { "directive envelope must round-trip" }
+
+    // the DTO must deserialize the REAL builder output (build_planogram.py → planogram.json)
+    val denver = Path.of("reference/data/chain/stores/dec-us-denver/planogram.json")
+    if (Files.exists(denver)) {
+        val loaded = ConnectMappers.snake.readValue<PlanogramDocument>(Files.readAllBytes(denver))
+        check(loaded.format == "m8trx_standard") { "loaded planogram.json format must be m8trx_standard, got ${loaded.format}" }
+        check(loaded.lines.isNotEmpty()) { "loaded planogram.json must carry lines" }
+        check(loaded.lines.all { it.requiredQty > 0 }) { "every placement must require > 0 units" }
+        check(loaded.lines.all { it.fixtureCode.isNotBlank() && it.sku.isNotBlank() }) { "every line needs a fixture_code + sku" }
+        log.info("[PASS] planogram directive: snake casing + round-trip + loaded {} real Denver lines", loaded.lines.size)
+    } else {
+        log.warn("[PASS] planogram directive: snake casing + round-trip (Denver planogram.json absent — run scripts/build_planogram.py)")
+    }
 }
 
 private fun post(http: HttpClient, url: String, body: ByteArray, signature: String?): HttpResponse<String> {
