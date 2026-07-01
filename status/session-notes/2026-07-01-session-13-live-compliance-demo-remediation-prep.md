@@ -64,3 +64,26 @@ The **live-compliance demo is PROVEN end-to-end** — the payoff of the S12 plan
 - **To file:** the compliance read-back TWIN-REQ (403 `CONNECT_NOT_EXPOSED` evidence) — draft at `status/briefs/TWIN-REQ-DRAFT-planogram-compliance-readback-2026-06-30.md`; strengthen with today's 403 and file per the B3 decision.
 - **Creds:** `.env` intact (`M8TRX_TWIN_BEARER` + full set), Bearer LIVE. Demo EPC files in scratchpad; `.twin-state/sold-epcs.txt` has the 12 demo sales appended (gitignored).
 - **Live-fire recipe (sales):** `set -a; source .env; set +a` then `M8TRX_STREAM_EPC_FILE=<file> M8TRX_STREAM_COUNT=<n> M8TRX_RUN_ID=<id> ./gradlew --no-daemon connectSaleStream`. Deterministic via a per-SKU EPC file; sold-log auto-excludes.
+
+---
+
+## Remediation arc + FR-COLLECT-ID — LIVE continuation (supersedes "IN PROGRESS" above)
+
+The remediation arc ran to completion in-session (Backend built the ingester live, twin drove it):
+
+- **Movement/transfer contract LOCKED** (co-designed up front, not hold-for-as-built): `X-Data-Type: inventory_movement`, `{external_movement_id?, site_id?, (to_zone_id|to_fixture_code), items:[{epc}], movement_type}` — as-built matched the lock exactly. Twin's emitter (`MovementDriver`/`connectMovementDrive`) needed zero rework; dry-run envelope verified against §8.
+- **Remediation PROVEN via relocation** (Bob-authorized live fires): #2 climbed `0→2` (a BOH relocate) and **#6 fully recovered `2→3` COMPLIANT** (`compliant` event) — the **first live runtime `thing_location` writes**. Summary **24/2/2 → 25/2/1**. `sell→drift→restock→remediate` demonstrated end-to-end on real, product-linked inventory.
+- **★ 7th core bug caught (#72, FIXED):** the first movement smoke got a **200 ack but `integration_event` FAILED** — on the 14-site M8trxDemo tenant, `to_fixture_code` can't resolve which store, and the deployed single-site fallback returned null. Twin's insistence on server-side readback caught it (the 200 hid it). Bob merged the **per-item-site fix (#72)** — resolve the code at the item's own site → `site_id` optional even multi-site; re-fire (no site_id) landed clean.
+- **Receive→relocate MECHANICS proven, but #7 blocked by a distinct gap:** minted a fresh `2706524` EPC (`30396061C000080035A4E901`, round-trip + collision verified via the SGTIN-96 encoder) → **received `created=1`** (site-level) → **relocated** to e82a21f3 (custody `received`→`moved`, relocate upsert clean, recompute ran). **BUT #7 didn't climb** — `thing.product_id` is NULL. Root cause = the receive path is **EPC-only** (no product resolution) → **FR-INTEG-04 / the FR-COLLECT-ID Identifier Resolution Pipeline (Volare §9a, FR-COLLECT-07..10) isn't built.** The product-less receive is a *symptom*, not a movement bug. Bob's call: **bank it** (option 2 — mechanics proven; #7's compliance climb deferred to FR-COLLECT-ID, a ~30-line decoder port on core's side).
+- **★ Handed core the fix reference:** twin owns the validated **clean-room Decathlon SGTIN-96 EPC↔EAN decoder** — shared as `m8trx-shared/twin/insights/EPC-EAN-DECODER-FR-COLLECT-ID-2026-07-01.md` + inline in comms. IP note flagged LOUD: **use twin's clean-room impl, cite "observed Decathlon SGTIN-96", NOT the proprietary pantos `EpcToEan.java`** (reference-only, never copy). Pipeline for FR-COLLECT-07 = `decode(EPC)→EAN-13→` core's existing `raw_item_identifier→product.barcode/gtin` lookup. Backend stashed it + pointed their FR-COLLECT-ID note at it.
+- **Built `connectReceiveDrive`** (`ConnectReceiveDrive.kt` + gradle task over `DeviceDriver.receive`) — closes the old "DeviceDriver runner" harness TODO. Dry-run default, `M8TRX_RECEIVE_LIVE` gated.
+
+**Two core findings this session (integrator-driven-testing thesis, again):** #72 multi-site movement resolution (**FIXED**) + FR-INTEG-04/FR-COLLECT-ID receive product-linkage (**surfaced + decoder handed off**, deferred to next round per Bob).
+
+**Full compliance lifecycle now PROVEN on real data:** planogram directive → resolve → evaluate → **live drift** (sales, compliant→partial→non) → **remediation** (relocation restock-from-back #2/#6 climbing; receive→relocate mechanics for new stock). Marketing/investor-grade.
+
+**Commits (branch `feature/connect-movement-emitter`, PR opened):** `6f55cb0` (feat: movement emitter scaffold) · `28c99fd` (feat: receive driver) · docs (this note + STATUS/TRACK/SESSION-LOG). The demo itself ran on the webhook plane + gitignored `.twin-state` (no repo change); EPC files in scratchpad.
+
+**Live-fire recipes (movement / receive):**
+- movement: `M8TRX_MOVEMENT_EPC_FILE=<file> M8TRX_MOVEMENT_TO_FIXTURE=GB-R3-U1 M8TRX_MOVEMENT_EXT_ID=<id> M8TRX_MOVEMENT_LIVE=true ./gradlew --no-daemon connectMovementDrive` (no `site_id` needed post-#72).
+- receive: `M8TRX_RECEIVE_EPC_FILE=<file> M8TRX_RECEIVE_SITE_ID=84f2a1c1-… M8TRX_RECEIVE_SPACE_ID=e19e1502-… M8TRX_RECEIVE_LIVE=true ./gradlew --no-daemon connectReceiveDrive` (Denver site + Back Room space; receive doesn't persist spaceId).

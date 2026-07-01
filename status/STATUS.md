@@ -2,7 +2,7 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-01 — Session 13 · ★ LIVE-COMPLIANCE DEMO PROVEN end-to-end — 12 real sales drove compliance compliant→partial→non_compliant · 24/2/2 · triple-verified · remediation arc started with Backend)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-01 — Session 13 · ★ FULL COMPLIANCE LIFECYCLE PROVEN — drift (12 sales, 24/2/2) + REMEDIATION (relocation #2/#6 climbed; receive→relocate mechanics) · 2 core bugs caught (#72 multi-site movement FIXED · FR-INTEG-04/FR-COLLECT-ID receive product-linkage surfaced + SGTIN-96 decoder handed off) · movement+receive drivers built, PR open)
 
 > **PICK UP HERE (Session 13 ongoing / 14):** **The live-compliance demo is PROVEN end-to-end.** Backend shipped the
 > **compliance-EVALUATION engine** (services #69 — `POST /api/v2/compliance/directives/{id}/evaluate` + `GET …/state` +
