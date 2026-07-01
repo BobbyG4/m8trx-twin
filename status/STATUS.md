@@ -2,21 +2,31 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-06-30 — Session 12 CLOSED · ★ Planogram Mode 3 driver LIVE-PROVEN end-to-end · twin drove a real 28-target directive → landed → resolved (triple-verified) · 6th core bug caught)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-01 — Session 13 · ★ LIVE-COMPLIANCE DEMO PROVEN end-to-end — 12 real sales drove compliance compliant→partial→non_compliant · 24/2/2 · triple-verified · remediation arc started with Backend)
 
-> **PICK UP HERE (Session 13):** **Planogram Mode 3 is LIVE-PROVEN end-to-end** — the twin drove a real 28-target
-> `directive_kind='planogram'` directive into M8trxDemo → landed (`compliance_directive a3b2bbde` + `_site` + 28
-> `_target`) → operator-mapped → **28 targets resolved** (triple-verified: twin fire + Backend readback #64/#65/#66 +
-> COORD independent on mother). **PR #7 merged; main `ae5fcf2`.** Driver: `build_planogram.py` (10× `planogram.json`) +
-> `PlanogramDirectiveDriver` + `connectPlanogramDrive` (dry-run default). **First actions:** **(1)** settle the
-> **wrong-zone mapping** with Backend — the smoke's operator mapping pointed `GB-R3-U1` at the wrong zone
-> ("Gondola R6 Front U1" = code `GF-R6-U1`, not the real "Gondola R3 Back U1"); pick **(a)** twin sends vendor codes +
-> supplies the code→zone map from `layout.json` / **(b)** twin sends zone *names* → auto-resolve. **Load-bearing for the
-> live-compliance demo** (else compliance scores a zone with no matching inventory). **(2)** run the **live-compliance
-> demo** once the mapping's right — re-fire correct → activate (`effective_date=today`) → sale-stream tap → watch
-> compliance move. **(3)** scale to the **full Denver** directive (2,504 targets). **Gated on Backend:** FR-PLN-08
-> compliance-check task-gen needs the **Notifications spine** (Triad Slice-1) — Backend has more to build before full
-> demo-ready. Detail: `status/session-notes/2026-06-30-session-12-planogram-mode3-driver-live.md`.
+> **PICK UP HERE (Session 13 ongoing / 14):** **The live-compliance demo is PROVEN end-to-end.** Backend shipped the
+> **compliance-EVALUATION engine** (services #69 — `POST /api/v2/compliance/directives/{id}/evaluate` + `GET …/state` +
+> a **recompute-on-sale hook**); Bob authorized the one-time **re-point** of the 28 resolved targets → the correct zone
+> **`e82a21f3`** (Gondola R3 Back U1 = code `GB-R3-U1`, where the stock actually is); operator `/evaluate` set the
+> baseline **27/1/0**. Twin drove **12 real sales** (`connectSaleStream`) → compliance drifted **compliant →
+> partially_compliant → non_compliant** (incl. the `req=1` one-event edge case) → **24/2/2**, 4 targets spanning the arc,
+> **triple-verified** every beat (twin fire → twin self-verify SOLD via `items/details` → Backend live `/state`).
+> **The S12 wrong-zone mapping is RESOLVED** (re-pointed to `e82a21f3`). Detail:
+> `status/session-notes/2026-07-01-session-13-live-compliance-demo-remediation-prep.md`.
+>
+> **NEXT — the REMEDIATION arc (in progress with Backend):** **(1)** Backend is building the **Connect inbound
+> movement/transfer ingester** (`X-Data-Type: inventory_movement`, FR-INTEG S178 — the missing runtime `thing_location`
+> writer) → unblocks **non→compliant remediation** (stock returns to shelf). **Contract co-designed** (Backend's proposed
+> payload + twin's 3 notes: EPC-qty-implicitly-1 · per-item-not-all-or-nothing · relocation(#2/#6)+receive(#7) split).
+> **(2)** Twin is scaffolding the **restock emitter** (`MovementDriver` + `connectMovementDrive`, dry-run default,
+> **HOLD-FIRE** until Backend's ingester deploys) — relocate backroom/other-gondola EPCs of SKUs 2456187/2456191 →
+> `GB-R3-U1` (restock-from-back for #2/#6); #7 (2706524) needs the existing **receive** path (unavailable_at_site).
+> **(3)** Fire the **remediation demo** when the ingester lands → watch compliance climb **non→partial→compliant** +
+> remediated events. **(4)** **File the compliance read-back TWIN-REQ** — twin's Connect key gets **`403
+> CONNECT_NOT_EXPOSED`** on `GET /state` (drove the whole demo blind; loop closed only via Backend) — hard evidence now
+> exists; draft `status/briefs/TWIN-REQ-DRAFT-planogram-compliance-readback-2026-06-30.md`. **(5)** Optional: capture a
+> marketing/investor **visual** of the proven compliance arc. **Still gated on Backend (deferred):** FR-PLN-08
+> compliance-check task-gen needs the **Notifications spine** (Triad Slice-1).
 >
 > **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working
 > service Bearer — scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`, tenant-wide) ·
