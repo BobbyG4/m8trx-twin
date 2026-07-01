@@ -16,8 +16,10 @@ import com.m8trx.twin.connect.model.webhook.ShipmentLine
 import com.m8trx.twin.connect.model.webhook.ShipmentManifest
 import com.m8trx.twin.connect.setup.ApiKeyBootstrap
 import com.m8trx.twin.connect.setup.Provisioner
+import com.m8trx.twin.connect.sim.FullLoopDriver
 import com.m8trx.twin.connect.sim.OutboundReceiver
 import com.m8trx.twin.connect.sim.PlanogramDirectiveDriver
+import com.m8trx.twin.connect.sim.RemediateMode
 import com.m8trx.twin.connect.sim.SftpDropDriver
 import org.slf4j.LoggerFactory
 import java.net.URI
@@ -48,6 +50,7 @@ fun main() {
     saleStreamEpcLoader()
     planogramDirectiveCasing()
     inventoryMovementCasing()
+    fullLoopPlan()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -277,6 +280,55 @@ private fun inventoryMovementCasing() {
     check(json.contains("\"to_fixture_code\":\"GB-R3-U1\"")) { "to_fixture_code must carry the target fixture: $json" }
     check(ConnectMappers.snake.readValue<InventoryMovement>(json) == movement) { "inventory_movement must round-trip" }
     log.info("[PASS] inventory movement (as-proposed S178): casing + round-trip, {} items", movement.items.size)
+}
+
+/**
+ * Full-loop plan integrity (CORE-REQ-005 part 1): [FullLoopDriver.plan] is pure/offline (reads local data
+ * files, no core), so we assert the composed plan's invariants on the REAL Denver GB-R3-U1 slice — drift is
+ * bounded by on-floor stock, floor (drift) and back-of-house (relocate) pools are disjoint, BOH is consumed
+ * once, and remediation never lowers observed. This proves the composition before any live wiring.
+ */
+private fun fullLoopPlan() {
+    val siteIds = Path.of("reference/data/chain/site_ids.csv")
+    val denverPj = Path.of("reference/data/chain/stores/dec-us-denver/planogram.json")
+    val denverEpcs = Path.of("reference/data/chain/stores/dec-us-denver/epcs.csv")
+    if (!Files.exists(siteIds) || !Files.exists(denverPj) || !Files.exists(denverEpcs)) {
+        log.warn("[SKIP] full-loop plan — site_ids.csv / Denver planogram.json / epcs.csv absent (run from repo root)")
+        return
+    }
+    val plan = FullLoopDriver(ConnectConfig.fromEnv()).plan(
+        FullLoopDriver.LoopParams(
+            stores = listOf("dec-us-denver"),
+            fixtures = setOf("GB-R3-U1"),
+            driftPerTarget = 2,
+            remediate = RemediateMode.BOTH,
+            seed = 42L,
+        ),
+    )
+    if (plan.targets.isEmpty()) {
+        log.warn("[SKIP] full-loop plan — 0 targets (GB-R3-U1 not in Denver planogram, or Denver not in site_ids)")
+        return
+    }
+    val allDrift = ArrayList<String>()
+    val allReloc = ArrayList<String>()
+    for (t in plan.targets) {
+        check(t.requiredQty > 0) { "target ${t.fixture}/${t.sku} must have required_qty > 0" }
+        check(t.driftPicks.size == minOf(2, t.onFloorNow)) { "driftPerTarget=2 → picks=min(2,onFloor): ${t.fixture}/${t.sku}" }
+        check(t.driftPicks.toSet().size == t.driftPicks.size) { "drift picks must be distinct: ${t.fixture}/${t.sku}" }
+        check(t.survivingFloor.size == t.onFloorNow - t.driftPicks.size) { "surviving = onFloor - drift: ${t.fixture}/${t.sku}" }
+        check(t.driftPicks.toSet().intersect(t.survivingFloor.toSet()).isEmpty()) { "drift ∩ surviving must be empty: ${t.fixture}" }
+        check(t.driftPicks.toSet().intersect(t.relocatePicks.toSet()).isEmpty()) { "floor(drift) ∩ BOH(relocate) must be empty: ${t.fixture}" }
+        check(t.relocatePicks.size <= t.bohAvailable) { "relocate picks can't exceed BOH available: ${t.fixture}/${t.sku}" }
+        check(t.observedAfterRemediate >= t.observedAfterDrift) { "remediation must not lower observed: ${t.fixture}/${t.sku}" }
+        allDrift += t.driftPicks
+        allReloc += t.relocatePicks
+    }
+    check(allDrift.toSet().size == allDrift.size) { "no EPC may be drifted by two targets" }
+    check(allReloc.toSet().size == allReloc.size) { "no BOH EPC may be relocated by two targets (consumption)" }
+    log.info(
+        "[PASS] full-loop plan (CORE-REQ-005): {} Denver GB-R3-U1 target(s), drift+relocate disjoint + BOH consumed once",
+        plan.targets.size,
+    )
 }
 
 private fun post(http: HttpClient, url: String, body: ByteArray, signature: String?): HttpResponse<String> {
