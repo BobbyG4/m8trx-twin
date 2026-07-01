@@ -191,6 +191,22 @@ tasks.register<JavaExec>("connectFullLoop") {
     )
 }
 
+// Launch-quality stress drive (CORE-REQ-005 part 2) — concurrent multi-arm sale_event storm across the retail
+// stores (scale · concurrency · NoScope/store-xref/site-scoped arms · dedup+unmapped probes · breakage report).
+// SAFE: dry-run by default (reports the campaign volume, sends nothing). M8TRX_STRESS_LIVE=true hammers the
+// tenant — ONLY after a coordinated clear-to-hammer (needs M8TRX_TWIN_WEBHOOK_KEY + M8TRX_TWIN_BEARER in .env).
+tasks.register<JavaExec>("connectStress") {
+    group = "verification"
+    description = "Drive the at-scale sale-load stress test (concurrent, multi-arm). Dry-run unless M8TRX_STRESS_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ConnectStressKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
 // catalog mix across all 10 stores on the webhook plane (no Bearer needed).
 tasks.register<JavaExec>("connectChainActivity") {

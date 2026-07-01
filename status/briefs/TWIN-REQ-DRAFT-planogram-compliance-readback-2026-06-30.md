@@ -1,3 +1,5 @@
+> **FILED 2026-07-02 as TWIN-REQ-003** → `m8trx-shared/twin/requirements/TWIN-REQ-003-connect-compliance-readback.md` (per CORE-REQ-005 GO). This draft is retained as history.
+
 # TWIN-REQ DRAFT — Public compliance/directive read-back for Connect Mode-3 integrators
 
 **Status:** DRAFT (twin-side, unfired) — 2026-06-30, Session 12 (T4 finding).

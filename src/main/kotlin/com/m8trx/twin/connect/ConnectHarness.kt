@@ -20,7 +20,9 @@ import com.m8trx.twin.connect.sim.FullLoopDriver
 import com.m8trx.twin.connect.sim.OutboundReceiver
 import com.m8trx.twin.connect.sim.PlanogramDirectiveDriver
 import com.m8trx.twin.connect.sim.RemediateMode
+import com.m8trx.twin.connect.sim.SaleArm
 import com.m8trx.twin.connect.sim.SftpDropDriver
+import com.m8trx.twin.connect.sim.StressHarness
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
@@ -51,6 +53,7 @@ fun main() {
     planogramDirectiveCasing()
     inventoryMovementCasing()
     fullLoopPlan()
+    stressPlan()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -329,6 +332,37 @@ private fun fullLoopPlan() {
         "[PASS] full-loop plan (CORE-REQ-005): {} Denver GB-R3-U1 target(s), drift+relocate disjoint + BOH consumed once",
         plan.targets.size,
     )
+}
+
+/**
+ * Stress-campaign plan integrity (CORE-REQ-005 part 2): [StressHarness.plan] is pure/offline, so we assert
+ * the campaign it builds on the real Denver floor — every requested arm is represented, NoScope jobs carry a
+ * distinct unsold EPC while the SKU arms carry none, and the dedup-replay + unmapped-store edge probes are
+ * present. Proves the at-scale campaign shape before any live fire.
+ */
+private fun stressPlan() {
+    val siteIds = Path.of("reference/data/chain/site_ids.csv")
+    val denverEpcs = Path.of("reference/data/chain/stores/dec-us-denver/epcs.csv")
+    if (!Files.exists(siteIds) || !Files.exists(denverEpcs)) {
+        log.warn("[SKIP] stress plan — site_ids.csv / Denver epcs.csv absent (run from repo root)")
+        return
+    }
+    val plan = StressHarness(ConnectConfig.fromEnv()).plan(
+        StressHarness.StressParams(stores = listOf("dec-us-denver"), salesPerStore = 30, seed = 7L),
+    )
+    check(plan.jobs.isNotEmpty()) { "stress plan produced no jobs" }
+    check(plan.jobs.map { it.arm }.toSet() == setOf(SaleArm.NOSCOPE, SaleArm.STORE_XREF, SaleArm.SITE_SCOPED)) {
+        "all three site-resolution arms must be represented"
+    }
+    val noscope = plan.jobs.filter { it.arm == SaleArm.NOSCOPE && it.note.isEmpty() }
+    check(noscope.all { it.epc != null }) { "NoScope jobs must carry an EPC" }
+    check(noscope.mapNotNull { it.epc }.toSet().size == noscope.size) { "NoScope EPCs must be distinct (no double-sell)" }
+    check(plan.jobs.filter { it.arm != SaleArm.NOSCOPE }.all { it.epc == null && it.sku.isNotEmpty() }) {
+        "SKU arms must carry a SKU and no EPC"
+    }
+    check(plan.jobs.any { it.storeCode == StressHarness.UNMAPPED_STORE }) { "unmapped-store quarantine probe must be present" }
+    check(plan.jobs.groupingBy { it.saleId }.eachCount().any { it.value > 1 }) { "dedup-replay (duplicate external_sale_id) must be present" }
+    log.info("[PASS] stress plan (CORE-REQ-005 part 2): {} jobs across 3 arms + dedup + unmapped probes", plan.jobs.size)
 }
 
 private fun post(http: HttpClient, url: String, body: ByteArray, signature: String?): HttpResponse<String> {
