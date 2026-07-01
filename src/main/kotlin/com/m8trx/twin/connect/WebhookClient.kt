@@ -19,6 +19,14 @@ object WebhookDataType {
      * dedicated channel needed to fire.
      */
     const val PLANOGRAM_DIRECTIVE = "planogram_directive"
+
+    /**
+     * Inventory-movement routing header — AS-PROPOSED (services S178, Backend's directional contract for
+     * the remediation-demo ingester; not yet confirmed deployed). Routes the relocation envelope
+     * (`to_fixture_code`/`to_zone_id` + `items[]`) to update `thing_location.zone_id` for each item (stays
+     * `in_stock`) — rides the existing twin-pos webhook auth, no dedicated channel needed to fire.
+     */
+    const val INVENTORY_MOVEMENT = "inventory_movement"
 }
 
 /**

@@ -6,6 +6,8 @@ import com.m8trx.twin.connect.model.bearer.ChannelConfig
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
 import com.m8trx.twin.connect.model.outbound.StocktakeResult
 import com.m8trx.twin.connect.model.webhook.DirectiveTarget
+import com.m8trx.twin.connect.model.webhook.InventoryMovement
+import com.m8trx.twin.connect.model.webhook.MovementItem
 import com.m8trx.twin.connect.model.webhook.PlanogramDirective
 import com.m8trx.twin.connect.model.webhook.PlanogramDocument
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
@@ -45,6 +47,7 @@ fun main() {
     dryRunAndFormatterChecks()
     saleStreamEpcLoader()
     planogramDirectiveCasing()
+    inventoryMovementCasing()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -239,6 +242,41 @@ private fun planogramDirectiveCasing() {
     } else {
         log.warn("[PASS] planogram directive (as-built #64): casing + round-trip (Denver planogram.json absent — run scripts/build_planogram.py)")
     }
+}
+
+/**
+ * Inventory-movement (remediation demo, AS-PROPOSED services S178): snake_case on the inbound plane,
+ * round-trips. Mirrors [planogramDirectiveCasing]'s casing assertion shape for the new ingester.
+ */
+private fun inventoryMovementCasing() {
+    val movement = InventoryMovement(
+        externalMovementId = "TWIN-MOV-TEST-1",
+        siteId = "site-uuid-1",
+        toFixtureCode = "GB-R3-U1",
+        items = listOf(
+            MovementItem(epc = "3039606303C19FC00021C51C"),
+            MovementItem(epc = "3039606303C19FC0005756B1"),
+        ),
+        movementType = "relocation",
+    )
+    val json = ConnectMappers.snake.writeValueAsString(movement)
+    listOf(
+        "external_movement_id",
+        "site_id",
+        "to_fixture_code",
+        "items",
+        "epc",
+        "movement_type",
+    ).forEach {
+        check(json.contains("\"$it\"")) { "inventory_movement must serialize snake field $it: $json" }
+    }
+    listOf("externalMovementId", "toFixtureCode", "movementType").forEach {
+        check(!json.contains(it)) { "inbound plane must not leak camelCase $it: $json" }
+    }
+    check(!json.contains("to_zone_id")) { "null one-of fields must be omitted (NON_NULL): $json" }
+    check(json.contains("\"to_fixture_code\":\"GB-R3-U1\"")) { "to_fixture_code must carry the target fixture: $json" }
+    check(ConnectMappers.snake.readValue<InventoryMovement>(json) == movement) { "inventory_movement must round-trip" }
+    log.info("[PASS] inventory movement (as-proposed S178): casing + round-trip, {} items", movement.items.size)
 }
 
 private fun post(http: HttpClient, url: String, body: ByteArray, signature: String?): HttpResponse<String> {
