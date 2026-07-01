@@ -174,6 +174,23 @@ tasks.register<JavaExec>("connectReceiveDrive") {
     )
 }
 
+// Full-loop drive (CORE-REQ-005 part 1) — composes the built P0 drivers into ONE parameterized run of the
+// path-(b) demo-nucleus loop: (opt) directive → sale-drift → items/details assert (SOLD) → movement/scan
+// remediate → items/details assert (present) → per-target compliance expectation (the backend session's oracle).
+// SAFE: dry-run by default (plans + logs the whole loop + expectation, sends nothing). M8TRX_LOOP_LIVE=true
+// drives it (needs M8TRX_TWIN_WEBHOOK_KEY + M8TRX_TWIN_BEARER in .env). Re-runnable per surface smoke + at scale.
+tasks.register<JavaExec>("connectFullLoop") {
+    group = "verification"
+    description = "Drive the full path-(b) loop (directive→drift→assert→remediate→assert). Dry-run unless M8TRX_LOOP_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ConnectFullLoopKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
 // catalog mix across all 10 stores on the webhook plane (no Bearer needed).
 tasks.register<JavaExec>("connectChainActivity") {
