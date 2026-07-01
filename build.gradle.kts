@@ -141,6 +141,22 @@ tasks.register<JavaExec>("connectPlanogramDrive") {
     )
 }
 
+// Inventory-movement drive (remediation demo, Backend's AS-PROPOSED contract services S178) — relocates
+// from-location EPCs onto a compliance fixture so a drifted compliance_target can climb back to compliant.
+// SAFE: dry-run by default (builds + logs the movement envelope, sends nothing). M8TRX_MOVEMENT_LIVE=true
+// to send — additionally HOLD FIRE until Backend confirms the inventory_movement ingester deployed.
+tasks.register<JavaExec>("connectMovementDrive") {
+    group = "verification"
+    description = "Drive an inventory_movement relocation (remediation demo). Dry-run unless M8TRX_MOVEMENT_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ConnectMovementDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Multi-site chain-activity stream (COORD S11 "broaden the fill") — weighted sale/restock/pricing/
 // catalog mix across all 10 stores on the webhook plane (no Bearer needed).
 tasks.register<JavaExec>("connectChainActivity") {
