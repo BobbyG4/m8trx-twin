@@ -14,19 +14,25 @@
 > **The S12 wrong-zone mapping is RESOLVED** (re-pointed to `e82a21f3`). Detail:
 > `status/session-notes/2026-07-01-session-13-live-compliance-demo-remediation-prep.md`.
 >
-> **NEXT — the REMEDIATION arc (in progress with Backend):** **(1)** Backend is building the **Connect inbound
-> movement/transfer ingester** (`X-Data-Type: inventory_movement`, FR-INTEG S178 — the missing runtime `thing_location`
-> writer) → unblocks **non→compliant remediation** (stock returns to shelf). **Contract co-designed** (Backend's proposed
-> payload + twin's 3 notes: EPC-qty-implicitly-1 · per-item-not-all-or-nothing · relocation(#2/#6)+receive(#7) split).
-> **(2)** Twin is scaffolding the **restock emitter** (`MovementDriver` + `connectMovementDrive`, dry-run default,
-> **HOLD-FIRE** until Backend's ingester deploys) — relocate backroom/other-gondola EPCs of SKUs 2456187/2456191 →
-> `GB-R3-U1` (restock-from-back for #2/#6); #7 (2706524) needs the existing **receive** path (unavailable_at_site).
-> **(3)** Fire the **remediation demo** when the ingester lands → watch compliance climb **non→partial→compliant** +
-> remediated events. **(4)** **File the compliance read-back TWIN-REQ** — twin's Connect key gets **`403
-> CONNECT_NOT_EXPOSED`** on `GET /state` (drove the whole demo blind; loop closed only via Backend) — hard evidence now
-> exists; draft `status/briefs/TWIN-REQ-DRAFT-planogram-compliance-readback-2026-06-30.md`. **(5)** Optional: capture a
-> marketing/investor **visual** of the proven compliance arc. **Still gated on Backend (deferred):** FR-PLN-08
-> compliance-check task-gen needs the **Notifications spine** (Triad Slice-1).
+> **REMEDIATION PROVEN + drivers shipped (PR [#8](https://github.com/BobbyG4/m8trx-twin/pull/8) MERGED).** Backend shipped
+> the movement ingester (services #71→#72); twin drove live relocations — **#6 fully recovered `2→3` compliant**, #2 `0→2`,
+> **24/2/2 → 25/2/1**, the **first live runtime `thing_location` writes**. **Receive→relocate mechanics proven** (minted +
+> received a 2706524 unit → relocated). Built `connectMovementDrive` + `connectReceiveDrive`. **2 core bugs caught:** #72
+> (multi-site movement resolution — **FIXED**) + **FR-INTEG-04/FR-COLLECT-ID** (EPC-only receive → `product_id` NULL → #7
+> couldn't climb; banked, Bob option 2). Handed core the **clean-room SGTIN-96 EPC↔EAN decoder** (relocated core-side to
+> `m8trx-shared/reference/dev/EPC-EAN-DECODER-FR-COLLECT-ID.md`).
+>
+> **NEXT SESSION (14):** **(1) FR-COLLECT-07 close-out** — Backend's building the Identifier Resolution Pipeline
+> (EPC→SKU/EAN decoder) so receive links product; **when Backend pings it deployed, re-fire #7** (`receive→relocate`) → it
+> climbs to compliant (closes the receive-of-new-stock edge). When FR-COLLECT kicks off, deliver twin's owed artifacts:
+> the **EPC→EAN→SKU test-vector fixture** (from the 169k validated tags), the **Hansae 2nd-scheme** template
+> (`reference/data/mk-trend/`), and **resolution-rate health-metric** pairing. **(2) The full "play" / activity runtime**
+> (`ACTIVITY-PLAN.md`) — drift + remediation now proven, so **animate the ongoing 24/7 operation** (traffic → transactions
+> → try-on → staff/restock/stocktake → LP/EAS) on the validated Connect sims + the new movement/receive drivers.
+> **(3)** Optional: a **marketing/investor visual** of the proven compliance lifecycle (drift → remediation). **Read-back
+> TWIN-REQ = Backend's now** (folds into their Connect **read-surface** on the FR-INTEG rollout → a scoped `/state` read
+> for twin self-verify; interim stays DB-reads-via-Backend — no twin filing needed). **Still gated on Backend (deferred):**
+> FR-PLN-08 compliance-check task-gen needs the **Notifications spine** (Triad Slice-1).
 >
 > **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working
 > service Bearer — scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`, tenant-wide) ·
@@ -35,11 +41,11 @@
 > integration `5dfba5cd`. ConnectConfig reads `M8TRX_TWIN_BEARER` first (`M8TRX_TWIN_SERVICE_BEARER` is now a fallback alias).
 > Keys-tab throwaway test keys were **revoked** (confirmed 401).
 >
-> **Connect harness — all 7 `connect*` drivers built + exercised** (`com.m8trx.twin.connect`, gradle `connect*` tasks, `connectSelfTest` 7 cases green):
+> **Connect harness — all 9 `connect*` drivers built + exercised** (`com.m8trx.twin.connect`, gradle `connect*` tasks, `connectSelfTest` 8 cases green):
 > `connectMultiSiteSmoke` · `connectSaleStream` (+ sold-EPC persistence `.twin-state/`) · `connectChainActivity`
 > (sale/restock/pricing/catalog × all 10 stores) · `connectSelfVerify` (items/details read-back, the closed loop) ·
 > `connectScanSweep` (DRY-RUN default; `M8TRX_SCAN_LIVE=true` for live §6 scans — hold for BACKEND reader-topology) ·
-> `connectOutboundReceiver` (§9 LAN receiver; PR #6) · **`connectPlanogramDrive`** (Mode-3 `directive_kind='planogram'`, dry-run default; PR #7, LIVE-PROVEN). **Comms:** `twin` seat on Slack `#m8trx-dev` (`@m8trx_twin`,
+> `connectOutboundReceiver` (§9 LAN receiver; PR #6) · **`connectPlanogramDrive`** (Mode-3 `directive_kind='planogram'`; PR #7, LIVE-PROVEN) · **`connectMovementDrive`** (Mode-3 `inventory_movement` relocation; PR #8, LIVE-PROVEN) · **`connectReceiveDrive`** (§6 Bearer item-receive; PR #8). **Comms:** `twin` seat on Slack `#m8trx-dev` (`@m8trx_twin`,
 > dormant-wake Monitor) — coordinator seat retired, Bob drives Backend↔Twin directly. Helpers: `m8trx-shared/brainstorm/comms/slack-*.sh`.
 >
 > ⚠ **Dedup-replay gap (NEW finding, filed for Bob/core CLEANUP):** a *failed* outbound event's content-hash blocks a
