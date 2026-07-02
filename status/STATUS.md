@@ -2,9 +2,18 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-01 — Session 13 · ★ FULL COMPLIANCE LIFECYCLE PROVEN — drift (12 sales, 24/2/2) + REMEDIATION (relocation #2/#6 climbed; receive→relocate mechanics) · 2 core bugs caught (#72 multi-site movement FIXED · FR-INTEG-04/FR-COLLECT-ID receive product-linkage surfaced + SGTIN-96 decoder handed off) · movement+receive drivers built, PR open)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-02 — Session 14 · ★ CORE-REQ-005 parts 1+2 SHIPPED — full-loop compose (`connectFullLoop`, PR #9) + at-scale stress harness (`connectStress`, PR #10) · live stress found the ceiling: conc ≤12 clean / 24 → ~50% `502` = **S8 event-loop starvation reproduced from the front door** · TWIN-REQ-003 filed+pushed · directive→task smoke + conc-1 baseline handed to next session)
 
-> **PICK UP HERE (Session 13 ongoing / 14):** **The live-compliance demo is PROVEN end-to-end.** Backend shipped the
+> **PICK UP HERE (Session 15):** CORE-REQ-005 **parts 1+2 done + merged** (PR #9 `connectFullLoop` = composed path-(b) loop; PR #10 `connectStress` = at-scale multi-arm stress). **TWIN-REQ-003 filed + pushed** (compliance/directive read-back over Connect). Live stress on M8trxDemo (~810 sales, 3 waves) found the dev ceiling: **conc ≤12 clean, 24 → ~50% `502`** — **reproduced S8 event-loop starvation** from the public API (backend deep-dive confirms; fix = `429`@nginx + offload/MVC, **post-demo, NOT demo-blocking**). Throughput plateaus ~10/s; no `429` backpressure.
+>
+> **NEXT:**
+> **(1) directive→task smoke** — rule-engine is **LIVE on master (`f14482a`)**. Drive a directive (`connectPlanogramDrive`, or `connectFullLoop` with `M8TRX_LOOP_PUBLISH_DIRECTIVE=true`) = INPUT; **backend session verifies the auto-created tasks** = OUTPUT (task-read `403 CONNECT_NOT_EXPOSED` to twin — JWT-only). **Run WITH backend watching** (synchronized smoke).
+> **(2) conc-1 latency baseline** — single sales at concurrency 1 to isolate per-txn cost vs contention (localizes the event-loop-starvation root; ~5 requests, cheap).
+> **(3) Part-3 synchronized surface smokes** as Phase-2 surfaces land — Task = LIVE (done); **Notification next** (backend building GetNotifications/count + the notification **RLS user-scope security fix**) → drive a loop event, verify the in-app notification row/badge/deep-link.
+> **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` (+ stale daemon env) → `set -a; . ./.env; set +a` then `./gradlew connect… --no-daemon` (else `M8TRX_TENANT_ID is not set`). **Bearer confirmed LIVE.** Creds in gitignored `.env`: `M8TRX_TWIN_BEARER` · `M8TRX_TWIN_WEBHOOK_KEY` · `M8TRX_TENANT_ID=ecfa6903-5c50-439f-8f80-185982de944e` · `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos`.
+>
+> ---
+> **PICK UP HERE — Session 13 (historical):** **The live-compliance demo is PROVEN end-to-end.** Backend shipped the
 > **compliance-EVALUATION engine** (services #69 — `POST /api/v2/compliance/directives/{id}/evaluate` + `GET …/state` +
 > a **recompute-on-sale hook**); Bob authorized the one-time **re-point** of the 28 resolved targets → the correct zone
 > **`e82a21f3`** (Gondola R3 Back U1 = code `GB-R3-U1`, where the stock actually is); operator `/evaluate` set the
