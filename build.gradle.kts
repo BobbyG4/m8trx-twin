@@ -220,3 +220,20 @@ tasks.register<JavaExec>("connectChainActivity") {
         },
     )
 }
+
+// Site-scope confinement audit (Strand V / SECHARDEN) — coordinator-invocable acceptance gate. Logs in the
+// labeled test cohort as real users (public login → JWT) and probes site confinement across token / store-
+// picker / Hasura-read planes → RED/GREEN matrix; optional at-scale stress. Public-surface only (no psql;
+// psql cohort-shaping stays coordinator/core-side per the twin HARD RULE). Confused-deputy WRITES stay GATED
+// until core provisions throwaway targets. Needs M8TRX_AUDIT_PASSWORD (+ M8TRX_HASURA_URL / M8TRX_AUDIT_SCALE).
+tasks.register<JavaExec>("connectSiteScopeAudit") {
+    group = "verification"
+    description = "Probe site-scope confinement (token/picker/reads) as cohort users → RED/GREEN matrix. Needs M8TRX_AUDIT_PASSWORD."
+    mainClass.set("com.m8trx.twin.connect.ConnectSiteScopeAuditKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
