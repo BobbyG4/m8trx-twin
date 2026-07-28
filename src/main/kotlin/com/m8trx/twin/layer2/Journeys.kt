@@ -70,7 +70,7 @@ class Journeys(
         for (line in lines.distinctBy { it.fixture }) {
             val code = line.fixture.takeIf { fixtures.impressionVisible.any { f -> f.code == it } }
                 ?: anyVisibleFixture.random(rng)
-            cursorMs = dwellAtFixture(ctx, customerId, code, dwellMsFor(ZoneRole.DEPARTMENT_BAND, rng), cursorMs)
+            cursorMs = dwellAtFixture(ctx, customerId, code, fixtureDwellMs(rng), cursorMs)
         }
 
         if (tryOn) {
@@ -102,13 +102,43 @@ class Journeys(
         return if (candidates.isEmpty()) zones.filter { it.role == ZoneRole.DEPARTMENT_BAND }.take(1) else candidates.shuffled(rng).take(target)
     }
 
+    /**
+     * Dwell in a zone by browsing SEVERAL fixtures inside it, splitting the zone's dwell budget between
+     * them — not by standing at one rack for the whole zone median.
+     *
+     * §8's `by_zone_min` (6 min for a department band) is **ZONE** dwell: the time a shopper spends in that
+     * band, across the several fixtures they look at while there. Charging the full zone median to a single
+     * fixture multiplies the day by the fixtures-per-visit factor — it was why a generated day came to 4.3M
+     * samples and a single session ran 31 minutes. Per-rack dwell of 30–90s matches both the literature and
+     * observed behaviour.
+     */
     private fun dwellAtZone(ctx: GeneratorContext, customerId: String, z: RoleZone, cursorMs: Long, rng: KRandom): Long {
         ctx.bus.publish(CustomerReachedZone(ctx.clock.now(), customerId, z.zoneCode))
+        val zoneBudget = dwellMsFor(z.role, rng)
         // Only department bands contain browsable fixtures; other roles are dwell-only for now.
-        val pool = z.department?.let { fixturesByDept[it] } ?: return cursorMs + dwellMsFor(z.role, rng)
-        if (pool.isEmpty()) return cursorMs + dwellMsFor(z.role, rng)
-        return dwellAtFixture(ctx, customerId, pool.random(rng), dwellMsFor(z.role, rng), cursorMs)
+        val pool = z.department?.let { fixturesByDept[it] } ?: return cursorMs + zoneBudget
+        if (pool.isEmpty()) return cursorMs + zoneBudget
+
+        var cursor = cursorMs
+        var remaining = zoneBudget
+        val visits = 1 + rng.nextInt(MAX_FIXTURES_PER_ZONE)
+        repeat(visits) {
+            if (remaining < MIN_DWELL_MS) return@repeat
+            val d = minOf(fixtureDwellMs(rng), remaining)
+            if (d < MIN_DWELL_MS) return@repeat
+            cursor = dwellAtFixture(ctx, customerId, pool.random(rng), d, cursor)
+            remaining -= (d + WALK_GAP_MS)
+        }
+        return cursor
     }
+
+    /**
+     * Time at ONE fixture: 30–90s, floored at [MIN_DWELL_MS] so a visit always clears
+     * `millisTillImpression` (5000ms) and can actually produce an impression.
+     */
+    private fun fixtureDwellMs(rng: KRandom): Long =
+        (FIXTURE_DWELL_MIN_MS + rng.nextDouble() * (FIXTURE_DWELL_MAX_MS - FIXTURE_DWELL_MIN_MS)).toLong()
+            .coerceAtLeast(MIN_DWELL_MS)
 
     private fun dwellAtFixture(ctx: GeneratorContext, customerId: String, fixtureCode: String, dwellMs: Long, cursorMs: Long): Long {
         val samples = browse.browse(fixtureCode, dwellMs, cursorMs, java.util.Random(cursorMs xor fixtureCode.hashCode().toLong()).asKotlinRandom())
@@ -135,6 +165,12 @@ class Journeys(
     private companion object {
         const val WALK_GAP_MS = 4_000L
         const val MIN_DWELL_MS = 6_000L // must clear millisTillImpression (5000) or the visit produces nothing
+
+        // Per-FIXTURE dwell. §8's by_zone_min is ZONE dwell and is split across the fixtures visited inside
+        // that zone; 30-90s at one rack matches the literature and observed behaviour.
+        const val FIXTURE_DWELL_MIN_MS = 30_000L
+        const val FIXTURE_DWELL_MAX_MS = 90_000L
+        const val MAX_FIXTURES_PER_ZONE = 3
     }
 }
 

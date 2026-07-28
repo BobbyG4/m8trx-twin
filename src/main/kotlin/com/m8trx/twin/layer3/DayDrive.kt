@@ -104,29 +104,51 @@ fun main() {
     data class Wire(val ts: Long, val objectId: String, val s: ImpressionOracle.Sample)
     val open = LocalTime.parse("10:00")
     val dayStart = streams.values.flatten().minOf { it.tsMs }
-    var timeline = streams.flatMap { (id, samples) ->
-        val origStart = samples.minOf { it.tsMs }
-        val newStart = dayStart + ((origStart - dayStart) / compress).toLong()
-        samples.map { Wire(newStart + (it.tsMs - origStart), id, it) }
-    }.sortedBy { it.ts }
-    if (timeline.isEmpty()) {
-        log.error("no samples generated — nothing to drive")
-        exitProcess(1)
-    }
-    if (fromHour != null || toHour != null) {
-        val dayStart = timeline.first().ts
+
+    // ⚠ SLICE IN STORE TIME, BEFORE COMPRESSION. Filtering the re-based timeline instead is wrong: the
+    // compressed day spans ~1h of wall time, so "hour 17" lands far past its end and the slice comes back
+    // EMPTY. Window on the original timestamps, then re-base only the survivors.
+    //
+    // A shopper is kept whole if their session STARTS inside the window — clipping mid-session would cut
+    // episodes and silently destroy the very dwell the run exists to produce.
+    val sliced: Map<String, List<ImpressionOracle.Sample>> = if (fromHour == null && toHour == null) {
+        streams
+    } else {
         val lo = dayStart + ((fromHour ?: open.hour) - open.hour) * 3_600_000L
         val hi = dayStart + ((toHour ?: 24) - open.hour) * 3_600_000L
-        timeline = timeline.filter { it.ts in lo until hi }
-        log.info("sliced to hours {}..{} → {} samples", fromHour, toHour, timeline.size)
+        streams.filterValues { it.minOf { s -> s.tsMs } in lo until hi }
+            .also { log.info("sliced to store hours {}..{} → {} shoppers (sessions kept whole)", fromHour, toHour, it.size) }
     }
+    if (sliced.isEmpty()) {
+        log.error("no shoppers in the requested window — nothing to drive")
+        exitProcess(1)
+    }
+
+    val sliceStart = sliced.values.flatten().minOf { it.tsMs }
+    val timeline = sliced.flatMap { (id, samples) ->
+        val ordered = samples.sortedBy { it.tsMs }
+        val origStart = ordered.first().tsMs
+        var t = sliceStart + ((origStart - sliceStart) / compress).toLong() // arrival: compressed
+        val out = ArrayList<Wire>(ordered.size)
+        out.add(Wire(t, id, ordered.first()))
+        for (i in 1 until ordered.size) {
+            val d = ordered[i].tsMs - ordered[i - 1].tsMs
+            // ≤1000ms ⇒ INSIDE an episode ⇒ replay verbatim, or the clocks never accumulate.
+            // Anything larger is idle — a walk to the next rack, or minutes standing in a zone that emits
+            // no samples at all — and is exactly what the factor is for. Leaving intra-shopper idle at real
+            // time was over-conservative: it kept a session at 16 minutes of mostly dead air.
+            t += if (d <= EPISODE_GAP_MS) d else (d / compress).toLong().coerceAtLeast(EPISODE_GAP_MS + 1)
+            out.add(Wire(t, id, ordered[i]))
+        }
+        out
+    }.sortedBy { it.ts }
 
     val oracle = ImpressionOracle()
     val slicedByObj = timeline.groupBy({ it.objectId }, { it.s })
     val expectedInSlice = slicedByObj.values.sumOf { oracle.run(fixtures, it).size }
 
     // Wall time is now simply the span of the re-based timeline; deltas are replayed verbatim.
-    val realMs = streams.values.flatten().let { it.maxOf { s -> s.tsMs } - it.minOf { s -> s.tsMs } }
+    val realMs = sliced.values.flatten().let { it.maxOf { s -> s.tsMs } - it.minOf { s -> s.tsMs } }
     val compressedMs = timeline.last().ts - timeline.first().ts
 
     // Guard the invariant rather than trusting the arithmetic: every shopper's intra-sample spacing must
