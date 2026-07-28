@@ -1,0 +1,298 @@
+package com.m8trx.twin.layer2
+
+import com.m8trx.twin.domain.CustomerExited
+import com.m8trx.twin.domain.CustomerReachedZone
+import com.m8trx.twin.domain.SaleCompleted
+import com.m8trx.twin.domain.SaleLine
+import com.m8trx.twin.layer1.BrowseEpisode
+import com.m8trx.twin.layer1.FixtureSet
+import com.m8trx.twin.layer1.RoleZone
+import com.m8trx.twin.layer1.ZoneAffinityModel
+import com.m8trx.twin.layer1.ZoneRole
+import com.m8trx.twin.runtime.GeneratorContext
+import java.time.Duration
+import kotlin.math.max
+import kotlin.random.Random as KRandom
+
+/**
+ * Layer 2 — single-actor arcs. A journey owns one shopper from entry to exit: which zones they visit, which
+ * fixtures they dwell at, whether they buy.
+ *
+ * **Dwell is emitted at Xovis fidelity, not as waypoints.** Every fixture visit is a [BrowseEpisode] at
+ * 5 Hz. This is load-bearing: below ~1 Hz core's dwell and look clocks reset on every sample and no
+ * impression can ever form, however long the shopper stands there — validated live against the twin edge
+ * 2026-07-28. A journey that emitted one pin per zone would look completely correct and produce nothing.
+ *
+ * Zone selection uses [ZoneAffinityModel], re-keyed off `(space_type, zone_type)` + structural code so it
+ * resolves in all 10 stores rather than only Denver.
+ */
+class Journeys(
+    private val fixtures: FixtureSet,
+    private val zones: List<RoleZone>,
+    private val catalog: StoreCatalog,
+    private val model: com.m8trx.twin.layer3.OperatingModel,
+) {
+    private val browse = BrowseEpisode(fixtures, emitHz = 5.0)
+
+    /** Fixtures the impression pipeline can actually see, grouped by the department band they sit in. */
+    private val fixturesByDept: Map<String, List<String>> = fixtures.impressionVisible
+        .filter { it.department != null }
+        .groupBy({ it.department!! }, { it.code })
+
+    private val anyVisibleFixture: List<String> = fixtures.impressionVisible.map { it.code }
+
+    fun run(journeyId: String, ctx: GeneratorContext, customerId: String, rng: KRandom) {
+        when (journeyId) {
+            "ShopAndBuy" -> shopAndBuy(ctx, customerId, rng, tryOn = false)
+            "TryOnAndPartialBuy" -> shopAndBuy(ctx, customerId, rng, tryOn = true)
+            else -> browseAndLeave(ctx, customerId, rng)
+        }
+    }
+
+    // ── the (1 - conversion) bulk: walk, dwell, leave without buying ───────────
+
+    private fun browseAndLeave(ctx: GeneratorContext, customerId: String, rng: KRandom) {
+        val visits = plannedZoneVisits(rng)
+        var cursorMs = ctx.clock.now().toEpochMilli()
+        for (z in visits) {
+            cursorMs = dwellAtZone(ctx, customerId, z, cursorMs, rng)
+        }
+        finish(ctx, customerId, cursorMs)
+    }
+
+    // ── the buyers ────────────────────────────────────────────────────────────
+
+    private fun shopAndBuy(ctx: GeneratorContext, customerId: String, rng: KRandom, tryOn: Boolean) {
+        val lines = catalog.sampleBasket(rng, model)
+        var cursorMs = ctx.clock.now().toEpochMilli()
+
+        // Browse the fixtures that actually hold what they buy — this is what ties dwell to the basket.
+        for (line in lines.distinctBy { it.fixture }) {
+            val code = line.fixture.takeIf { fixtures.impressionVisible.any { f -> f.code == it } }
+                ?: anyVisibleFixture.random(rng)
+            cursorMs = dwellAtFixture(ctx, customerId, code, dwellMsFor(ZoneRole.DEPARTMENT_BAND, rng), cursorMs)
+        }
+
+        if (tryOn) {
+            // Try-on zones are their own space; the walk there is a gap, so clocks reset — correct.
+            val role = if (rng.nextDouble() < 0.5) ZoneRole.FOOTWEAR_BENCH else ZoneRole.FITTING_ROOM
+            zones.firstOrNull { it.role == role }?.let {
+                ctx.bus.publish(CustomerReachedZone(ctx.clock.now(), customerId, it.zoneCode))
+            }
+            cursorMs += dwellMsFor(ZoneRole.FOOTWEAR_BENCH, rng)
+        }
+
+        zones.firstOrNull { it.role == ZoneRole.CHECKOUT }?.let {
+            ctx.bus.publish(CustomerReachedZone(ctx.clock.now(), customerId, it.zoneCode))
+        }
+        cursorMs += dwellMsFor(ZoneRole.CHECKOUT, rng)
+
+        ctx.bus.publish(SaleCompleted(ctx.clock.now(), customerId, lines))
+        finish(ctx, customerId, cursorMs)
+    }
+
+    // ── mechanics ─────────────────────────────────────────────────────────────
+
+    /** Pick the zones this session visits, sampling each role independently against its affinity. */
+    private fun plannedZoneVisits(rng: KRandom): List<RoleZone> {
+        val conversion = model.conversion.overallRate.value
+        val target = max(1, model.dwell.zonesVisitedPerSession.value)
+        val candidates = zones.filter { it.role.shopperReachable && it.role != ZoneRole.FIXTURE }
+            .filter { rng.nextDouble() < ZoneAffinityModel.probability(it.role, conversion) }
+        return if (candidates.isEmpty()) zones.filter { it.role == ZoneRole.DEPARTMENT_BAND }.take(1) else candidates.shuffled(rng).take(target)
+    }
+
+    private fun dwellAtZone(ctx: GeneratorContext, customerId: String, z: RoleZone, cursorMs: Long, rng: KRandom): Long {
+        ctx.bus.publish(CustomerReachedZone(ctx.clock.now(), customerId, z.zoneCode))
+        // Only department bands contain browsable fixtures; other roles are dwell-only for now.
+        val pool = z.department?.let { fixturesByDept[it] } ?: return cursorMs + dwellMsFor(z.role, rng)
+        if (pool.isEmpty()) return cursorMs + dwellMsFor(z.role, rng)
+        return dwellAtFixture(ctx, customerId, pool.random(rng), dwellMsFor(z.role, rng), cursorMs)
+    }
+
+    private fun dwellAtFixture(ctx: GeneratorContext, customerId: String, fixtureCode: String, dwellMs: Long, cursorMs: Long): Long {
+        val samples = browse.browse(fixtureCode, dwellMs, cursorMs, java.util.Random(cursorMs xor fixtureCode.hashCode().toLong()).asKotlinRandom())
+        ctx.sink.emitSamples(customerId, samples)
+        // +1 walk gap to the next fixture; exceeding the 1000ms allowance is correct — a new fixture
+        // is a new dwell episode, and core resets both clocks on the gap.
+        return cursorMs + dwellMs + WALK_GAP_MS
+    }
+
+    private fun dwellMsFor(role: ZoneRole, rng: KRandom): Long {
+        val median = ZoneAffinityModel.dwellMedianMin(role) ?: 1.5
+        // Log-normal-ish spread around the median without pulling in a stats lib: 0.55x .. 1.8x.
+        val factor = 0.55 + rng.nextDouble() * 1.25
+        return (median * 60_000 * factor).toLong().coerceAtLeast(MIN_DWELL_MS)
+    }
+
+    private fun finish(ctx: GeneratorContext, customerId: String, cursorMs: Long) {
+        ctx.sink.evict(customerId)
+        ctx.scheduler.scheduleAfter(Duration.ofMillis(max(0, cursorMs - ctx.clock.now().toEpochMilli()))) {
+            ctx.bus.publish(CustomerExited(ctx.clock.now(), customerId))
+        }
+    }
+
+    private companion object {
+        const val WALK_GAP_MS = 4_000L
+        const val MIN_DWELL_MS = 6_000L // must clear millisTillImpression (5000) or the visit produces nothing
+    }
+}
+
+private fun java.util.Random.asKotlinRandom(): KRandom = KRandom(this.nextLong())
+
+/** Real SKUs off the store's `assortment.csv`, used to build priced baskets. */
+class StoreCatalog(private val skus: List<Sku>) {
+    data class Sku(val itemCd: String, val ean: String, val priceUsd: Double, val department: String, val fixture: String, val category: String)
+
+    private val byCategory: Map<String, List<Sku>> = skus.groupBy { it.category }
+
+    /**
+     * Sample a basket: unit count around `units_per_txn`, then SKUs drawn with **price-band weighting** so
+     * most lines are mid-price with an occasional high-value item — exactly what §5 of the operating model
+     * specifies and what a uniform draw does not do.
+     *
+     * This matters more than it looks. The Denver assortment is a real Decathlon catalog: median line $55
+     * but a mean of $323, because it contains Riverside carbon gravel bikes up to $11,999. Drawing SKUs
+     * uniformly gave every basket a shot at a bike and produced an ATV of ~$1,900 against a modelled $58.
+     * The prices are correct; uniform sampling was the error.
+     *
+     * Method: draw a target line price from a log-normal centred on §5 `avg_line_price_usd`, then take the
+     * nearest-priced SKU in the chosen category. Real SKUs, real prices, realistic frequency — a bike is
+     * reachable but rare, as in life.
+     *
+     * Note the model's own economics (`avg_line_price_usd` $26.40) were calibrated against the superseded
+     * 871-SKU running-store catalog, not this 2,586-SKU chain assortment. Same staleness class as the §8
+     * zone-affinity codes. Recalibrating §5 against the live assortment is a separate, flagged decision;
+     * this sampler at least makes the generator obey the model as written.
+     */
+    fun sampleBasket(rng: KRandom, model: com.m8trx.twin.layer3.OperatingModel): List<SaleLine> {
+        val target = model.basket.unitsPerTxn.value
+        // ROUND, don't truncate. toInt() truncates, so a 2.2 target with ±0.8 spread lands in 1.4..3.0 and
+        // collapses to a mean near 1.6 — a systematic ~27% under-count of units, not sampling noise.
+        val units = max(1, Math.round(target + (rng.nextDouble() - 0.5) * 1.6).toInt())
+        val mix = mappedUnitMix(model)
+        val targetLine = model.basket.avgLinePriceUsd.value
+
+        return (1..units).map {
+            val pool = if (mix.isNotEmpty()) byCategory[weightedPick(mix, rng)] ?: skus else skus
+            val sku = nearestPriced(pool, drawTargetPrice(targetLine, rng), rng)
+            SaleLine(sku.itemCd, sku.ean, sku.priceUsd, sku.department, sku.fixture)
+        }
+    }
+
+    /**
+     * §5's buckets are catalog-agnostic names; the store's `category` column uses its own vocabulary.
+     * Map bucket → store categories, drop buckets this store has none of, and renormalise. Intersecting
+     * the raw names instead would silently keep only footwear/apparel/outdoor and skew every basket.
+     */
+    private fun mappedUnitMix(model: com.m8trx.twin.layer3.OperatingModel): Map<String, Double> {
+        val bucketToCategories = mapOf(
+            "footwear" to listOf("footwear"),
+            "apparel" to listOf("apparel"),
+            "outdoor" to listOf("outdoor"),
+            "accessories_other" to listOf("accessories", "bag_pack"),
+            "fitness_equipment" to listOf("outdoor"),
+            "hardware_watches" to listOf("accessories"),
+            "team_sport" to listOf("accessories"),
+        )
+        val out = mutableMapOf<String, Double>()
+        model.basket.cleanUnitMix.forEach { (bucket, w) ->
+            val cats = bucketToCategories[bucket]?.filter { byCategory.containsKey(it) } ?: return@forEach
+            if (cats.isEmpty()) return@forEach
+            cats.forEach { out[it] = (out[it] ?: 0.0) + w / cats.size }
+        }
+        val sum = out.values.sum()
+        return if (sum <= 0.0) emptyMap() else out.mapValues { it.value / sum }
+    }
+
+    /** Log-normal around the target line price — right-skewed, so occasional expensive lines occur naturally. */
+    private fun drawTargetPrice(mean: Double, rng: KRandom): Double {
+        val sigma = 0.85
+        val mu = kotlin.math.ln(mean) - sigma * sigma / 2.0
+        // Box-Muller for a standard normal; kotlin.random has no gaussian.
+        val u1 = rng.nextDouble().coerceAtLeast(1e-12)
+        val u2 = rng.nextDouble()
+        val z = kotlin.math.sqrt(-2.0 * kotlin.math.ln(u1)) * kotlin.math.cos(2.0 * Math.PI * u2)
+        return kotlin.math.exp(mu + sigma * z)
+    }
+
+    /** Nearest-priced SKU to [targetPrice], with a small random tie-break so identical prices vary. */
+    private fun nearestPriced(pool: List<Sku>, targetPrice: Double, rng: KRandom): Sku {
+        if (pool.isEmpty()) return skus.random(rng)
+        var best = pool[0]
+        var bestD = Double.MAX_VALUE
+        val start = rng.nextInt(pool.size)
+        for (k in pool.indices) {
+            val s = pool[(start + k) % pool.size]
+            val d = kotlin.math.abs(s.priceUsd - targetPrice)
+            if (d < bestD) {
+                bestD = d
+                best = s
+            }
+        }
+        return best
+    }
+
+    private fun weightedPick(weights: Map<String, Double>, rng: KRandom): String {
+        var r = rng.nextDouble() * weights.values.sum()
+        for ((k, w) in weights) {
+            r -= w
+            if (r <= 0) return k
+        }
+        return weights.keys.last()
+    }
+
+    companion object {
+        fun load(assortmentCsv: java.nio.file.Path): StoreCatalog {
+            val lines = java.nio.file.Files.readAllLines(assortmentCsv)
+            val header = splitCsv(lines.first())
+            fun idx(name: String) = header.indexOf(name)
+            val iItem = idx("item_cd")
+            val iEan = idx("ean")
+            val iPrice = idx("price_usd")
+            val iDept = idx("department")
+            val iFix = idx("fixture")
+            val iCat = idx("category")
+            val skus = lines.drop(1).mapNotNull { row ->
+                val c = splitCsv(row)
+                if (c.size <= maxOf(iItem, iEan, iPrice, iDept, iFix, iCat)) return@mapNotNull null
+                val price = c[iPrice].toDoubleOrNull() ?: return@mapNotNull null
+                Sku(c[iItem], c[iEan], price, c[iDept], c[iFix], c[iCat])
+            }
+            require(skus.isNotEmpty()) { "no priced SKUs parsed from $assortmentCsv" }
+            return StoreCatalog(skus)
+        }
+
+        /**
+         * RFC4180-ish field split — quoted fields may contain commas, and `""` is an escaped quote.
+         *
+         * A naive `split(",")` shifts every column after the first quoted product name, which silently
+         * pulled a non-price field into `price_usd` and inflated ATV from $58 to $1,961. The catalog has
+         * both cases: `"Quechua Camp Bed Air 79"" Inflatable..."` and `"S/M  5'2""-5'..."`.
+         */
+        internal fun splitCsv(line: String): List<String> {
+            val out = mutableListOf<String>()
+            val sb = StringBuilder()
+            var inQuotes = false
+            var i = 0
+            while (i < line.length) {
+                val ch = line[i]
+                when {
+                    inQuotes && ch == '"' && i + 1 < line.length && line[i + 1] == '"' -> {
+                        sb.append('"')
+                        i++
+                    }
+                    ch == '"' -> inQuotes = !inQuotes
+                    ch == ',' && !inQuotes -> {
+                        out.add(sb.toString())
+                        sb.setLength(0)
+                    }
+                    else -> sb.append(ch)
+                }
+                i++
+            }
+            out.add(sb.toString())
+            return out
+        }
+    }
+}

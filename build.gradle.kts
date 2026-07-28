@@ -269,3 +269,19 @@ tasks.register<JavaExec>("connectPeopleDrive") {
         },
     )
 }
+
+// Layer-3 scenario harness (BRIEF-TWIN-SPINE 3.3). Generates a whole day headlessly at rate=+inf and
+// asserts the STORE-OPERATING-MODEL §1 reconciliation identity, determinism from seed, and — the part that
+// matters — that the emitted dwell streams would actually fire impressions on the real pipeline. The oracle
+// was validated 7/7 against the live twin edge, so its offline verdict is trustworthy. No network.
+tasks.register<JavaExec>("scenarioSelfTest") {
+    group = "verification"
+    description = "Generate a day offline; assert §1 reconciliation, determinism, and that dwell fires impressions."
+    mainClass.set("com.m8trx.twin.layer3.ScenarioSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
