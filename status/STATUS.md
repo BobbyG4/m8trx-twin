@@ -2,7 +2,24 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-03 — Session 14 · ★ CORE-REQ-005 parts 1–3 DONE (`connectFullLoop` #9 · `connectStress` #10 · compliance read-back smoke → **TWIN-REQ-003 SATISFIED**) · ★ **Strand V site-scope hardening GREEN** (`connectSiteScopeAudit` #11 — the at-scale 151-table sweep caught **3 event/audit leaks** core's core-36/tail-35 mapping missed) · **seat/perms tenant-wide leak** surfaced (core's `seed_users.py` fix) · main `2131384`)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — Session 15 · **BRIEF-TWIN-SPINE restart**)
+
+> **PICK UP HERE (Session 16).** Ground-truth note: `status/active/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — **read it before firing the spine brief.** Branch `chore/spine-restart-hygiene` (4 commits, ktlint+compile+`connectSelfTest`+`peopleSelfTest` green).
+>
+> **DONE S15:** 3.1 spine live (`connectChainActivity`, ~1 event/6s at conc 1, ~530 sales, zero non-200s) · 3.4 hygiene (5 stale HOLD FIRE sites; `seed_store.py` de-hardcoded + SUPERSEDED) · **`peopleSelfTest` 38/38** (impression-rule conformance + zone-affinity re-key portable across all 10 stores).
+>
+> **★ 3 RULINGS OWED BY BOB — everything unblocked is finished:**
+> **(a) Space-UUID route** — hand-off (precedent `site_ids.csv`) vs tenant-wide reader password. Twin recommends hand-off + file **TWIN-REQ-004** (Connect spatial read). No Connect endpoint returns space identity today; `items/receive` *demands* a `spaceId` nothing provides — an integrator-facing defect, not just a twin one.
+> **(b) NATS vs REST join point** — `ImpressionEventController` is now `@ConnectExposed`, so REST works and drops the edge-server dependency, but bypasses `ImpressionStateMachine` (proves the tail, not the pipeline). Recommend both, REST rows tagged.
+> **(c) Footfall** — `crossing` has **no v2 consumer** (`sliceId` is a v1 concept; only implementor is `Journaler.kt`). Twin cannot drive the visitor count the reconciliation identity divides into. **Descoped from 3.2.**
+>
+> **✅ CLEARED:** FR-PLN-08's Notifications-spine gate — rule engine live on master `f14482a`. The owed **directive→task smoke** is runnable **with a backend watcher** (task read stays JWT-only).
+> **⚠ STILL OWED (Bob):** rotate the mother Hasura admin secret — de-hardcoding does not remove it from git history, and it is instance-wide.
+> **⚙ Emit-contract constants (hard):** >1 Hz floor (5 Hz default, Xovis runs 5–25) · within 1m of a fixture **edge** · ray held on the **same** fixture · both clocks past 5000ms · ~10s cache lag before the subscriber sees it · circle fixtures are silently skipped by core (Denver has 3) · `com.m8trx.geometry` is **off-limits** (shared with Android AR — report bugs, never patch).
+
+---
+
+## Session 14 priorities (historical — updated 2026-07-03 — Session 14 · ★ CORE-REQ-005 parts 1–3 DONE (`connectFullLoop` #9 · `connectStress` #10 · compliance read-back smoke → **TWIN-REQ-003 SATISFIED**) · ★ **Strand V site-scope hardening GREEN** (`connectSiteScopeAudit` #11 — the at-scale 151-table sweep caught **3 event/audit leaks** core's core-36/tail-35 mapping missed) · **seat/perms tenant-wide leak** surfaced (core's `seed_users.py` fix) · main `2131384`)
 
 > **PICK UP HERE (Session 15):** **CORE-REQ-005 parts 1–3 DONE + merged** (PR #9 `connectFullLoop` · #10 `connectStress` · compliance read-back smoke GREEN). **TWIN-REQ-003 SATISFIED** (core PR #76 `925f9a4` — `POST /api/v2/compliance/state` live; the `/state` 403 wall closed, assert-split done). **★ Strand V site-scope hardening GREEN** (`connectSiteScopeAudit`, PR #11) — a site-scoped user proven confined across token/picker/read planes + writes; **the at-scale 151-table sweep caught 3 event/audit leaks** (`integration_event`/`item_custody_event`/`unified_audit_event`) that core's core-36/tail-35 mapping missed → core fixed → twin re-verified 0. **Seat/perms tenant-wide leak** surfaced provisioning demo logins (root `seed_users.py` grants `user_tenant_membership` per site-role — **core's fix**; twin roster clean). `main` `2131384` (PRs #9/#10/#11 merged). *(Part-2 live-stress ceiling: conc ≤12 clean / 24 → ~50% `502` = S8 event-loop starvation; fix `429`@nginx + offload/MVC, post-demo.)*
 >
