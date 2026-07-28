@@ -253,3 +253,19 @@ tasks.register<JavaExec>("peopleSelfTest") {
         },
     )
 }
+
+// Drive core's REAL fixture-impression pipeline over NATS into the twin edge (BRIEF-TWIN-SPINE 3.2).
+// Prints the ImpressionOracle prediction BEFORE publishing so it cannot be retrofitted to the result.
+// SAFE BY DEFAULT — dry-run; M8TRX_PEOPLE_LIVE=true fires. Two interlocks guard the production office
+// edge on the same host: NATS server_name must be 'edge-twin-denver', and the office space is denylisted.
+tasks.register<JavaExec>("connectPeopleDrive") {
+    group = "verification"
+    description = "Publish objLocation at Xovis fidelity into the twin edge; predict impressions first, then compare."
+    mainClass.set("com.m8trx.twin.layer1.PeopleDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
