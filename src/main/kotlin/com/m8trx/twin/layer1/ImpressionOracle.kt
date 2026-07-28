@@ -59,6 +59,23 @@ class ImpressionOracle(
         val out = mutableListOf<Predicted>()
         val state = mutableMapOf<String, Clocks>()
 
+        /**
+         * Emit a fired impression with its FINAL window.
+         *
+         * Validated against the live twin edge 2026-07-28 (5 episodes: 12000/8000/15000/9000/7000ms — the
+         * reported duration equalled the full episode span every time). Core `create()`s the impression the
+         * moment both clocks cross [millisTillImpression], then `update()`s it on every subsequent sample,
+         * and each `cache.put` resets `expireAfterWrite` — so what finally publishes carries the window at
+         * EXPIRY, not at creation. An earlier version of this oracle froze at creation and under-reported
+         * (predicted 5200ms against an actual 15000ms). Flushed on reset (leave-and-return is a new
+         * impression) and again at end of stream.
+         */
+        fun flush(code: String, c: Clocks) {
+            if (!c.fired) return
+            out += Predicted(code, c.firstDwell!!, c.lastDwell!!, c.firstLook!!, c.lastLook!!)
+            c.fired = false
+        }
+
         for (s in samples) {
             // The gate at XovisImpressionEvaluator.kt:311 — both halves lost when viewDirection is absent.
             if (s.hasTag || s.viewDir == null) continue
@@ -67,8 +84,8 @@ class ImpressionOracle(
             if (lookingAt != null && lookingAt.visibleToImpressionPipeline) {
                 val c = state.getOrPut(lookingAt.code) { Clocks() }
                 if (c.lastLook == null || s.tsMs - c.lastLook!! > lookAwayAllowanceMs) {
+                    flush(lookingAt.code, c) // the previous impression ended when the look lapsed
                     c.firstLook = s.tsMs
-                    c.fired = false
                 }
                 c.lastLook = s.tsMs
             }
@@ -76,8 +93,8 @@ class ImpressionOracle(
             for (f in fixtures.nearby(s.p, dwellProximityMm)) {
                 val c = state.getOrPut(f.code) { Clocks() }
                 if (c.lastDwell == null || s.tsMs - c.lastDwell!! > goAwayAllowanceMs) {
+                    flush(f.code, c)
                     c.firstDwell = s.tsMs
-                    c.fired = false
                 }
                 c.lastDwell = s.tsMs
 
@@ -87,12 +104,13 @@ class ImpressionOracle(
                 val ld = c.lastDwell ?: continue
                 val ll = c.lastLook ?: continue
                 // Strict `>`, matching core's `lastLook.minusMillis(m).isAfter(firstLook)`.
+                // Once fired we keep extending lastDwell/lastLook above; the final window is emitted by flush().
                 if (!c.fired && (ll - fl) > millisTillImpression && (ld - fd) > millisTillImpression) {
                     c.fired = true
-                    out += Predicted(f.code, fd, ld, fl, ll)
                 }
             }
         }
+        state.forEach { (code, c) -> flush(code, c) }
         return out
     }
 

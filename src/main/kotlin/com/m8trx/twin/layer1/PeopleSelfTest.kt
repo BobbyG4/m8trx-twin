@@ -212,6 +212,9 @@ fun main() {
     log.info("[7] duration reporting")
     val d = fired5.first().durationMs
     check("duration is positive and under the episode length", d in 1..12_000, "duration=$d")
+    // Validated against the live twin edge 2026-07-28 across 5 episodes: the edge reports the window at
+    // cache EXPIRY (full episode span), never the window at creation. 12s episode → 12000ms.
+    check("duration equals the full episode span, matching the live edge", d == 12_000L, "expected 12000, got $d")
 
     // ── 8. zone-affinity re-key portability (ruling 2026-07-28, decision 3) ───
     log.info("[8] zone-affinity re-key — portable across all 10 stores")

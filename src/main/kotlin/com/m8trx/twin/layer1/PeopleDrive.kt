@@ -90,7 +90,21 @@ fun main() {
     // ── build the episode on a synthetic timeline, then rebase onto wall clock ─
     val rng = Random(env("M8TRX_PEOPLE_SEED", "42").toLong())
     val episode = BrowseEpisode(fixtures, emitHz = emitHz).browse(target, dwellMs, 0L, rng)
-    val samples = if (noViewDir) episode.map { it.copy(viewDir = null) } else episode
+
+    // Negative control for the emit-rate floor. BrowseEpisode REFUSES to construct below 1 Hz (correctly —
+    // that guard stops a broken generator shipping), so a slow emitter is modelled by decimating a valid
+    // stream instead of weakening the guard. M8TRX_PEOPLE_DECIMATE=10 at 5 Hz → 0.5 Hz → must fire nothing.
+    val decimate = env("M8TRX_PEOPLE_DECIMATE", "1").toInt()
+    val thinned = if (decimate > 1) episode.filterIndexed { i, _ -> i % decimate == 0 } else episode
+    val samples = if (noViewDir) thinned.map { it.copy(viewDir = null) } else thinned
+    if (decimate > 1) {
+        log.info(
+            "DECIMATE={} → {} samples, effective {} Hz (negative control for the >1 Hz floor)",
+            decimate,
+            samples.size,
+            "%.2f".format(emitHz / decimate),
+        )
+    }
 
     // ── ★ PREDICTION FIRST — printed before publish so it cannot be retrofitted ─
     val predicted = oracle.run(fixtures, samples)
@@ -112,6 +126,17 @@ fun main() {
             )
         }
     }
+    // Mis-targeting must never be silent. Gondola rows are paired front/back ~1.4m apart, so a standoff
+    // computed off the longest edge can land on the side facing the PAIRED unit — the ray then crosses the
+    // near fixture first and the impression lands there. Observed live 2026-07-28: aiming at GB-R5-U1
+    // produced an impression on GF-R5-U1, confirmed by explicitly targeting GF-R5-U1 and getting the same
+    // zone UUID (970e95e8…). The oracle reports the true hit; this makes the divergence loud.
+    val landed = predicted.map { it.fixtureCode }.distinct()
+    if (predicted.isNotEmpty() && landed != listOf(target)) {
+        log.warn("⚠ TARGET MISMATCH: requested '{}' but the ray resolves to {} — the standoff sits on the", target, landed)
+        log.warn("  side facing a neighbouring fixture. The impression is REAL but lands on the neighbour.")
+    }
+
     log.info("─────────────────────────────────────────────────────")
     log.info("")
 
@@ -157,7 +182,8 @@ fun main() {
         spaceId.replace("-", ""),
     )
 
-    samples.forEachIndexed { i, s ->
+    for (i in samples.indices) {
+        val s = samples[i]
         val ts = t0 + (s.tsMs - samples.first().tsMs)
         nats.objLocation(
             ObjLocation(
@@ -173,7 +199,10 @@ fun main() {
             id = "$objectId-$i",
         )
         if (i % 10 == 0) log.info("  … sample {}/{} t=+{}ms", i, samples.size, ts - t0)
-        Thread.sleep(stepMs)
+        // Pace off the actual inter-sample delta, not a fixed step — decimated streams carry wider gaps
+        // and real time must match the timestamps core reads off the envelope.
+        val next = samples.getOrNull(i + 1) ?: break
+        Thread.sleep((next.tsMs - s.tsMs).coerceAtLeast(0L))
     }
 
     // Evict so the state machine drops the object cleanly, mirroring a shopper leaving frame.
