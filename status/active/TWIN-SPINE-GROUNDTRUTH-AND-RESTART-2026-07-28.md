@@ -200,7 +200,39 @@ The dataset *is* well-suited otherwise: every fixture carries `rect_mm` **and** 
 
 **Recommended fix:** re-key affinity off `zone_type` + `department` rather than literal Z-codes. Same effort, and it then works across all 10 stores unchanged instead of one.
 
-### 3.8 What checked out
+### 3.8 ★ ADDENDUM (post-ruling) — `crossing` is a dead end; descope it from 3.2
+
+Found while doing the §3.6 UUID-resolution prerequisite. Twin brief 3.2 names **three** shapes twin
+publishes — `objLocation`, `objEviction`, `crossing`. The third does not survive contact with v2.
+
+**`sliceId` is a v1 concept with no v2 table.** Core's `AreaEvent.Crossing` still declares
+`sliceId: UUID`, but `slices` exists only in the **archived** v1 data schema
+(`m8trx-api/graphql/_archived/data/…`, type `arealayoutslice`). In v2 the tables are `crossing_line`,
+`crossing_line_event`, `zone_crossing` — and **zero `.sql` migrations across `m8trx-services` mention
+"slice" at all**. There is no resolution path from twin's `CS-01` to a v2 `sliceId`.
+
+**And nothing consumes the event.** The only implementor of `onCrossing` is
+`area/journal/Journaler.kt:44` — a journal writer. No traffic or footfall derivation subscribes.
+
+**`crossing_line` shows the never-written signature.** It appears in exactly three places:
+`SiteScopeCoverageGuardTest` (the table inventory), `TenantService` (cascade delete), and
+`HypertableRetentionJob` (retention list). That is the *same* fingerprint the Connect brief used to
+establish `impression_event` had never been written — cascade-delete and retention only, no writer.
+
+**Consequences:**
+1. **Descope `crossing` from 3.2.** Building it means inventing a `sliceId` against a table that
+   doesn't exist, for an event whose only consumer is a log. Pure waste. `objLocation` +
+   `objEviction` are the live pair.
+2. **The crossing-slice UUID resolution in §3.6 is moot** — drop it. Space UUIDs are still required.
+3. **★ Twin cannot drive footfall.** Door-count/entry-crossing is the natural source of *visitors*,
+   and the entire `STORE-OPERATING-MODEL.md` §1 reconciliation identity is anchored on it
+   (`visitors → transactions → revenue`). With no crossing consumer, twin can drive **fixture
+   dwell/impressions** and **transactions** (already live via `sale_event`), but **not the visitor
+   count that the funnel divides into.** 3.3's reconciliation gate (§4 of `TRAFFIC-GENERATOR-SKETCH.md`)
+   cannot close on the platform side until something consumes crossings. This should be a ruling, not
+   an assumption — flagged for Bob + Connect.
+
+### 3.9 What checked out
 
 - Twin is parked and clean at `b0390fc`, last substantive work 07-03 — ✅
 - All six Connect canonical types live-proven via `WebhookClient.push()` — ✅
