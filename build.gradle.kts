@@ -237,3 +237,19 @@ tasks.register<JavaExec>("connectSiteScopeAudit") {
         },
     )
 }
+
+// Layer-1 people/impression conformance harness (BRIEF-TWIN-SPINE 3.2/3.3). Offline: no network, no
+// credentials, no mother UUIDs — runs against the committed layout.json. Proves an emit stream would
+// actually satisfy core's fixture-impression rule BEFORE it is fired live, because the failure mode is
+// silent (below ~1 Hz, both clocks reset every sample and nothing can ever fire).
+tasks.register<JavaExec>("peopleSelfTest") {
+    group = "verification"
+    description = "Assert the people-emit stream satisfies core's impression rule (distance + dwell + view, >1Hz floor)."
+    mainClass.set("com.m8trx.twin.layer1.PeopleSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
