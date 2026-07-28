@@ -1,99 +1,144 @@
 # TWIN → COORDINATOR — Session 15 status
 
-**Lane:** Twin · **Date:** 2026-07-28 · **Brief:** `BRIEF-TWIN-SPINE-2026-07-28.md`
-**Branch:** `chore/spine-restart-hygiene` @ `b6f34ab` (8 commits, pushed, **no PR opened** — awaiting Bob's go)
-**Verification:** ktlint + `compileKotlin` + `connectSelfTest` + `peopleSelfTest` (39/39) all green
+**Lane:** Twin · **Date:** 2026-07-28 (refreshed 15:5x, pre-full-day-run) · **Brief:** `BRIEF-TWIN-SPINE-2026-07-28.md`
+**Branch:** `chore/spine-restart-hygiene` @ `87f2c5e` (13 commits, pushed, **no PR opened** — awaiting Bob)
+**Verification:** ktlint · `compileKotlin` · `connectSelfTest` · `peopleSelfTest` (49) · `scenarioSelfTest` (23) — all green
+
+> **Refreshed deliberately BEFORE the full-day run** so that if the run is interrupted (machine standby is a live risk — it drives from Bob's MacBook over ZeroTier), nothing is lost and a successor can finish the interpretation unaided. §2 is the run card.
 
 ---
 
 ## 1. Headline
 
-**Core's fixture-impression pipeline ran end to end for the first time, with no camera and no lab.** Twin published `objLocation` into the new twin edge; `XovisImpressionEvaluator` ran real point-in-polygon against live fixture geometry, `ImpressionStateMachine` computed real dwell/look clocks, and `FixtureImpression` published on cache expiry. Verified by direct NATS observation across 9 episodes.
+**Core's fixture-impression pipeline is proven end to end, camera-free, at volume.** Twin publishes `objLocation` into the twin edge; `XovisImpressionEvaluator` runs real point-in-polygon, `ImpressionStateMachine` computes real dwell/look clocks, `ImpressionNatsSubscriber` writes `impression_event`.
 
-**Twin's `ImpressionOracle` is validated against the live edge 7/7** — including both negative controls — so the emit contract can now be iterated locally without the edge.
+- **DB-confirmed 5/5** on the single-episode battery (Bob ran the psql check twin cannot).
+- **First circle impression ever** — the acceptance gate for Connect's `GeometryConverter` fix. DB-confirmed, 3 rows on Promo Island 1.
+- **First volume run** — evening peak, 245,118 samples, 182 shoppers, **854 impressions**, 96 distinct fixtures, 182/182 shoppers producing at least one.
+- **A full generated day reconciles to `STORE-OPERATING-MODEL` §1** on all four legs and is ready to drive.
 
 ---
 
-## 2. Brief scope — status
+## 2. ★ RUN CARD — full day (built, verified offline, NOT yet run)
+
+`connectDayDrive` is built and green. The day is generated, reconciled and oracle-checked **offline first**; the driver refuses to publish a day that does not reconcile.
+
+```bash
+cd ~/IdeaProjects/m8trx-twin
+set -a; . ./.env; set +a
+export M8TRX_NATS_URL="nats://192.168.55.29:4223"     # 4223 = edge-twin-denver. NOT 4222 (office/real Xovis)
+export M8TRX_SPACE_ID="e3c9a424-3ced-5288-9756-19935d39f88f"
+export M8TRX_SITE_ID="84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e"
+M8TRX_DAY_LIVE=true ./gradlew connectDayDrive --no-daemon
+```
+
+Omit `M8TRX_DAY_LIVE` for a dry run — it prints the full plan, the reconciliation table and the pacing check without publishing.
+
+### Expected counts (current model)
+
+| | |
+|---|---|
+| Shoppers | **790** |
+| Samples | **1,100,584** |
+| **Expected impressions** | **3,664** |
+| Store time → wall time | 11h14m → **~44 min** at 18× |
+| Visitors / transactions / revenue | 792 / 192 / $11,586.09 |
+
+> ⚠ **3,664 supersedes the 2,045 figure** quoted in earlier correspondence. 2,045 was measured **before** the zone-vs-fixture dwell fix, when a shopper stood at ONE rack for a whole zone median. On the corrected model a shopper browses several racks, so impressions per visitor rose 2.35 → 4.33 while total samples FELL 4.3M → 1.1M. Do not publish 2,045.
+
+### Useful variants
+
+- `M8TRX_DAY_FROM_HOUR=17 M8TRX_DAY_TO_HOUR=19` — evening-peak slice (~19 min, 812 expected). Windows are applied in **store time** and keep sessions **whole**.
+- `M8TRX_DAY_TAG=<prefix>` — tags every `objectId`, giving a clean population to verify against.
+- `M8TRX_DAY_SEED` / `M8TRX_DAY_SCALE` / `M8TRX_DAY_COMPRESS` — deterministic; same seed reproduces the day exactly.
+
+### Verifying afterwards
+
+Twin verifies over **NATS** (public surface). The `impression_event` DB check is **direct psql, which twin's Off-Limits rule forbids** — it needs Bob or the coordinator. ⚠ The **22,944-row Hasura truncation ceiling** is untested: the evening slice's 854 rows was well under it, but 3,664 may reach it depending on the query shape.
+
+---
+
+## 3. ★ THE PACING INVARIANT — compress ARRIVALS, never EPISODES
+
+**This is the single most expensive thing to get wrong, and the failure is silent.**
+
+The impression rule has hard absolute timings: `millisTillImpression` 5000ms, both allowances 1000ms, a >1 Hz emit floor, a 10s cache. Compress episode durations and dwell drops under 5s → **zero impressions from a run that looks perfectly healthy for 45 minutes**.
+
+The naive implementation — walk the merged timeline, compress anything that is not intra-episode — **is wrong, and wrong invisibly**. With ~790 *overlapping* shoppers, two consecutive samples on the merged timeline are almost always DIFFERENT people, so nearly every delta reads as inter-episode and gets divided. A shopper's 200ms spacing becomes ~11ms and their 8.4s dwell ~470ms.
+
+**Correct rule, as implemented:**
+- Each shopper's **arrival** is shifted by `offset / factor`.
+- Within a shopper, deltas **≤ 1000ms** (inside an episode) replay **verbatim**.
+- Everything larger — walks between racks, multi-minute zone dwell that emits no samples — is divided.
+
+**Guarded, not trusted:** the driver asserts worst intra-episode spacing ≤ 1000ms and **aborts before publishing** if the rebase moved it. Verified 200ms across every change.
+
+**Related, same class:** wire `ts` is anchored to the **planned** timeline, not `System.currentTimeMillis()`. Core computes its clocks from the envelope `ts`, so publisher jitter would otherwise leak into the rule — see §5.
+
+---
+
+## 4. Brief scope — status
 
 | Item | State |
 |---|---|
-| **3.1** Turn the stream on | ✅ **DONE** — `connectChainActivity`, ~550 events, zero non-200s. **Stopped on Bob's instruction** pending other fixes; restart is one command. |
-| **3.2** ★ Drive the people pipeline over NATS | ✅ **PROVEN** — `connectPeopleDrive` shipped; 9 live episodes; oracle validated. `crossing` **descoped** (§4). |
-| **3.3** Build the people generator | 🟡 **FOUNDATION ONLY** — geometry, oracle, browse-episode, zone-affinity re-key all shipped and tested. **`TrafficGenerator`, the runtime skeleton, and journeys are NOT built** — and are partly gated (§4 footfall). |
-| **3.4** Hygiene | ✅ **DONE** — 5 stale HOLD FIRE sites (brief said 2); `seed_store.py` de-hardcoded + marked SUPERSEDED. **Secret rotation still owed — Bob's, not closeable from twin.** |
+| **3.1** Turn the stream on | ✅ `connectChainActivity`, ~550 events, zero non-200s. Stopped on Bob's instruction. |
+| **3.2** ★ People pipeline over NATS | ✅ **PROVEN** — `connectPeopleDrive`, 12+ live episodes, oracle validated, DB-confirmed. `crossing` descoped. |
+| **3.3** People generator | ✅ **BUILT** — runtime skeleton (Q2/Q3/Q6), `OperatingModel`, `TrafficGenerator`, journeys, reconciliation gate, `connectDayDrive`. Full day reconciles. |
+| **3.4** Hygiene | ✅ Done. **Secret rotation still owed — Bob's, not closeable from twin.** |
 
 ---
 
-## 3. Ground-truth corrections (accepted into m8trx-shared through `9f8f68e0`)
+## 5. Findings the coordinator should carry
 
-Two brief errors caught before either session built on them:
+**★ Circle fixtures — acceptance proven, but the fix is only half-complete.** Connect's `GeometryConverter` fix landed and the edge now loads 115/115. Twin produced the first-ever circle impression (`PI-01` → `7dc6fb79`, 8400ms). **But `Geometry.Circle.edges()` is still a stub**, so circles get **containment-only** proximity — a shopper 0.6m from a promo island accumulates *no dwell*. Proven live: that configuration emitted `lookingAtFixture` but no `dwellingNearbyFixture` and no impression. Connect documents this as a KNOWN GAP; the real fix (`distanceToBoundary` on `Geometry`) touches the artifact shared with Android AR and is a decision, not a drive-by. Twin models it and stands ON the footprint. Regression asserts both directions.
 
-1. **`viewDirection` is mandatory** (`XovisImpressionEvaluator.kt:311`). Twin never emitted it, so every people-event would have been silently dropped — `impression_event` stays 0 and each session blames the other. The real killer is the **>1 Hz emit floor**: below it both clocks reset per sample and `millisTillImpression` is unreachable however long the shopper stands there.
-2. **Connect outbound already exists** — `OutboundWebhookDispatcher` + `OutboundRetryJob`, live-proven by twin in S11 (happy path + retry/heal). The Connect brief stated it did not, which would have had that session rebuild working infrastructure.
+**The silent-failure mode, twice confirmed.** At sub-1 Hz the edge still emits `lookingAtFixture` and `dwellingNearbyFixture` — transitions flow, everything looks healthy — while **no impression can ever form**. Worse than nothing happening.
 
-Also surfaced: the **edge-server instance was unowned across all three briefs** (→ ruled to the Connect session, now delivered and live).
+**Publisher jitter leaks into the rule.** The evening slice produced 854 impressions against 812 predicted (+5.2%). The tell was internal: **854 impressions against only 790 `lookingAtFixture` transitions**, which is contradictory — a look-transition fires only when the *fixture changes*, so extra impressions without extra transitions means clocks reset mid-episode. Cause: `ts` stamped at publish time, and the run ran 18% over plan, stretching some intra-episode gaps past 1000ms. **Fixed** (§3); the full day should land on prediction.
 
----
+**`viewDirection` off costs the dwell half too** — proven live (no `dwellingNearbyFixture` either), which settled the ruling.
 
-## 4. Findings the coordinator should carry
+**`crossing` is a dead end in v2** — `sliceId` is a v1 concept; only `onCrossing` implementor is `Journaler.kt`. Descoped. **Footfall is NOT blocked**: `person_session` is the visit record (ruled 2026-07-28) and the §1 identity closes on it.
 
-**`crossing` is a dead end in v2 — descoped from 3.2.** `sliceId` is a v1 concept (`arealayoutslice`, archived schema); v2 has `crossing_line`/`crossing_line_event`/`zone_crossing` and **zero `.sql` migrations mention "slice"**. The only `onCrossing` implementor is `Journaler.kt`. `crossing_line` shows the same never-written fingerprint as `impression_event` did — cascade-delete and retention only, no writer.
-> **Consequence:** twin can drive **fixture dwell** and **transactions**, but **not footfall**. The `STORE-OPERATING-MODEL.md` §1 reconciliation identity (`visitors → transactions → revenue`) cannot close platform-side until something consumes crossings. **This gates 3.3's realism gate. Needs a ruling.**
+**No front-door read for impressions** — `ImpressionEventController` is POST-only. Fourth sibling of the same gap (compliance `/state`, task read, space read, impression read) → **TWIN-REQ-004 as ONE read-surface brief** (ruled).
 
-**The silent-failure mode is worse than "nothing happens".** At 0.5 Hz the edge still emits `lookingAtFixture` and `dwellingNearbyFixture` — transitions flow normally and the pipeline looks healthy — while **no impression can ever form**. Anyone debugging would see traffic and conclude it was fine.
-
-**`viewDirection` off costs the dwell half too.** It produced no `lookingAtFixture` and no `dwellingNearbyFixture` either, though the distance clause needs no vector. The gate discards the event before it gets there. **This is the design question Bob + Connect still owe a ruling on** — now demonstrated rather than argued.
-
-**No front-door read for impressions.** `ImpressionEventController` is **POST-only**. That is now the *fourth* sibling of the same gap — compliance `/state` (closed as TWIN-REQ-003), task read, space read, impression read. **Recommend TWIN-REQ-004 be scoped as one Connect read-surface brief, not four one-offs.**
-
-**Zone/space UUIDs are v5 (deterministic).** Twin could not derive the recipe (130 name patterns × 8 namespaces, no match), but **differential probing recovers the mappings through the public surface alone** — no hand-off, no reader password. Confirmed: `GF-R6-U1=030dc90f`, `PW-01=feb54fac`, `GF-R5-U1=970e95e8`. ~20s/fixture. **Twin is therefore not blocked**, though core sharing the derivation recipe remains strictly better and would cover all 929 zones and every future store.
-
-**★ FR-PLN-08's Notifications-spine gate has CLEARED.** Rule engine live on master `f14482a`. The owed **directive→task smoke** is unblocked and runnable **with a backend watcher** (task read is still not `@ConnectExposed` — verified by enumerating every annotation site).
+**FR-PLN-08's Notifications gate CLEARED** — rule engine live on master `f14482a`. The owed **directive→task smoke** is runnable with a backend watcher (task read still not `@ConnectExposed`).
 
 ---
 
-## 5. Proven live (9 episodes, twin edge `edge-twin-denver`)
+## 6. Model corrections made this session
 
-- Impression fires; **duration equals full episode span exactly** — 12000/8000/15000/9000/7000/11400/6600ms
-- **Targeting is real** — distinct fixtures return distinct zone UUIDs, reproducibly
-- **Multi-fixture journey** — one `objectId` across two fixtures → two impressions
-- **Both negative controls silent**, proven inside a window where a positive fired (so silence ≠ dead subscriber)
-- **Ray occlusion validated on a non-obvious case** — aiming at `GB-R5-U1` correctly predicted to land on `GF-R5-U1` (paired gondolas ~1.4m apart); the edge agreed, and explicitly targeting `GF-R5-U1` returned the same UUID
-- **Cache lag measured** — 10.7s / 12.7s after `lastDwell`, consistent with 10s `expireAfterWrite` + async jitter
-- **74% of Denver's sales floor lies within 1m of a fixture edge** — dwell is far less discriminating than §8 assumes; a realism input for journey tuning
+| Correction | Why it mattered |
+|---|---|
+| **Zone dwell ≠ fixture dwell** | §8's 6-min department-band median is ZONE dwell across several racks. Charging it to one fixture inflated the day to 4.3M samples / 31-min sessions. Now 30–90s per rack: 1.1M samples, impressions/visitor 2.35 → 4.33. |
+| **Standoff side** | Paired gondolas sit ~1.4m apart, so a back unit's longest edge faces its twin — the ray hit the neighbour. `GB-R3-U1` landed on R3 *Front*. Now ray-validated. |
+| **CSV quoting** | Assortment has quoted commas and escaped quotes; `split(",")` shifted `price_usd` → ATV $1,961 vs $58. |
+| **Basket truncation** | `toInt()` truncated a 2.2 target to ~1.6 mean — systematic 27% unit under-count. |
+| **Uniform SKU draw** | Gave every basket a shot at a $2,999 gravel bike. Prices are CORRECT (real catalog); §5's price-band weighting was what I'd skipped. |
+| **Tolerances** | Flat ±10% is unachievable at small n (binomial sd 4.1 vs tolerance 2.2). Now `max(pct, 3σ)`, converging to ±10% as n grows. |
 
----
-
-## 6. Not verified
-
-**No `impression_event` row has been confirmed.** All evidence above is NATS-observed. The DB check is direct psql, which twin's `CLAUDE.md` Off-Limits rule forbids, so it was not run. `objectId`s available for a sharp write-path check: `twin-r2-A-noviewdir` and `-B-slow` should have written **nothing**; `-C-journey` **two** rows; `-D-oraclefix` and `-E-occlusion` **one each**.
+**Still flagged, not fixed:** §5's economics (ATV $58, avg line $26.40) were calibrated against the superseded 871-SKU running-store catalog, not this 2,586-SKU chain assortment — same staleness class as the §8 zone codes. Recalibration is a decision, not a drive-by.
 
 ---
 
-## 7. Rulings owed
+## 7. Open
 
-| # | Ruling | Owner | Blocks |
-|---|---|---|---|
-| 1 | **Footfall** — does anything consume `crossing`? | Bob + Connect | 3.3's reconciliation gate |
-| 2 | **`viewDirection` off drops dwell too** — accept, or split the gate? | Bob + Connect | test-matrix design |
-| 3 | **TWIN-REQ-004 scope** — one read-surface brief vs four one-offs | Bob | filed, not yet written |
-| 4 | **Space/zone UUID route** — derivation recipe vs probing (twin unblocked either way) | Core | speed only |
-| 5 | **Secret rotation** (mother Hasura admin) — de-hardcoding did not remove it from git history; instance-wide | Bob | security hygiene |
-| 6 | **PR** on `chore/spine-restart-hygiene` | Bob | merge |
-
----
-
-## 8. Cross-lane
-
-- **Connect session:** delivered the twin edge and `ImpressionNatsSubscriber`; join point is proven from twin's side. Outstanding for them: the `viewDirection` gate ruling, and a read-surface for impressions.
-- **Triad session:** Phase-1a confirmed closed and on master. Its rule engine cleared twin's FR-PLN-08 gate. Its §2.3 notification scope-path trap is the **same defect class** as the seat/perms leak twin surfaced in S14 — `connectSiteScopeAudit` is a site-scope gate, and a **user-scope arm is filed-not-built** per Bob's ruling.
-- **Standing gate:** re-run `connectSiteScopeAudit` after any core re-seed. Needs `M8TRX_AUDIT_PASSWORD`.
+| # | Item | Owner |
+|---|---|---|
+| 1 | **Run the full day** (§2) — 44 min, standby risk | Bob |
+| 2 | `impression_event` DB verification (twin cannot — Off-Limits) | Bob / coordinator |
+| 3 | Secret rotation (mother Hasura admin; still in git history, instance-wide) | Bob |
+| 4 | PR on `chore/spine-restart-hygiene` | Bob |
+| 5 | TWIN-REQ-004 — one Connect read-surface brief | Twin, on Bob's go |
+| 6 | `Circle.edges()` / `distanceToBoundary` — circle dwell parity | Connect |
+| 7 | 22,944-row Hasura ceiling — untested at 3,664 | Coordinator |
+| 8 | **Unreconciled:** 3 DB rows for Promo Island 1 where twin accounts for 1 | Twin |
 
 ---
 
-## 9. Artifacts
+## 8. Artifacts
 
-`status/active/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — full ground-truth note (accepted in full)
-`src/main/kotlin/com/m8trx/twin/layer1/` — `FixtureGeometry` · `ImpressionOracle` · `BrowseEpisode` · `ZoneAffinity` · `PeopleDrive` · `PeopleSelfTest`
-Gradle: `./gradlew peopleSelfTest` (offline, 39 cases) · `./gradlew connectPeopleDrive` (dry-run default; two interlocks guard the production office edge)
+`status/active/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — ground-truth note (accepted in full)
+`src/main/kotlin/com/m8trx/twin/` — `runtime/` · `layer1/{FixtureGeometry,ImpressionOracle,BrowseEpisode,ZoneAffinity,PeopleDrive}` · `layer2/Journeys` · `layer3/{OperatingModel,TrafficGenerator,Reconciliation,ScenarioRun,DayDrive}`
+`reference/data/chain/stores/dec-us-denver/fixture_ids.csv` — mother fixture map, re-keyed name → **code** (names are localized EN/FR/KO; a name join breaks at Lyon/Busan)
+Gradle: `peopleSelfTest` (49, offline) · `scenarioSelfTest` (23, offline) · `connectPeopleDrive` · `connectDayDrive` — both dry-run by default, both guarded by the `edge-twin-denver` interlock
