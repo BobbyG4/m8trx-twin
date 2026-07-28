@@ -203,6 +203,21 @@ fun main() {
     var published = 0
     val seenObjects = LinkedHashSet<String>()
 
+    // Wire timestamps come from the PLANNED timeline, not the wall clock.
+    //
+    // Core computes both dwell clocks from the envelope `ts`, so stamping System.currentTimeMillis() at
+    // publish time lets scheduling jitter leak into the rule. The first live slice published 245k samples
+    // in 18m54s against a 15m57s plan; that ~18% lag stretched some intra-episode gaps past the 1000ms
+    // allowance, SPLITTING episodes and producing 854 impressions where the oracle predicted 812. The
+    // tell was 854 impressions against only 790 lookingAtFixture transitions — a look-transition fires
+    // only when the fixture CHANGES, so extra impressions without extra transitions means the same
+    // fixture's clocks reset mid-episode.
+    //
+    // Anchoring ts to the plan makes the run reproducible and keeps the oracle's prediction exact
+    // regardless of how evenly the publisher actually keeps time.
+    val wireEpoch = System.currentTimeMillis()
+    val planEpoch = timeline.first().ts
+
     for (i in timeline.indices) {
         val w = timeline[i]
         val wireId = "$runTag-${w.objectId}"
@@ -217,7 +232,7 @@ fun main() {
                 viewDirection = w.s.viewDir?.let { arrayOf(it.x, it.y) },
                 layoutId = spaceId,
             ),
-            ts = System.currentTimeMillis(),
+            ts = wireEpoch + (w.ts - planEpoch),
             id = "$wireId-$i",
         )
         published++
@@ -233,8 +248,10 @@ fun main() {
             )
         }
         if (i == timeline.size - 1) break
-        // Deltas are already correct — compression was applied by re-basing arrivals, not by scaling here.
-        val sleep = timeline[i + 1].ts - w.ts
+        // Sleep toward the PLANNED wall time for the next sample rather than the raw delta, so publishing
+        // cost is absorbed instead of accumulating into drift.
+        val dueAt = wireEpoch + (timeline[i + 1].ts - planEpoch)
+        val sleep = dueAt - System.currentTimeMillis()
         if (sleep > 0) Thread.sleep(sleep)
     }
 
