@@ -58,7 +58,7 @@ unique per-store floors**, and made twin emit **mother-canonical zone geometry**
 ## Failed approaches / don't-repeat
 - **BSD `sed` has no `\b`** — the first `149→103` doc replace silently no-op'd. Use plain patterns or `[[:<:]]`.
 - **Hardcoded admin secret to query mother was BLOCKED** (auto-mode classifier, correctly) — using
-  the Hasura **admin secret** (`seed_store.py:20`, `veryValerie`) bypasses auth = project hard-rule
+  the Hasura **admin secret** (`seed_store.py:20`, value redacted 2026-07-28) bypasses auth = project hard-rule
   violation. Don't. Get a scoped read token or have Bob paste the data (he did, for the geometry).
 - **First per-store generator overflowed** (units/rows floor `max(3, min(target, cap))` could exceed
   the fit cap → overlaps). Fix: `min(cap, max(2, target))` — fit cap always wins. The per-store

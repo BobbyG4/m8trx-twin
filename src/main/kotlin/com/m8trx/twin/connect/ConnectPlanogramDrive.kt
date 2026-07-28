@@ -12,8 +12,10 @@ import java.nio.file.Path
  * and POSTs at `X-Data-Type: planogram_directive` on the existing twin-pos webhook.
  *
  * SAFE BY DEFAULT — dry-run (builds + logs the directive, sends nothing). `M8TRX_PLANOGRAM_LIVE=true` fires.
- * !! HOLD FIRE until BACKEND confirms services #64 is merged + deployed (else the POST falls through the
- * generic data_type path, not the planogram landing). !!
+ *
+ * INGEST LIVE (services #64, deployed 2026-06-30; resolver #65/#66). LIVE-PROVEN in S12: the Denver
+ * `GB-R3-U1` slice (28 targets) landed and all 28 resolved, triple-verified. Dry-run stays the default
+ * because a full directive is 2,504 targets, not because the surface is unproven.
  *
  * Defaults to **Denver only** + dry-run so an accidental run can't fire 10 full directives. For the smoke,
  * bound it to a fixture slice: `M8TRX_PLANOGRAM_FIXTURES=GB-R3-U1`.
