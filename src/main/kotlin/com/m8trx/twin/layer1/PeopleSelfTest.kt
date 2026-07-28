@@ -213,6 +213,61 @@ fun main() {
     val d = fired5.first().durationMs
     check("duration is positive and under the episode length", d in 1..12_000, "duration=$d")
 
+    // ── 8. zone-affinity re-key portability (ruling 2026-07-28, decision 3) ───
+    log.info("[8] zone-affinity re-key — portable across all 10 stores")
+    val chainDir = Path.of(System.getenv("M8TRX_CHAIN_DIR") ?: "reference/data/chain", "stores")
+    val storeDirs = java.nio.file.Files.list(chainDir).use { s -> s.sorted().toList() }
+        .filter { java.nio.file.Files.exists(it.resolve("layout.json")) }
+    check("all 10 stores present", storeDirs.size == 10, "found ${storeDirs.size}")
+
+    val resolutions = storeDirs.map { ZoneRoleResolver.resolve(it.resolve("layout.json")) }
+    val allUnmapped = resolutions.flatMap { it.unmapped }
+    check(
+        "every zone in every store resolves to a role — zero unmapped",
+        allUnmapped.isEmpty(),
+        "unmapped=${allUnmapped.take(8)}${if (allUnmapped.size > 8) " …+${allUnmapped.size - 8}" else ""}",
+    )
+
+    // The two codes the old §8 table named, which no longer exist anywhere — the reason for the re-key.
+    val everyCode = resolutions.flatMap { r -> r.zones.map { it.zoneCode } }.toSet()
+    check("Z-04 (old 'Main Sales Floor') is genuinely absent", "Z-04" !in everyCode)
+    check("Z-10 (old 'Fitting Rooms') is genuinely absent", "Z-10" !in everyCode)
+
+    // Roles that must exist in EVERY store for a journey to be constructible.
+    val required = listOf(
+        ZoneRole.ENTRANCE,
+        ZoneRole.CHECKOUT,
+        ZoneRole.DEPARTMENT_BAND,
+        ZoneRole.FOOTWEAR_BENCH,
+        ZoneRole.GAIT_ANALYSIS,
+        ZoneRole.GPS_ACCESSORIES,
+        ZoneRole.FITTING_ROOM,
+    )
+    for (role in required) {
+        val missing = resolutions.filter { it.withRole(role).isEmpty() }.map { it.storeCode }
+        check("$role present in all 10 stores", missing.isEmpty(), "missing in $missing")
+    }
+
+    val bandCounts = resolutions.associate { it.storeCode to it.withRole(ZoneRole.DEPARTMENT_BAND).size }
+    check(
+        "department bands are 2..7 per store (STATUS: min(7 universes, gondola rows))",
+        bandCounts.values.all { it in 2..7 },
+        "counts=$bandCounts",
+    )
+    log.info("  · department bands per store: {}", bandCounts.toSortedMap())
+    log.info("  · sport universes across chain: {}", resolutions.flatMap { it.departments }.distinct().sorted())
+
+    check(
+        "checkout probability tracks the conversion rate, not a constant",
+        ZoneAffinityModel.probability(ZoneRole.CHECKOUT, 0.22) == 0.22 &&
+            ZoneAffinityModel.probability(ZoneRole.CHECKOUT, 0.30) == 0.30,
+    )
+    check(
+        "back-of-house is not shopper-reachable",
+        !ZoneRole.RECEIVING.shopperReachable && !ZoneRole.BACKROOM_RACK.shopperReachable,
+    )
+    log.info("  · ⚠ uncalibrated roles introduced by the re-key (NOT sourced): {}", ZoneAffinityModel.uncalibratedRoles)
+
     log.info("")
     log.info("peopleSelfTest — {} passed, {} failed", passed, failed)
     if (failed > 0) exitProcess(1)
