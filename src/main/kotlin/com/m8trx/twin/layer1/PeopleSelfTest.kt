@@ -100,10 +100,47 @@ fun main() {
     val farPt = Pt(target.centre.x + 50_000, target.centre.y)
     check("far point is not contained", !target.contains(farPt))
     check("far point fails the distance clause", !target.withinDwellRange(farPt, oracle.dwellProximityMm))
+    // Circles were invisible until Connect fixed GeometryConverter (2026-07-28); the edge now loads
+    // 115 of 115, so this assertion is inverted from its original form rather than deleted — the flip is
+    // the acceptance signal for that fix.
     check(
-        "3 Denver circles are flagged invisible to the pipeline",
-        fixtures.fixtures.count { !it.visibleToImpressionPipeline } == 3,
-        "got ${fixtures.fixtures.count { !it.visibleToImpressionPipeline }}",
+        "all 115 fixtures are now visible to the pipeline (GeometryConverter fix landed)",
+        fixtures.fixtures.count { !it.visibleToImpressionPipeline } == 0,
+        "still invisible: ${fixtures.fixtures.filter { !it.visibleToImpressionPipeline }.map { it.code }}",
+    )
+    val circles = fixtures.fixtures.filter { it.kind == Fixture.Kind.CIRCLE }
+    check(
+        "the 3 circle fixtures are present and carry a radius",
+        circles.size == 3 && circles.all { (it.radiusMm ?: 0.0) > 0.0 },
+        "circles=${circles.map { it.code to it.radiusMm }}",
+    )
+    check(
+        "a circle is ray-hittable from outside",
+        circles.first().let { c ->
+            val p = Pt(c.centre.x, c.centre.y - (c.radiusMm!! + 600))
+            fixtures.lookingAt(p, Pt(0.0, 1.0))?.code == c.code
+        },
+    )
+    // Core gives circles CONTAINMENT-ONLY proximity (Geometry.Circle.edges() is a stub), so standing 0.6m
+    // outside a promo island accumulates NO dwell — proven live 2026-07-28: that configuration emitted
+    // lookingAtFixture but no dwellingNearbyFixture and no impression. Standing ON the footprint fires
+    // (PI-01 → 7dc6fb79, 8400ms). If these flip, core shipped distanceToBoundary and the circle standoff
+    // in BrowseEpisode can move back outside the radius.
+    val circle = circles.first()
+    val outsideCircle = Pt(circle.centre.x, circle.centre.y - (circle.radiusMm!! + 600))
+    check(
+        "circle: 0.6m OUTSIDE fails the distance clause (containment-only)",
+        !circle.withinDwellRange(outsideCircle, oracle.dwellProximityMm),
+    )
+    check(
+        "circle: ON the footprint satisfies it",
+        circle.withinDwellRange(Pt(circle.centre.x + circle.radiusMm * 0.5, circle.centre.y), oracle.dwellProximityMm),
+    )
+    val circleEpisode = BrowseEpisode(fixtures, emitHz = 5.0).browse(circle.code, 8_400, 0L, Random(11))
+    check(
+        "a circle browse fires an impression on the requested circle",
+        oracle.run(fixtures, circleEpisode).any { it.fixtureCode == circle.code },
+        oracle.explainSilence(fixtures, circleEpisode).toString(),
     )
 
     // ── 2. the emit-rate floor — the case that matters ────────────────────────
@@ -276,9 +313,9 @@ fun main() {
     val withIds = fixtures.fixtures.count { it.zoneId != null }
     check("fixture_ids.csv joined onto all 115 fixtures", withIds == 115, "got $withIds")
     check(
-        "the 3 CIRCLE-INVISIBLE fixtures are flagged not-ok",
-        fixtures.fixtures.count { !it.pipelineOk } == 3,
-        "got ${fixtures.fixtures.count { !it.pipelineOk }}",
+        "sidecar marks all 115 pipeline-ok after the GeometryConverter fix",
+        fixtures.fixtures.count { !it.pipelineOk } == 0,
+        "still not-ok: ${fixtures.fixtures.filter { !it.pipelineOk }.map { it.code }}",
     )
     check(
         "pipeline flag agrees with twin's own circle detection",

@@ -47,11 +47,16 @@ data class Fixture(
     /**
      * True when core's impression pipeline can see this fixture at all.
      *
-     * `ImpressionStateMachine` logs a warning and returns false for `Geometry.Circle` — circle proximity is
-     * not implemented. Denver's sales floor has 3 such fixtures; a shopper can browse one for a full minute
-     * and produce nothing. The generator must never target these.
+     * **History (matters for reading older twin notes):** circles used to be invisible. `GeometryConverter`
+     * handled only Polygon and returned a bare null with no logging, so Denver's 3 circle fixtures were
+     * silently dropped and the evaluator loaded 112 of 115 — a shopper could browse one for a full minute
+     * and produce nothing. Connect shipped the fix 2026-07-28 and the twin edge now loads **115 of 115**,
+     * so circles are live and targetable.
+     *
+     * Driven by [pipelineOk] (from the `fixture_ids.csv` sidecar) so that if a geometry kind is ever dropped
+     * again, the map is the single place that says so rather than a hard-coded kind check here.
      */
-    val visibleToImpressionPipeline: Boolean get() = kind == Kind.POLYGON
+    val visibleToImpressionPipeline: Boolean get() = pipelineOk
 
     /** True when [p] lies inside the ring (ray-casting). Circles fall back to radius. */
     fun contains(p: Pt): Boolean = when (kind) {
@@ -81,8 +86,18 @@ data class Fixture(
      * Core's DISTANCE clause, exactly: inside the polygon OR within [dwellProximityMm] of an edge.
      * Note the strict `<` — matching `ImpressionStateMachine`'s `distanceFromPoint(p) < dwellProximity`.
      */
-    fun withinDwellRange(p: Pt, dwellProximityMm: Double): Boolean =
-        visibleToImpressionPipeline && (contains(p) || distanceToEdge(p) < dwellProximityMm)
+    fun withinDwellRange(p: Pt, dwellProximityMm: Double): Boolean {
+        if (!visibleToImpressionPipeline) return false
+        // CIRCLES ARE CONTAINMENT-ONLY. Core's proximity clause is `contains(p) || edges().any { … }`, and
+        // `Geometry.Circle.edges()` is a stub returning an empty sequence — so the dwellProximity band
+        // contributes NOTHING for a circle. A shopper 0.5m from a promo island is "not nearby", where the
+        // same shopper beside a polygon rack would be. Confirmed live 2026-07-28: a circle standoff produced
+        // `lookingAtFixture` but no `dwellingNearbyFixture` and no impression. Core documents this as a
+        // KNOWN GAP (the real fix is a `distanceToBoundary` on Geometry, which touches the artifact shared
+        // with Android AR and is therefore a decision, not a drive-by).
+        if (kind == Kind.CIRCLE) return contains(p)
+        return contains(p) || distanceToEdge(p) < dwellProximityMm
+    }
 
     /**
      * Distance along a ray from [origin] in direction [dir] at which it first crosses this fixture,
@@ -92,11 +107,26 @@ data class Fixture(
      * Magnitude of [dir] is irrelevant (core builds an unbounded ray from the slope); only direction counts.
      */
     fun rayHitDistance(origin: Pt, dir: Pt): Double? {
-        if (kind != Kind.POLYGON) return null
         val len = hypot(dir.x, dir.y)
         if (len == 0.0) return null
         val d = Pt(dir.x / len, dir.y / len)
         if (contains(origin)) return 0.0
+
+        if (kind == Kind.CIRCLE) {
+            // Ray/circle: |origin + t·d − centre|² = r², solved for the nearest t ≥ 0.
+            val r = radiusMm ?: return null
+            val ox = origin.x - centre.x
+            val oy = origin.y - centre.y
+            val b = 2.0 * (ox * d.x + oy * d.y)
+            val c = ox * ox + oy * oy - r * r
+            val disc = b * b - 4.0 * c
+            if (disc < 0.0) return null
+            val sq = sqrt(disc)
+            val t1 = (-b - sq) / 2.0
+            val t2 = (-b + sq) / 2.0
+            return listOf(t1, t2).filter { it >= 0.0 }.minOrNull()
+        }
+
         var best: Double? = null
         for (i in 0 until ring.size - 1) {
             val t = raySegmentT(origin, d, ring[i], ring[i + 1]) ?: continue
@@ -173,7 +203,7 @@ class FixtureSet(val storeCode: String, val spaceCode: String, val fixtures: Lis
                 kind = kind,
                 ring = ring,
                 centre = centre,
-                radiusMm = z.path("properties").path("radius_mm").asDouble(0.0).takeIf { it > 0.0 },
+                radiusMm = parseRadius(z),
                 department = z.path("department").asText(null),
             )
         }
@@ -185,6 +215,19 @@ class FixtureSet(val storeCode: String, val spaceCode: String, val fixtures: Lis
                 val parts = pair.trim().split(Regex("\\s+"))
                 Pt(parts[0].toDouble(), parts[1].toDouble())
             }
+        }
+
+        /**
+         * Circle radius. The layout emits `properties.radiusX` / `radiusY` (an ellipse shape, always equal
+         * in this dataset) — NOT `radius_mm`, which never exists. Reading the wrong key silently produced a
+         * null radius, which made every circle un-hittable regardless of what core did.
+         */
+        private fun parseRadius(z: JsonNode): Double? {
+            val p = z.path("properties")
+            val rx = p.path("radiusX").asDouble(0.0)
+            val ry = p.path("radiusY").asDouble(0.0)
+            val r = if (rx > 0.0 && ry > 0.0) (rx + ry) / 2.0 else maxOf(rx, ry)
+            return r.takeIf { it > 0.0 }
         }
 
         private fun parseCircleCentre(z: JsonNode): Pt {

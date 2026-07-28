@@ -45,8 +45,9 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
         val f = fixtures.fixtures.firstOrNull { it.code == fixtureCode }
             ?: error("no fixture '$fixtureCode' in ${fixtures.storeCode}/${fixtures.spaceCode}")
         require(f.visibleToImpressionPipeline) {
-            "fixture '$fixtureCode' is a ${f.kind} — core's ImpressionStateMachine does not implement circle " +
-                "proximity (it warns and skips), so browsing it can never produce an impression. Pick a polygon fixture."
+            "fixture '$fixtureCode' is flagged not-visible to the impression pipeline in fixture_ids.csv, so " +
+                "browsing it can never produce an impression. (Circles WERE invisible until Connect's " +
+                "GeometryConverter fix on 2026-07-28; the edge now loads 115 of 115.)"
         }
         require(standoffMm < 1000.0) { "standoffMm=$standoffMm is outside core's 1000mm dwellProximity" }
 
@@ -86,6 +87,21 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
     private fun standoffPoint(f: Fixture, standoffMm: Double): Pt {
         data class Candidate(val p: Pt, val edgeLen: Double)
         val candidates = mutableListOf<Candidate>()
+
+        // CIRCLES: stand ON the footprint, not beside it.
+        //
+        // Circles have no ring, and — more importantly — core gives them CONTAINMENT-ONLY proximity:
+        // `Geometry.Circle.edges()` is a stub, so the dwellProximity band contributes nothing. A shopper
+        // outside the radius never accumulates dwell no matter how close they stand. Proven live
+        // 2026-07-28: a radius+600mm standoff on PI-01 produced `lookingAtFixture` but no
+        // `dwellingNearbyFixture` and no impression.
+        //
+        // Standing on the footprint is also the intended semantic — core's own test note reads "anyone
+        // stepping onto the footprint counts". Placed at 0.5r so the jitter cannot push the shopper out.
+        if (f.kind == Fixture.Kind.CIRCLE) {
+            val r = f.radiusMm ?: return f.centre
+            return Pt(f.centre.x + r * 0.5, f.centre.y)
+        }
 
         for (i in 0 until f.ring.size - 1) {
             val a = f.ring[i]
