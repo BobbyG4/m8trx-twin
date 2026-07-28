@@ -271,6 +271,38 @@ fun main() {
     )
     log.info("  · ⚠ uncalibrated roles introduced by the re-key (NOT sourced): {}", ZoneAffinityModel.uncalibratedRoles)
 
+    // ── 9. mother fixture-id sidecar + standoff targeting ────────────────────
+    log.info("[9] fixture_ids sidecar + standoff targeting")
+    val withIds = fixtures.fixtures.count { it.zoneId != null }
+    check("fixture_ids.csv joined onto all 115 fixtures", withIds == 115, "got $withIds")
+    check(
+        "the 3 CIRCLE-INVISIBLE fixtures are flagged not-ok",
+        fixtures.fixtures.count { !it.pipelineOk } == 3,
+        "got ${fixtures.fixtures.count { !it.pipelineOk }}",
+    )
+    check(
+        "pipeline flag agrees with twin's own circle detection",
+        fixtures.fixtures.all { it.pipelineOk == it.visibleToImpressionPipeline },
+    )
+    check(
+        "GB-R3-U1 maps to the S13 compliance zone e82a21f3",
+        fixtures.fixtures.first { it.code == "GB-R3-U1" }.zoneId?.startsWith("e82a21f3") == true,
+    )
+
+    // Paired gondolas ~1.4m apart are the case that broke targeting: the back unit's longest edge faces
+    // its twin, so a naive standoff put the front unit in the ray. Verified live 2026-07-28 — GB-R3-U1
+    // now lands on e82a21f3 (R3 Back) where it previously produced 998268a9 (R3 Front).
+    val paired = fixtures.impressionVisible.filter { it.code.startsWith("GB-") || it.code.startsWith("GF-") }.take(24)
+    val misTargeted = paired.filter { f ->
+        val s = BrowseEpisode(fixtures, emitHz = 5.0).browse(f.code, 9_000, 0L, Random(7))
+        oracle.run(fixtures, s).none { it.fixtureCode == f.code }
+    }
+    check(
+        "standoff resolves to the REQUESTED fixture for paired gondolas",
+        misTargeted.isEmpty(),
+        "mis-targeted: ${misTargeted.map { it.code }}",
+    )
+
     log.info("")
     log.info("peopleSelfTest — {} passed, {} failed", passed, failed)
     if (failed > 0) exitProcess(1)

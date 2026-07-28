@@ -32,6 +32,15 @@ data class Fixture(
     val centre: Pt,
     val radiusMm: Double?,
     val department: String?,
+    /**
+     * Mother's `zone.id`, when a `fixture_ids.csv` sidecar is present. Twin's `layout.json` carries geometry
+     * but no platform identifiers (`zone_id: null`), so this is joined in from the map read off mother
+     * 2026-07-28. Not required to DRIVE the pipeline — core resolves fixtures itself from x/y — but it is
+     * what lets twin name a returned `fixtureId` instead of probing for it.
+     */
+    val zoneId: String? = null,
+    /** False when core's evaluator silently skips this fixture (see [visibleToImpressionPipeline]). */
+    val pipelineOk: Boolean = true,
 ) {
     enum class Kind { POLYGON, CIRCLE }
 
@@ -112,15 +121,42 @@ class FixtureSet(val storeCode: String, val spaceCode: String, val fixtures: Lis
     fun lookingAt(p: Pt, dir: Pt): Fixture? = fixtures.mapNotNull { f -> f.rayHitDistance(p, dir)?.let { f to it } }.minByOrNull { it.second }?.first
 
     companion object {
-        /** Load the fixture zones of one space from a store's `layout.json`. */
+        /**
+         * Load the fixture zones of one space from a store's `layout.json`, joining `fixture_ids.csv`
+         * (name → mother `zone_id` + pipeline flag) when it sits alongside. The sidecar is optional — twin
+         * can drive the pipeline without it — so a missing file is not an error.
+         */
         fun load(layoutJson: Path, spaceType: String = "sales_floor"): FixtureSet {
             val root = ConnectMappers.camel.readTree(Files.readAllBytes(layoutJson))
             val space = root.path("spaces").firstOrNull { it.path("space_type").asText() == spaceType }
                 ?: error("no space of type '$spaceType' in $layoutJson")
+            val ids = loadFixtureIds(layoutJson.resolveSibling("fixture_ids.csv"))
             val fixtures = space.path("zones")
                 .filter { it.path("zone_type").asText() == "fixture" }
-                .map { parseFixture(it) }
+                .map { z ->
+                    val f = parseFixture(z)
+                    val row = ids[f.code]
+                    if (row == null) f else f.copy(zoneId = row.first, pipelineOk = row.second)
+                }
             return FixtureSet(root.path("store_id").asText(), space.path("code").asText(), fixtures)
+        }
+
+        /** code → (zone_id, pipelineOk). Empty when the sidecar is absent. */
+        private fun loadFixtureIds(csv: Path): Map<String, Pair<String, Boolean>> {
+            if (!Files.exists(csv)) return emptyMap()
+            val lines = Files.readAllLines(csv)
+            if (lines.size < 2) return emptyMap()
+            val header = lines.first().split(",")
+            val iCode = header.indexOf("code")
+            val iZone = header.indexOf("zone_id")
+            val iPipe = header.indexOf("pipeline")
+            if (iCode < 0 || iZone < 0) return emptyMap()
+            return lines.drop(1).mapNotNull { l ->
+                val c = l.split(",")
+                if (c.size <= maxOf(iCode, iZone)) return@mapNotNull null
+                val ok = iPipe < 0 || c.getOrNull(iPipe)?.trim() == "ok"
+                c[iCode] to (c[iZone] to ok)
+            }.toMap()
         }
 
         private fun parseFixture(z: JsonNode): Fixture {

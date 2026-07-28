@@ -69,26 +69,44 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
     }
 
     /**
-     * A point [standoffMm] outside the fixture's nearest edge, on the side facing the aisle.
-     * Approximated by stepping out from the centroid toward the closest edge midpoint and beyond.
+     * A standoff point [standoffMm] outside the fixture, on a side from which the shopper can actually SEE
+     * it — validated by ray-cast, not assumed.
+     *
+     * Naively stepping out from the longest edge is wrong on a real floor. Denver's gondolas are paired
+     * front/back ~1.4m apart, so the longest edge of `GB-R3-U1` (Gondola R3 **Back**) faces its twin
+     * `GF-R3-U1`; a shopper standing there and looking at the back unit's centroid has the FRONT unit in
+     * the way, and the impression lands on the neighbour. Observed live 2026-07-28 and confirmed against
+     * the mother fixture map: aiming at `GB-R3-U1` produced impressions on `998268a9` (R3 Front), not
+     * `e82a21f3` (R3 Back).
+     *
+     * So: generate a candidate outside each edge, keep only those whose view ray genuinely resolves to this
+     * fixture, and among those prefer the widest edge (the browsable face). Falls back to the longest-edge
+     * candidate when none validates, so behaviour degrades rather than throwing.
      */
     private fun standoffPoint(f: Fixture, standoffMm: Double): Pt {
-        // Step outward along the centroid → edge-midpoint direction for the longest edge (the browsable face).
-        var bestMid = f.centre
-        var bestLen = -1.0
+        data class Candidate(val p: Pt, val edgeLen: Double)
+        val candidates = mutableListOf<Candidate>()
+
         for (i in 0 until f.ring.size - 1) {
             val a = f.ring[i]
             val b = f.ring[i + 1]
             val len = hypot(b.x - a.x, b.y - a.y)
-            if (len > bestLen) {
-                bestLen = len
-                bestMid = Pt((a.x + b.x) / 2, (a.y + b.y) / 2)
-            }
+            if (len <= 0.0) continue
+            val mid = Pt((a.x + b.x) / 2, (a.y + b.y) / 2)
+            // Outward normal = away from the centroid through the edge midpoint.
+            val dx = mid.x - f.centre.x
+            val dy = mid.y - f.centre.y
+            val d = hypot(dx, dy)
+            if (d <= 0.0) continue
+            candidates += Candidate(Pt(mid.x + dx / d * standoffMm, mid.y + dy / d * standoffMm), len)
         }
-        val dx = bestMid.x - f.centre.x
-        val dy = bestMid.y - f.centre.y
-        val d = hypot(dx, dy).takeIf { it > 0.0 } ?: return Pt(f.centre.x, f.centre.y + standoffMm)
-        return Pt(bestMid.x + dx / d * standoffMm, bestMid.y + dy / d * standoffMm)
+        if (candidates.isEmpty()) return Pt(f.centre.x, f.centre.y + standoffMm)
+
+        val visible = candidates.filter { c ->
+            val aim = Pt(f.centre.x - c.p.x, f.centre.y - c.p.y)
+            fixtures.lookingAt(c.p, aim)?.code == f.code
+        }
+        return (visible.maxByOrNull { it.edgeLen } ?: candidates.maxByOrNull { it.edgeLen }!!).p
     }
 
     /** Direction vector from [from] toward [to], scaled to [magnitude] with a little angular noise. */

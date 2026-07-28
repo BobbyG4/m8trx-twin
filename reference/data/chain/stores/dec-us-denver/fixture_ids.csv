@@ -1,0 +1,116 @@
+code,name,zone_id,pipeline
+ACC-01,Accessories Bay 1,14d36fe7-d505-561f-ac22-effdd9fb3282,ok
+ACC-02,Accessories Bay 2,2fa4b940-fab1-5025-9937-ec2fce1ba2d3,ok
+ACC-03,Accessories Bay 3,d02aeec3-9cb5-5c8e-8f88-8c046f1869d6,ok
+CO-01,Checkout Counter 1,fed6379d-ebe4-5c7b-b2b4-42f792ff144f,ok
+CO-02,Checkout Counter 2,76239634-ba46-5f04-8fec-d8a625dc5662,ok
+CO-03,Checkout Counter 3,d6e7f73a-96cf-5742-bc0d-3ccdabe1257a,ok
+CO-04,Checkout Counter 4,8d9d4d0a-d63c-5b1f-9c82-ea115a16e66a,ok
+CO-IR,Impulse Rack,388d2397-0f37-54e6-a8fe-7d62c400fe47,ok
+FB-01,Footwear Bench Seat,3fdbb630-9820-5998-b67a-ac569d63f6e8,ok
+GA-01,Treadmill 1,87e13a69-344c-5b58-a516-c75a679d5fe1,ok
+GB-R1-U1,Gondola R1 Back U1,2455b41f-5f1f-5e9f-85dc-f845ef4b07c6,ok
+GB-R1-U2,Gondola R1 Back U2,71d3df1e-8661-5b76-a421-240cb800ae04,ok
+GB-R1-U3,Gondola R1 Back U3,9e0a999b-a0fb-528f-aa98-c4206c235b0c,ok
+GB-R1-U4,Gondola R1 Back U4,a3978d0c-3ca2-54f4-b7a6-2070800644a8,ok
+GB-R1-U5,Gondola R1 Back U5,453220df-5875-5df5-bcd3-40d9d0ff3a2e,ok
+GB-R1-U6,Gondola R1 Back U6,b3ffcf72-56fb-5ed5-bcdc-2126bf6a917d,ok
+GB-R1-U7,Gondola R1 Back U7,f508b3a8-26f2-569e-9fc6-4ebd255d40a8,ok
+GB-R2-U1,Gondola R2 Back U1,3a11fde4-f81c-5e91-8db6-f19c9f73acb4,ok
+GB-R2-U2,Gondola R2 Back U2,f70b629c-ecbb-50cd-bfcf-6a8a5791e192,ok
+GB-R2-U3,Gondola R2 Back U3,cdc457b4-120d-547d-9517-adc4adea7ff5,ok
+GB-R2-U4,Gondola R2 Back U4,35470d8b-6e56-5449-9311-dfd70f17c6fc,ok
+GB-R2-U5,Gondola R2 Back U5,da5283a7-21ed-5feb-85db-6b85fdb3e047,ok
+GB-R2-U6,Gondola R2 Back U6,901209d3-f969-5dcb-a98a-38736d6545dd,ok
+GB-R2-U7,Gondola R2 Back U7,66d76213-c91e-5a2d-bf48-04944fa3d063,ok
+GB-R3-U1,Gondola R3 Back U1,e82a21f3-b4e5-5646-91a7-a857a711a9ba,ok
+GB-R3-U2,Gondola R3 Back U2,590a71d3-76a4-5bad-abfb-5215aecc8526,ok
+GB-R3-U3,Gondola R3 Back U3,f3a03d27-90bc-5f76-a4e7-8d08862d87ad,ok
+GB-R3-U4,Gondola R3 Back U4,b7b97471-675b-50c8-8e1e-085d41b6a83c,ok
+GB-R3-U5,Gondola R3 Back U5,e9a9d72f-9cb0-5960-ae6e-59066b8b35d9,ok
+GB-R3-U6,Gondola R3 Back U6,e8d93a13-a423-5f62-bd68-f6489955d8cd,ok
+GB-R3-U7,Gondola R3 Back U7,6bc284eb-bc34-5d14-a229-7dcff80ce861,ok
+GB-R4-U1,Gondola R4 Back U1,857c012a-79e0-5b79-b220-343c69b83074,ok
+GB-R4-U2,Gondola R4 Back U2,1a1af0e5-0739-5f4c-8a01-e5fcaff6b612,ok
+GB-R4-U3,Gondola R4 Back U3,d9da950f-40f5-5dfb-9ee2-d96f11433076,ok
+GB-R4-U4,Gondola R4 Back U4,f281cccf-19cc-5c25-bc9f-971ec1e4f0e8,ok
+GB-R4-U5,Gondola R4 Back U5,259260d6-b6fa-5f59-b14c-ac612abd360c,ok
+GB-R4-U6,Gondola R4 Back U6,7571804d-6423-576a-9571-a7cad2f5ec02,ok
+GB-R4-U7,Gondola R4 Back U7,ba0f3afa-d408-52f4-b559-05440f3a25fc,ok
+GB-R5-U1,Gondola R5 Back U1,2ed5654f-02ed-5db8-9347-faa5ff9e9e39,ok
+GB-R5-U2,Gondola R5 Back U2,a998691f-b345-5b77-a4b9-657719355824,ok
+GB-R5-U3,Gondola R5 Back U3,a2ef9022-79cd-5bf3-88b5-d331f1363e8c,ok
+GB-R5-U4,Gondola R5 Back U4,e0c32172-c11a-56a9-b721-a1aed479b7c6,ok
+GB-R5-U5,Gondola R5 Back U5,f6f259fb-3ab6-5e99-ab07-28c59c262a9f,ok
+GB-R5-U6,Gondola R5 Back U6,29bcd778-3e99-54d8-ab78-7c22c2f6d027,ok
+GB-R5-U7,Gondola R5 Back U7,72c55a59-74b7-5185-b694-0e399b6aa7fd,ok
+GB-R6-U1,Gondola R6 Back U1,c0d7e1b1-5596-5c65-b729-cf4eeae73670,ok
+GB-R6-U2,Gondola R6 Back U2,e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd,ok
+GB-R6-U3,Gondola R6 Back U3,205feeb2-451f-575c-9c5c-24d978ade4b6,ok
+GB-R6-U4,Gondola R6 Back U4,db907175-7463-524f-b0e5-c841a2e9b9d1,ok
+GB-R6-U5,Gondola R6 Back U5,80e36f35-b5c3-538f-8d8f-22358f14ce91,ok
+GB-R6-U6,Gondola R6 Back U6,e17d1029-359c-5d48-83f8-c4b6ec4977dd,ok
+GB-R6-U7,Gondola R6 Back U7,ac0413ac-1ed9-5f9d-a645-03398f76f46b,ok
+GF-R1-U1,Gondola R1 Front U1,f07fca36-1345-5234-85f7-e1d92b655cd8,ok
+GF-R1-U2,Gondola R1 Front U2,5dc52fcc-ba43-5846-ae0b-61710eb3dce3,ok
+GF-R1-U3,Gondola R1 Front U3,4cf33249-fc1a-5ff4-97c1-cb5c74d6bbfc,ok
+GF-R1-U4,Gondola R1 Front U4,3a743d60-1902-597c-ab52-6ad986bd7de9,ok
+GF-R1-U5,Gondola R1 Front U5,ccf00328-d35b-52a2-8878-69b84d4f3d44,ok
+GF-R1-U6,Gondola R1 Front U6,c2b5bf82-a267-51f3-8838-eda5964ff9c2,ok
+GF-R1-U7,Gondola R1 Front U7,5d4bae2c-d990-514a-b0c7-45eb32f98c4a,ok
+GF-R2-U1,Gondola R2 Front U1,d2bc38ee-5cf7-5187-bc5d-ee5df405e688,ok
+GF-R2-U2,Gondola R2 Front U2,3ebd2e33-7bb1-55d0-bfd2-9e92d54de2e6,ok
+GF-R2-U3,Gondola R2 Front U3,97d54fe0-052f-51a2-8fcc-4e6e31708481,ok
+GF-R2-U4,Gondola R2 Front U4,5a96612c-26d2-5e09-a263-3251e37af472,ok
+GF-R2-U5,Gondola R2 Front U5,596af12f-4dbb-5b91-bef7-3d17b7ac4e90,ok
+GF-R2-U6,Gondola R2 Front U6,29d93b47-d785-5941-9e47-869f43715081,ok
+GF-R2-U7,Gondola R2 Front U7,b469c521-853b-522c-ac4f-43194eda5a44,ok
+GF-R3-U1,Gondola R3 Front U1,998268a9-54d0-5573-b803-a328f0b87d17,ok
+GF-R3-U2,Gondola R3 Front U2,c7de6422-9437-5a4c-8b7f-c3322ba82dce,ok
+GF-R3-U3,Gondola R3 Front U3,48d6af54-6499-5966-92a0-7cc6d3a0b20a,ok
+GF-R3-U4,Gondola R3 Front U4,f8f45fee-339f-5110-b63b-1734a77ddd0d,ok
+GF-R3-U5,Gondola R3 Front U5,a3c21e57-051e-5e61-a7e3-13a638ebf031,ok
+GF-R3-U6,Gondola R3 Front U6,54914bd2-5210-5c41-8e65-69c625d732be,ok
+GF-R3-U7,Gondola R3 Front U7,d934f144-7007-5fd5-8333-34012cd0fdea,ok
+GF-R4-U1,Gondola R4 Front U1,851898c5-cb13-5474-b71e-2eec052815b4,ok
+GF-R4-U2,Gondola R4 Front U2,bf0e47b6-72dc-5212-91ab-7392759d5e41,ok
+GF-R4-U3,Gondola R4 Front U3,14ed7729-a143-5616-92e1-af1fd3880a7a,ok
+GF-R4-U4,Gondola R4 Front U4,e00f447b-a848-54ce-9965-5948c18b82a3,ok
+GF-R4-U5,Gondola R4 Front U5,49f45406-757e-5c4b-a7b5-55a6f6f72d75,ok
+GF-R4-U6,Gondola R4 Front U6,62ab3275-31b7-5e23-9cd2-89ba30b7d9d3,ok
+GF-R4-U7,Gondola R4 Front U7,f29b69df-7fc9-5c66-abcf-fbe9fff86066,ok
+GF-R5-U1,Gondola R5 Front U1,970e95e8-c287-551c-bd1f-4c3cb97dfa26,ok
+GF-R5-U2,Gondola R5 Front U2,46b543e4-486f-54d1-99c0-e1dd552582f6,ok
+GF-R5-U3,Gondola R5 Front U3,b98591ff-b186-5be0-8ae5-5d1ba188abf8,ok
+GF-R5-U4,Gondola R5 Front U4,e870c5ad-584e-501e-bbfc-95c03a318146,ok
+GF-R5-U5,Gondola R5 Front U5,89f31d97-f639-512b-b4fd-526cc18fe9c0,ok
+GF-R5-U6,Gondola R5 Front U6,d6a26e54-93de-57ad-9251-f7ab0b63e553,ok
+GF-R5-U7,Gondola R5 Front U7,6dacafd8-5d56-5537-9b9d-8c11cd509db7,ok
+GF-R6-U1,Gondola R6 Front U1,030dc90f-dc97-52a7-b607-0b45fee4ebe0,ok
+GF-R6-U2,Gondola R6 Front U2,87518e4e-fe0e-56fd-a700-f27f2e55496a,ok
+GF-R6-U3,Gondola R6 Front U3,1d640f72-c4ca-5235-b505-507e80ea57c0,ok
+GF-R6-U4,Gondola R6 Front U4,7e6238f8-3d56-5834-9733-f0e555fd1ca9,ok
+GF-R6-U5,Gondola R6 Front U5,d93ed6f8-91f3-5642-8f34-03da0dfc79eb,ok
+GF-R6-U6,Gondola R6 Front U6,6586526b-4c7e-51d3-8e8c-65bcdcd453b4,ok
+GF-R6-U7,Gondola R6 Front U7,25725f8c-3d66-5b06-9e5c-131ef0fe22d4,ok
+GPS-01,GPS Display Case 1,5e0cc30b-dc0c-5a18-9bca-c3e89feee162,ok
+GPS-02,GPS Display Case 2,a0f1c0c4-9cfc-5bb4-8ea4-57c1fe0a2f72,ok
+GPS-03,GPS Display Case 3,31db3b74-c7cd-5681-9a0c-0d9cc31ae0ea,ok
+GPS-04,GPS Display Case 4,c9a2c55b-35cc-5bdb-a6d0-e3c5b999ec8f,ok
+GPS-05,GPS Display Case 5,15cc4054-c5db-5554-beac-b7adfcdd0e8c,ok
+GPS-06,GPS Display Case 6,63340ce6-0988-52ec-b857-74a8da4e2e3f,ok
+PE-01,East Wall Bay 1,233e87bf-e9fb-5d52-9c2f-1bd51a7553e8,ok
+PE-02,East Wall Bay 2,db2ada86-a3d6-5599-8217-bbe334f55bcf,ok
+PE-03,East Wall Bay 3,4a9f62c2-75b2-51d4-86c2-25ff318ee870,ok
+PE-04,East Wall Bay 4,0ef3204d-e78f-5aa3-8a58-3cc16fa0f767,ok
+PE-05,East Wall Bay 5,c9ae66e0-66e3-522e-a5ac-c4f1e6638586,ok
+PE-06,East Wall Bay 6,73e715e0-9856-5a44-b2dc-5ced85b22dfc,ok
+PI-01,Promo Island 1,7dc6fb79-6128-5a06-bab2-7848db41d32d,CIRCLE-INVISIBLE
+PI-03,Promo Island 3,7cba765e-1b6f-5249-8044-5d4a07d4c8ca,CIRCLE-INVISIBLE
+PW-01,West Wall Bay 1,feb54fac-d9de-58be-9e83-45f6fb29758d,ok
+PW-02,West Wall Bay 2,ffb7e63f-e697-5448-89de-c3aecd453b23,ok
+PW-03,West Wall Bay 3,27a4636d-ac1e-5280-a72d-589f4f6640c2,ok
+PW-04,West Wall Bay 4,82f9b31b-ac97-59eb-99c9-d865472a8c7f,ok
+PW-05,West Wall Bay 5,c5b509cd-80a6-5e3d-b201-5eda56e3c853,ok
+PW-06,West Wall Bay 6,a212a460-9704-5a4f-befe-7dbc44e3e106,ok
+RR-02,Apparel Round Rack 2,7ea82496-e868-52d8-a63b-2fa55cb9c718,CIRCLE-INVISIBLE
