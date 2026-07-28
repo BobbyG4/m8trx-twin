@@ -285,3 +285,20 @@ tasks.register<JavaExec>("scenarioSelfTest") {
         },
     )
 }
+
+// Drive a whole generated store day into the twin edge (BRIEF-TWIN-SPINE 3.3 -> 3.2). The day is generated
+// and oracle-checked OFFLINE first, so the expected impression count is known before publishing. PACING:
+// episode deltas replay at REAL time and only inter-episode gaps are divided — compressing episodes would
+// push dwell under the 5000ms threshold and yield zero impressions from a run that looks healthy.
+// SAFE BY DEFAULT — dry-run; M8TRX_DAY_LIVE=true fires. Same two edge interlocks as connectPeopleDrive.
+tasks.register<JavaExec>("connectDayDrive") {
+    group = "verification"
+    description = "Generate a full store day, verify offline, then replay it live with gap-only compression."
+    mainClass.set("com.m8trx.twin.layer3.DayDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}

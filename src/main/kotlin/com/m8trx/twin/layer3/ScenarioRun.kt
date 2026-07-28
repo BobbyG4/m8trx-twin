@@ -49,7 +49,25 @@ class ScenarioRun(
         val schedulerErrors: Int,
     )
 
-    fun run(date: LocalDate, seed: Long, populationScale: Double, zone: ZoneId = ZoneId.of("America/Denver")): Result {
+    /**
+     * The generated dwell streams for a day, keyed by customer. Same seed → identical output, so this can
+     * be called after [run] to get the emissions without threading them through the result.
+     */
+    fun streamsFor(
+        date: LocalDate,
+        seed: Long,
+        populationScale: Double,
+        zone: ZoneId = ZoneId.of("America/Denver"),
+    ): Map<String, List<ImpressionOracle.Sample>> {
+        val sink = RecordingSink()
+        generate(date, seed, populationScale, zone, sink)
+        return sink.streams
+    }
+
+    private data class Tally(var visitors: Int = 0, var transactions: Int = 0, var units: Int = 0, var revenue: Double = 0.0, var errors: Int = 0)
+
+    /** Shared generation path — deterministic from (date, seed, scale). */
+    private fun generate(date: LocalDate, seed: Long, populationScale: Double, zone: ZoneId, sink: RecordingSink): Tally {
         val model = OperatingModel.load(modelPath)
         val layout = chainDir.resolve("stores/$storeCode/layout.json")
         val fixtures = FixtureSet.load(layout)
@@ -61,29 +79,29 @@ class ScenarioRun(
         val clock = SimpleClock(ZonedDateTime.of(date, openHour, zone).toInstant())
         val scheduler = QueueScheduler(clock, FailurePolicy.SKIP_AND_LOG)
         val bus = SimpleEventBus()
-        val sink = RecordingSink()
+        val tally = Tally()
 
-        var visitors = 0
-        var transactions = 0
-        var units = 0
-        var revenue = 0.0
-        bus.subscribe(CustomerEntered::class) { visitors++ }
+        bus.subscribe(CustomerEntered::class) { tally.visitors++ }
         bus.subscribe(SaleCompleted::class) { s ->
-            transactions++
-            units += s.units
-            revenue += s.totalUsd
+            tally.transactions++
+            tally.units += s.units
+            tally.revenue += s.totalUsd
         }
 
-        val generator = TrafficGenerator(
-            model,
-            journeys,
-            TrafficGenerator.Params(date = date, zone = zone, populationScale = populationScale),
-        )
+        val generator = TrafficGenerator(model, journeys, TrafficGenerator.Params(date = date, zone = zone, populationScale = populationScale))
         val ctx = GeneratorContext(clock, scheduler, bus, forkRng(seed, generator.id), log, sink)
-
         generator.start(ctx)
         scheduler.drain()
         generator.stop(ctx)
+        tally.errors = scheduler.errorCount
+        return tally
+    }
+
+    fun run(date: LocalDate, seed: Long, populationScale: Double, zone: ZoneId = ZoneId.of("America/Denver")): Result {
+        val model = OperatingModel.load(modelPath)
+        val fixtures = FixtureSet.load(chainDir.resolve("stores/$storeCode/layout.json"))
+        val sink = RecordingSink()
+        val tally = generate(date, seed, populationScale, zone, sink)
 
         val dayType = if (date.dayOfWeek.value >= 6) model.traffic.visitorsPerDay.weekend else model.traffic.visitorsPerDay.weekday
         val expectedVisitors = dayType * populationScale
@@ -102,12 +120,12 @@ class ScenarioRun(
         val report = Reconciliation.check(
             model,
             expectedVisitors,
-            Reconciliation.Observed(visitors, transactions, units, revenue),
+            Reconciliation.Observed(tally.visitors, tally.transactions, tally.units, tally.revenue),
         )
 
         return Result(
-            visitors, transactions, units, revenue, expectedVisitors, report,
-            sink.totalSamples, predicted, silent, scheduler.errorCount,
+            tally.visitors, tally.transactions, tally.units, tally.revenue, expectedVisitors, report,
+            sink.totalSamples, predicted, silent, tally.errors,
         )
     }
 }
