@@ -2,20 +2,31 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — Session 15 · **BRIEF-TWIN-SPINE restart**)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — **Session 15 CLOSED** · ★ people pipeline PROVEN end to end camera-free · full day **3,664 impressions vs 3,664 predicted = 0.0%** · first circle impression ever · 2 coordinator-brief errors caught pre-build)
 
-> **PICK UP HERE (Session 16).** Ground-truth note: `status/active/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — **read it before firing the spine brief.** Branch `chore/spine-restart-hygiene` (4 commits, ktlint+compile+`connectSelfTest`+`peopleSelfTest` green).
+> **PICK UP HERE (Session 16).** Read first: `status/session-notes/2026-07-28-session-15-spine-restart-people-pipeline-full-day.md` (§3 is the *don't-repeat* record — **every bug in S15 was silent-failure class**) and `status/archive/sprint/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md`. Coordinator handoff: `status/active/TWIN-STATUS-FOR-COORDINATOR-2026-07-28.md` (§2 is a standalone run card).
 >
-> **DONE S15:** 3.1 spine live (`connectChainActivity`, ~1 event/6s at conc 1, ~530 sales, zero non-200s) · 3.4 hygiene (5 stale HOLD FIRE sites; `seed_store.py` de-hardcoded + SUPERSEDED) · **`peopleSelfTest` 38/38** (impression-rule conformance + zone-affinity re-key portable across all 10 stores).
+> **Branch `chore/spine-restart-hygiene` @ 15 commits, PUSHED, NO PR — Bob's call.** `main` untouched at `b0390fc`. All green: ktlint · compile · `connectSelfTest` · `peopleSelfTest` (49) · `scenarioSelfTest` (23).
 >
-> **★ 3 RULINGS OWED BY BOB — everything unblocked is finished:**
-> **(a) Space-UUID route** — hand-off (precedent `site_ids.csv`) vs tenant-wide reader password. Twin recommends hand-off + file **TWIN-REQ-004** (Connect spatial read). No Connect endpoint returns space identity today; `items/receive` *demands* a `spaceId` nothing provides — an integrator-facing defect, not just a twin one.
-> **(b) NATS vs REST join point** — `ImpressionEventController` is now `@ConnectExposed`, so REST works and drops the edge-server dependency, but bypasses `ImpressionStateMachine` (proves the tail, not the pipeline). Recommend both, REST rows tagged.
-> **(c) Footfall** — `crossing` has **no v2 consumer** (`sliceId` is a v1 concept; only implementor is `Journaler.kt`). Twin cannot drive the visitor count the reconciliation identity divides into. **Descoped from 3.2.**
+> **DONE S15 (brief 3.1–3.4 all delivered):** ground-truth pass caught **2 brief errors** (`viewDirection` MANDATORY + the **>1 Hz emit floor**; Connect outbound already exists) → accepted into shared `9f8f68e0` · 3.1 stream (~550 events, zero non-200s) · 3.4 hygiene · **`peopleSelfTest` 49** · zone-affinity re-key (all 10 stores, 0 unmapped) · Layer-4 runtime skeleton (locked Q2/Q3/Q6) + `OperatingModel` + `TrafficGenerator` + journeys + **§1 reconciliation gate** · `connectPeopleDrive` · `connectDayDrive` · **full day 1,100,584 samples / 790 shoppers / 44m20s / 3,664 = 3,664** · single episodes **DB-confirmed 5/5** · **first circle impression** (`PI-01` → `7dc6fb79`).
 >
-> **✅ CLEARED:** FR-PLN-08's Notifications-spine gate — rule engine live on master `f14482a`. The owed **directive→task smoke** is runnable **with a backend watcher** (task read stays JWT-only).
-> **⚠ STILL OWED (Bob):** rotate the mother Hasura admin secret — de-hardcoding does not remove it from git history, and it is instance-wide.
-> **⚙ Emit-contract constants (hard):** >1 Hz floor (5 Hz default, Xovis runs 5–25) · within 1m of a fixture **edge** · ray held on the **same** fixture · both clocks past 5000ms · ~10s cache lag before the subscriber sees it · circle fixtures are silently skipped by core (Denver has 3) · `com.m8trx.geometry` is **off-limits** (shared with Android AR — report bugs, never patch).
+> **★ ALL SIX RULINGS CLOSED — nothing in the spine is decision-blocked.**
+>
+> **NEXT, ranked:**
+> **(1) ★ 18 of 115 fixtures never browsed — including ALL THREE CIRCLES.** `dwellAtZone` reaches fixtures only via `fixturesByDept`; `PI-01`/`PI-03`/`RR-02` sit in `Z-01` with no department, so they sat out the day despite being individually proven. Read as a heatmap this looks like the platform dropping them — the same wrong conclusion the old converter bug caused. **Fix:** browse non-department fixtures via `in_area_zone`.
+> **(2) `impression_event` DB verification for `fullday-0728` — OWED (Bob/coordinator).** Expect **3,664 rows**; twin verifies over NATS only (psql is Off-Limits).
+> **(3) 22,944-row Hasura truncation ceiling — UNTESTED.** 854 was under it; 3,664 may not be.
+> **(4) Three Promo-Island-1 rows vs twin's one — UNRECONCILED.**
+> **(5) TWIN-REQ-004 — ✅ FILED 2026-07-28** (`m8trx-shared/twin/requirements/TWIN-REQ-004-connect-read-surface.md`): ONE Connect read-surface brief covering task read · space/zone read · impression read (compliance `/state` already shipped as TWIN-REQ-003). Highest-value item is **space/zone identity** — `POST /items/receive` *requires* a `spaceId` nothing on the Connect surface returns, so a third party cannot call receive without out-of-band UUIDs. That gap has a victim who is not twin. **Twin is NOT blocked** (fixture map covers Denver; NATS covers impression verification).
+> **(6) directive→task smoke** (owed since S14) — **unblocked**, rule engine live on master `f14482a`; needs a backend watcher.
+> **(7) §5 economics recalibration** — ATV $58 / avg line $26.40 are from the superseded 871-SKU catalog, not the live 2,586-SKU assortment. Bob's decision.
+>
+> **⚠ STILL OWED (Bob, cannot close from twin):** rotate the mother Hasura admin secret — de-hardcoding did **not** remove it from git history, and it is instance-wide.
+>
+> **⚙ EMIT-CONTRACT CONSTANTS (hard, learned the hard way):** **emit >1 Hz** (5 Hz default; Xovis runs 5–25 — below the floor both clocks reset per sample and 5000ms is unreachable however long the shopper stands) · within **1m of a fixture EDGE** · ray held on the **SAME** fixture · **both** clocks past 5000ms · ~10s `expireAfterWrite` lag before the subscriber sees it · **circles are CONTAINMENT-ONLY** (`Circle.edges()` is a stub — stand ON the footprint) · **`com.m8trx.geometry` is OFF-LIMITS** (shared with Android AR — report, never patch).
+> **⚙ PACING RULE (Bob adopted twin's formulation):** compress each shopper's **ARRIVAL**, never their internal timing. "Compress the gaps" is ambiguous once shoppers overlap, because consecutive samples belong to different people and nearly every delta reads inter-episode. Deltas ≤1000ms replay verbatim; larger ones divide. **Guarded by an invariant that aborts before publishing.** And anchor wire `ts` to the **plan**, not the wall clock — core computes both clocks from the envelope `ts`, so publisher jitter otherwise leaks into the rule.
+> **⛔ TWO EDGES SHARE .29:** `:4223` = `edge-twin-denver` (twin) · `:4222` = `edge-itx-office` (**PRODUCTION, real Xovis**). Every live driver asserts NATS `server_name` before emitting and denylists the office space.
+> **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` → `set -a; . ./.env; set +a` then `./gradlew … --no-daemon`.
 
 ---
 

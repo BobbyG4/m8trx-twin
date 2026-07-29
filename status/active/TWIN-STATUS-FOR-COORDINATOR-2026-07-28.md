@@ -138,7 +138,7 @@ The naive implementation — walk the merged timeline, compress anything that is
 
 ## 8. Artifacts
 
-`status/active/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — ground-truth note (accepted in full)
+`status/archive/sprint/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md` — ground-truth note (accepted in full)
 `src/main/kotlin/com/m8trx/twin/` — `runtime/` · `layer1/{FixtureGeometry,ImpressionOracle,BrowseEpisode,ZoneAffinity,PeopleDrive}` · `layer2/Journeys` · `layer3/{OperatingModel,TrafficGenerator,Reconciliation,ScenarioRun,DayDrive}`
 `reference/data/chain/stores/dec-us-denver/fixture_ids.csv` — mother fixture map, re-keyed name → **code** (names are localized EN/FR/KO; a name join breaks at Lyon/Busan)
 Gradle: `peopleSelfTest` (49, offline) · `scenarioSelfTest` (23, offline) · `connectPeopleDrive` · `connectDayDrive` — both dry-run by default, both guarded by the `edge-twin-denver` interlock
