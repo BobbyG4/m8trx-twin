@@ -14,8 +14,11 @@ import java.nio.file.Path
  *
  * SAFE BY DEFAULT — dry-run (builds + logs the movement envelope, sends nothing).
  * `M8TRX_MOVEMENT_LIVE=true` fires.
- * !! HOLD FIRE until BACKEND confirms the inventory_movement ingester is merged + deployed (else the POST
- * falls through the generic data_type path, not the movement landing). !!
+ *
+ * INGESTER LIVE (services #71→#72, deployed 2026-07-01). LIVE-PROVEN in S13: twin drove real relocations
+ * that recovered compliance targets (#6 `2→3` compliant, #2 `0→2`; 24/2/2 → 25/2/1) — the first live
+ * runtime `thing_location` writes. Dry-run stays the default because this mutates real inventory location,
+ * not because the surface is unproven.
  *
  * Env: M8TRX_MOVEMENT_EPC_FILE (a from-location EPC list, one EPC per line — no header),
  * M8TRX_MOVEMENT_TO_FIXTURE (default GB-R3-U1), M8TRX_MOVEMENT_TYPE (default relocation),

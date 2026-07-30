@@ -64,7 +64,7 @@ class PlanogramDirectiveDriver(private val webhook: WebhookClient) {
     /** Serialize the directive WITHOUT sending — the offline assertion path + the dry-run log shape. */
     fun dryRun(directive: PlanogramDirective): String = ConnectMappers.snake.writeValueAsString(directive)
 
-    /** LIVE: POST at `X-Data-Type: planogram_directive`. HOLD FIRE until BACKEND confirms #64 deployed. */
+    /** LIVE: POST at `X-Data-Type: planogram_directive`. Creates real compliance targets — opt in explicitly. */
     fun drive(directive: PlanogramDirective, auth: WebhookClient.AuthMode = WebhookClient.AuthMode.HMAC): ConnectResponse {
         val resp = webhook.push(WebhookDataType.PLANOGRAM_DIRECTIVE, directive, auth)
         when (resp) {

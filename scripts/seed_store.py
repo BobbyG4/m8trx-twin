@@ -12,15 +12,40 @@ Actions:
   6. Verify counts
 
 Auth: Hasura admin secret (bootstrap-only tool, not a runtime twin emitter).
+
+⚠ SUPERSEDED (2026-07-28). This is the Session-3 single-store bootstrap. It targets the PRE-CHAIN
+tenant and the 600 sqm "Decathlon Running" layout, both of which were replaced by the chain dataset
+(`reference/data/chain/`) and RE-RESEED v2 (2026-06-26): 14 sites / 30 spaces / 929 zones / 102,675
+items on tenant ecfa6903-…. Kept for provenance only. Do NOT run it against the live demo tenant —
+it clears zones for the space it points at. The current path is Connect, not direct Hasura writes
+(see CLAUDE.md § Posture).
+
+⚠ CREDENTIAL HISTORY. This file previously carried a hardcoded mother Hasura admin secret. It is now
+read from the environment, but de-hardcoding does NOT remove it from git history — the secret is
+still recoverable from earlier commits and must be ROTATED to be considered closed. Tracked in
+STATUS.md § Deferred. The secret is instance-wide, not tenant-scoped.
 """
 
-import json, sys, uuid, requests
+import json, os, sys, uuid, requests
 
-HASURA_URL   = "https://mother.m8trx.com/v2/v1/graphql"
-ADMIN_SECRET = "veryValerie"
-SPACE_ID     = "a66450b6-8ab1-4ea4-806e-2d078296e260"
-SITE_ID      = "d68a4884-0957-4b90-947e-997018778583"
-TENANT_ID    = "14d052b0-5505-4f29-b238-35efd71fb4bb"
+
+def _require(key: str) -> str:
+    """Fail fast rather than silently seeding the wrong tenant with a default."""
+    val = os.environ.get(key)
+    if not val:
+        sys.exit(
+            f"Required env var {key} is not set.\n"
+            "This script has no defaults by design — its former hardcoded values pointed at the\n"
+            "pre-chain tenant and would seed the wrong instance. See the SUPERSEDED note above."
+        )
+    return val
+
+
+HASURA_URL   = os.environ.get("M8TRX_HASURA_URL", "https://mother.m8trx.com/v2/v1/graphql")
+ADMIN_SECRET = _require("M8TRX_HASURA_ADMIN_SECRET")
+SPACE_ID     = _require("M8TRX_SPACE_ID")
+SITE_ID      = _require("M8TRX_SITE_ID")
+TENANT_ID    = _require("M8TRX_TENANT_ID")
 
 HEADERS = {
     "Content-Type": "application/json",

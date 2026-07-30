@@ -17,8 +17,8 @@ import org.slf4j.LoggerFactory
  * to `/v1/webhook/{tenant}/twin-pos` with `X-Data-Type: inventory_movement`. Lands as a
  * `thing_location.zone_id` update per item (item stays `in_stock`) — NOT a sale, NOT a stock adjustment.
  *
- * HOLD FIRE until Backend confirms the ingester is merged + deployed — until then [drive] is
- * wired-but-unfired and [dryRun] is the offline assertion path.
+ * Ingester LIVE since services #71→#72 (2026-07-01) and live-proven in S13. [dryRun] remains the offline
+ * assertion path; [drive] mutates real `thing_location` rows, so callers opt in explicitly.
  */
 class MovementDriver(private val webhook: WebhookClient) {
     private val log = LoggerFactory.getLogger(MovementDriver::class.java)
@@ -45,7 +45,7 @@ class MovementDriver(private val webhook: WebhookClient) {
     /** Serialize the movement WITHOUT sending — the offline assertion path + the dry-run log shape. */
     fun dryRun(mv: InventoryMovement): String = ConnectMappers.snake.writeValueAsString(mv)
 
-    /** LIVE: POST at `X-Data-Type: inventory_movement`. HOLD FIRE until BACKEND confirms deployed. */
+    /** LIVE: POST at `X-Data-Type: inventory_movement`. Mutates real `thing_location` — opt in explicitly. */
     fun drive(mv: InventoryMovement, auth: WebhookClient.AuthMode = WebhookClient.AuthMode.API_KEY): ConnectResponse {
         val resp = webhook.push(WebhookDataType.INVENTORY_MOVEMENT, mv, auth)
         when (resp) {

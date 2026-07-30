@@ -2,7 +2,35 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-03 — Session 14 · ★ CORE-REQ-005 parts 1–3 DONE (`connectFullLoop` #9 · `connectStress` #10 · compliance read-back smoke → **TWIN-REQ-003 SATISFIED**) · ★ **Strand V site-scope hardening GREEN** (`connectSiteScopeAudit` #11 — the at-scale 151-table sweep caught **3 event/audit leaks** core's core-36/tail-35 mapping missed) · **seat/perms tenant-wide leak** surfaced (core's `seed_users.py` fix) · main `2131384`)
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — **Session 15 CLOSED** · ★ people pipeline PROVEN end to end camera-free · full day **3,664 impressions vs 3,664 predicted = 0.0%** · first circle impression ever · 2 coordinator-brief errors caught pre-build)
+
+> **PICK UP HERE (Session 16).** Read first: `status/session-notes/2026-07-28-session-15-spine-restart-people-pipeline-full-day.md` (§3 is the *don't-repeat* record — **every bug in S15 was silent-failure class**) and `status/archive/sprint/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md`. Coordinator handoff: `status/active/TWIN-STATUS-FOR-COORDINATOR-2026-07-28.md` (§2 is a standalone run card).
+>
+> **Branch `chore/spine-restart-hygiene` @ 15 commits, PUSHED, NO PR — Bob's call.** `main` untouched at `b0390fc`. All green: ktlint · compile · `connectSelfTest` · `peopleSelfTest` (49) · `scenarioSelfTest` (23).
+>
+> **DONE S15 (brief 3.1–3.4 all delivered):** ground-truth pass caught **2 brief errors** (`viewDirection` MANDATORY + the **>1 Hz emit floor**; Connect outbound already exists) → accepted into shared `9f8f68e0` · 3.1 stream (~550 events, zero non-200s) · 3.4 hygiene · **`peopleSelfTest` 49** · zone-affinity re-key (all 10 stores, 0 unmapped) · Layer-4 runtime skeleton (locked Q2/Q3/Q6) + `OperatingModel` + `TrafficGenerator` + journeys + **§1 reconciliation gate** · `connectPeopleDrive` · `connectDayDrive` · **full day 1,100,584 samples / 790 shoppers / 44m20s / 3,664 = 3,664** · single episodes **DB-confirmed 5/5** · **first circle impression** (`PI-01` → `7dc6fb79`).
+>
+> **★ ALL SIX RULINGS CLOSED — nothing in the spine is decision-blocked.**
+>
+> **NEXT, ranked:**
+> **(1) ★ 18 of 115 fixtures never browsed — including ALL THREE CIRCLES.** `dwellAtZone` reaches fixtures only via `fixturesByDept`; `PI-01`/`PI-03`/`RR-02` sit in `Z-01` with no department, so they sat out the day despite being individually proven. Read as a heatmap this looks like the platform dropping them — the same wrong conclusion the old converter bug caused. **Fix:** browse non-department fixtures via `in_area_zone`.
+> **(2) `impression_event` DB verification for `fullday-0728` — OWED (Bob/coordinator).** Expect **3,664 rows**; twin verifies over NATS only (psql is Off-Limits).
+> **(3) 22,944-row Hasura truncation ceiling — UNTESTED.** 854 was under it; 3,664 may not be.
+> **(4) Three Promo-Island-1 rows vs twin's one — UNRECONCILED.**
+> **(5) TWIN-REQ-004 — ✅ FILED 2026-07-28** (`m8trx-shared/twin/requirements/TWIN-REQ-004-connect-read-surface.md`): ONE Connect read-surface brief covering task read · space/zone read · impression read (compliance `/state` already shipped as TWIN-REQ-003). Highest-value item is **space/zone identity** — `POST /items/receive` *requires* a `spaceId` nothing on the Connect surface returns, so a third party cannot call receive without out-of-band UUIDs. That gap has a victim who is not twin. **Twin is NOT blocked** (fixture map covers Denver; NATS covers impression verification).
+> **(6) directive→task smoke** (owed since S14) — **unblocked**, rule engine live on master `f14482a`; needs a backend watcher.
+> **(7) §5 economics recalibration** — ATV $58 / avg line $26.40 are from the superseded 871-SKU catalog, not the live 2,586-SKU assortment. Bob's decision.
+>
+> **⚠ STILL OWED (Bob, cannot close from twin):** rotate the mother Hasura admin secret — de-hardcoding did **not** remove it from git history, and it is instance-wide.
+>
+> **⚙ EMIT-CONTRACT CONSTANTS (hard, learned the hard way):** **emit >1 Hz** (5 Hz default; Xovis runs 5–25 — below the floor both clocks reset per sample and 5000ms is unreachable however long the shopper stands) · within **1m of a fixture EDGE** · ray held on the **SAME** fixture · **both** clocks past 5000ms · ~10s `expireAfterWrite` lag before the subscriber sees it · **circles are CONTAINMENT-ONLY** (`Circle.edges()` is a stub — stand ON the footprint) · **`com.m8trx.geometry` is OFF-LIMITS** (shared with Android AR — report, never patch).
+> **⚙ PACING RULE (Bob adopted twin's formulation):** compress each shopper's **ARRIVAL**, never their internal timing. "Compress the gaps" is ambiguous once shoppers overlap, because consecutive samples belong to different people and nearly every delta reads inter-episode. Deltas ≤1000ms replay verbatim; larger ones divide. **Guarded by an invariant that aborts before publishing.** And anchor wire `ts` to the **plan**, not the wall clock — core computes both clocks from the envelope `ts`, so publisher jitter otherwise leaks into the rule.
+> **⛔ TWO EDGES SHARE .29:** `:4223` = `edge-twin-denver` (twin) · `:4222` = `edge-itx-office` (**PRODUCTION, real Xovis**). Every live driver asserts NATS `server_name` before emitting and denylists the office space.
+> **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` → `set -a; . ./.env; set +a` then `./gradlew … --no-daemon`.
+
+---
+
+## Session 14 priorities (historical — updated 2026-07-03 — Session 14 · ★ CORE-REQ-005 parts 1–3 DONE (`connectFullLoop` #9 · `connectStress` #10 · compliance read-back smoke → **TWIN-REQ-003 SATISFIED**) · ★ **Strand V site-scope hardening GREEN** (`connectSiteScopeAudit` #11 — the at-scale 151-table sweep caught **3 event/audit leaks** core's core-36/tail-35 mapping missed) · **seat/perms tenant-wide leak** surfaced (core's `seed_users.py` fix) · main `2131384`)
 
 > **PICK UP HERE (Session 15):** **CORE-REQ-005 parts 1–3 DONE + merged** (PR #9 `connectFullLoop` · #10 `connectStress` · compliance read-back smoke GREEN). **TWIN-REQ-003 SATISFIED** (core PR #76 `925f9a4` — `POST /api/v2/compliance/state` live; the `/state` 403 wall closed, assert-split done). **★ Strand V site-scope hardening GREEN** (`connectSiteScopeAudit`, PR #11) — a site-scoped user proven confined across token/picker/read planes + writes; **the at-scale 151-table sweep caught 3 event/audit leaks** (`integration_event`/`item_custody_event`/`unified_audit_event`) that core's core-36/tail-35 mapping missed → core fixed → twin re-verified 0. **Seat/perms tenant-wide leak** surfaced provisioning demo logins (root `seed_users.py` grants `user_tenant_membership` per site-role — **core's fix**; twin roster clean). `main` `2131384` (PRs #9/#10/#11 merged). *(Part-2 live-stress ceiling: conc ≤12 clean / 24 → ~50% `502` = S8 event-loop starvation; fix `429`@nginx + offload/MVC, post-demo.)*
 >

@@ -237,3 +237,68 @@ tasks.register<JavaExec>("connectSiteScopeAudit") {
         },
     )
 }
+
+// Layer-1 people/impression conformance harness (BRIEF-TWIN-SPINE 3.2/3.3). Offline: no network, no
+// credentials, no mother UUIDs — runs against the committed layout.json. Proves an emit stream would
+// actually satisfy core's fixture-impression rule BEFORE it is fired live, because the failure mode is
+// silent (below ~1 Hz, both clocks reset every sample and nothing can ever fire).
+tasks.register<JavaExec>("peopleSelfTest") {
+    group = "verification"
+    description = "Assert the people-emit stream satisfies core's impression rule (distance + dwell + view, >1Hz floor)."
+    mainClass.set("com.m8trx.twin.layer1.PeopleSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Drive core's REAL fixture-impression pipeline over NATS into the twin edge (BRIEF-TWIN-SPINE 3.2).
+// Prints the ImpressionOracle prediction BEFORE publishing so it cannot be retrofitted to the result.
+// SAFE BY DEFAULT — dry-run; M8TRX_PEOPLE_LIVE=true fires. Two interlocks guard the production office
+// edge on the same host: NATS server_name must be 'edge-twin-denver', and the office space is denylisted.
+tasks.register<JavaExec>("connectPeopleDrive") {
+    group = "verification"
+    description = "Publish objLocation at Xovis fidelity into the twin edge; predict impressions first, then compare."
+    mainClass.set("com.m8trx.twin.layer1.PeopleDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Layer-3 scenario harness (BRIEF-TWIN-SPINE 3.3). Generates a whole day headlessly at rate=+inf and
+// asserts the STORE-OPERATING-MODEL §1 reconciliation identity, determinism from seed, and — the part that
+// matters — that the emitted dwell streams would actually fire impressions on the real pipeline. The oracle
+// was validated 7/7 against the live twin edge, so its offline verdict is trustworthy. No network.
+tasks.register<JavaExec>("scenarioSelfTest") {
+    group = "verification"
+    description = "Generate a day offline; assert §1 reconciliation, determinism, and that dwell fires impressions."
+    mainClass.set("com.m8trx.twin.layer3.ScenarioSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Drive a whole generated store day into the twin edge (BRIEF-TWIN-SPINE 3.3 -> 3.2). The day is generated
+// and oracle-checked OFFLINE first, so the expected impression count is known before publishing. PACING:
+// episode deltas replay at REAL time and only inter-episode gaps are divided — compressing episodes would
+// push dwell under the 5000ms threshold and yield zero impressions from a run that looks healthy.
+// SAFE BY DEFAULT — dry-run; M8TRX_DAY_LIVE=true fires. Same two edge interlocks as connectPeopleDrive.
+tasks.register<JavaExec>("connectDayDrive") {
+    group = "verification"
+    description = "Generate a full store day, verify offline, then replay it live with gap-only compression."
+    mainClass.set("com.m8trx.twin.layer3.DayDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
