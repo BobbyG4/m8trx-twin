@@ -47,7 +47,20 @@ class ScenarioRun(
         val predictedImpressions: Int,
         val shoppersWithNoImpression: Int,
         val schedulerErrors: Int,
-    )
+        /**
+         * Fixture codes that would carry at least one impression over this day — i.e. exactly what a
+         * fixture heatmap of the run would light up.
+         *
+         * Tracked because the S15 full day covered 97 of 115 and the 18 it missed looked, on a heatmap,
+         * like the platform silently dropping them. A coverage number turns that into an assertion.
+         */
+        val fixturesCovered: Set<String>,
+        /** Every fixture the impression pipeline can see — the denominator for [fixturesCovered]. */
+        val fixturesVisible: Set<String>,
+    ) {
+        val fixturesNeverBrowsed: Set<String> get() = fixturesVisible - fixturesCovered
+        val coveragePct: Double get() = if (fixturesVisible.isEmpty()) 0.0 else fixturesCovered.size * 100.0 / fixturesVisible.size
+    }
 
     /**
      * The generated dwell streams for a day, keyed by customer. Same seed → identical output, so this can
@@ -111,10 +124,12 @@ class ScenarioRun(
         val oracle = ImpressionOracle()
         var predicted = 0
         var silent = 0
+        val covered = mutableSetOf<String>()
         sink.streams.forEach { (_, samples) ->
-            val n = oracle.run(fixtures, samples).size
-            predicted += n
-            if (n == 0) silent++
+            val ps = oracle.run(fixtures, samples)
+            predicted += ps.size
+            ps.forEach { covered += it.fixtureCode }
+            if (ps.isEmpty()) silent++
         }
 
         val report = Reconciliation.check(
@@ -126,6 +141,8 @@ class ScenarioRun(
         return Result(
             tally.visitors, tally.transactions, tally.units, tally.revenue, expectedVisitors, report,
             sink.totalSamples, predicted, silent, tally.errors,
+            fixturesCovered = covered,
+            fixturesVisible = fixtures.impressionVisible.map { it.code }.toSet(),
         )
     }
 }

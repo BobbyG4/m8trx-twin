@@ -33,6 +33,19 @@ data class Fixture(
     val radiusMm: Double?,
     val department: String?,
     /**
+     * The AREA zone this fixture physically sits in (`in_area_zone` in `layout.json`) — `D-01`…`D-07` for a
+     * department band, `Z-01` for the entrance, `Z-06` GPS, `Z-07` accessories wall, `Z-02` checkout, etc.
+     *
+     * **This, not [department], is the correct key for "which fixtures can a shopper in this zone browse".**
+     * Journeys used to reach fixtures only through [department], and 19 of Denver's 115 fixtures carry no
+     * department — including all three circles, which sit in `Z-01`. They therefore sat out an entire
+     * generated day despite being individually proven, and a heatmap of the result showed three permanently
+     * cold promo islands: the same wrong conclusion the old `GeometryConverter` bug used to cause, this time
+     * from a twin-side modelling limit. Verified present, non-null and orphan-free on every fixture in all
+     * 10 stores, with `in_area_zone` → band department agreeing wherever a department exists.
+     */
+    val inAreaZone: String?,
+    /**
      * Mother's `zone.id`, when a `fixture_ids.csv` sidecar is present. Twin's `layout.json` carries geometry
      * but no platform identifiers (`zone_id: null`), so this is joined in from the map read off mother
      * 2026-07-28. Not required to DRIVE the pipeline — core resolves fixtures itself from x/y — but it is
@@ -205,6 +218,7 @@ class FixtureSet(val storeCode: String, val spaceCode: String, val fixtures: Lis
                 centre = centre,
                 radiusMm = parseRadius(z),
                 department = z.path("department").asText(null),
+                inAreaZone = z.path("in_area_zone").asText(null)?.takeIf { it.isNotBlank() && it != "null" },
             )
         }
 

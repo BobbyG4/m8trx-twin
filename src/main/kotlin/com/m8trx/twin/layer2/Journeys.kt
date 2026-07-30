@@ -34,10 +34,25 @@ class Journeys(
 ) {
     private val browse = BrowseEpisode(fixtures, emitHz = 5.0)
 
-    /** Fixtures the impression pipeline can actually see, grouped by the department band they sit in. */
-    private val fixturesByDept: Map<String, List<String>> = fixtures.impressionVisible
-        .filter { it.department != null }
-        .groupBy({ it.department!! }, { it.code })
+    /**
+     * Fixtures the impression pipeline can see, grouped by the AREA ZONE they physically sit in.
+     *
+     * **Keyed off `in_area_zone`, NOT `department`** — that was the bug. Department-keying reached only the
+     * fixtures inside a sport-universe band, and **19 of Denver's 115 fixtures carry no department**: the 6
+     * GPS cases (`Z-06`), 3 accessories bays (`Z-07`), gait treadmill (`Z-09`), footwear bench (`Z-08`),
+     * 4 checkout counters + impulse rack (`Z-02`), and **all three circles** — `PI-01`, `PI-03`, `RR-02` —
+     * which sit in the entrance zone `Z-01`. The full day of 2026-07-28 covered 97 distinct fixtures and
+     * those 18 never participated, despite `PI-01` being individually proven the same day (first circle
+     * impression ever). Read as a heatmap that looks like the platform dropping them.
+     *
+     * `in_area_zone` is verified present, non-null and orphan-free on every fixture in all 10 stores, and it
+     * agrees with the band department wherever one exists — so this subsumes the old department map rather
+     * than sitting beside it, and resolves in every store, not only Denver. Same discipline as the S15
+     * zone-affinity re-key: key off structure that actually exists everywhere.
+     */
+    private val fixturesByZone: Map<String, List<String>> = fixtures.impressionVisible
+        .filter { it.inAreaZone != null }
+        .groupBy({ it.inAreaZone!! }, { it.code })
 
     private val anyVisibleFixture: List<String> = fixtures.impressionVisible.map { it.code }
 
@@ -115,9 +130,16 @@ class Journeys(
     private fun dwellAtZone(ctx: GeneratorContext, customerId: String, z: RoleZone, cursorMs: Long, rng: KRandom): Long {
         ctx.bus.publish(CustomerReachedZone(ctx.clock.now(), customerId, z.zoneCode))
         val zoneBudget = dwellMsFor(z.role, rng)
-        // Only department bands contain browsable fixtures; other roles are dwell-only for now.
-        val pool = z.department?.let { fixturesByDept[it] } ?: return cursorMs + zoneBudget
+
+        // Fixtures are reached by the zone they SIT IN, so non-department zones (entrance promo islands,
+        // GPS cases, accessories wall, benches, impulse rack) are browsable too — see [fixturesByZone].
+        val pool = fixturesByZone[z.zoneCode] ?: return cursorMs + zoneBudget
         if (pool.isEmpty()) return cursorMs + zoneBudget
+
+        // Being in a zone is not the same as stopping at a rack in it. The entrance is crossed by every
+        // session but only catches a minority at the promo island; a department band is why you came.
+        // Without this gate, zone-keyed pools would put all 790 shoppers at the three entrance circles.
+        if (rng.nextDouble() >= ZoneAffinityModel.fixtureBrowseRate(z.role)) return cursorMs + zoneBudget
 
         var cursor = cursorMs
         var remaining = zoneBudget

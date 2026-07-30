@@ -69,6 +69,59 @@ fun main() {
     log.info("  · impressions per visitor: {}", "%.2f".format(perVisitor))
     check("impressions per visitor is plausible (0.5..8)", perVisitor in 0.5..8.0, "got $perVisitor")
 
+    // ── 2b. fixture coverage — the S15 regression ─────────────────────────────
+    //
+    // The 2026-07-28 full day covered 97 of Denver's 115 fixtures. The 18 it missed were not a platform
+    // fault: journeys reached fixtures only through `department`, and 19 fixtures carry none — the GPS
+    // cases, accessories bays, benches, checkout rack, and all three circles (`Z-01`). On a heatmap that
+    // reads as the platform dropping them, which is the same wrong conclusion the old GeometryConverter
+    // bug caused. Fixture pools are now keyed off `in_area_zone`, so this asserts it stays fixed.
+    log.info("[2b] fixture coverage — every visible fixture must be reachable by a journey")
+    log.info(
+        "  · covered {}/{} ({}%)",
+        weekday.fixturesCovered.size,
+        weekday.fixturesVisible.size,
+        "%.1f".format(weekday.coveragePct),
+    )
+    val missed = weekday.fixturesNeverBrowsed
+    if (missed.isNotEmpty()) log.warn("  · never browsed ({}): {}", missed.size, missed.sorted())
+
+    // Deliberately a THRESHOLD, not zero. Whether every fixture is *reachable* is a deterministic geometry
+    // question and is asserted exactly, scale-free, by `peopleSelfTest` [10]. What remains here is sampling:
+    // at the default 0.12 scale a day is ~98 visitors, and a fixture in a low-affinity zone can simply go
+    // undrawn. Demanding zero here would make the harness flaky and teach us to ignore it — the failure mode
+    // that lets a real silent regression through. Full scale (~790, the S15 day) covers 115/115.
+    check(
+        "fixture coverage is high (>=90% of visible fixtures browsed)",
+        weekday.coveragePct >= 90.0,
+        "only ${"%.1f".format(weekday.coveragePct)}% — never browsed: ${missed.sorted()}",
+    )
+
+    // Named explicitly, not just counted: these are the three that motivated the fix, and they are
+    // CONTAINMENT-ONLY on core's side (`Geometry.Circle.edges()` is a stub), so they are the first thing
+    // that breaks if the standoff logic regresses.
+    val circles = setOf("PI-01", "PI-03", "RR-02")
+    check(
+        "all three circle fixtures are browsed (PI-01, PI-03, RR-02)",
+        weekday.fixturesCovered.containsAll(circles),
+        "missing ${circles - weekday.fixturesCovered}",
+    )
+
+    // The department-less set as a class — the actual root cause, not just its most visible symptom. Before
+    // the `in_area_zone` re-key NONE of these could be browsed, so a majority being covered at a 12% day is
+    // the signal; exact per-fixture reachability is `peopleSelfTest` [10]'s job.
+    val deptLess = setOf(
+        "GPS-01", "GPS-02", "GPS-03", "GPS-04", "GPS-05", "GPS-06",
+        "ACC-01", "ACC-02", "ACC-03", "GA-01", "FB-01", "CO-IR",
+    )
+    val deptLessHit = deptLess.intersect(weekday.fixturesCovered)
+    log.info("  · department-less fixtures covered: {}/{} — {}", deptLessHit.size, deptLess.size, deptLessHit.sorted())
+    check(
+        "department-less fixtures are reached at all (GPS cases, accessories bays, bench, treadmill, impulse rack)",
+        deptLessHit.size >= deptLess.size * 2 / 3,
+        "only ${deptLessHit.size}/${deptLess.size}: missing ${(deptLess - weekday.fixturesCovered).sorted()}",
+    )
+
     // ── 3. determinism ────────────────────────────────────────────────────────
     log.info("[3] determinism — same seed must reproduce the day exactly")
     val repeat = runner.run(LocalDate.of(2026, 7, 28), seed = 4242, populationScale = scale)
@@ -77,6 +130,7 @@ fun main() {
     check("revenue reproduces exactly", repeat.revenueUsd == weekday.revenueUsd)
     check("emitted sample count reproduces", repeat.emittedSamples == weekday.emittedSamples)
     check("predicted impressions reproduce", repeat.predictedImpressions == weekday.predictedImpressions)
+    check("fixture coverage reproduces", repeat.fixturesCovered == weekday.fixturesCovered)
 
     val different = runner.run(LocalDate.of(2026, 7, 28), seed = 9999, populationScale = scale)
     check("a different seed yields a different day", different.visitors != weekday.visitors || different.revenueUsd != weekday.revenueUsd)

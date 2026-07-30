@@ -340,6 +340,39 @@ fun main() {
         "mis-targeted: ${misTargeted.map { it.code }}",
     )
 
+    // ── 10. EVERY fixture must be individually browsable ─────────────────────
+    //
+    // The whole-floor version of the check above, and the deterministic counterpart to `scenarioSelfTest`'s
+    // statistical coverage number. Two of Denver's fixtures were not merely unlucky in a generated day, they
+    // were **impossible to browse**: `ACC-02` and `GPS-04` are boxed in on all four sides with 200–400mm
+    // gaps, so every candidate at the fixed 600mm standoff landed inside a neighbour, nothing validated, and
+    // the fallback aimed the shopper at that neighbour. The standoff is now fitted to each edge's clearance.
+    //
+    // Scale-free and seed-independent on purpose: a coverage percentage over a generated day mixes this
+    // failure (unreachable by construction) with ordinary sampling thinness, and only the first is a bug.
+    log.info("[10] every fixture is individually browsable — no fixture unreachable by construction")
+    val browser = BrowseEpisode(fixtures, emitHz = 5.0)
+    val unreachable = fixtures.impressionVisible.filter { f ->
+        val s = browser.browse(f.code, 12_000, 0L, Random(11))
+        oracle.run(fixtures, s).none { it.fixtureCode == f.code }
+    }
+    if (unreachable.isNotEmpty()) {
+        unreachable.forEach { f ->
+            log.error(
+                "  · {} ({}, in_area_zone={}) — a dwell episode aimed at it produces no impression ON it",
+                f.code,
+                f.kind,
+                f.inAreaZone,
+            )
+        }
+    }
+    check(
+        "all ${fixtures.impressionVisible.size} visible fixtures are individually browsable",
+        unreachable.isEmpty(),
+        "unreachable: ${unreachable.map { it.code }}",
+    )
+    log.info("  · ⚠ uncalibrated fixture-browse rates (NOT sourced): {}", ZoneAffinityModel.uncalibratedBrowseRates)
+
     log.info("")
     log.info("peopleSelfTest — {} passed, {} failed", passed, failed)
     if (failed > 0) exitProcess(1)
