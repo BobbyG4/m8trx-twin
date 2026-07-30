@@ -314,3 +314,15 @@ tasks.register<JavaExec>("lossAudit") {
         },
     )
 }
+
+tasks.register<JavaExec>("impressionWatch") {
+    group = "verification"
+    description = "Twin's in-code wire counter for the people plane; dedupes by id and writes a citable CSV. Blocks until killed."
+    mainClass.set("com.m8trx.twin.layer1.ImpressionWatcherKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
