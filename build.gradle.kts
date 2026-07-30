@@ -326,3 +326,15 @@ tasks.register<JavaExec>("impressionWatch") {
         },
     )
 }
+
+tasks.register<JavaExec>("oracleDump") {
+    group = "verification"
+    description = "Dump per-impression oracle predictions for a drive slice, for the oracle-vs-actual diff."
+    mainClass.set("com.m8trx.twin.layer3.OracleDumpKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
