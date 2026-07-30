@@ -2,6 +2,12 @@
 
 ---
 
+## ⚠⚠ S16 CLOSED BY PROXY (Coordinator, 2026-07-30 — the session died to provider API errors and could not be revived)
+
+> **READ FIRST, S17:** [`session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md`](session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md) — S16's work (all artifact-cited), the Coordinator-run acceptance (**1,512 = 1,512 = 1,512 = 1,512**, investigation CLOSED-PROVEN core-side), and your ordered openers. **First act: countersign.** Your branch `fix/fixture-coverage-in-area-zone` (6 commits) was local-only and is now protectively pushed; disposal is yours.
+
+---
+
 ## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — **Session 15 CLOSED** · ★ people pipeline PROVEN end to end camera-free · full day **3,664 impressions vs 3,664 predicted = 0.0%** · first circle impression ever · 2 coordinator-brief errors caught pre-build)
 
 > **PICK UP HERE (Session 16).** Read first: `status/session-notes/2026-07-28-session-15-spine-restart-people-pipeline-full-day.md` (§3 is the *don't-repeat* record — **every bug in S15 was silent-failure class**) and `status/archive/sprint/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md`. Coordinator handoff: `status/active/TWIN-STATUS-FOR-COORDINATOR-2026-07-28.md` (§2 is a standalone run card).
