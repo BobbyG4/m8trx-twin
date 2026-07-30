@@ -302,3 +302,15 @@ tasks.register<JavaExec>("connectDayDrive") {
         },
     )
 }
+
+tasks.register<JavaExec>("lossAudit") {
+    group = "verification"
+    description = "Size the impression-cache working set of the S15 runs; localise the fullday-0728 persistence loss."
+    mainClass.set("com.m8trx.twin.layer3.LossAuditKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
