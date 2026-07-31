@@ -89,7 +89,9 @@ Auth/routing unchanged: `POST /v1/webhook/{tenantId}/{integrationKey}` on the `�
 
 ## ✅ Bearer service-plane live + read-side self-verify — 2026-06-30
 
-The service-principal Bearer plane is **live-verified** (services #51/#52, closing OI-1/C1). A minted `principal_kind='service'` key (`m8trx_<hex>`; scopes `integration:manage` + `scan:submit` + `inventory:create` + `inventory:read`, tenant-wide) now returns **200** on `/api/v2` — this **supersedes any earlier "service-bearer → 401 INVALID_TOKEN" notes**. Header: `Authorization: Bearer m8trx_<hex>` (env `M8TRX_TWIN_BEARER`).
+The service-principal Bearer plane is **live-verified** (services #51/#52, closing OI-1/C1). A minted `principal_kind='service'` key (`m8trx_<hex>`; scopes `integration:manage` + `scan:submit` + `inventory:create` + `inventory:read`) now returns **200** on `/api/v2` — this **supersedes any earlier "service-bearer → 401 INVALID_TOKEN" notes**. Header: `Authorization: Bearer m8trx_<hex>` (env `M8TRX_TWIN_BEARER`).
+
+> ⚠ **Corrected 2026-07-31 — the key is SITE-SCOPED to Denver, not tenant-wide.** This doc and `TRACK-TWIN.md` both said "tenant-wide" for a month. Measured: `POST /spatial/identity` with the site **omitted** returns `site_count: 1` (`dec-us-denver`) against a 14-site tenant, and every foreign site refuses with `403` by slug **and** by UUID. This is not cosmetic — it changed a verdict. The first read of `/compliance/state`'s `403` assumed a tenant-wide key and therefore a regression; the site-scoped reality forced a re-test with the key's **own** site named before that conclusion could stand. (It survived — see the §6.5 measured table — but the difference was one probe.)
 
 **New read-side atom — `inventoryItemsDetails` (twin self-verify):**
 
@@ -142,10 +144,34 @@ The two reads the doc warns are hardest to hold — `vision_ai:view` and `task:r
 that shipped first, was accepted as **TWIN-REQ-003 SATISFIED** on 2026-07-02, and was demonstrated live
 (28/28 · 25/2/1 · 0.893) is the one now refusing.
 
-**This is not a ref problem and not a key-wide problem.** In the same run, seconds apart, the same key used
-`inventory:read` successfully on #30. And the control is #32: a bogus ref there produced a **404** (cleared
-the scope gate, failed ref resolution), while the same bogus-ref shape on #33 produced a **403** — refused
-*before* ref resolution. That is a capability gate, not a missing directive.
+**Not a ref problem, not a scope problem, not a key-wide problem** — all three ruled out by measurement:
+
+- Same key, seconds apart in the same run, gets **200** on #30 with the same documented scope.
+- #33 refuses **with the key's own Denver site named**, so it is not site-scope.
+- #32 is the control: an equally bogus ref there gives **404** (cleared the scope gate, failed ref
+  resolution); the same shape on #33 gives **403** — refused *before* resolution.
+
+That is a capability gate the documented scope does not open.
+
+#### Site-scope confinement — §6.5 rule 2, proven externally 2026-07-31
+
+Rule 2 claims a named site is checked against the key's `site_scope` (403 outside it) and an **omitted**
+site means "every site this key may see", never "every site in the tenant". **It holds on all three
+reachable reads**, and is not bypassable by switching ref form:
+
+| Read | own site | foreign site (slug) | foreign site (UUID) | site omitted |
+|---|---|---|---|---|
+| #30 `spatial/identity` | 200 | **403** | — | **200, `site_count:1`** of 14 |
+| #31 `impressions/query` | 200 | **403** | **403** | n/a (required) |
+| #32 `tasks/query` | 404 on ref = gate cleared | **403** | — | 404 on ref, own scope |
+
+⚠ **Refusal quality is the defect, not confinement.** Every `403` returns a raw untyped Spring body —
+`{"timestamp","path","status":403,"error":"Forbidden","requestId"}`, **no `error` code, no `message`** —
+while the `404`s are correctly typed with messages. PR #217's typed-error fix covers ref-resolution
+refusals and **not** scope refusals: the same defect class §6.5 records as fixed on 2026-07-30. So a
+cross-site 403 and a missing-capability 403 are indistinguishable to an integrator. (#33 is the exception —
+it *does* return typed `PERMISSION_DENIED`, which is itself absent from §6.5's error table. Two 403 paths,
+one typed and one not.)
 
 Two further notes: `PERMISSION_DENIED` is **not in §6.5's documented error table** (`INVALID_REQUEST` /
 `SITE_NOT_FOUND` / `SPACE_NOT_FOUND` / `ZONE_NOT_FOUND` / `DIRECTIVE_NOT_FOUND`), so this refusal is coming
