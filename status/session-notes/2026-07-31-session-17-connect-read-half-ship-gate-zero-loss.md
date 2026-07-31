@@ -105,6 +105,42 @@ Three separate findings, one shape: **Connect lets an integrator write, and incr
 
 ---
 
+## ★ LATE ADDITION — the LP substrate, built (Bob's ruling)
+
+Twin's own finding earlier in the session was *"envelope ready, LP story not ready"*. Bob ruled: **fix the anchor docs and build the journey.** Both landed in `cdcdf03`.
+
+### The anchor pointed at stock that does not exist
+
+`CLAUDE.md` and `STATUS.md` named *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"* as the LP anchor. **Zero watch SKUs exist in the live 2,586-SKU catalog** — that belonged to the superseded 920-SKU Manhattan concept. **Session 8's static-seed audit flagged exactly this and it went unclosed for two months.** Also corrected: CLAUDE.md's *"Garmin watches"*, and `store-operating-model.json`'s `eas_scope_skus: 36`.
+
+Replaced with a **rule, not another literal** — a list rots the same way next time the catalog is rebuilt:
+
+```
+EAS-tagged  ⟺  price_usd >= 150  AND  category != "outdoor"
+```
+
+Both clauses earn their place: the floor selects genuinely premium stock; the exclusion is **concealability**, and in this catalog `outdoor` captures it exactly — verified by enumerating every bike/tent/trainer `product_type`, finding all of them there, and confirming the rule admits none. **271 of 2,586**, concentrated on `PE-02`/`PW-02` Kiprun premium footwear — which is what CLAUDE.md already meant by *"Kiprun premium shoes"*.
+
+⚠ **Tag state is declared TWIN-SIDE, in the code header, prominently.** A real third-party EAS owns tag state and the platform never sees it — which is exactly what makes twin minting it *faithful emulation*, conditional on never implying M8TRX stores or could verify it. That distinction is the difference between a demo and a lie, so it lives in `EasTagging.kt`, not only in a results file.
+
+### `Shoplift` is code now, and the alarm is earned
+
+Browse two ordinary zones → dwell at a fixture that actually holds tagged stock (a real `BrowseEpisode`, so a real impression forms) → conceal a unit from that same fixture → **skip checkout** → walk out on an `objLocation` path that **genuinely crosses `CS-01` at `y=600`**.
+
+**The alarm is a consequence of the track.** `EasGateCrossed` is published only *after* the walk-out samples are emitted, carrying the unpaid EPCs; a subscriber raises the alarm. No journey fires one directly — that would fill the LP tile with events having no shopper behind them, the same structural-zero-as-fact pattern this session spent all day removing elsewhere. The crossing is **checked, not asserted**: the walk fails loudly if the sign change did not happen.
+
+**No `SaleCompleted`**, so these shoppers correctly never enter conversion or revenue — the §1 reconciliation identity stays honest and shrink appears as the gap it is.
+
+**Proven firing, not merely compiling:** a generated day yields **2 concealments and 2 gate alarms**, every concealment producing exactly one alarm. Gates load from the store's own layout; a store declaring none emits no crossing, so **absence stays absence** rather than being papered over with an invented gate.
+
+`scenarioSelfTest` **27 → 37** — gate geometry, the rule (incl. case-insensitivity and the road-bike case), the arc firing, alarm-per-concealment, and an assertion that **zero watch SKUs exist** so the dead anchor cannot be restored by accident.
+
+### Don't-repeat, added to the record
+
+**I nearly filed "twin has no EAS substrate."** A first pass scanned `zones` only, found nothing, and would have argued against building this. The substrate is real and lives in **`crossing_slices` and `sensors`** — which a zone scan never touches. Partial-listing errors of exactly this shape bit three people on 2026-07-31, the coordinator twice. **Look where the data is, not where you expect it.**
+
+---
+
 ## Branch / deploy state at close
 
 - **`feat/connect-read-half`**, 7 commits, **stacked on `fix/fixture-coverage-in-area-zone`** (S16's 7 commits, still **unmerged, no PR**). `main` untouched at `39c8238`.
