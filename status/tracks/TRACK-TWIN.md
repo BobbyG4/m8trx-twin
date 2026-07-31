@@ -17,6 +17,23 @@
 
 ⚠ **Needs a site-scoped key to be meaningful.** Twin's `M8TRX_TWIN_BEARER` is Denver-scoped, which is what makes the negative controls real.
 
+### ★ AND the cold-onboarding peer test is the second standing gate (Bob, 2026-07-31)
+
+Bob's stated goal is **self-service integration** — he named API integration as *"the most friction on any project, and we always seem to have to customize."*
+
+**The peer test is the only instrument that detects the thing which forces that customization: onboarding that requires a human on M8TRX's side.** Everyone building a surface holds the access that hides the problem — they can register a source, mint a scope, load a mapping, and never notice the vendor cannot. **Twin cannot, and that is the whole value.**
+
+**How to run it — the standard does not move:** author the field-map and payload **cold, from the published contract, asking nothing.** *If you need to ask how, that is the finding.* §8.1 invites exactly this report, and the first run of it produced `/alerts/query`, the §8.2 registration section, and a corrected read-back claim inside an hour.
+
+**Report one of three verdicts, and keep them distinct — they are different outcomes:**
+- **(a)** author and send unaided, end to end.
+- **(b)** author everything; onboarding needs a human, **as documented**. ✅ An honest contract with a known limitation — this is a PASS. The original defect was a doc promising self-serve and delivering a wall.
+- **(c)** something does not match the doc. ⛔ The failure case.
+
+**Judge the doc against reality, not against the ideal.** The test twin found most useful: *"does the contract correctly predict what happens to someone following it?"* — not *"does it promise the right things."* Most docs fail the first.
+
+⏳ **Sequencing (Bob):** the cold run happens **after** the alarm plumbing is complete and confirmed, never against half-built plumbing — that measures the missing half, not whether a stranger can onboard. **Wait for the coordinator's signal.** Last verdict: **(b)**, 2026-07-31, with one (c) on the capability route (see TWIN-REQ-005).
+
 ---
 
 **Prev session:** Session 15 (2026-07-28) · ✅ **CLOSED.** **The people pipeline is PROVEN end to end, camera-free, at full-day volume with the oracle EXACT.** Full day: **1,100,584 samples · 790 shoppers · 44m20s · 3,664 impressions vs 3,664 predicted (0.0%)** · 97 distinct fixtures · 790/790 shoppers produced impressions · median dwell 60.0s · tag `fullday-0728`. Single episodes **DB-confirmed 5/5**. **First circle-fixture impression ever** (`PI-01` → `7dc6fb79`) = the acceptance gate for Connect's `GeometryConverter` fix, which the same run showed is **half-complete** (`Geometry.Circle.edges()` is a stub → **containment-only proximity**; a shopper 0.6m from a promo island accumulates no dwell). Built: `runtime/` (locked Q2/Q3/Q6), `layer1/{FixtureGeometry,ImpressionOracle,BrowseEpisode,ZoneAffinity,PeopleDrive}`, `layer2/Journeys`, `layer3/{OperatingModel,TrafficGenerator,Reconciliation,ScenarioRun,DayDrive}`; tasks `peopleSelfTest` (49) · `scenarioSelfTest` (23) · `connectPeopleDrive` · `connectDayDrive`. **✅ MERGED 2026-07-30 as PR [#13](https://github.com/BobbyG4/m8trx-twin/pull/13) — `main` now `39c8238`** (was `b0390fc`; branch `chore/spine-restart-hygiene`, 15 commits). **Session notes:** [→](../session-notes/2026-07-28-session-15-spine-restart-people-pipeline-full-day.md)
