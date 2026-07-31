@@ -101,7 +101,8 @@ private fun readPlaneCasing() {
          "summary":{"zones":2,"sessions":2,"view_time_seconds":12.5,"dwell_time_seconds":9.25},
          "impressions":[
            {"id":"i-1","personSessionId":"ps-1","zoneId":"z-1","zoneCode":"PI-01","zoneName":"Promo Island 1",
-            "spaceId":"sp-1","firstLook":1000,"lastLook":9000,"firstDwell":1200,"lastDwell":8800,
+            "spaceId":"sp-1","firstLook":"2026-07-28T04:30:46.691Z","lastLook":"2026-07-28T04:30:54.691Z",
+            "firstDwell":"2026-07-28T04:30:46.891Z","lastDwell":"2026-07-28T04:30:54.491Z",
             "viewTimeSeconds":8.0,"dwellTimeSeconds":7.6,"classification":"adult","recordedAt":"2026-07-30T07:00:01Z"},
            {"id":"i-2","personSessionId":"ps-2","zoneId":"z-2","zoneCode":"GPS-04","firstLook":2000,"lastLook":6500,
             "viewTimeSeconds":4.5,"dwellTimeSeconds":4.1,"recordedAt":"2026-07-30T07:01:00Z"}]}
@@ -115,7 +116,16 @@ private fun readPlaneCasing() {
     val first = parsed.impressions.first()
     check(first.personSessionId == "ps-1") { "CAMEL row field personSessionId must bind off the same mapper" }
     check(first.zoneCode == "PI-01") { "CAMEL row field zoneCode must bind" }
-    check(first.firstLook == 1000L && first.lastDwell == 8800L) { "CAMEL row clocks must bind" }
+    // The clocks are ISO-8601 STRINGS on the wire (measured live 2026-07-31), not epoch millis. A
+    // Long here compiles and passes a hand-written fixture, then throws on the first real call — so
+    // this fixture uses the shape the server actually sent, and row 2 keeps the millis form to prove
+    // the accessor tolerates both.
+    check(first.firstLook == "2026-07-28T04:30:46.691Z") { "row clocks bind as the ISO strings the server sends" }
+    check(first.firstLookMs == java.time.Instant.parse("2026-07-28T04:30:46.691Z").toEpochMilli()) {
+        "ISO clock must parse to millis: ${first.firstLookMs}"
+    }
+    check(parsed.impressions[1].firstLookMs == 2000L) { "an epoch-millis clock must still parse: ${parsed.impressions[1].firstLookMs}" }
+    check(first.lastLookMs!! - first.firstLookMs!! == 8_000L) { "parsed clocks must support arithmetic" }
     check(first.recordedAt == "2026-07-30T07:00:01Z") { "recordedAt (event time, == firstLook) must bind" }
     check(parsed.impressions[1].classification == null) { "an absent optional row field must stay null, not throw" }
 

@@ -161,15 +161,42 @@ data class ImpressionRow(
     val zoneCode: String? = null,
     val zoneName: String? = null,
     val spaceId: String? = null,
-    val firstLook: Long? = null,
-    val lastLook: Long? = null,
-    val firstDwell: Long? = null,
-    val lastDwell: Long? = null,
+    val firstLook: String? = null,
+    val lastLook: String? = null,
+    val firstDwell: String? = null,
+    val lastDwell: String? = null,
     val viewTimeSeconds: Double? = null,
     val dwellTimeSeconds: Double? = null,
     val classification: String? = null,
     val recordedAt: String? = null,
-)
+) {
+    /**
+     * ⚠ The four clocks are **ISO-8601 strings on the wire**, not epoch millis — measured 2026-07-31
+     * against dev (`"2026-07-28T04:30:46.691Z"`). The §6.5 doc names the fields but not their type,
+     * and the obvious inference is wrong: the NATS event carries millis natively and the *request*
+     * accepts either, so modelling the RESPONSE as `Long` compiles, passes an offline round-trip
+     * against a hand-written fixture, and then throws `InvalidFormatException` on the first live call.
+     * Typed as the wire type here; use [millis] when arithmetic is needed.
+     */
+    fun millis(v: String?): Long? = parseInstantOrMillis(v)
+
+    val firstLookMs: Long? get() = millis(firstLook)
+    val lastLookMs: Long? get() = millis(lastLook)
+    val firstDwellMs: Long? get() = millis(firstDwell)
+    val lastDwellMs: Long? get() = millis(lastDwell)
+    val recordedAtMs: Long? get() = millis(recordedAt)
+}
+
+/**
+ * Accepts either representation, so a deployment that later switches to millis (or a fixture written
+ * either way) does not break the read. Returns null rather than throwing — a single odd timestamp
+ * should not abort a whole window walk.
+ */
+fun parseInstantOrMillis(v: String?): Long? {
+    if (v.isNullOrBlank()) return null
+    v.toLongOrNull()?.let { return it }
+    return runCatching { java.time.Instant.parse(v).toEpochMilli() }.getOrNull()
+}
 
 // ── §6.5.3 POST /api/v2/tasks/query — the tasks YOUR directive generated (task:read) ─────────────
 

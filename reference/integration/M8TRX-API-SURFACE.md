@@ -174,6 +174,30 @@ field-for-field. Both bind off `ConnectMappers.camel` with explicit `@JsonProper
 server ignores it as unknown, and the read silently answers a *different* question — pinned by
 `connectSelfTest`.
 
+#### Acceptance, 2026-07-31 — twin reproduced the coordinator's psql number from the front door
+
+`./gradlew impressionVerify` over `2026-07-28`, 60-minute slices: **3,119 distinct rows in 24 calls**, no
+unresolved truncation — **exactly the 3,119 the coordinator's `psql` returned on 07-30**. 98 distinct
+fixtures, 907 sessions. The row count that previously required a human with database access is now a
+gradle task, which is the whole point of §6.5.
+
+Two things the first live call caught that no offline fixture would have:
+
+- **The row clocks are ISO-8601 strings, not epoch millis.** §6.5 names `firstLook`/`lastLook`/
+  `firstDwell`/`lastDwell` but not their type, and the obvious inference is wrong — the NATS event carries
+  millis natively and the *request* accepts either form. Modelling the response as `Long` compiles, passes
+  a hand-written round-trip, and throws `InvalidFormatException` on the first real call. Now typed as the
+  wire type with `…Ms` accessors that parse either form.
+- **All four clocks are identical per row** — `firstDwell` == `firstLook` and `lastDwell` == `lastLook` to
+  the millisecond, on 100% of rows sampled, so `viewTimeSeconds` == `dwellTimeSeconds` always. ⚠ **Most
+  likely twin's own artifact, not a core defect:** `BrowseEpisode` parks the shopper at a standoff point
+  facing the fixture, so "ray on fixture" and "within 1m of edge" become true on the same sample and false
+  on the same sample. The consequence is still real — core's duration rule
+  `min(lastDwell-firstDwell, lastLook-firstDwell)` **degenerates to a single span against twin's data, so
+  its discriminating case is never exercised**, and any analytic that separates "looked at" from "lingered
+  near" currently reads the same number twice. Real Xovis data would diverge (approach, linger, look away
+  while still nearby). A **twin realism gap**, worth a journey-model pass; flagged, not fixed.
+
 ### Three planes, never conflated
 
 ```
