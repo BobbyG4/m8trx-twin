@@ -101,6 +101,67 @@ This closes C1/OI-1: twin's webhook-plane generators are now self-validating thr
 
 ---
 
+## ✅ The Connect READ half — §6.5, live 2026-07-30 (PR #210 `d9663c61`)
+
+Four reads landed as one surface, closing **TWIN-REQ-004**. Each exists because an integrator otherwise
+had to ask a human: for UUIDs by email, for someone to run `psql`, or for a backend engineer to watch a
+screen while the integrator drove the input. Twin was that integrator in all three cases.
+
+Core adopted a **standing rule** off the back of the brief — *a new Connect write ships with its read, or
+its results file announces the gap explicitly.* The debt was never the missing read; it was the silence
+about it.
+
+| # | Atom | Transport | Route | Body / Response | Auth (scope) | Notes |
+|---|------|-----------|-------|-----------------|--------------|-------|
+| 30 | `spatialIdentity` | REST | `POST /api/v2/spatial/identity` | `{ site_ref?, space_ref?, zone_types?, include_zones?, limit? }` → `{ sites:[{ site_id, slug, name, timezone, spaces:[{ space_id, name, floor_level, space_type, area_sqm, zones:[{ zone_id, code, external_code, name, zone_type, parent_zone_id, enabled }] }] }], site_count, space_count, zone_count, truncated }` | Bearer — `inventory:read` | **Call this first.** `items/receive` (#25) requires a `spaceId` nothing else emits — this is what makes self-serve onboarding possible. Key the map on **`code`**: `name` is localized EN/FR/KO, and zone UUIDs are UUIDv5 but **not derivable** (twin tried 130 patterns × 8 namespaces). Zones default 2000, max 10000 |
+| 31 | `impressionQuery` | REST | `POST /api/v2/visionai/impressions/query` | `{ site_ref, space_ref?, zone_ref?, from?, to?, limit? }` → `{ site_id, from, to, count, truncated, summary:{ zones, sessions, view_time_seconds, dwell_time_seconds }, impressions:[…] }` | Bearer — **`vision_ai:view`** (⚠ never `inventory:*` — §4 SEC-3) | Twin reads back its **own** people-plane traffic. Filters on `recorded_at` = **event time** (equals `firstLook`), not ingest — so a window means what it says. `summary` covers **returned rows only**. `zoneId`/`zoneCode` are stamped at ingest and never re-resolved. Rows default 500, max 5000 |
+| 32 | `taskQuery` | REST | `POST /api/v2/tasks/query` | `{ directive_ref, site_ref?, status?, limit? }` → `{ directive_ref, directive_id, count, truncated, summary:{…}, tasks:[{ task_id, type, status, priority, title, site_id, space_id, zone_id, zone_code, zone_name, assigned_to, assigned_to_role, assigned_by, compliance_target_id, rule_id, rule_name, reason, delta_qty, due_at, started_at, completed_at, created_at }] }` | Bearer — **`task:read`** | Scoped to **your own directive**, not to "tasks". Unblocks the directive→task smoke without a backend watcher. `assigned_to` is a UUID only — no staff name/email crosses Connect. Task **lifecycle verbs** stay `403 CONNECT_NOT_EXPOSED` to a service principal, by design |
+| 33 | `complianceState` | REST | `POST /api/v2/compliance/state` | `{ directive_ref, site_ref? }` → `{ directive_ref, directive_id, name, status, effective_date, activated, sites:[…], summary:{…}, total_targets, resolved_targets, evaluated_targets, compliance_score, targets:[…] }` | Bearer — `inventory:read` | Shipped earlier as **TWIN-REQ-003** (core PR #76); documented into §6.5 to complete the family. ⚠ `site_ref` here is a site **UUID** — this route predates slug resolution. `activated` means "≥1 target evaluated", NOT the lifecycle field (`activation_status` stays `pending`) |
+
+### ⚠ Reachable ≠ callable — the trap to check before blaming core
+
+`@ConnectExposed` makes an endpoint reachable; the **key still needs the capability**. Pre-SEC-3 keys hold
+no `vision_ai:*`, and no existing key holds `task:read`. Core smoke-verified both directions: an
+ingest-only key `403`s all three reads while a granted key `200`s them — **`view` ≠ `ingest`**, so a key
+that may POST impressions still cannot read them back.
+
+Twin's `M8TRX_TWIN_BEARER` carries `integration:manage` + `scan:submit` + `inventory:create` +
+`inventory:read` — which covers #30 and #33, and **not #31 or #32, the two that matter most**. Grant via
+`PATCH /api/v2/connect/service-keys/{keyId}/scopes` (§7). Run **`./gradlew connectReadProbe`** to see which
+of the four this key actually holds; it names the missing capability rather than reporting a bare failure.
+
+### ⚠ There is no paging — `truncated` means narrow, not "page 2"
+
+No `offset`, no cursor. For the impression read the **window is the cursor**; walk it in slices. An
+over-wide window or over-max `limit` is **refused with 400, never silently clamped** — a clamp answers a
+different question while looking like it answered yours. Twin's own full day is 3,119 impressions at one
+site, which a single call returns 500 of. `./gradlew impressionVerify` walks the range and recursively
+halves any slice that still truncates; if a slice hits the floor still truncated it says so loudly, which
+per §6.5 is the signal that a real cursor is needed and is not built.
+
+### ⚠ Casing — the one mixed-shape response on the surface
+
+Envelopes and refs are **`snake_case`**; **impression rows are `camelCase`**, mirroring the ingest response
+field-for-field. Both bind off `ConnectMappers.camel` with explicit `@JsonProperty` on every snake field
+(`connect/model/bearer/ReadPlane.kt`). A field added without its annotation serializes camelCase, the
+server ignores it as unknown, and the read silently answers a *different* question — pinned by
+`connectSelfTest`.
+
+### Three planes, never conflated
+
+```
+oracle prediction   twin's model of core's rule      (./gradlew oracleDump)
+wire                what core actually published     (./gradlew impressionWatch)
+rows                what survived to storage         (./gradlew impressionVerify)
+```
+
+`oracle vs wire` measures the **model**, transport-free. `wire vs rows` measures **transport**. The
+2026-07-30 decisive drive: **1512 predicted / 1512 wire / 1370 rows** — model exact, transport −9.4%.
+Reporting that as "the oracle was 9.4% off" would have been false, and reporting the model as "EXACT"
+without qualifying it against the emitted stream is the same error in the other direction.
+
+---
+
 ## Sequencing notes (scenario authors, read this)
 
 These are NOT enforced by core — twin's orchestrator must respect them. Wrong order produces `refusedItemIds`, 404s, or audit rows that look anomalous in the dashboard.

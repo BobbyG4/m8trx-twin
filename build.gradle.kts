@@ -338,3 +338,33 @@ tasks.register<JavaExec>("oracleDump") {
         },
     )
 }
+
+// ── Connect §6.5 READ half (live 2026-07-30, PR #210) ───────────────────────────────────────────
+// Reachable != callable: @ConnectExposed opens the endpoint, but the KEY still needs the capability.
+// Pre-SEC-3 keys hold no vision_ai:* and no task:read, so probe before assuming a 403 is a core bug.
+tasks.register<JavaExec>("connectReadProbe") {
+    group = "verification"
+    description = "Which of the four §6.5 reads does THIS key hold? Names the missing capability. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ConnectReadProbeKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Reads back twin's OWN persisted impressions. There is no cursor, so the window IS the cursor:
+// this walks the range in slices and halves any slice the server marks truncated. Diffing against an
+// oracleDump measures MODEL + TRANSPORT combined — pair with impressionWatch to attribute a gap.
+tasks.register<JavaExec>("impressionVerify") {
+    group = "verification"
+    description = "Read back persisted impressions via POST /visionai/impressions/query; optional oracle diff. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ImpressionVerifyKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}

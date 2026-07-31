@@ -4,6 +4,12 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.ChannelConfig
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
+import com.m8trx.twin.connect.model.bearer.ImpressionQueryRequest
+import com.m8trx.twin.connect.model.bearer.ImpressionQueryResponse
+import com.m8trx.twin.connect.model.bearer.ReadCaps
+import com.m8trx.twin.connect.model.bearer.SpatialIdentityRequest
+import com.m8trx.twin.connect.model.bearer.SpatialIdentityResponse
+import com.m8trx.twin.connect.model.bearer.TaskQueryRequest
 import com.m8trx.twin.connect.model.outbound.StocktakeResult
 import com.m8trx.twin.connect.model.webhook.DirectiveTarget
 import com.m8trx.twin.connect.model.webhook.InventoryMovement
@@ -52,9 +58,123 @@ fun main() {
     saleStreamEpcLoader()
     planogramDirectiveCasing()
     inventoryMovementCasing()
+    readPlaneCasing()
+    readPlaneCaps()
     fullLoopPlan()
     stressPlan()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
+}
+
+/**
+ * §6.5 is the one response shape on the whole surface that carries BOTH casings — snake_case
+ * envelopes and refs, camelCase impression rows mirroring the ingest response. A field added without
+ * its `@JsonProperty` serializes camelCase, the server ignores it as unknown, and the read silently
+ * answers a different question than the one asked. This pins both halves.
+ */
+private fun readPlaneCasing() {
+    // ── requests: refs are snake, always ──
+    val impressionReq =
+        ImpressionQueryRequest(siteRef = "dec-us-denver", spaceRef = "Sales Floor", zoneRef = "GF-R6-U1", from = "0", to = "1", limit = 500)
+    val impressionJson = ConnectMappers.camel.writeValueAsString(impressionReq)
+    listOf("site_ref", "space_ref", "zone_ref", "from", "to", "limit").forEach {
+        check(impressionJson.contains("\"$it\"")) { "impression query must serialize snake ref $it: $impressionJson" }
+    }
+    listOf("siteRef", "spaceRef", "zoneRef").forEach {
+        check(!impressionJson.contains(it)) { "read plane must not leak camelCase ref $it: $impressionJson" }
+    }
+
+    val spatialJson = ConnectMappers.camel.writeValueAsString(
+        SpatialIdentityRequest(siteRef = "dec-us-denver", includeZones = false, zoneTypes = listOf("fixture")),
+    )
+    listOf("site_ref", "include_zones", "zone_types").forEach {
+        check(spatialJson.contains("\"$it\"")) { "spatial/identity must serialize snake field $it: $spatialJson" }
+    }
+    val taskJson = ConnectMappers.camel.writeValueAsString(
+        TaskQueryRequest(directiveRef = "PLN-1", siteRef = "dec-us-denver", status = listOf("open")),
+    )
+    check(taskJson.contains("\"directive_ref\"")) { "tasks/query must serialize directive_ref: $taskJson" }
+    check(!taskJson.contains("directiveRef")) { "tasks/query must not leak directiveRef: $taskJson" }
+
+    // ── response: snake envelope, CAMEL rows. Both must deserialize off the SAME mapper. ──
+    val body = """
+        {"site_id":"s-1","from":"2026-07-30T07:00:00Z","to":"2026-07-30T08:00:00Z","count":2,"truncated":true,
+         "summary":{"zones":2,"sessions":2,"view_time_seconds":12.5,"dwell_time_seconds":9.25},
+         "impressions":[
+           {"id":"i-1","personSessionId":"ps-1","zoneId":"z-1","zoneCode":"PI-01","zoneName":"Promo Island 1",
+            "spaceId":"sp-1","firstLook":1000,"lastLook":9000,"firstDwell":1200,"lastDwell":8800,
+            "viewTimeSeconds":8.0,"dwellTimeSeconds":7.6,"classification":"adult","recordedAt":"2026-07-30T07:00:01Z"},
+           {"id":"i-2","personSessionId":"ps-2","zoneId":"z-2","zoneCode":"GPS-04","firstLook":2000,"lastLook":6500,
+            "viewTimeSeconds":4.5,"dwellTimeSeconds":4.1,"recordedAt":"2026-07-30T07:01:00Z"}]}
+    """.trimIndent()
+    val parsed = ConnectMappers.camel.readValue<ImpressionQueryResponse>(body)
+    check(parsed.count == 2) { "snake envelope field count must bind" }
+    check(parsed.truncated) { "truncated must bind — ignoring it turns a page into an answer" }
+    check(parsed.siteId == "s-1") { "snake site_id must bind to siteId" }
+    check(parsed.summary?.viewTimeSeconds == 12.5) { "snake summary view_time_seconds must bind" }
+    check(parsed.impressions.size == 2) { "rows must bind" }
+    val first = parsed.impressions.first()
+    check(first.personSessionId == "ps-1") { "CAMEL row field personSessionId must bind off the same mapper" }
+    check(first.zoneCode == "PI-01") { "CAMEL row field zoneCode must bind" }
+    check(first.firstLook == 1000L && first.lastDwell == 8800L) { "CAMEL row clocks must bind" }
+    check(first.recordedAt == "2026-07-30T07:00:01Z") { "recordedAt (event time, == firstLook) must bind" }
+    check(parsed.impressions[1].classification == null) { "an absent optional row field must stay null, not throw" }
+
+    // Unknown keys must not break the read — responses carry more than twin models.
+    val withExtra = ConnectMappers.camel.readValue<ImpressionQueryResponse>(
+        """{"count":1,"truncated":false,"someFutureField":"x","impressions":[{"id":"i-9","zoneCode":"RR-02","unknownRowField":7}]}""",
+    )
+    check(withExtra.impressions.first().zoneCode == "RR-02") { "unknown keys must be tolerated on both envelope and row" }
+
+    val spatial = ConnectMappers.camel.readValue<SpatialIdentityResponse>(
+        """{"sites":[{"site_id":"s-1","slug":"dec-us-denver","spaces":[{"space_id":"sp-1","space_type":"sales_floor",
+           "zones":[{"zone_id":"z-1","code":"GB-R3-U1","external_code":null,"zone_type":"fixture","enabled":true}]}]}],
+           "site_count":1,"space_count":1,"zone_count":1,"truncated":false}""",
+    )
+    check(spatial.sites.first().spaces.first().zones.first().code == "GB-R3-U1") { "zone code must bind — it is the key to map on, not name" }
+    check(spatial.sites.first().spaces.first().zones.first().externalCode == null) { "external_code stays null until registered" }
+    check(spatial.zoneCount == 1) { "snake zone_count must bind" }
+    log.info("[PASS] §6.5 read-plane casing — snake envelopes/refs + camel impression rows, one mapper")
+}
+
+/**
+ * The caps are refusals, not clamps: an over-max `limit` comes back 400 rather than silently
+ * answering a narrower question. Twin checks locally first so that costs zero round trips, and so a
+ * caller cannot mistake a clamped answer for a complete one.
+ */
+private fun readPlaneCaps() {
+    val client =
+        ConnectClient(
+            ConnectConfig(
+                apiBase = "http://localhost:1/api/v2",
+                webhookBase = "",
+                tenantId = null,
+                integrationSlug = null,
+                serviceBearer = "m8trx_x",
+                webhookApiKey = null,
+                inboundHmacSecret = null,
+                outboundVerifySecret = null,
+            ),
+        )
+    var refused = false
+    try {
+        client.queryImpressions(ImpressionQueryRequest(siteRef = "s", limit = ReadCaps.ROWS_MAX + 1))
+    } catch (e: IllegalArgumentException) {
+        refused = true
+        check(e.message!!.contains("${ReadCaps.ROWS_MAX}")) { "the refusal must name the ceiling: ${e.message}" }
+    }
+    check(refused) { "an over-max impression limit must be refused locally, not sent" }
+
+    refused = false
+    try {
+        client.spatialIdentity(SpatialIdentityRequest(limit = ReadCaps.ZONES_MAX + 1))
+    } catch (e: IllegalArgumentException) {
+        refused = true
+    }
+    check(refused) { "an over-max zone limit must be refused locally, not sent" }
+    check(ReadCaps.ROWS_DEFAULT == 500 && ReadCaps.ZONES_DEFAULT == 2_000 && ReadCaps.WINDOW_MAX_DAYS == 31L) {
+        "documented §6.5 ceilings must not drift silently from the API doc"
+    }
+    log.info("[PASS] §6.5 caps refuse locally and name the ceiling")
 }
 
 /** The keystone: a signature verifies against the exact bytes it signed, and nothing else. */
