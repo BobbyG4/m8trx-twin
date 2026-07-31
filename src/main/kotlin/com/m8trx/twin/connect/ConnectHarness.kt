@@ -17,6 +17,7 @@ import com.m8trx.twin.connect.model.webhook.MovementItem
 import com.m8trx.twin.connect.model.webhook.PlanogramDirective
 import com.m8trx.twin.connect.model.webhook.PlanogramDocument
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
+import com.m8trx.twin.connect.model.webhook.ProductCatalogItem
 import com.m8trx.twin.connect.model.webhook.SaleEvent
 import com.m8trx.twin.connect.model.webhook.ShipmentLine
 import com.m8trx.twin.connect.model.webhook.ShipmentManifest
@@ -226,6 +227,16 @@ private fun dtoCasingRoundTrip() {
     listOf("external_shipment_id", "destination_site_id", "items", "expected_quantity").forEach {
         check(shipJson.contains("\"$it\"")) { "shipment_manifest must serialize snake field $it: $shipJson" }
     }
+    // gtin rides both catalog and pricing as a snake-plane field, and is OMITTED when absent (NON_NULL)
+    // so the payload stays byte-identical for a consumer that has not adopted the re-key yet.
+    val pricedByGtin = ConnectMappers.snake.writeValueAsString(PricingUpdate("5391035", 8000, gtin = "3608392174964"))
+    check(pricedByGtin.contains("\"gtin\":\"3608392174964\"")) { "pricing_update must carry gtin: $pricedByGtin" }
+    check(pricedByGtin.contains("\"sku\":\"5391035\"")) { "pricing_update keeps sku alongside gtin: $pricedByGtin" }
+    check(!ConnectMappers.snake.writeValueAsString(PricingUpdate("SKU-1", 1)).contains("gtin")) {
+        "gtin must be omitted entirely when null, not serialized as null"
+    }
+    val catByGtin = ConnectMappers.snake.writeValueAsString(ProductCatalogItem("5391035", "Quechua MH500", gtin = "3608392174988"))
+    check(catByGtin.contains("\"gtin\":\"3608392174988\"")) { "product_catalog must carry gtin: $catByGtin" }
     check(ConnectMappers.snake.writeValueAsString(PricingUpdate("SKU-1", 2999)).contains("\"price_minor\"")) {
         "pricing_update must serialize price_minor"
     }

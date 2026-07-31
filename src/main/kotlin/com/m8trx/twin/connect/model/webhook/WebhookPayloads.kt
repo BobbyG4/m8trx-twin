@@ -60,12 +60,26 @@ data class SaleEvent(
 }
 
 /** `product_catalog` — requires [sku] + [name]; any extra keys land in `product.metadata` server-side. */
-data class ProductCatalogItem(val sku: String, val name: String)
+/**
+ * `product_catalog` — one product per event.
+ *
+ * [gtin] carries the EAN-13, which **is** a GTIN-13, and is the field that actually identifies a sellable
+ * unit in this catalog. [sku] is Decathlon's `item_cd`, a supplier **style/model code** — two sizes of one
+ * shoe share it (see `5391035`). Sending `sku` alone is what makes a catalog delivery update *both* product
+ * rows on the platform, so the two are sent together and a consumer may key on whichever it trusts.
+ */
+data class ProductCatalogItem(val sku: String, val name: String, val gtin: String? = null)
 
 /** `shipment_manifest` — [externalShipmentId] + [destinationSiteId] + [items]. */
 data class ShipmentManifest(val externalShipmentId: String, val destinationSiteId: String, val items: List<ShipmentLine>)
 
 data class ShipmentLine(val sku: String, val expectedQuantity: Int)
 
-/** `pricing_update` — [sku] + [priceMinor] (integer minor units). */
-data class PricingUpdate(val sku: String, val priceMinor: Long)
+/**
+ * `pricing_update` — [sku] + [priceMinor] (integer minor units), plus [gtin].
+ *
+ * The `gtin` matters more here than anywhere: `5391035`'s two sizes are priced **$80 and $109**, so a
+ * pricing delivery keyed on the style code alone does not merely update two rows, it writes one variant's
+ * price onto the other.
+ */
+data class PricingUpdate(val sku: String, val priceMinor: Long, val gtin: String? = null)

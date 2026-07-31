@@ -37,7 +37,14 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ChainActivityS
 
 private data class Store(val code: String, val siteId: String)
 
-private data class Sku(val itemCd: String, val name: String, val priceMinor: Long)
+/**
+ * One **sellable unit**, keyed on [ean] (an EAN-13, i.e. a GTIN-13).
+ *
+ * [itemCd] is Decathlon's supplier **style code** and is NOT unique: `5391035` is one shoe in two sizes at
+ * two prices. This record used to be deduped on [itemCd], which silently dropped the second variant and
+ * left twin emitting a style code the platform then applied to both product rows.
+ */
+private data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
 
@@ -131,15 +138,15 @@ private fun fire(
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
             val sk = skus[rng.nextInt(skus.size)]
             val churned = (sk.priceMinor * (0.7 + rng.nextDouble() * 0.5)).toLong().coerceAtLeast(1)
-            val resp = driver.pushPricing(PricingUpdate(sk.itemCd, churned), WebhookClient.AuthMode.API_KEY)
-            logFire(seq, type, store, "sku=${sk.itemCd} ${sk.priceMinor}->$churned", resp)
+            val resp = driver.pushPricing(PricingUpdate(sk.itemCd, churned, gtin = sk.ean), WebhookClient.AuthMode.API_KEY)
+            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->$churned", resp)
         }
         Activity.CATALOG -> {
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
             val sk = skus[rng.nextInt(skus.size)]
-            val resp = driver.pushCatalog(ProductCatalogItem(sk.itemCd, sk.name), WebhookClient.AuthMode.API_KEY)
-            logFire(seq, type, store, "sku=${sk.itemCd}", resp)
+            val resp = driver.pushCatalog(ProductCatalogItem(sk.itemCd, sk.name, gtin = sk.ean), WebhookClient.AuthMode.API_KEY)
+            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean}", resp)
         }
     }
 }
@@ -183,20 +190,39 @@ private fun loadAssortment(file: Path): List<Sku> {
     if (lines.size < 2) return emptyList()
     val h = splitCsv(lines.first())
     val iItem = h.indexOf("item_cd")
+    val iEan = h.indexOf("ean")
     val iName = h.indexOf("name_en")
     val iPrice = h.indexOf("price_local")
     val iCcy = h.indexOf("currency")
-    if (iItem < 0 || iName < 0 || iPrice < 0) return emptyList()
+    if (iItem < 0 || iEan < 0 || iName < 0 || iPrice < 0) return emptyList()
+    // Dedupe on EAN, the sellable unit — NOT on item_cd. item_cd is a supplier STYLE code and deduping on
+    // it dropped `5391035`'s second size entirely, so twin could not address the $109 variant at all while
+    // its pricing deliveries rewrote both rows. EAN is measurably unique: 2,586 distinct across the chain,
+    // zero blank.
     val seen = HashSet<String>()
     val out = ArrayList<Sku>()
+    var blankSku = 0
     for (line in lines.drop(1)) {
         val c = splitCsv(line)
-        if (c.size <= maxOf(iItem, iName, iPrice)) continue
+        if (c.size <= maxOf(iItem, iEan, iName, iPrice)) continue
         val itemCd = c[iItem].trim()
+        val ean = c[iEan].trim()
         val price = c[iPrice].trim().toDoubleOrNull()
-        if (itemCd.isEmpty() || price == null || !seen.add(itemCd)) continue
+        if (ean.isEmpty() || price == null || !seen.add(ean)) continue
+        // 5 products (the Van Rysel RCR Pro frame sizes) carry NO item_cd in source. They are skipped
+        // rather than emitted with a blank sku — but counted and reported, because a silent skip is how
+        // a catalog hole stays invisible. They become emittable once ingest keys on gtin.
+        if (itemCd.isEmpty()) {
+            blankSku++
+            continue
+        }
         val ccy = if (iCcy in c.indices) c[iCcy].trim() else "USD"
-        out.add(Sku(itemCd, c[iName].trim(), priceToMinor(price, ccy)))
+        out.add(Sku(itemCd, ean, c[iName].trim(), priceToMinor(price, ccy)))
+    }
+    if (blankSku >
+        0
+    ) {
+        log.warn("{}: {} product(s) skipped — no item_cd in source (gtin present); emittable once ingest keys on gtin", file.fileName, blankSku)
     }
     return out
 }
