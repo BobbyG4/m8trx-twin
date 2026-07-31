@@ -248,10 +248,20 @@ fun main() {
     // ── 7. reported duration is sane ──────────────────────────────────────────
     log.info("[7] duration reporting")
     val d = fired5.first().durationMs
-    check("duration is positive and under the episode length", d in 1..12_000, "duration=$d")
-    // Validated against the live twin edge 2026-07-28 across 5 episodes: the edge reports the window at
-    // cache EXPIRY (full episode span), never the window at creation. 12s episode → 12000ms.
-    check("duration equals the full episode span, matching the live edge", d == 12_000L, "expected 12000, got $d")
+    // F4 (2026-07-31): episodes are now approach(1200) → engage(12000) → disengage(1200), all at the same
+    // standoff, so proximity holds throughout and only the look clause changes. Core's rule is
+    // `min(lastDwell - firstDwell, lastLook - firstDwell)`:
+    //     lastDwell - firstDwell = 1200 + 12000 + 1200 = 14400
+    //     lastLook  - firstDwell = 1200 + 12000        = 13200   ← the min
+    // So the reported duration is 13200 and, for the first time, **the `min` actually selects between two
+    // different arms**. Under the old coincident-clock episode both arms were 12000 and the selection was
+    // untestable — which is exactly the gap F4 exists to close.
+    check("duration is positive and within the episode envelope", d in 1..14_400, "duration=$d")
+    check("duration = approach + engaged, i.e. the LOOK-bounded arm of core's min()", d == 13_200L, "expected 13200, got $d")
+    // ⚠ OWED: the 12000 figure this previously asserted was validated against the live twin edge on
+    // 2026-07-28 across 5 episodes — under the OLD single-phase shape. 13200 is the oracle's prediction for
+    // the NEW shape and has NOT yet been confirmed against the edge. Re-verify on the next live drive
+    // before any doc claims the three-phase episode matches core.
 
     // ── 8. zone-affinity re-key portability (ruling 2026-07-28, decision 3) ───
     log.info("[8] zone-affinity re-key — portable across all 10 stores")
@@ -339,6 +349,39 @@ fun main() {
         misTargeted.isEmpty(),
         "mis-targeted: ${misTargeted.map { it.code }}",
     )
+
+    // ── 10. EVERY fixture must be individually browsable ─────────────────────
+    //
+    // The whole-floor version of the check above, and the deterministic counterpart to `scenarioSelfTest`'s
+    // statistical coverage number. Two of Denver's fixtures were not merely unlucky in a generated day, they
+    // were **impossible to browse**: `ACC-02` and `GPS-04` are boxed in on all four sides with 200–400mm
+    // gaps, so every candidate at the fixed 600mm standoff landed inside a neighbour, nothing validated, and
+    // the fallback aimed the shopper at that neighbour. The standoff is now fitted to each edge's clearance.
+    //
+    // Scale-free and seed-independent on purpose: a coverage percentage over a generated day mixes this
+    // failure (unreachable by construction) with ordinary sampling thinness, and only the first is a bug.
+    log.info("[10] every fixture is individually browsable — no fixture unreachable by construction")
+    val browser = BrowseEpisode(fixtures, emitHz = 5.0)
+    val unreachable = fixtures.impressionVisible.filter { f ->
+        val s = browser.browse(f.code, 12_000, 0L, Random(11))
+        oracle.run(fixtures, s).none { it.fixtureCode == f.code }
+    }
+    if (unreachable.isNotEmpty()) {
+        unreachable.forEach { f ->
+            log.error(
+                "  · {} ({}, in_area_zone={}) — a dwell episode aimed at it produces no impression ON it",
+                f.code,
+                f.kind,
+                f.inAreaZone,
+            )
+        }
+    }
+    check(
+        "all ${fixtures.impressionVisible.size} visible fixtures are individually browsable",
+        unreachable.isEmpty(),
+        "unreachable: ${unreachable.map { it.code }}",
+    )
+    log.info("  · ⚠ uncalibrated fixture-browse rates (NOT sourced): {}", ZoneAffinityModel.uncalibratedBrowseRates)
 
     log.info("")
     log.info("peopleSelfTest — {} passed, {} failed", passed, failed)

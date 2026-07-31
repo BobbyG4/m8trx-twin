@@ -2,39 +2,68 @@
 
 ---
 
+## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-31 — **Session 17 CLOSED** · ★ **ZERO-LOSS CONFIRMED 1512/1512/1512** · §6.5 READ half wired → **TWIN-REQ-004 CLOSED** · **`connectAcceptance` = the Connect ship gate, and twin holds that role standing**)
+
+> **PICK UP HERE (Session 18).** Read first: `status/session-notes/2026-07-31-session-17-connect-read-half-ship-gate-zero-loss.md` (the *don't-repeat* record is §Failed approaches — **four of today's errors were my own**). Coordinator-facing record: `m8trx-shared/status/active/RESULTS-TWIN-2026-07-31.md`.
+>
+> **✅ BRANCH STATE — MERGED to `main` 2026-07-31.** `feat/connect-read-half`, **26 commits**, which *already contained* S16's `fix/fixture-coverage-in-area-zone` as an ancestor — they were never two independent branches, and an earlier note here saying "PR S16's first" was wrong. One merge landed both. Green at merge: ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` **37**.
+>
+> **★ THE RESULT.** Post-#245 drive on the reproducing profile (seed 4242, hours 12-16, compress 18): **oracle 1512 · wire 1512 · rows 1512 · sessions 308 · fixtures 115/115 · loss 0.00%.** The external proof the impression-loss fix never had, closing the arc open since S15. It settled the S282-vs-twin contradiction as a **timeline, not a side**: 9.4% pre-fix → **20.3% at 03:03** → **total** during the `vision_ai` entitlement-gate outage → **0.00% post-#245**. *(The gate-shedding explanation for the 03:03 partial was offered as **labelled inference, not asserted** — it needs someone who can see the gate.)*
+>
+> **★ TWIN NOW HOLDS A STANDING ROLE** (Bob's ruling): **`./gradlew connectAcceptance` is the Connect ship gate** — the only automated coverage that surface has, because every CI security suite drives a human JWT and none drives a Connect key. Green before ship; extend it as the surface grows; **coverage gaps print alongside failures.** Detail + the non-vacuity rule: `status/tracks/TRACK-TWIN.md` § STANDING ROLE.
+>
+> **NEXT, ranked:**
+> **(1) PR the two stacked branches** — S16's first, then S17's.
+> **(2) ★ Restore `integration:manage` + grant `alert:read`** on `M8TRX_TWIN_BEARER` — **one admin action**, and twin cannot self-serve it (SEC-1 subset guard + the key surface is `CONNECT_NOT_EXPOSED`). Unblocks FR-INTEG-16, the §7 DLQ, and the `/alerts/query` half of the EAS test.
+> **(3) LP chain end to end** once BW-TRIAD applies mig 205 and BW-CONNECT registers `twin-eas`: alarm → `alert` → routed to an LP role → visible on `/alerts` → dispositioned, **each hop verified**. ⚠ **Twin owes substrate first — see (6).**
+> **(4) directive→task follow-up — a DECISION, not build work.** Twin can drive the input and read the output but **cannot cause the middle**: `/activate` and `/evaluate` are `CONNECT_NOT_EXPOSED`. Either expose a scoped activation or declare the loop deliberately human-gated. *("Needs a backend watcher" understates it — a watcher observes; what is missing is an actor.)*
+> **(5) F4's end-divergence is NOT closed.** `firstDwell`→`firstLook` diverge on a persisted row (proven live, 1,200ms), but `lastDwell == lastLook` because the impression flushes at eviction before the disengage tail lands. **Core's `min()` still cannot be observed choosing between two arms** — needs an episode outliving its own flush.
+> **(6) ✅ DONE 2026-07-31 — LP substrate BUILT (Bob's ruling).** The dead "W-series watches" anchor is replaced by a **derivable rule** (`layer2/EasTagging.kt`: `price >= $150 AND category != "outdoor"` → **271 SKUs**, zero bulky items) and **`Shoplift` is now real code**, not a design-table entry: browse a fixture holding tagged stock → conceal a unit → **skip checkout** → walk out on a track that genuinely crosses `CS-01` at `y=600`. **The alarm is a consequence of the track** — `EasGateCrossed` is published from the emitted samples and carries the unpaid EPCs, so no journey fires an alarm directly. **Proven firing, not just compiling:** a generated day produces 2 concealments and 2 gate alarms, and every concealment yields exactly one alarm. `scenarioSelfTest` 27 → **37**.
+> **(7) Planogram grain** — `build_planogram.py` is `item_cd`-keyed in two places, so `5391035`'s target sums both sizes and takes whichever EAN was read last. Fix identified (`(fixture, ean)`), **not applied** — regenerates 10 documents and changes directive payloads. Needs a go.
+> **(8) §5 economics recalibration** — ATV $58 / avg line $26.40 from the superseded 871-SKU catalog. Bob's decision.
+>
+> **⚠ STILL OWED (Bob, cannot close from twin):** rotate the mother Hasura admin secret — de-hardcoding did **not** remove it from git history.
+>
+> **★ TWIN-SIDE TRUTHS TO CITE, because nobody else can state them:**
+> **Twin is 99.8% of the platform's entire impression record** (7,206 of the census's 7,222) — so `FR-INTEL-29 — BUILT, 7,222 rows` is true about the *pipeline* and misleading as evidence about *production*. Same class: **`scan_event.position` is twin's seed** (102,675 of 102,683), in **per-space unregistered mm frames, SRID 0, Z=0** — not calibration-wrong, but Sales Floor `(0,0)` and Back Room `(0,0)` are different physical points, so **cross-space reasoning over it is invalid** until FR-SPATIAL-26 Pass-2. Labelled at source in `DEPLOY-HANDOFF.md`; **do not delete or regenerate** (reseed parity is byte-for-byte verified).
+>
+> **⚠ THE PATTERN WORTH ONE DECISION:** **Connect lets an integrator write, and increasingly read, but not provision or transition.** directive→task needs an actor · FR-INTEG-16 needs a scope · alarms need three registrations (two with no self-serve path) · and `PATCH /connect/service-keys/{keyId}/scopes`, documented in §7 as *the* supported way to add scopes, is `CONNECT_NOT_EXPOSED` to **every** Connect key.
+>
+> **⚙ EMIT-CONTRACT CONSTANTS (unchanged, hard):** **emit >1 Hz** (5 Hz default) · within **1m of a fixture EDGE** · ray held on the **SAME** fixture · **both** clocks past 5000ms · ~10s `expireAfterWrite` lag · **circles are CONTAINMENT-ONLY** (`Circle.edges()` is a stub) · **`com.m8trx.geometry` is OFF-LIMITS** (shared with Android AR).
+> **⚙ PACING RULE:** compress each shopper's **ARRIVAL**, never their internal timing; anchor wire `ts` to the **plan**, not the wall clock.
+> **⛔ TWO EDGES SHARE .29:** `:4223` = `edge-twin-denver` (twin) · `:4222` = `edge-itx-office` (**PRODUCTION, real Xovis**).
+> **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` → `set -a; . ./.env; set +a` then `./gradlew … --no-daemon`.
+
+---
+
 ## ⚠⚠ S16 CLOSED BY PROXY (Coordinator, 2026-07-30 — the session died to provider API errors and could not be revived)
 
 > **READ FIRST, S17:** [`session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md`](session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md) — S16's work (all artifact-cited), the Coordinator-run acceptance (**1,512 = 1,512 = 1,512 = 1,512**, investigation CLOSED-PROVEN core-side), and your ordered openers. **First act: countersign.** Your branch `fix/fixture-coverage-in-area-zone` (6 commits) was local-only and is now protectively pushed; disposal is yours.
 
----
-
-## ⚠ NEXT SESSION PRIORITIES (updated 2026-07-28 — **Session 15 CLOSED** · ★ people pipeline PROVEN end to end camera-free · full day **3,664 impressions vs 3,664 predicted = 0.0%** · first circle impression ever · 2 coordinator-brief errors caught pre-build)
-
-> **PICK UP HERE (Session 16).** Read first: `status/session-notes/2026-07-28-session-15-spine-restart-people-pipeline-full-day.md` (§3 is the *don't-repeat* record — **every bug in S15 was silent-failure class**) and `status/archive/sprint/TWIN-SPINE-GROUNDTRUTH-AND-RESTART-2026-07-28.md`. Coordinator handoff: `status/active/TWIN-STATUS-FOR-COORDINATOR-2026-07-28.md` (§2 is a standalone run card).
+> ### ↕ RECONCILED 2026-07-31 — this block and the S17 block above close the same investigation on different days. Both are honest; read them together.
 >
-> **Branch `chore/spine-restart-hygiene` @ 15 commits, PUSHED, NO PR — Bob's call.** `main` untouched at `b0390fc`. All green: ktlint · compile · `connectSelfTest` · `peopleSelfTest` (49) · `scenarioSelfTest` (23).
+> The Coordinator's acceptance above (1,512 four ways, **2026-07-30**) and twin's independent confirmation
+> (**0.00% loss, 2026-07-31 08:24**) are **not a contradiction and neither supersedes the other** — they
+> measured different builds. The full sequence, with the intermediate states that make it coherent, is the
+> timeline table in
+> [`session-notes/2026-07-31-session-17-…`](session-notes/2026-07-31-session-17-connect-read-half-ship-gate-zero-loss.md):
 >
-> **DONE S15 (brief 3.1–3.4 all delivered):** ground-truth pass caught **2 brief errors** (`viewDirection` MANDATORY + the **>1 Hz emit floor**; Connect outbound already exists) → accepted into shared `9f8f68e0` · 3.1 stream (~550 events, zero non-200s) · 3.4 hygiene · **`peopleSelfTest` 49** · zone-affinity re-key (all 10 stores, 0 unmapped) · Layer-4 runtime skeleton (locked Q2/Q3/Q6) + `OperatingModel` + `TrafficGenerator` + journeys + **§1 reconciliation gate** · `connectPeopleDrive` · `connectDayDrive` · **full day 1,100,584 samples / 790 shoppers / 44m20s / 3,664 = 3,664** · single episodes **DB-confirmed 5/5** · **first circle impression** (`PI-01` → `7dc6fb79`).
+> | When | Measurement | Loss |
+> |---|---|---|
+> | 07-30 pre-fix | wire 1512 → rows 1370 | 9.4% |
+> | **07-30 Coordinator acceptance** | **1512 four ways** | **0%** |
+> | 07-31 03:03 (twin, independent) | wire 1512 → rows 1205 | **20.3%** |
+> | 07-31 06:36–07:18 | wire 1512/317/317 → rows 0 | **total** — the `vision_ai` entitlement gate |
+> | **07-31 08:24 post-#245 (twin)** | **wire 1512 → rows 1512** | **0.00%** |
 >
-> **★ ALL SIX RULINGS CLOSED — nothing in the spine is decision-blocked.**
->
-> **NEXT, ranked:**
-> **(1) ★ 18 of 115 fixtures never browsed — including ALL THREE CIRCLES.** `dwellAtZone` reaches fixtures only via `fixturesByDept`; `PI-01`/`PI-03`/`RR-02` sit in `Z-01` with no department, so they sat out the day despite being individually proven. Read as a heatmap this looks like the platform dropping them — the same wrong conclusion the old converter bug caused. **Fix:** browse non-department fixtures via `in_area_zone`.
-> **(2) `impression_event` DB verification for `fullday-0728` — OWED (Bob/coordinator).** Expect **3,664 rows**; twin verifies over NATS only (psql is Off-Limits).
-> **(3) 22,944-row Hasura truncation ceiling — UNTESTED.** 854 was under it; 3,664 may not be.
-> **(4) Three Promo-Island-1 rows vs twin's one — UNRECONCILED.**
-> **(5) TWIN-REQ-004 — ✅ FILED 2026-07-28** (`m8trx-shared/twin/requirements/TWIN-REQ-004-connect-read-surface.md`): ONE Connect read-surface brief covering task read · space/zone read · impression read (compliance `/state` already shipped as TWIN-REQ-003). Highest-value item is **space/zone identity** — `POST /items/receive` *requires* a `spaceId` nothing on the Connect surface returns, so a third party cannot call receive without out-of-band UUIDs. That gap has a victim who is not twin. **Twin is NOT blocked** (fixture map covers Denver; NATS covers impression verification).
-> **(6) directive→task smoke** (owed since S14) — **unblocked**, rule engine live on master `f14482a`; needs a backend watcher.
-> **(7) §5 economics recalibration** — ATV $58 / avg line $26.40 are from the superseded 871-SKU catalog, not the live 2,586-SKU assortment. Bob's decision.
->
-> **⚠ STILL OWED (Bob, cannot close from twin):** rotate the mother Hasura admin secret — de-hardcoding did **not** remove it from git history, and it is instance-wide.
->
-> **⚙ EMIT-CONTRACT CONSTANTS (hard, learned the hard way):** **emit >1 Hz** (5 Hz default; Xovis runs 5–25 — below the floor both clocks reset per sample and 5000ms is unreachable however long the shopper stands) · within **1m of a fixture EDGE** · ray held on the **SAME** fixture · **both** clocks past 5000ms · ~10s `expireAfterWrite` lag before the subscriber sees it · **circles are CONTAINMENT-ONLY** (`Circle.edges()` is a stub — stand ON the footprint) · **`com.m8trx.geometry` is OFF-LIMITS** (shared with Android AR — report, never patch).
-> **⚙ PACING RULE (Bob adopted twin's formulation):** compress each shopper's **ARRIVAL**, never their internal timing. "Compress the gaps" is ambiguous once shoppers overlap, because consecutive samples belong to different people and nearly every delta reads inter-episode. Deltas ≤1000ms replay verbatim; larger ones divide. **Guarded by an invariant that aborts before publishing.** And anchor wire `ts` to the **plan**, not the wall clock — core computes both clocks from the envelope `ts`, so publisher jitter otherwise leaks into the rule.
-> **⛔ TWO EDGES SHARE .29:** `:4223` = `edge-twin-denver` (twin) · `:4222` = `edge-itx-office` (**PRODUCTION, real Xovis**). Every live driver asserts NATS `server_name` before emitting and denylists the office space.
-> **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` → `set -a; . ./.env; set +a` then `./gradlew … --no-daemon`.
+> So "CLOSED-PROVEN core-side" on 07-30 was true when written and **did not stay true** — an entitlement gate
+> keyed to an unsatisfiable slug regressed it, and #245 closed it again. **Neither record is wrong; a reader
+> taking either one alone would be.** Kept side by side deliberately: deleting the 07-30 acceptance to make
+> `main` tidy would erase a measurement someone honestly made.
 
 ---
+
+## Session 15/16 priorities (historical)
 
 ## Session 14 priorities (historical — updated 2026-07-03 — Session 14 · ★ CORE-REQ-005 parts 1–3 DONE (`connectFullLoop` #9 · `connectStress` #10 · compliance read-back smoke → **TWIN-REQ-003 SATISFIED**) · ★ **Strand V site-scope hardening GREEN** (`connectSiteScopeAudit` #11 — the at-scale 151-table sweep caught **3 event/audit leaks** core's core-36/tail-35 mapping missed) · **seat/perms tenant-wide leak** surfaced (core's `seed_users.py` fix) · main `2131384`)
 
@@ -144,6 +173,9 @@
 
 ### Blocked on core
 
+- **Connect: provision + transition, not read (NEW, S17 — one decision, not three).** An integrator can write and increasingly read, but cannot **provision or transition**: `/activate` + `/evaluate` are `CONNECT_NOT_EXPOSED` (directive→task cannot be closed unaided) · `alert_source`/`alert_source_kind` registration has **no path for anyone short of psql** (§8.2's own measurement) · `POST /api/v2/compliance/fixture-codes` is not Connect-reachable, so §8.1's recommended `zone_ref` path is one a vendor cannot take · and **`PATCH /connect/service-keys/{keyId}/scopes`, documented in §7 as the supported way to add scopes, is `CONNECT_NOT_EXPOSED` to every Connect key** — with SEC-1's subset guard, no Connect key can ever obtain a new capability without an admin.
+- **`alert:read` held by no existing key (NEW, S17)** — `/alerts/query` shipped and is Connect-reachable, but uncallable by anyone without an admin re-mint. Second instance of the SEC-3 pattern (`vision_ai:*` was the first). Twin's view: *"a new write ships with its read"* wants a second clause — **and with a route for a key to obtain the capability.**
+
 - **Planogram Mode 3 demo tail (NEW, S12)** — directive→targets→**resolved** is LIVE-PROVEN, but **FR-PLN-08 compliance-check task-gen + push** ride the **Notifications spine** (Triad Slice-1), which Backend defers behind the 07-30 critical path. Also OPEN: the **wrong-zone fixture mapping** ((a)/(b) decision with Backend — `GB-R3-U1` mapped to `GF-R6-U1`'s zone) + **no `/api/v2` compliance read-back** for twin self-verify (**FILED as TWIN-REQ-003**, 2026-07-02 — folds into the Connect read-surface). ✅ Partial OI-2 close: `POST /api/v2/compliance/fixture-codes` now loads `fixture_code_mapping` (operator-side).
 - **Auth 500 / Hikari pool starvation (NEW, Session 8)** — post-reseed, the bulk-mutation Hasura **audit-trigger cascade** exhausted m8trx-services' `HikariPool-1` (10/10 active, 30 waiting) → auth/exchange 500 (reqId `3cc2943b`). Mother DB healthy (74/200); likely amplifier = the 102,675-item dual-write (~205k rows). **Core's to fix** (pool headroom / async-batch audit-ingest / quiesce triggers during bulk load) — **OPEN, core investigating.** Connect-based incremental seeding avoids the bulk direct-DB writes that trigger it. *(Not caused by the twin session's read-only audit.)*
 - **Image pipeline (NEW)** — `image` = Shopify CDN hot-link; backend hit an issue; likely need cached bytes in M8TRX's own asset store. Confirm what the seed did + whether core can store/serve cached assets. Part of `CATALOG-IMPORT-ONBOARDING`.
@@ -164,7 +196,8 @@
 - Address: 620 6th Avenue, New York, NY 10011 (Flatiron District)
 - Currency: USD
 - SKU mix: running (primary) + fitness + hiking + swim + cycling + accessories + GPS watches
-- LP scenario anchor: W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items
+- LP scenario anchor: **EAS-tagged premium concealable stock — `price_usd >= $150 AND category != "outdoor"`, 271 of 2,586 SKUs**, concentrated on `PE-02`/`PW-02` (Kiprun premium footwear). Gate is `CS-01` "Main Entrance Gate". Rule lives in `layer2/EasTagging.kt`; tag state is **twin-side, not the platform's**.
+  ⚠ **Corrected 2026-07-31** — was *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"*. **Zero watch SKUs exist in the live catalog**; that anchor belonged to the superseded 920-SKU concept and Session 8 flagged it unclosed. Asserted absent by `scenarioSelfTest`.
 
 ---
 
@@ -193,7 +226,11 @@
 |---|---|---|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
+| **TWIN-REQ-005 — Connect capability acquisition** | 📨 **FILED 2026-07-31** (`m8trx-shared/twin/requirements/TWIN-REQ-005-connect-capability-acquisition.md`). No Connect key can obtain a capability it was not minted with, and §7's documented path (`PATCH …/service-keys/{keyId}/scopes`) is `CONNECT_NOT_EXPOSED` to every Connect key. Two individually-correct mechanisms (the admin-only door + SEC-1's subset guard) that together leave **no path at all**. Twin NOT blocked — twin asks a human, which is exactly what a real integrator cannot do. | `/alerts/query` uncallable by anyone; 2nd instance after `vision_ai:*` |
+| **TWIN-REQ-004 Connect READ surface** | ✅ **SATISFIED — CLOSED 2026-07-31 by twin as external prover.** All four §6.5 reads callable; rule-2 confinement proven on all four with negative controls by slug AND UUID; omitted-site returns 1 of 14. All three §4 interim positions retired with evidence (fixture-map CSV → `/spatial/identity`; human `psql` → 3,119 rows reproduced in code; engineer-watched task smoke → `/tasks/query`). | — |
+| **FR-INTEG-16 two-system reconciliation** — *feasibility asked of twin* | ✅ **ANSWERED 2026-07-31: YES.** Three of four steps live-proven; step 1 blocked only on `integration:manage` (a scope, restorable). `hmac_secret` at channel creation means the case never needs a key mint. | one scope grant |
 | TWIN-REQ-003 compliance/directive read-back (Connect Mode-3) | ✅ **SATISFIED** (2026-07-02; core PR #76 `925f9a4` — `POST /api/v2/compliance/state` live; twin part-3 smoke GREEN 28/28 · 25/2/1 · 0.893) | — |
+| **TWIN-REQ-004 Connect READ surface** (task read · space/zone read · impression read) | ✅ **ABSORBED core-side 2026-07-30** (`m8trx-shared/status/briefs/BRIEF-CONNECT-READ-SURFACE-2026-07-30.md`) — **sequenced behind the Traffic reference surface, so not yet shipped**; interim positions (fixture-map CSV · NATS impression observation · watched task smoke) remain the operating mode, and `connectSiteScopeAudit` re-runs against every new endpoint on ship. Filed 2026-07-28. | integrator self-verification; `items/receive` uncallable by a third party without out-of-band UUIDs |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
 | CORE-REQ-003 build Connect simulators — **inverse, core→twin** | ✅ **DONE** (S11 — all 5 P0 sims live end-to-end) + **Planogram Mode 3 driver LIVE-PROVEN** (S12, PR #7 — directive→targets→resolved, triple-verified) | — |

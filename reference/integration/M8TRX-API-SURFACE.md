@@ -89,7 +89,9 @@ Auth/routing unchanged: `POST /v1/webhook/{tenantId}/{integrationKey}` on the `�
 
 ## ✅ Bearer service-plane live + read-side self-verify — 2026-06-30
 
-The service-principal Bearer plane is **live-verified** (services #51/#52, closing OI-1/C1). A minted `principal_kind='service'` key (`m8trx_<hex>`; scopes `integration:manage` + `scan:submit` + `inventory:create` + `inventory:read`, tenant-wide) now returns **200** on `/api/v2` — this **supersedes any earlier "service-bearer → 401 INVALID_TOKEN" notes**. Header: `Authorization: Bearer m8trx_<hex>` (env `M8TRX_TWIN_BEARER`).
+The service-principal Bearer plane is **live-verified** (services #51/#52, closing OI-1/C1). A minted `principal_kind='service'` key (`m8trx_<hex>`; scopes `integration:manage` + `scan:submit` + `inventory:create` + `inventory:read`) now returns **200** on `/api/v2` — this **supersedes any earlier "service-bearer → 401 INVALID_TOKEN" notes**. Header: `Authorization: Bearer m8trx_<hex>` (env `M8TRX_TWIN_BEARER`).
+
+> ⚠ **Corrected 2026-07-31 — the key is SITE-SCOPED to Denver, not tenant-wide.** This doc and `TRACK-TWIN.md` both said "tenant-wide" for a month. Measured: `POST /spatial/identity` with the site **omitted** returns `site_count: 1` (`dec-us-denver`) against a 14-site tenant, and every foreign site refuses with `403` by slug **and** by UUID. This is not cosmetic — it changed a verdict. The first read of `/compliance/state`'s `403` assumed a tenant-wide key and therefore a regression; the site-scoped reality forced a re-test with the key's **own** site named before that conclusion could stand. (It survived — see the §6.5 measured table — but the difference was one probe.)
 
 **New read-side atom — `inventoryItemsDetails` (twin self-verify):**
 
@@ -98,6 +100,142 @@ The service-principal Bearer plane is **live-verified** (services #51/#52, closi
 | 29 | `inventoryItemsDetails` | REST | `POST /api/v2/inventory/items/details` | `{ epcs:[String] }` → `[{ epc, itemId:UUID, sku, attribs:Object, attribsType, state, imageUrl }]` (one element per resolved EPC; unknown EPCs omitted) | Bearer — `inventory:read` | Idempotent read | **Read-side self-verify** — twin reads its own item state back after firing (e.g. confirm `state=sold` post-sale) with **zero psql**. Code-verified live 2026-06-30 vs M8trxDemo (20/20 recent sales read back `sold`); the closed-loop check behind the `connectSelfVerify` task |
 
 This closes C1/OI-1: twin's webhook-plane generators are now self-validating through the public read API, no psql. (The earlier blocker — no self-serve scoped-Bearer mint; `/api/v2/connect/credentials` = `501 @MvpStub` — was resolved core-side by un-stubbing service-key issuance.)
+
+---
+
+## ✅ The Connect READ half — §6.5, live 2026-07-30 (PR #210 `d9663c61`)
+
+Four reads landed as one surface, closing **TWIN-REQ-004**. Each exists because an integrator otherwise
+had to ask a human: for UUIDs by email, for someone to run `psql`, or for a backend engineer to watch a
+screen while the integrator drove the input. Twin was that integrator in all three cases.
+
+Core adopted a **standing rule** off the back of the brief — *a new Connect write ships with its read, or
+its results file announces the gap explicitly.* The debt was never the missing read; it was the silence
+about it.
+
+| # | Atom | Transport | Route | Body / Response | Auth (scope) | Notes |
+|---|------|-----------|-------|-----------------|--------------|-------|
+| 30 | `spatialIdentity` | REST | `POST /api/v2/spatial/identity` | `{ site_ref?, space_ref?, zone_types?, include_zones?, limit? }` → `{ sites:[{ site_id, slug, name, timezone, spaces:[{ space_id, name, floor_level, space_type, area_sqm, zones:[{ zone_id, code, external_code, name, zone_type, parent_zone_id, enabled }] }] }], site_count, space_count, zone_count, truncated }` | Bearer — `inventory:read` | **Call this first.** `items/receive` (#25) requires a `spaceId` nothing else emits — this is what makes self-serve onboarding possible. Key the map on **`code`**: `name` is localized EN/FR/KO, and zone UUIDs are UUIDv5 but **not derivable** (twin tried 130 patterns × 8 namespaces). Zones default 2000, max 10000 |
+| 31 | `impressionQuery` | REST | `POST /api/v2/visionai/impressions/query` | `{ site_ref, space_ref?, zone_ref?, from?, to?, limit? }` → `{ site_id, from, to, count, truncated, summary:{ zones, sessions, view_time_seconds, dwell_time_seconds }, impressions:[…] }` | Bearer — **`vision_ai:view`** (⚠ never `inventory:*` — §4 SEC-3) | Twin reads back its **own** people-plane traffic. Filters on `recorded_at` = **event time** (equals `firstLook`), not ingest — so a window means what it says. `summary` covers **returned rows only**. `zoneId`/`zoneCode` are stamped at ingest and never re-resolved. Rows default 500, max 5000 |
+| 32 | `taskQuery` | REST | `POST /api/v2/tasks/query` | `{ directive_ref, site_ref?, status?, limit? }` → `{ directive_ref, directive_id, count, truncated, summary:{…}, tasks:[{ task_id, type, status, priority, title, site_id, space_id, zone_id, zone_code, zone_name, assigned_to, assigned_to_role, assigned_by, compliance_target_id, rule_id, rule_name, reason, delta_qty, due_at, started_at, completed_at, created_at }] }` | Bearer — **`task:read`** | Scoped to **your own directive**, not to "tasks". Unblocks the directive→task smoke without a backend watcher. `assigned_to` is a UUID only — no staff name/email crosses Connect. Task **lifecycle verbs** stay `403 CONNECT_NOT_EXPOSED` to a service principal, by design |
+| 33 | `complianceState` | REST | `POST /api/v2/compliance/state` | `{ directive_ref, site_ref? }` → `{ directive_ref, directive_id, name, status, effective_date, activated, sites:[…], summary:{…}, total_targets, resolved_targets, evaluated_targets, compliance_score, targets:[…] }` | Bearer — `inventory:read` | Shipped earlier as **TWIN-REQ-003** (core PR #76); documented into §6.5 to complete the family. ⚠ `site_ref` here is a site **UUID** — this route predates slug resolution. `activated` means "≥1 target evaluated", NOT the lifecycle field (`activation_status` stays `pending`) |
+
+### ⚠ Reachable ≠ callable — the trap to check before blaming core
+
+`@ConnectExposed` makes an endpoint reachable; the **key still needs the capability**. Pre-SEC-3 keys hold
+no `vision_ai:*`, and no existing key holds `task:read`. Core smoke-verified both directions: an
+ingest-only key `403`s all three reads while a granted key `200`s them — **`view` ≠ `ingest`**, so a key
+that may POST impressions still cannot read them back.
+
+Grant via `PATCH /api/v2/connect/service-keys/{keyId}/scopes` (§7). Run **`./gradlew connectReadProbe`** to
+see which of the four this key actually holds; it names the missing capability rather than reporting a bare
+failure.
+
+#### Measured 2026-07-31 (`connectReadProbe`, live vs dev) — the inverse of the expected shape
+
+| Read | Documented scope | Result |
+|---|---|---|
+| #30 `spatial/identity` | `inventory:read` | ✅ **200** |
+| #31 `impressions/query` | `vision_ai:view` | ✅ **200** — the key **does** hold `vision_ai:view` |
+| #32 `tasks/query` | `task:read` | ✅ **404 `DIRECTIVE_NOT_FOUND`** on a deliberately-absent ref = cleared the scope gate, so `task:read` is held |
+| #33 `compliance/state` | `inventory:read` | ❌ **403 `PERMISSION_DENIED` "Insufficient permissions"** |
+
+The two reads the doc warns are hardest to hold — `vision_ai:view` and `task:read` — **both work**. The one
+that shipped first, was accepted as **TWIN-REQ-003 SATISFIED** on 2026-07-02, and was demonstrated live
+(28/28 · 25/2/1 · 0.893) is the one now refusing.
+
+**Not a ref problem, not a scope problem, not a key-wide problem** — all three ruled out by measurement:
+
+- Same key, seconds apart in the same run, gets **200** on #30 with the same documented scope.
+- #33 refuses **with the key's own Denver site named**, so it is not site-scope.
+- #32 is the control: an equally bogus ref there gives **404** (cleared the scope gate, failed ref
+  resolution); the same shape on #33 gives **403** — refused *before* resolution.
+
+That is a capability gate the documented scope does not open.
+
+#### Site-scope confinement — §6.5 rule 2, proven externally 2026-07-31
+
+Rule 2 claims a named site is checked against the key's `site_scope` (403 outside it) and an **omitted**
+site means "every site this key may see", never "every site in the tenant". **It holds on all three
+reachable reads**, and is not bypassable by switching ref form:
+
+| Read | own site | foreign site (slug) | foreign site (UUID) | site omitted |
+|---|---|---|---|---|
+| #30 `spatial/identity` | 200 | **403** | — | **200, `site_count:1`** of 14 |
+| #31 `impressions/query` | 200 | **403** | **403** | n/a (required) |
+| #32 `tasks/query` | 404 on ref = gate cleared | **403** | — | 404 on ref, own scope |
+
+⚠ **Refusal quality is the defect, not confinement.** Every `403` returns a raw untyped Spring body —
+`{"timestamp","path","status":403,"error":"Forbidden","requestId"}`, **no `error` code, no `message`** —
+while the `404`s are correctly typed with messages. PR #217's typed-error fix covers ref-resolution
+refusals and **not** scope refusals: the same defect class §6.5 records as fixed on 2026-07-30. So a
+cross-site 403 and a missing-capability 403 are indistinguishable to an integrator. (#33 is the exception —
+it *does* return typed `PERMISSION_DENIED`, which is itself absent from §6.5's error table. Two 403 paths,
+one typed and one not.)
+
+Two further notes: `PERMISSION_DENIED` is **not in §6.5's documented error table** (`INVALID_REQUEST` /
+`SITE_NOT_FOUND` / `SPACE_NOT_FOUND` / `ZONE_NOT_FOUND` / `DIRECTIVE_NOT_FOUND`), so this refusal is coming
+from a different layer than the read family's own error model. And the 2026-07-30 message fix **is**
+deployed — #32's 404 came back with its full explanatory text, including the `404`-vs-`200 count:0`
+distinction inline.
+
+**Flagged for Bob, not filed:** this reads as a regression on a shipped and accepted endpoint, not a missing
+surface, so it is a bug report rather than a TWIN-REQ. Twin is not blocked — #31 covers impression
+self-verification, which was the point of the exercise.
+
+### ⚠ There is no paging — `truncated` means narrow, not "page 2"
+
+No `offset`, no cursor. For the impression read the **window is the cursor**; walk it in slices. An
+over-wide window or over-max `limit` is **refused with 400, never silently clamped** — a clamp answers a
+different question while looking like it answered yours. Twin's own full day is 3,119 impressions at one
+site, which a single call returns 500 of. `./gradlew impressionVerify` walks the range and recursively
+halves any slice that still truncates; if a slice hits the floor still truncated it says so loudly, which
+per §6.5 is the signal that a real cursor is needed and is not built.
+
+### ⚠ Casing — the one mixed-shape response on the surface
+
+Envelopes and refs are **`snake_case`**; **impression rows are `camelCase`**, mirroring the ingest response
+field-for-field. Both bind off `ConnectMappers.camel` with explicit `@JsonProperty` on every snake field
+(`connect/model/bearer/ReadPlane.kt`). A field added without its annotation serializes camelCase, the
+server ignores it as unknown, and the read silently answers a *different* question — pinned by
+`connectSelfTest`.
+
+#### Acceptance, 2026-07-31 — twin reproduced the coordinator's psql number from the front door
+
+`./gradlew impressionVerify` over `2026-07-28`, 60-minute slices: **3,119 distinct rows in 24 calls**, no
+unresolved truncation — **exactly the 3,119 the coordinator's `psql` returned on 07-30**. 98 distinct
+fixtures, 907 sessions. The row count that previously required a human with database access is now a
+gradle task, which is the whole point of §6.5.
+
+Two things the first live call caught that no offline fixture would have:
+
+- **The row clocks are ISO-8601 strings, not epoch millis.** §6.5 names `firstLook`/`lastLook`/
+  `firstDwell`/`lastDwell` but not their type, and the obvious inference is wrong — the NATS event carries
+  millis natively and the *request* accepts either form. Modelling the response as `Long` compiles, passes
+  a hand-written round-trip, and throws `InvalidFormatException` on the first real call. Now typed as the
+  wire type with `…Ms` accessors that parse either form.
+- **All four clocks are identical per row** — `firstDwell` == `firstLook` and `lastDwell` == `lastLook` to
+  the millisecond, on 100% of rows sampled, so `viewTimeSeconds` == `dwellTimeSeconds` always. ⚠ **Most
+  likely twin's own artifact, not a core defect:** `BrowseEpisode` parks the shopper at a standoff point
+  facing the fixture, so "ray on fixture" and "within 1m of edge" become true on the same sample and false
+  on the same sample. The consequence is still real — core's duration rule
+  `min(lastDwell-firstDwell, lastLook-firstDwell)` **degenerates to a single span against twin's data, so
+  its discriminating case is never exercised**, and any analytic that separates "looked at" from "lingered
+  near" currently reads the same number twice. Real Xovis data would diverge (approach, linger, look away
+  while still nearby). A **twin realism gap**, worth a journey-model pass; flagged, not fixed.
+
+### Three planes, never conflated
+
+```
+oracle prediction   twin's model of core's rule      (./gradlew oracleDump)
+wire                what core actually published     (./gradlew impressionWatch)
+rows                what survived to storage         (./gradlew impressionVerify)
+```
+
+`oracle vs wire` measures the **model**, transport-free. `wire vs rows` measures **transport**. The
+2026-07-30 decisive drive: **1512 predicted / 1512 wire / 1370 rows** — model exact, transport −9.4%.
+Reporting that as "the oracle was 9.4% off" would have been false, and reporting the model as "EXACT"
+without qualifying it against the emitted stream is the same error in the other direction.
 
 ---
 

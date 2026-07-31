@@ -1,0 +1,27 @@
+# twin in-code wire counter — tag=post215-0731 server=edge-twin-denver
+# deduped by envelope id; minute = WALL-CLOCK arrival (UTC), NOT recorded_at/firstLook
+minute_utc,fixtureImpression,lookingAtFixture,dwellingNearbyFixture
+03:03,0,17,845
+03:04,15,38,2696
+03:05,33,49,4817
+03:06,51,63,5695
+03:07,56,77,7706
+03:08,83,104,9488
+03:09,103,104,12320
+03:10,122,135,13557
+03:11,123,119,12284
+03:12,123,114,13041
+03:13,120,104,12842
+03:14,122,105,13477
+03:15,120,104,14123
+03:16,95,88,13170
+03:17,90,74,10394
+03:18,88,44,8257
+03:19,60,40,6561
+03:20,44,23,3829
+03:21,28,19,2691
+03:22,20,7,1536
+03:23,10,5,997
+03:24,6,0,365
+# per-fixture fixtureImpression counts
+# ?,1512

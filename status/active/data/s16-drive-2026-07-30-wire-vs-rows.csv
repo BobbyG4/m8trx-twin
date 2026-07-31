@@ -1,0 +1,26 @@
+# S16 decisive drive, 2026-07-30. Denver sales_floor, store hours 12-16, compress 18x, seed 4242, scale 1.0.
+# prediction 1512 (pre-registered) | wire 1512 (twin in-code, deduped) | rows 1370 | missing 142 (9.4%)
+# wire minute = wall-clock publish arrival; accepted minute = recorded_at (firstLook). Offset ~1 min: wire[m+1] pairs with accepted[m].
+accepted_minute_utc,wire_next_minute,wire,accepted,gap
+06:58,06:59,3,4,-1
+06:59,07:00,21,21,0
+07:00,07:01,40,42,-2
+07:01,07:02,46,57,-11
+07:02,07:03,63,68,-5
+07:03,07:04,92,90,2
+07:04,07:05,105,110,-5
+07:05,07:06,121,113,8
+07:06,07:07,129,131,-2
+07:07,07:08,127,129,-2
+07:08,07:09,125,113,12
+07:09,07:10,115,73,42
+07:10,07:11,103,62,41
+07:11,07:12,108,69,39
+07:12,07:13,92,84,8
+07:13,07:14,72,72,0
+07:14,07:15,57,47,10
+07:15,07:16,34,36,-2
+07:16,07:17,30,24,6
+07:17,07:18,15,14,1
+07:18,07:19,9,8,1
+07:19,07:20,5,3,2

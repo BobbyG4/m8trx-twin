@@ -93,6 +93,38 @@ object ZoneAffinityModel {
         else -> calibrated[role] ?: introduced[role] ?: 0.0
     }
 
+    /**
+     * P(the shopper actually STOPS at a fixture | they are in this zone) — distinct from [probability],
+     * which is P(they enter the zone at all).
+     *
+     * The two are not the same thing, and conflating them is what kept 18 of Denver's 115 fixtures out of an
+     * entire generated day. Every shopper crosses the entrance ([probability] 1.00) but only a minority stops
+     * at the promo island there; conversely a shopper who walks into the GPS zone went there to look at
+     * watches. Without this split, keying fixture pools off the zone (the fix) would have swung the other way
+     * and had all 790 shoppers browsing the three entrance circles for a full zone median.
+     *
+     * **Every value here is [A-new]** — §8 has no equivalent table, so none of these are calibrated research.
+     * Reasoned from zone function: destination zones high, transit zones low. Tune freely; do not cite.
+     * Surfaced by [uncalibratedBrowseRates] so they cannot masquerade as sourced figures.
+     */
+    fun fixtureBrowseRate(role: ZoneRole): Double = when (role) {
+        // Destination zones — the shopper went there to look at the merchandise.
+        ZoneRole.DEPARTMENT_BAND -> 0.95
+        ZoneRole.GPS_ACCESSORIES -> 0.90
+        ZoneRole.GAIT_ANALYSIS -> 0.85
+        ZoneRole.ACCESSORIES_WALL -> 0.85
+        ZoneRole.FOOTWEAR_BENCH -> 0.80
+        // Transit zones — a fixture is there, most people walk past it.
+        ZoneRole.CHECKOUT -> 0.25 // the impulse rack (`CO-IR`), not the counters
+        ZoneRole.ENTRANCE -> 0.15 // promo islands catch a minority on the way in
+        // No browsable fixtures inside these (or staff-only).
+        else -> 0.0
+    }
+
+    /** Browse rates this model invented rather than inherited from §8 — i.e. all non-zero ones. */
+    val uncalibratedBrowseRates: Set<ZoneRole>
+        get() = ZoneRole.entries.filter { fixtureBrowseRate(it) > 0.0 }.toSet()
+
     /** Median dwell in minutes per role, from §8 `dwell.by_zone_min`; null where §8 gave none. */
     fun dwellMedianMin(role: ZoneRole): Double? = when (role) {
         ZoneRole.FOOTWEAR_BENCH, ZoneRole.GAIT_ANALYSIS -> 9.0

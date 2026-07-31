@@ -302,3 +302,87 @@ tasks.register<JavaExec>("connectDayDrive") {
         },
     )
 }
+
+tasks.register<JavaExec>("lossAudit") {
+    group = "verification"
+    description = "Size the impression-cache working set of the S15 runs; localise the fullday-0728 persistence loss."
+    mainClass.set("com.m8trx.twin.layer3.LossAuditKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+tasks.register<JavaExec>("impressionWatch") {
+    group = "verification"
+    description = "Twin's in-code wire counter for the people plane; dedupes by id and writes a citable CSV. Blocks until killed."
+    mainClass.set("com.m8trx.twin.layer1.ImpressionWatcherKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+tasks.register<JavaExec>("oracleDump") {
+    group = "verification"
+    description = "Dump per-impression oracle predictions for a drive slice, for the oracle-vs-actual diff."
+    mainClass.set("com.m8trx.twin.layer3.OracleDumpKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// ── Connect §6.5 READ half (live 2026-07-30, PR #210) ───────────────────────────────────────────
+// Reachable != callable: @ConnectExposed opens the endpoint, but the KEY still needs the capability.
+// Pre-SEC-3 keys hold no vision_ai:* and no task:read, so probe before assuming a 403 is a core bug.
+tasks.register<JavaExec>("connectReadProbe") {
+    group = "verification"
+    description = "Which of the four §6.5 reads does THIS key hold? Names the missing capability. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ConnectReadProbeKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Reads back twin's OWN persisted impressions. There is no cursor, so the window IS the cursor:
+// this walks the range in slices and halves any slice the server marks truncated. Diffing against an
+// oracleDump measures MODEL + TRANSPORT combined — pair with impressionWatch to attribute a gap.
+tasks.register<JavaExec>("impressionVerify") {
+    group = "verification"
+    description = "Read back persisted impressions via POST /visionai/impressions/query; optional oracle diff. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ImpressionVerifyKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// ── THE CONNECT SHIP GATE (Bob's ruling, 2026-07-31) ────────────────────────────────────────────
+// M8TRX's paid API surface has no automated regression coverage: every CI security suite drives a
+// human JWT against frontEnd RLS or greps source. None drives a Connect key against a Connect
+// endpoint. Until a CI deploy gate with live keys exists, THIS is the gate. Green before ship.
+// Coverage gaps are printed alongside failures — a run that silently skips an endpoint is the
+// false-green class this exists to prevent. Exit 0 = pass; 1 = fail OR indeterminate.
+tasks.register<JavaExec>("connectAcceptance") {
+    group = "verification"
+    description = "Connect ship gate: §6.5 site-scope confinement (incl. the omitted-site rule), typed refusals, reachability. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ConnectAcceptanceKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}

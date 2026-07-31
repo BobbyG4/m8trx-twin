@@ -84,7 +84,8 @@
   "shrink": {
     "rate_pct_of_sales": { "value": 0.016, "range": [0.014, 0.018], "conf": "S" },
     "split": { "external_theft": 0.37, "internal_employee": 0.29, "administrative": 0.34 },
-    "eas_scope_skus": 36
+    "_eas_scope_skus_note": "SUPERSEDED 2026-07-31 — was 36, a literal from the 920-SKU concept. EAS scope is now a RULE, not a count: price_usd >= 150 AND category != outdoor (see layer2/EasTagging.kt). Denver yields 271 of 2,586. Left as a note rather than a number because the count is derived per store.",
+    "eas_scope_skus": 271
   },
 
   "dwell": {

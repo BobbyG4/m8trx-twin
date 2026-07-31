@@ -156,10 +156,26 @@ class ImpressionOracle(
                 "(shopper stood at one fixture while looking at another)"
         }
 
-        val span = usable.last().tsMs - usable.first().tsMs
-        if (span <= millisTillImpression) {
-            reasons += "episode too short: ${span}ms total, needs strictly more than ${millisTillImpression}ms " +
-                "on both clocks (plus ~10s cache lag before it reaches the subscriber)"
+        // Report the two clocks SEPARATELY, not the total stream span.
+        //
+        // This used to measure `usable.last().tsMs - usable.first().tsMs` and call it "the episode". That
+        // was only ever right because every episode twin generated held both clauses over the identical
+        // window — so stream span, look span and dwell span were the same number and the shortcut could not
+        // be caught. The F4 three-phase episode (approach / engage / disengage) separates them, and the
+        // shortcut immediately reported a 4s look as "long enough" because the surrounding proximity
+        // brought the stream to 6.4s. The rule gates on each clock, so the diagnostic must too.
+        val lookTs = usable.filter { s -> s.viewDir?.let { fixtures.lookingAt(s.p, it) } != null }.map { it.tsMs }
+        val nearTs = usable.filter { s -> fixtures.nearby(s.p, dwellProximityMm).isNotEmpty() }.map { it.tsMs }
+        val lookSpan = if (lookTs.isEmpty()) 0L else lookTs.max() - lookTs.min()
+        val dwellSpan = if (nearTs.isEmpty()) 0L else nearTs.max() - nearTs.min()
+        if (lookSpan <= millisTillImpression || dwellSpan <= millisTillImpression) {
+            val which = when {
+                lookSpan <= millisTillImpression && dwellSpan <= millisTillImpression -> "both clocks"
+                lookSpan <= millisTillImpression -> "the LOOK clock"
+                else -> "the DWELL clock"
+            }
+            reasons += "episode too short on $which: look=${lookSpan}ms dwell=${dwellSpan}ms, each needs " +
+                "strictly more than ${millisTillImpression}ms (plus ~10s cache lag before it reaches the subscriber)"
         }
 
         if (reasons.isEmpty()) reasons += "no single cause identified — inspect the sample stream directly"

@@ -4,11 +4,16 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.ComplianceStateRequest
 import com.m8trx.twin.connect.model.bearer.CreateApiKeyRequest
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
+import com.m8trx.twin.connect.model.bearer.ImpressionQueryRequest
 import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import com.m8trx.twin.connect.model.bearer.ItemReceiveRequest
+import com.m8trx.twin.connect.model.bearer.ReadCaps
 import com.m8trx.twin.connect.model.bearer.ScanBatch
+import com.m8trx.twin.connect.model.bearer.SpatialIdentityRequest
+import com.m8trx.twin.connect.model.bearer.TaskQueryRequest
 import com.m8trx.twin.connect.model.bearer.TestRequest
 import com.m8trx.twin.connect.model.bearer.TransformsRequest
 import com.m8trx.twin.connect.model.bearer.UpdateChannelRequest
@@ -37,6 +42,56 @@ class ConnectClient(
     fun receiveItems(req: ItemReceiveRequest): ConnectResponse = send("POST", "/inventory/items/receive", req)
 
     fun itemDetails(req: ItemDetailsRequest): ConnectResponse = send("POST", "/inventory/items/details", req)
+
+    // ── READ half (§6.5, live 2026-07-30) ─────────────────────────────────────
+    //
+    // Four reads, one shape: resolve by the ref YOU supplied, site-confined, bounded, truncation
+    // announced, one capability per plane. Each exists because an integrator otherwise had to ask a
+    // human — for UUIDs by email, for someone to run psql, or for a backend engineer to watch a
+    // screen while the integrator drove the input. Twin was that integrator in all three cases.
+    //
+    // ⚠ Reachable ≠ callable. `@ConnectExposed` opens the endpoint; the KEY still needs the
+    // capability, and pre-SEC-3 keys hold no `vision_ai:*` and no `task:read`. An ingest-only key
+    // 403s the people read even though it may POST impressions — `view` ≠ `ingest`. Grant via
+    // `PATCH /api/v2/connect/service-keys/{keyId}/scopes` (§7). `connectReadProbe` reports which of
+    // the four this key actually holds.
+
+    /**
+     * `POST /spatial/identity` — site → space → zone map (`inventory:read`).
+     * **Call this first:** `items/receive` requires a `spaceId` that nothing else on the Connect
+     * surface emits, which is what made self-serve onboarding impossible before §6.5.
+     */
+    fun spatialIdentity(req: SpatialIdentityRequest): ConnectResponse {
+        require(req.limit == null || req.limit in 1..ReadCaps.ZONES_MAX) {
+            "limit must be 1..${ReadCaps.ZONES_MAX} (asked for ${req.limit}) — the server refuses with 400, it does not clamp"
+        }
+        return send("POST", "/spatial/identity", req)
+    }
+
+    /**
+     * `POST /visionai/impressions/query` — read back twin's own people-plane traffic
+     * (**`vision_ai:view`**, never `inventory:*` — §4 SEC-3).
+     */
+    fun queryImpressions(req: ImpressionQueryRequest): ConnectResponse {
+        require(req.limit == null || req.limit in 1..ReadCaps.ROWS_MAX) {
+            "limit must be 1..${ReadCaps.ROWS_MAX} (asked for ${req.limit}) — the server refuses with 400, it does not clamp"
+        }
+        return send("POST", "/visionai/impressions/query", req)
+    }
+
+    /**
+     * `POST /tasks/query` — the tasks YOUR directive generated (`task:read`).
+     * An unknown `directive_ref` is a 404 `DIRECTIVE_NOT_FOUND`, NOT an empty 200.
+     */
+    fun queryTasks(req: TaskQueryRequest): ConnectResponse {
+        require(req.limit == null || req.limit in 1..ReadCaps.ROWS_MAX) {
+            "limit must be 1..${ReadCaps.ROWS_MAX} (asked for ${req.limit}) — the server refuses with 400, it does not clamp"
+        }
+        return send("POST", "/tasks/query", req)
+    }
+
+    /** `POST /compliance/state` — directive + per-fixture compliance (`inventory:read`; TWIN-REQ-003). */
+    fun complianceState(req: ComplianceStateRequest): ConnectResponse = send("POST", "/compliance/state", req)
 
     // ── Control plane (§7) ────────────────────────────────────────────────────
     fun createIntegration(req: CreateIntegrationRequest): ConnectResponse = send("POST", "/integrations", req)
