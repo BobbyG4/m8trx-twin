@@ -88,6 +88,34 @@ Tenant, the 251 users, and the 14 site rows **stay**. Three operations:
 
 Prefer the **API receive/scan** path (one step → `scan_event` + derived `thing_location` + audit). It is still blocked by the service-bearer gap (#4 below). Until that lands, use the **direct-DB escape hatch but write BOTH `thing_location` AND `scan_event` at the fixture-zone** — the 2026-06-11 round wrote `thing_location` only and the UI (which reads `scan_event`) stayed blank, forcing a fix-up.
 
+> ### ⚠ PROVENANCE NOTICE — `scan_event` on M8trxDemo is SEED DATA (labelled 2026-07-31)
+>
+> This instruction is why **102,675 of mother's 102,683 `scan_event` rows are twin's seed**, not sensor
+> output. The ingress lane found the rows with **no traced writer** — `ScanService.kt:95`, the only
+> `INSERT INTO scan_event` in services, does not set `position`/`operator_position_*`/`location_method`,
+> and Hasura has no insert permission. The remaining **8** rows are that real writer's output, which is
+> exactly why they are the *unpopulated* ones. Row count matches RE-RESEED v2 exactly (84,266 floor /
+> 18,409 BOH).
+>
+> **`position` was never specified here.** This hand-off asks for the fixture-**zone**; twin has no
+> `operator_position_*` or `location_method` anywhere. Those column values are an import-side derivation,
+> presumably from the fixture zone centroid.
+>
+> **It is NOT calibration-wrong** — these coordinates are authored by `build_layout.py` and never passed
+> through a camera→SRF transform, so S277's Xovis `scale: 0.452` bug does not touch them. But three things
+> a consumer will not guess:
+>
+> 1. **Per-space frames, mutually unregistered.** Pass-2 site assembly is dormant (`srf_to_site_transform`
+>    is `null` on every space), so Sales Floor `(0,0)` and Back Room `(0,0)` are *different physical
+>    points*. Same `position`, different `space_id` ⇒ **not co-located**.
+> 2. **Z is uniformly 0** on all 102,675 rows — a `PointZ` whose Z carries no information.
+> 3. **SRID 0, millimetres** — PostGIS treats it as unitless Cartesian; anything assuming metres is out
+>    by 1000×.
+>
+> **Do not reason over `scan_event.position` across spaces** until FR-SPATIAL-26 Pass-2 lands. The data is
+> not a defect; silence about its provenance was. **Do not delete or regenerate** — reseed parity with
+> mother is byte-for-byte verified and worth more than tidiness.
+
 ### Acceptance checks (run post-reseed)
 
 - [ ] 14 sites have non-null `latitude`/`longitude` (geo map plots all 14) **and non-null `site_category`** — the 10 retail = `store`, the 4 offices = `office`.
