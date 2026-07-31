@@ -79,7 +79,9 @@ Decathlon Korea, mid-format running + fitness specialty. ~2,000-3,000 SKUs curat
 - **Footprint** — ~30m × 50m, ~1,500 sqm
 - **SKU curation** — filter Decathlon Korea catalog by category (Kalenji + Kiprun running, Domyos fitness, Geologic accessories, selected Quechua crossover); variant-expand by size/color; anchor to fixtures. Detail in `reference/data/SKU-CURATION.md` (TBD).
 - **Try-on zones** — apparel fitting rooms (4-6 stalls), footwear bench area, GPS watch demo station. Three behavioral profiles, not one. Note: current core schema's `fitting_room` table is apparel-specific (filed as core requirement: generalize to `try_on_zone`).
-- **EAS gates** — 1 main entrance, EAS-tagged premium SKUs (Garmin watches, Kiprun premium shoes) for the LP demo
+- **EAS gates** — 1 main entrance (`CS-01` "Main Entrance Gate", present in all 10 stores as an `eas_gate` crossing slice with real SRF geometry). **EAS-tagged stock is defined by a RULE, not a list** — `price_usd >= $150 AND category != "outdoor"`, i.e. premium *and* concealable, since every bulky line (road bikes, tents, trainers) lives in `outdoor`. Yields **271 of Denver's 2,586 SKUs**, concentrated on `PE-02`/`PW-02` Kiprun premium footwear. Rule + rationale: `layer2/EasTagging.kt`.
+  ⚠ **Tag state is TWIN-SIDE. The platform does not know it and never sees it** — a real third-party EAS owns tag state. That makes twin minting it faithful emulation, *provided* it is never implied to be something M8TRX stores or could verify.
+  ⚠ **Corrected 2026-07-31:** this line previously named *"Garmin watches"* and STATUS named *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"*. **The live 2,586-SKU chain catalog has ZERO watch SKUs** — that anchor belonged to the superseded 920-SKU Manhattan concept. Session 8's static-seed audit flagged it and it went unclosed for two months. `scenarioSelfTest` now asserts the absence so it cannot be restored by accident.
 
 ---
 

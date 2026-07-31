@@ -2,10 +2,14 @@ package com.m8trx.twin.layer2
 
 import com.m8trx.twin.domain.CustomerExited
 import com.m8trx.twin.domain.CustomerReachedZone
+import com.m8trx.twin.domain.EasGateCrossed
+import com.m8trx.twin.domain.ItemConcealed
 import com.m8trx.twin.domain.SaleCompleted
 import com.m8trx.twin.domain.SaleLine
 import com.m8trx.twin.layer1.BrowseEpisode
 import com.m8trx.twin.layer1.FixtureSet
+import com.m8trx.twin.layer1.ImpressionOracle
+import com.m8trx.twin.layer1.Pt
 import com.m8trx.twin.layer1.RoleZone
 import com.m8trx.twin.layer1.ZoneAffinityModel
 import com.m8trx.twin.layer1.ZoneRole
@@ -35,6 +39,15 @@ class Journeys(
     private val browse = BrowseEpisode(fixtures, emitHz = 5.0)
 
     /**
+     * EAS gates for this store, read from its own layout. Empty for a store whose layout declares none —
+     * and then [walkOutThroughGate] emits nothing rather than inventing a gate.
+     */
+    var gates: List<EasTagging.Gate> = emptyList()
+        private set
+
+    fun withGates(g: List<EasTagging.Gate>): Journeys = apply { gates = g }
+
+    /**
      * Fixtures the impression pipeline can see, grouped by the AREA ZONE they physically sit in.
      *
      * **Keyed off `in_area_zone`, NOT `department`** — that was the bug. Department-keying reached only the
@@ -60,6 +73,7 @@ class Journeys(
         when (journeyId) {
             "ShopAndBuy" -> shopAndBuy(ctx, customerId, rng, tryOn = false)
             "TryOnAndPartialBuy" -> shopAndBuy(ctx, customerId, rng, tryOn = true)
+            "Shoplift" -> shoplift(ctx, customerId, rng)
             else -> browseAndLeave(ctx, customerId, rng)
         }
     }
@@ -104,6 +118,96 @@ class Journeys(
 
         ctx.bus.publish(SaleCompleted(ctx.clock.now(), customerId, lines))
         finish(ctx, customerId, cursorMs)
+    }
+
+    // ── loss prevention ───────────────────────────────────────────────────────
+
+    /**
+     * **Shoplift** — the LP arc, and the point is that the alarm is *earned*.
+     *
+     * Browse a fixture that actually holds EAS-tagged stock (a real [BrowseEpisode], so a real impression
+     * forms) → conceal a tagged unit from that same fixture → **skip checkout entirely** → walk out through
+     * the gate, emitting an `objLocation` path that genuinely crosses the gate line.
+     *
+     * ## Why the crossing is emitted as samples rather than asserted
+     *
+     * The gate crossing is **derived from the track**, not declared alongside it. [EasGateCrossed] is
+     * published only after the walk-out samples have been emitted, and it carries the EPCs the shopper is
+     * actually holding. An alarm emitter subscribes to that. Publishing an alarm directly from here would
+     * fill the LP tile with events that have no shopper behind them — a populated-looking surface that means
+     * nothing, which is the failure this project spent 2026-07-31 removing everywhere else.
+     *
+     * ## What is real and what is twin's
+     *
+     * Real: the gate (`CS-01`, present in all 10 stores with actual SRF geometry), the fixture, the dwell,
+     * the SKU, the EPC. **Twin's:** which units carry a tag — see [EasTagging], and it is declared there
+     * because tag state is the vendor's domain and the platform never sees it.
+     *
+     * No [SaleCompleted] is published, so this shopper correctly does not appear in conversion or revenue —
+     * the §1 reconciliation identity stays honest and shrink shows up as the gap it really is.
+     */
+    private fun shoplift(ctx: GeneratorContext, customerId: String, rng: KRandom) {
+        var cursorMs = ctx.clock.now().toEpochMilli()
+
+        // Browse a couple of ordinary zones first — a thief who beelines to the target is not a shopper,
+        // and the dwell before the act is what makes the track readable afterwards.
+        plannedZoneVisits(rng).take(2).forEach { cursorMs = dwellAtZone(ctx, customerId, it, cursorMs, rng) }
+
+        // The target: a tagged SKU, browsed at the fixture that actually holds it.
+        val target = catalog.taggedSkus().takeIf { it.isNotEmpty() }?.random(rng)
+        if (target != null) {
+            val code = target.fixture.takeIf { c -> fixtures.impressionVisible.any { it.code == c } }
+                ?: anyVisibleFixture.random(rng)
+            cursorMs = dwellAtFixture(ctx, customerId, code, fixtureDwellMs(rng), cursorMs)
+            ctx.bus.publish(ItemConcealed(ctx.clock.now(), customerId, target.itemCd, target.ean, target.priceUsd, code))
+        }
+
+        // NO checkout. That absence is the whole arc — it is why the gate crossing alarms.
+        cursorMs = walkOutThroughGate(ctx, customerId, cursorMs, carried = listOfNotNull(target?.ean), paid = false, rng = rng)
+        finish(ctx, customerId, cursorMs)
+    }
+
+    /**
+     * Emit a walk that **crosses the EAS gate line outbound**, then publish the crossing derived from it.
+     *
+     * The path steps from inside the store (`y > gate.y`) to outside (`y < gate.y`) at the same 5 Hz the rest
+     * of the journey uses, so the crossing is visible in the position stream a subscriber sees — not merely
+     * in an event twin asserted. `viewDir` points the way they are walking.
+     *
+     * Returns the advanced cursor. If the store's layout declares no `eas_gate` slice the walk is skipped and
+     * no crossing is published — **absence stays absence**, rather than being papered over with a synthetic
+     * gate that would make every store look instrumented.
+     */
+    private fun walkOutThroughGate(
+        ctx: GeneratorContext,
+        customerId: String,
+        cursorMs: Long,
+        carried: List<String>,
+        paid: Boolean,
+        rng: KRandom,
+    ): Long {
+        val gate = gates.firstOrNull() ?: return cursorMs
+        val stepMs = (1000.0 / EMIT_HZ).toLong()
+        val exit = gate.crossingPoint(0.3 + rng.nextDouble() * 0.4) // through the middle of the doorway, not the jamb
+        val approach = APPROACH_MM
+
+        val samples = (0..GATE_WALK_STEPS).map { i ->
+            val frac = i.toDouble() / GATE_WALK_STEPS
+            // inside (+approach) → outside (-approach); the sign change IS the crossing.
+            val y = exit.y + approach - frac * (approach * 2)
+            ImpressionOracle.Sample(
+                tsMs = cursorMs + i * stepMs,
+                p = Pt(exit.x + (rng.nextDouble() - 0.5) * 200, y),
+                viewDir = Pt(0.0, -1.0), // facing the door
+                hasTag = false,
+            )
+        }
+        ctx.sink.emitSamples(customerId, samples)
+
+        val crossed = samples.first().p.y > gate.y && samples.last().p.y < gate.y
+        check(crossed) { "gate walk did not cross ${gate.code} at y=${gate.y} — the crossing must be real, not asserted" }
+        ctx.bus.publish(EasGateCrossed(ctx.clock.now(), customerId, gate.code, gate.zoneCode, outbound = true, carriedEpcs = carried, paid = paid))
+        return cursorMs + (GATE_WALK_STEPS + 1) * stepMs
     }
 
     // ── mechanics ─────────────────────────────────────────────────────────────
@@ -193,6 +297,12 @@ class Journeys(
         const val FIXTURE_DWELL_MIN_MS = 30_000L
         const val FIXTURE_DWELL_MAX_MS = 90_000L
         const val MAX_FIXTURES_PER_ZONE = 3
+
+        // Gate walk-out. Emitted at the same 5 Hz as every other episode so the crossing is visible in the
+        // position stream rather than only in the event twin publishes.
+        const val EMIT_HZ = 5.0
+        const val GATE_WALK_STEPS = 20
+        const val APPROACH_MM = 1_500.0 // start 1.5m inside, end 1.5m outside — an unambiguous sign change
     }
 }
 
@@ -203,6 +313,12 @@ class StoreCatalog(private val skus: List<Sku>) {
     data class Sku(val itemCd: String, val ean: String, val priceUsd: Double, val department: String, val fixture: String, val category: String)
 
     private val byCategory: Map<String, List<Sku>> = skus.groupBy { it.category }
+
+    /**
+     * The stock a vendor's EAS system would have tagged — see [EasTagging] for the rule and, importantly,
+     * for the statement that this is TWIN-SIDE state the platform does not hold. Denver yields 271 of 2,586.
+     */
+    fun taggedSkus(): List<Sku> = skus.filter { EasTagging.isTagged(it) }
 
     /**
      * Sample a basket: unit count around `units_per_txn`, then SKUs drawn with **price-band weighting** so

@@ -122,6 +122,52 @@ fun main() {
         "only ${deptLessHit.size}/${deptLess.size}: missing ${(deptLess - weekday.fixturesCovered).sorted()}",
     )
 
+    // ── 2b. loss prevention — the Shoplift arc (S17) ──────────────────────────
+    log.info("[2b] loss prevention — EAS tagging + gate")
+
+    val layout = java.nio.file.Path.of(System.getenv("M8TRX_CHAIN_DIR") ?: "reference/data/chain", "stores/dec-us-denver/layout.json")
+    val gates = com.m8trx.twin.layer2.EasTagging.loadGates(layout)
+    check("Denver declares an eas_gate crossing slice", gates.isNotEmpty(), "found none — a zone-only scan misses crossing_slices")
+    val gate = gates.first()
+    check(
+        "the gate is CS-01 with real SRF geometry",
+        gate.code == "CS-01" && gate.xEnd > gate.xStart,
+        "got ${gate.code} x=${gate.xStart}..${gate.xEnd} y=${gate.y}",
+    )
+    check("gate crossing points lie ON the line", gate.crossingPoint(0.5).y == gate.y && gate.crossingPoint(0.5).x in gate.xStart..gate.xEnd)
+
+    // The tagging RULE, asserted as a rule — a literal list is what rotted the old watch anchor.
+    val tag = com.m8trx.twin.layer2.EasTagging
+    check("a premium concealable item is tagged", tag.isTagged(350.0, "footwear"))
+    check("a cheap item is NOT tagged", !tag.isTagged(29.99, "footwear"))
+    check("a road bike is NOT tagged however expensive — unconcealable", !tag.isTagged(2999.0, "outdoor"))
+    check("the rule is case-insensitive on category", !tag.isTagged(2999.0, "OUTDOOR"))
+
+    // ⚠ The anchor the docs used to name does not exist. Assert its ABSENCE so nobody restores it.
+    val denverRows = java.nio.file.Files.readAllLines(
+        java.nio.file.Path.of(System.getenv("M8TRX_CHAIN_DIR") ?: "reference/data/chain", "stores/dec-us-denver/assortment.csv"),
+    )
+    val watchRows = denverRows.drop(1).count { it.contains("watch", ignoreCase = true) }
+    check(
+        "the live catalog still has ZERO watch SKUs (the old 'W-series, EAS-tagged, 40 items' anchor is dead)",
+        watchRows == 0,
+        "found $watchRows — if watches were added, revisit EasTagging and the LP anchor docs",
+    )
+
+    log.info("  · LP arcs in the weekday day: {} concealment(s), {} gate alarm(s)", weekday.concealments, weekday.gateAlarms)
+    check(
+        "the Shoplift arc actually FIRES in a generated day (not merely compiled)",
+        weekday.concealments > 0 && weekday.gateAlarms > 0,
+        "concealments=${weekday.concealments} gateAlarms=${weekday.gateAlarms} — shoplift_baseline is ${"%.4f".format(
+            0.003,
+        )} of the mix; at this scale it may need a larger day",
+    )
+    check(
+        "every concealment produced a gate alarm — the alarm is a consequence of the track",
+        weekday.gateAlarms == weekday.concealments,
+        "concealments=${weekday.concealments} but gateAlarms=${weekday.gateAlarms}",
+    )
+
     // ── 3. determinism ────────────────────────────────────────────────────────
     log.info("[3] determinism — same seed must reproduce the day exactly")
     val repeat = runner.run(LocalDate.of(2026, 7, 28), seed = 4242, populationScale = scale)

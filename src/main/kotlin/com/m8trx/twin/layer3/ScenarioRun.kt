@@ -48,6 +48,13 @@ class ScenarioRun(
         val shoppersWithNoImpression: Int,
         val schedulerErrors: Int,
         /**
+         * LP arcs actually executed this day. Surfaced so a run can PROVE the Shoplift journey fired rather
+         * than merely compiling — the "structural zero rendered as fact" pattern in twin's own output.
+         * These shoppers publish no `SaleCompleted`, so they correctly never enter conversion or revenue.
+         */
+        val concealments: Int = 0,
+        val gateAlarms: Int = 0,
+        /**
          * Fixture codes that would carry at least one impression over this day — i.e. exactly what a
          * fixture heatmap of the run would light up.
          *
@@ -196,7 +203,18 @@ class ScenarioRun(
         return peak
     }
 
-    private data class Tally(var visitors: Int = 0, var transactions: Int = 0, var units: Int = 0, var revenue: Double = 0.0, var errors: Int = 0)
+    private data class Tally(
+        var visitors: Int = 0,
+        var transactions: Int = 0,
+        var units: Int = 0,
+        var revenue: Double = 0.0,
+        var errors: Int = 0,
+        // LP (S17). Counted so a day can PROVE the Shoplift arc fires rather than merely compiling — and so
+        // shrink is visible as the gap it is: these shoppers deliberately produce no SaleCompleted, so they
+        // never enter conversion or revenue and the §1 reconciliation identity stays honest.
+        var concealments: Int = 0,
+        var gateAlarms: Int = 0,
+    )
 
     /** Shared generation path — deterministic from (date, seed, scale). */
     private fun generate(date: LocalDate, seed: Long, populationScale: Double, zone: ZoneId, sink: RecordingSink): Tally {
@@ -205,7 +223,11 @@ class ScenarioRun(
         val fixtures = FixtureSet.load(layout)
         val zones = ZoneRoleResolver.resolve(layout).zones
         val catalog = StoreCatalog.load(chainDir.resolve("stores/$storeCode/assortment.csv"))
+        // EAS gates come from the store's own layout (`crossing_slices` where `eas_gate: true`). A store
+        // that declares none gets an empty list and the Shoplift arc emits no crossing — absence stays
+        // absence rather than being papered over with an invented gate.
         val journeys = Journeys(fixtures, zones, catalog, model)
+            .withGates(com.m8trx.twin.layer2.EasTagging.loadGates(layout))
 
         val openHour = LocalTime.parse(model.store.operatingHours.open)
         val clock = SimpleClock(ZonedDateTime.of(date, openHour, zone).toInstant())
@@ -214,6 +236,8 @@ class ScenarioRun(
         val tally = Tally()
 
         bus.subscribe(CustomerEntered::class) { tally.visitors++ }
+        bus.subscribe(com.m8trx.twin.domain.ItemConcealed::class) { tally.concealments++ }
+        bus.subscribe(com.m8trx.twin.domain.EasGateCrossed::class) { if (it.shouldAlarm) tally.gateAlarms++ }
         bus.subscribe(SaleCompleted::class) { s ->
             tally.transactions++
             tally.units += s.units
@@ -260,6 +284,7 @@ class ScenarioRun(
         return Result(
             tally.visitors, tally.transactions, tally.units, tally.revenue, expectedVisitors, report,
             sink.totalSamples, predicted, silent, tally.errors,
+            concealments = tally.concealments, gateAlarms = tally.gateAlarms,
             fixturesCovered = covered,
             fixturesVisible = fixtures.impressionVisible.map { it.code }.toSet(),
         )

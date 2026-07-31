@@ -18,7 +18,7 @@
 > **(3) LP chain end to end** once BW-TRIAD applies mig 205 and BW-CONNECT registers `twin-eas`: alarm → `alert` → routed to an LP role → visible on `/alerts` → dispositioned, **each hop verified**. ⚠ **Twin owes substrate first — see (6).**
 > **(4) directive→task follow-up — a DECISION, not build work.** Twin can drive the input and read the output but **cannot cause the middle**: `/activate` and `/evaluate` are `CONNECT_NOT_EXPOSED`. Either expose a scoped activation or declare the loop deliberately human-gated. *("Needs a backend watcher" understates it — a watcher observes; what is missing is an actor.)*
 > **(5) F4's end-divergence is NOT closed.** `firstDwell`→`firstLook` diverge on a persisted row (proven live, 1,200ms), but `lastDwell == lastLook` because the impression flushes at eviction before the disengage tail lands. **Core's `min()` still cannot be observed choosing between two arms** — needs an episode outliving its own flush.
-> **(6) Twin's own LP substrate gaps** — **zero watch SKUs** in the live 2,586-SKU catalog (the documented "W-series watches, EAS-tagged, 40 items" anchor belongs to the superseded 920-SKU concept; **Session 8 flagged this and it was never closed**), **no per-item EAS tag column**, and **`Shoplift` is a design-table entry, not code**. Gates are real (`CS-01`, 10/10 stores, real SRF geometry).
+> **(6) ✅ DONE 2026-07-31 — LP substrate BUILT (Bob's ruling).** The dead "W-series watches" anchor is replaced by a **derivable rule** (`layer2/EasTagging.kt`: `price >= $150 AND category != "outdoor"` → **271 SKUs**, zero bulky items) and **`Shoplift` is now real code**, not a design-table entry: browse a fixture holding tagged stock → conceal a unit → **skip checkout** → walk out on a track that genuinely crosses `CS-01` at `y=600`. **The alarm is a consequence of the track** — `EasGateCrossed` is published from the emitted samples and carries the unpaid EPCs, so no journey fires an alarm directly. **Proven firing, not just compiling:** a generated day produces 2 concealments and 2 gate alarms, and every concealment yields exactly one alarm. `scenarioSelfTest` 27 → **37**.
 > **(7) Planogram grain** — `build_planogram.py` is `item_cd`-keyed in two places, so `5391035`'s target sums both sizes and takes whichever EAN was read last. Fix identified (`(fixture, ean)`), **not applied** — regenerates 10 documents and changes directive payloads. Needs a go.
 > **(8) §5 economics recalibration** — ATV $58 / avg line $26.40 from the superseded 871-SKU catalog. Bob's decision.
 >
@@ -169,7 +169,8 @@
 - Address: 620 6th Avenue, New York, NY 10011 (Flatiron District)
 - Currency: USD
 - SKU mix: running (primary) + fitness + hiking + swim + cycling + accessories + GPS watches
-- LP scenario anchor: W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items
+- LP scenario anchor: **EAS-tagged premium concealable stock — `price_usd >= $150 AND category != "outdoor"`, 271 of 2,586 SKUs**, concentrated on `PE-02`/`PW-02` (Kiprun premium footwear). Gate is `CS-01` "Main Entrance Gate". Rule lives in `layer2/EasTagging.kt`; tag state is **twin-side, not the platform's**.
+  ⚠ **Corrected 2026-07-31** — was *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"*. **Zero watch SKUs exist in the live catalog**; that anchor belonged to the superseded 920-SKU concept and Session 8 flagged it unclosed. Asserted absent by `scenarioSelfTest`.
 
 ---
 
