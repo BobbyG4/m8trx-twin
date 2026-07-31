@@ -248,10 +248,20 @@ fun main() {
     // ── 7. reported duration is sane ──────────────────────────────────────────
     log.info("[7] duration reporting")
     val d = fired5.first().durationMs
-    check("duration is positive and under the episode length", d in 1..12_000, "duration=$d")
-    // Validated against the live twin edge 2026-07-28 across 5 episodes: the edge reports the window at
-    // cache EXPIRY (full episode span), never the window at creation. 12s episode → 12000ms.
-    check("duration equals the full episode span, matching the live edge", d == 12_000L, "expected 12000, got $d")
+    // F4 (2026-07-31): episodes are now approach(1200) → engage(12000) → disengage(1200), all at the same
+    // standoff, so proximity holds throughout and only the look clause changes. Core's rule is
+    // `min(lastDwell - firstDwell, lastLook - firstDwell)`:
+    //     lastDwell - firstDwell = 1200 + 12000 + 1200 = 14400
+    //     lastLook  - firstDwell = 1200 + 12000        = 13200   ← the min
+    // So the reported duration is 13200 and, for the first time, **the `min` actually selects between two
+    // different arms**. Under the old coincident-clock episode both arms were 12000 and the selection was
+    // untestable — which is exactly the gap F4 exists to close.
+    check("duration is positive and within the episode envelope", d in 1..14_400, "duration=$d")
+    check("duration = approach + engaged, i.e. the LOOK-bounded arm of core's min()", d == 13_200L, "expected 13200, got $d")
+    // ⚠ OWED: the 12000 figure this previously asserted was validated against the live twin edge on
+    // 2026-07-28 across 5 episodes — under the OLD single-phase shape. 13200 is the oracle's prediction for
+    // the NEW shape and has NOT yet been confirmed against the edge. Re-verify on the next live drive
+    // before any doc claims the three-phase episode matches core.
 
     // ── 8. zone-affinity re-key portability (ruling 2026-07-28, decision 3) ───
     log.info("[8] zone-affinity re-key — portable across all 10 stores")

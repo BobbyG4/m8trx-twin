@@ -28,11 +28,38 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
     }
 
     /**
-     * Stand [standoffMm] from the nearest edge of [fixtureCode], facing it, for [dwellMs].
+     * Stand [standoffMm] from the nearest edge of [fixtureCode] for [approachMs] + [dwellMs] +
+     * [disengageMs], **facing it only for the middle span**.
      *
      * [standoffMm] must stay under the 1000mm `dwellProximity` or the distance clause never holds; the
      * default 600mm is a realistic browsing stand-off with margin. Jitter models the small postural drift
      * a real tracker sees — it must never push the shopper outside the proximity band, so it is bounded.
+     *
+     * ## Why the episode has three phases (F4, 2026-07-31)
+     *
+     * Until now every sample was emitted at the standoff **facing the fixture**, so the proximity clause and
+     * the look clause went true on the same sample and false on the same sample. Every persisted row came
+     * back with `firstDwell == firstLook` and `lastDwell == lastLook` **to the millisecond** — measured over
+     * 3,119 rows, 100% of them.
+     *
+     * That is not how a shopper behaves, and it had a consequence beyond realism: core's duration rule is
+     * `min(lastDwell - firstDwell, lastLook - firstDwell)`, and against coincident clocks **both arms are
+     * identical, so the `min` never discriminates and its selection has never been exercised by anything.**
+     * Any analytic separating "looked at" from "lingered near" was reading the same number twice.
+     *
+     * So: **approach** (nearby, looking elsewhere) → **engage** (nearby, looking) → **disengage** (nearby,
+     * looking away again). Position is the same standoff throughout, so `dwellProximity` holds across the
+     * whole episode and only the look clause changes. That yields `firstDwell < firstLook` and
+     * `lastDwell > lastLook`, so the `min` resolves to `lastLook - firstDwell` and the rule's real branch
+     * is finally under test.
+     *
+     * [disengageMs] deliberately exceeds `lookAwayAllowanceMs` (1000ms) — at or under it the look clock is
+     * merely paused, not stopped, and the clocks would re-converge. The **engaged** span is left equal to
+     * [dwellMs] rather than carved out of it, so impression *counts* are unchanged and this alters the shape
+     * of an episode without silently changing what a day produces.
+     *
+     * Pass `approachMs = 0, disengageMs = 0` for the old coincident-clock shape (offline conformance cases
+     * that assert against a single span still do this deliberately).
      */
     fun browse(
         fixtureCode: String,
@@ -41,6 +68,8 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
         rng: Random,
         standoffMm: Double = 600.0,
         jitterMm: Double = 80.0,
+        approachMs: Long = 1_200,
+        disengageMs: Long = 1_200,
     ): List<ImpressionOracle.Sample> {
         val f = fixtures.fixtures.firstOrNull { it.code == fixtureCode }
             ?: error("no fixture '$fixtureCode' in ${fixtures.storeCode}/${fixtures.spaceCode}")
@@ -56,20 +85,34 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
         // neighbour behind them. In a tight aisle the standoff shrinks, so the jitter has to shrink with it.
         val effJitter = minOf(jitterMm, stand.standoffMm * 0.4)
         val stepMs = (1000.0 / emitHz).toLong()
-        val n = (dwellMs / stepMs).toInt().coerceAtLeast(1)
+        val nApproach = (approachMs / stepMs).toInt().coerceAtLeast(0)
+        val nEngaged = (dwellMs / stepMs).toInt().coerceAtLeast(1)
+        val nDisengage = (disengageMs / stepMs).toInt().coerceAtLeast(0)
 
-        return (0..n).map { i ->
+        // Position is the SAME standoff throughout — the shopper is inside `dwellProximity` for the whole
+        // episode. Only where they are LOOKING changes. That is what makes the two clocks diverge.
+        fun sampleAt(i: Int, looking: Boolean): ImpressionOracle.Sample {
             val p = Pt(
                 stand.p.x + (rng.nextDouble() - 0.5) * 2 * effJitter,
                 stand.p.y + (rng.nextDouble() - 0.5) * 2 * effJitter,
             )
-            ImpressionOracle.Sample(
+            // Looking away = aimed at the mirror point through the shopper, i.e. 180° off the fixture.
+            // Anywhere well off-axis would do; the antipode is unambiguous and needs no extra geometry.
+            val target = if (looking) f.centre else Pt(2 * p.x - f.centre.x, 2 * p.y - f.centre.y)
+            return ImpressionOracle.Sample(
                 tsMs = startTsMs + i * stepMs,
                 p = p,
-                viewDir = aimAt(p, f.centre, viewMagnitude, rng),
+                viewDir = aimAt(p, target, viewMagnitude, rng),
                 hasTag = false,
             )
         }
+
+        val out = ArrayList<ImpressionOracle.Sample>(nApproach + nEngaged + nDisengage + 2)
+        var i = 0
+        repeat(nApproach) { out += sampleAt(i++, looking = false) }
+        repeat(nEngaged + 1) { out += sampleAt(i++, looking = true) }
+        repeat(nDisengage) { out += sampleAt(i++, looking = false) }
+        return out
     }
 
     /** Where the shopper stands, and how much postural drift that position can absorb. */
