@@ -32,6 +32,27 @@ Bob's stated goal is **self-service integration** — he named API integration a
 
 **Judge the doc against reality, not against the ideal.** The test twin found most useful: *"does the contract correctly predict what happens to someone following it?"* — not *"does it promise the right things."* Most docs fail the first.
 
+### ⛔ WHO RUNS IT — the gate weakens by design exposure, and twin-the-lane can no longer run it cold
+
+**This is a live constraint, not a finding.** The instrument only works if the person holding it has *only*
+the published contract. Twin spent hours of 2026-07-31 inside the alarm design conversation — the envelope,
+the registration gates, the lifecycle — so **twin-the-lane can never author "cold" against that surface
+again.** Any run by this lane would carry knowledge no real integrator has and return a **false pass**,
+which is worse than not running it: it would certify onboarding as self-service when it is not.
+
+**The rule, agreed with BW-CONNECT 2026-07-31:**
+
+> **A cold-onboarding peer test is run by a FRESH session holding only the published
+> `M8TRX-CONNECT-API.md` — never by the lane that participated in designing the surface.**
+
+Twin-the-lane's remaining job on this gate is to **hand it over**: name the surface, hand across the doc,
+and *stay out of the run*. Reading the result is fine; coaching it is not.
+
+⚠ **This generalises.** The same erosion applies to any surface twin helps design. `connectAcceptance` is
+unaffected — it asserts mechanical properties (confinement, refusal codes, caps) that do not care what the
+runner knows — but **anything testing "could a stranger figure this out" degrades the moment twin stops
+being a stranger.** Check this before running the gate, not after.
+
 ⏳ **Sequencing (Bob):** the cold run happens **after** the alarm plumbing is complete and confirmed, never against half-built plumbing — that measures the missing half, not whether a stranger can onboard. **Wait for the coordinator's signal.** Last verdict: **(b)**, 2026-07-31, with one (c) on the capability route (see TWIN-REQ-005).
 
 ---
