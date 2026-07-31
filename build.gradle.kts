@@ -368,3 +368,21 @@ tasks.register<JavaExec>("impressionVerify") {
         },
     )
 }
+
+// ── THE CONNECT SHIP GATE (Bob's ruling, 2026-07-31) ────────────────────────────────────────────
+// M8TRX's paid API surface has no automated regression coverage: every CI security suite drives a
+// human JWT against frontEnd RLS or greps source. None drives a Connect key against a Connect
+// endpoint. Until a CI deploy gate with live keys exists, THIS is the gate. Green before ship.
+// Coverage gaps are printed alongside failures — a run that silently skips an endpoint is the
+// false-green class this exists to prevent. Exit 0 = pass; 1 = fail OR indeterminate.
+tasks.register<JavaExec>("connectAcceptance") {
+    group = "verification"
+    description = "Connect ship gate: §6.5 site-scope confinement (incl. the omitted-site rule), typed refusals, reachability. Read-only."
+    mainClass.set("com.m8trx.twin.connect.ConnectAcceptanceKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
