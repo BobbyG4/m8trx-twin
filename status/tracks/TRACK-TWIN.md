@@ -30,6 +30,29 @@
 
 ---
 
+### ⚙ Drive run-card (kept here because S15's handoff is now archived)
+
+```bash
+set -a; . ./.env; set +a
+export M8TRX_NATS_URL="nats://192.168.55.29:4223"        # 4223 = edge-twin-denver. NOT 4222 (office/real Xovis)
+export M8TRX_SPACE_ID="e3c9a424-3ced-5288-9756-19935d39f88f"
+export M8TRX_SITE_ID="84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e"
+export M8TRX_DAY_DATE=2026-07-28 M8TRX_DAY_SEED=4242 M8TRX_DAY_SCALE=1.0 M8TRX_DAY_COMPRESS=18.0
+export M8TRX_DAY_FROM_HOUR=12 M8TRX_DAY_TO_HOUR=16       # THE REPRODUCING PROFILE — 469,665 samples, 308 shoppers, 1512 predicted
+export M8TRX_DAY_LIVE=true                                # omit for dry-run
+./gradlew connectDayDrive --no-daemon                     # ~22 min wall
+```
+
+**The four-number protocol** (never collapse these — oracle-vs-rows alone cannot attribute a gap):
+1. `./gradlew oracleDump` → **oracle** (the model, offline, before publishing)
+2. `./gradlew impressionWatch` in the background → **wire** (core's own published output)
+3. the drive → publishes
+4. `./gradlew impressionVerify` over the drive's wall-clock window → **rows** (what persisted)
+
+`M8TRX_EPISODE_APPROACH_MS=0 M8TRX_EPISODE_DISENGAGE_MS=0` reverts F4's three-phase episode to the old coincident-clock shape — that A/B is what exonerated F4 when persistence went to zero.
+
+---
+
 ## Current State
 
 **S16 (2026-07-30) — current:** `main` **`39c8238`** — **PR #13 merged**, the whole S15 spine (runtime/ · layer1/ · layer2/Journeys · layer3/) is now on `main`; no open PRs, working tree clean. Picked up `m8trx-shared/status/briefs/BRIEF-TWIN-LANE-2026-07-30.md` (p2, coordinator, nothing blocking). Ledger reconciled: **TWIN-REQ-004 → ABSORBED core-side** (2026-07-30, sequenced behind the Traffic reference surface — interim positions stay live); **CORE-REQ-001 was already ABSORBED** twin-side since 2026-06-21 (`eb39526`) in *both* STATUS and TRACK, so the coordinator's ledger flag is stale on their copy, not ours.
