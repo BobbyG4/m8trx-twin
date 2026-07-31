@@ -1,6 +1,6 @@
 # Session 17 — 2026-07-31 · Connect READ half wired · the ship gate · zero-loss CONFIRMED
 
-**Branch:** `feat/connect-read-half` (stacked on the unmerged `fix/fixture-coverage-in-area-zone`) · **7 commits this session** · `main` at `39c8238`
+**Branch:** `feat/connect-read-half` (stacked on the unmerged `fix/fixture-coverage-in-area-zone`) · **12 commits this session** · `main` at `39c8238`
 **Shared results file:** `m8trx-shared/status/active/RESULTS-TWIN-2026-07-31.md` (the coordinator-facing record; this file is twin's own)
 **Mode:** coordinator-driven lane, ~10 cross-session briefs. Twin acted as **external prover** for the Connect surface all day.
 
@@ -54,7 +54,9 @@ connectDayDrive · reproducing profile · seed 4242 · hours 12-16 · compress 1
 | `5078a0c` | **F4 — three-phase browse episode**; core's `min()` finally discriminates |
 | `ef620ac` | episode-shape env toggle — **and it exonerated F4** |
 
-**Green at close:** ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` 27.
+| `cdcdf03` | **`Shoplift` journey + `EasTagging`** — the LP substrate, built (see § LATE ADDITION) |
+
+**Green at close:** ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` **37**.
 
 ---
 
