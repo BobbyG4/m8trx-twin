@@ -68,8 +68,11 @@ class BrowseEpisode(private val fixtures: FixtureSet, private val emitHz: Double
         rng: Random,
         standoffMm: Double = 600.0,
         jitterMm: Double = 80.0,
-        approachMs: Long = 1_200,
-        disengageMs: Long = 1_200,
+        // Env-overridable so the three-phase shape can be switched OFF live without a code edit. That is
+        // not a convenience: when a drive stops persisting, "did MY change do this or did a deploy?" is the
+        // first question, and answering it needs an A/B on the same build in the same hour.
+        approachMs: Long = System.getenv("M8TRX_EPISODE_APPROACH_MS")?.toLongOrNull() ?: 1_200,
+        disengageMs: Long = System.getenv("M8TRX_EPISODE_DISENGAGE_MS")?.toLongOrNull() ?: 1_200,
     ): List<ImpressionOracle.Sample> {
         val f = fixtures.fixtures.firstOrNull { it.code == fixtureCode }
             ?: error("no fixture '$fixtureCode' in ${fixtures.storeCode}/${fixtures.spaceCode}")
