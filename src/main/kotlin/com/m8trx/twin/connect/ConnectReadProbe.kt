@@ -80,7 +80,10 @@ fun main() {
             Verdict.REF_NOT_FOUND -> "HELD*   "
             Verdict.OTHER -> "?       "
         }
-        log.info("  {} {:<34} scope={:<16} {}", mark, r.name, r.scope, r.detail)
+        // slf4j takes only `{}` — a format specifier like `{:<34}` prints literally and shifts every
+        // argument one position right, which is how the first live run reported the endpoint name in
+        // the detail column and dropped the refusal message entirely. Pad before handing it over.
+        log.info("  {} {} scope={} {}", mark, r.name.padEnd(34), r.scope.padEnd(16), r.detail)
     }
 
     val held = results.count { it.verdict == Verdict.HELD || it.verdict == Verdict.REF_NOT_FOUND }

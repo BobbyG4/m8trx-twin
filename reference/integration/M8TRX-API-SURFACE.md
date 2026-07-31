@@ -125,10 +125,37 @@ no `vision_ai:*`, and no existing key holds `task:read`. Core smoke-verified bot
 ingest-only key `403`s all three reads while a granted key `200`s them — **`view` ≠ `ingest`**, so a key
 that may POST impressions still cannot read them back.
 
-Twin's `M8TRX_TWIN_BEARER` carries `integration:manage` + `scan:submit` + `inventory:create` +
-`inventory:read` — which covers #30 and #33, and **not #31 or #32, the two that matter most**. Grant via
-`PATCH /api/v2/connect/service-keys/{keyId}/scopes` (§7). Run **`./gradlew connectReadProbe`** to see which
-of the four this key actually holds; it names the missing capability rather than reporting a bare failure.
+Grant via `PATCH /api/v2/connect/service-keys/{keyId}/scopes` (§7). Run **`./gradlew connectReadProbe`** to
+see which of the four this key actually holds; it names the missing capability rather than reporting a bare
+failure.
+
+#### Measured 2026-07-31 (`connectReadProbe`, live vs dev) — the inverse of the expected shape
+
+| Read | Documented scope | Result |
+|---|---|---|
+| #30 `spatial/identity` | `inventory:read` | ✅ **200** |
+| #31 `impressions/query` | `vision_ai:view` | ✅ **200** — the key **does** hold `vision_ai:view` |
+| #32 `tasks/query` | `task:read` | ✅ **404 `DIRECTIVE_NOT_FOUND`** on a deliberately-absent ref = cleared the scope gate, so `task:read` is held |
+| #33 `compliance/state` | `inventory:read` | ❌ **403 `PERMISSION_DENIED` "Insufficient permissions"** |
+
+The two reads the doc warns are hardest to hold — `vision_ai:view` and `task:read` — **both work**. The one
+that shipped first, was accepted as **TWIN-REQ-003 SATISFIED** on 2026-07-02, and was demonstrated live
+(28/28 · 25/2/1 · 0.893) is the one now refusing.
+
+**This is not a ref problem and not a key-wide problem.** In the same run, seconds apart, the same key used
+`inventory:read` successfully on #30. And the control is #32: a bogus ref there produced a **404** (cleared
+the scope gate, failed ref resolution), while the same bogus-ref shape on #33 produced a **403** — refused
+*before* ref resolution. That is a capability gate, not a missing directive.
+
+Two further notes: `PERMISSION_DENIED` is **not in §6.5's documented error table** (`INVALID_REQUEST` /
+`SITE_NOT_FOUND` / `SPACE_NOT_FOUND` / `ZONE_NOT_FOUND` / `DIRECTIVE_NOT_FOUND`), so this refusal is coming
+from a different layer than the read family's own error model. And the 2026-07-30 message fix **is**
+deployed — #32's 404 came back with its full explanatory text, including the `404`-vs-`200 count:0`
+distinction inline.
+
+**Flagged for Bob, not filed:** this reads as a regression on a shipped and accepted endpoint, not a missing
+surface, so it is a bug report rather than a TWIN-REQ. Twin is not blocked — #31 covers impression
+self-verification, which was the point of the exercise.
 
 ### ⚠ There is no paging — `truncated` means narrow, not "page 2"
 
