@@ -6,7 +6,7 @@
 
 > **PICK UP HERE (Session 18).** Read first: `status/session-notes/2026-07-31-session-17-connect-read-half-ship-gate-zero-loss.md` (the *don't-repeat* record is §Failed approaches — **four of today's errors were my own**). Coordinator-facing record: `m8trx-shared/status/active/RESULTS-TWIN-2026-07-31.md`.
 >
-> **⚠ BRANCH STATE — TWO UNMERGED BRANCHES STACKED, NO PRs.** `fix/fixture-coverage-in-area-zone` (S16, 7 commits — that session died before close) with `feat/connect-read-half` (S17, 7 commits) on top. `main` untouched at `39c8238`. **PR S16's first.** Green: ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` 27.
+> **✅ BRANCH STATE — MERGED to `main` 2026-07-31.** `feat/connect-read-half`, **26 commits**, which *already contained* S16's `fix/fixture-coverage-in-area-zone` as an ancestor — they were never two independent branches, and an earlier note here saying "PR S16's first" was wrong. One merge landed both. Green at merge: ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` **37**.
 >
 > **★ THE RESULT.** Post-#245 drive on the reproducing profile (seed 4242, hours 12-16, compress 18): **oracle 1512 · wire 1512 · rows 1512 · sessions 308 · fixtures 115/115 · loss 0.00%.** The external proof the impression-loss fix never had, closing the arc open since S15. It settled the S282-vs-twin contradiction as a **timeline, not a side**: 9.4% pre-fix → **20.3% at 03:03** → **total** during the `vision_ai` entitlement-gate outage → **0.00% post-#245**. *(The gate-shedding explanation for the 03:03 partial was offered as **labelled inference, not asserted** — it needs someone who can see the gate.)*
 >
@@ -33,6 +33,33 @@
 > **⚙ PACING RULE:** compress each shopper's **ARRIVAL**, never their internal timing; anchor wire `ts` to the **plan**, not the wall clock.
 > **⛔ TWO EDGES SHARE .29:** `:4223` = `edge-twin-denver` (twin) · `:4222` = `edge-itx-office` (**PRODUCTION, real Xovis**).
 > **⚙ Live-fire reminder:** gradle `JavaExec` does NOT auto-load `.env` → `set -a; . ./.env; set +a` then `./gradlew … --no-daemon`.
+
+---
+
+## ⚠⚠ S16 CLOSED BY PROXY (Coordinator, 2026-07-30 — the session died to provider API errors and could not be revived)
+
+> **READ FIRST, S17:** [`session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md`](session-notes/2026-07-30-session-16-PROXY-CLOSE-loss-investigation-acceptance.md) — S16's work (all artifact-cited), the Coordinator-run acceptance (**1,512 = 1,512 = 1,512 = 1,512**, investigation CLOSED-PROVEN core-side), and your ordered openers. **First act: countersign.** Your branch `fix/fixture-coverage-in-area-zone` (6 commits) was local-only and is now protectively pushed; disposal is yours.
+
+> ### ↕ RECONCILED 2026-07-31 — this block and the S17 block above close the same investigation on different days. Both are honest; read them together.
+>
+> The Coordinator's acceptance above (1,512 four ways, **2026-07-30**) and twin's independent confirmation
+> (**0.00% loss, 2026-07-31 08:24**) are **not a contradiction and neither supersedes the other** — they
+> measured different builds. The full sequence, with the intermediate states that make it coherent, is the
+> timeline table in
+> [`session-notes/2026-07-31-session-17-…`](session-notes/2026-07-31-session-17-connect-read-half-ship-gate-zero-loss.md):
+>
+> | When | Measurement | Loss |
+> |---|---|---|
+> | 07-30 pre-fix | wire 1512 → rows 1370 | 9.4% |
+> | **07-30 Coordinator acceptance** | **1512 four ways** | **0%** |
+> | 07-31 03:03 (twin, independent) | wire 1512 → rows 1205 | **20.3%** |
+> | 07-31 06:36–07:18 | wire 1512/317/317 → rows 0 | **total** — the `vision_ai` entitlement gate |
+> | **07-31 08:24 post-#245 (twin)** | **wire 1512 → rows 1512** | **0.00%** |
+>
+> So "CLOSED-PROVEN core-side" on 07-30 was true when written and **did not stay true** — an entitlement gate
+> keyed to an unsatisfiable slug regressed it, and #245 closed it again. **Neither record is wrong; a reader
+> taking either one alone would be.** Kept side by side deliberately: deleting the 07-30 acceptance to make
+> `main` tidy would erase a measurement someone honestly made.
 
 ---
 
