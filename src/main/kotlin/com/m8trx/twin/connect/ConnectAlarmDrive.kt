@@ -176,10 +176,26 @@ fun main() {
         return
     }
 
+    // ⚠ A1-repeat is a WEAKER test than it looks, and reading the wire proved it.
+    // Six webhook sends produced only FOUR `integration_event` rows: a byte-identical payload is
+    // collapsed by the CONTENT HASH at the integration layer and never reaches the alert layer at all.
+    // So "A1 sent twice → one alert row" is satisfied without alert-level `dedupe_key` dedupe ever
+    // being exercised — a vacuous assertion of exactly the kind `connectAcceptance`'s omitted-site rule
+    // exists to forbid. Only the Bearer arm's B2 genuinely tested it (disposition=deduped, same alertId).
+    //
+    // A3 fixes it: SAME `dedupe_key`, DIFFERENT bytes (antenna_group A2→A9). The content hash differs,
+    // so it reaches the ingester; the dedupe_key matches, so the alert layer must collapse it. If a
+    // second row appears for that key, alert-level dedupe is broken on the webhook plane — which no
+    // test on either side currently covers.
+    val a3 = driver.gateExitUnpaid(source, siteSlug, gate.code, subject.epc, occurredAt - 3_000, antennaGroup = "A9")
+    check(a3.dedupeKey == a1.dedupeKey) { "A3 must carry A1's dedupe_key or it tests nothing: ${a3.dedupeKey} vs ${a1.dedupeKey}" }
+    check(driver.dryRun(a3) != driver.dryRun(a1)) { "A3 must differ in bytes from A1 or the content hash stops it before the alert layer" }
+
     val sends = listOf(
         "A1 (§8.1 shape)" to driver.drive(a1),
-        "A1 repeat (byte-identical — dedupe must collapse it)" to driver.drive(a1),
+        "A1 repeat (byte-identical — collapsed by CONTENT HASH at the integration layer, not by dedupe_key)" to driver.drive(a1),
         "A2 (§2 shape, distinct dedupe_key)" to driver.drive(a2),
+        "A3 (SAME dedupe_key, DIFFERENT bytes — the only real test of alert-level dedupe on this plane)" to driver.drive(a3),
     )
 
     // ── B live: raise → retry (must dedupe) → clear → a refusal. Acks printed VERBATIM. ──
@@ -377,7 +393,15 @@ private fun verdict(sends: List<Pair<String, ConnectResponse>>, after: AlarmDriv
     log.info("")
     log.info("  step 1 · external source → M8TRX ......... {}", if (sends.all { it.second.isOk }) "ACCEPTED (receipt only)" else "REFUSED")
     log.info("  step 2 · alert row created ............... {}", if (observable) "see /alerts/query above" else "UNPROVEN — no reachable diagnostic")
-    log.info("  step 3 · dedupe collapsed the repeat ..... {}", if (observable) "see count above" else "UNPROVEN — needs the row count")
+    log.info(
+        "  step 3 · dedupe collapsed the repeat ..... {}",
+        if (observable) {
+            "count above — but read it per LAYER: A1-repeat is stopped by the integration content hash, " +
+                "A3 (same dedupe_key, different bytes) and B2 are what actually test the ALERT layer"
+        } else {
+            "UNPROVEN — needs the row count"
+        },
+    )
     log.info("  step 4 · routed to an LP role ............ {}", if (observable) "see assigned_to_role above" else "UNPROVEN")
     log.info(
         "  step 5 · visible on /alerts .............. {}",
