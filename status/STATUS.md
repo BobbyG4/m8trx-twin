@@ -6,14 +6,14 @@
 
 > **PICK UP HERE (Session 18).** Read first: `status/session-notes/2026-07-31-session-17-connect-read-half-ship-gate-zero-loss.md` (the *don't-repeat* record is §Failed approaches — **four of today's errors were my own**). Coordinator-facing record: `m8trx-shared/status/active/RESULTS-TWIN-2026-07-31.md`.
 >
-> **✅ BRANCH STATE — MERGED to `main` 2026-07-31.** `feat/connect-read-half`, **26 commits**, which *already contained* S16's `fix/fixture-coverage-in-area-zone` as an ancestor — they were never two independent branches, and an earlier note here saying "PR S16's first" was wrong. One merge landed both. Green at merge: ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` **37**.
+> **✅ BRANCH STATE — MERGED. `main` = `5e4b81a` (PR [#14](https://github.com/BobbyG4/m8trx-twin/pull/14)), no open PRs, both branches gone.** `feat/connect-read-half` *already contained* S16's `fix/fixture-coverage-in-area-zone` as an ancestor — they were never two independent branches, and any note saying "PR S16's first" was wrong. One merge landed both. **Verified count (2026-08-01): 29 commits between `39c8238` and `5e4b81a` — 27 non-merge + 2 merges**, one linear chain with S16's `5b06290` (fixture coverage) at the base and S17's on top, plus the coordinator's S16 proxy-close doc `f92078a` arriving from `main`. *(This line said "26 commits"; TRACK said "7 + 7". Both were wrong.)* Green at merge: ktlint · `connectSelfTest` 11 · `peopleSelfTest` 50 · `scenarioSelfTest` **37**.
 >
 > **★ THE RESULT.** Post-#245 drive on the reproducing profile (seed 4242, hours 12-16, compress 18): **oracle 1512 · wire 1512 · rows 1512 · sessions 308 · fixtures 115/115 · loss 0.00%.** The external proof the impression-loss fix never had, closing the arc open since S15. It settled the S282-vs-twin contradiction as a **timeline, not a side**: 9.4% pre-fix → **20.3% at 03:03** → **total** during the `vision_ai` entitlement-gate outage → **0.00% post-#245**. *(The gate-shedding explanation for the 03:03 partial was offered as **labelled inference, not asserted** — it needs someone who can see the gate.)*
 >
 > **★ TWIN NOW HOLDS A STANDING ROLE** (Bob's ruling): **`./gradlew connectAcceptance` is the Connect ship gate** — the only automated coverage that surface has, because every CI security suite drives a human JWT and none drives a Connect key. Green before ship; extend it as the surface grows; **coverage gaps print alongside failures.** Detail + the non-vacuity rule: `status/tracks/TRACK-TWIN.md` § STANDING ROLE.
 >
 > **NEXT, ranked:**
-> **(1) PR the two stacked branches** — S16's first, then S17's.
+> **(1) ✅ DONE 2026-07-31 — both branches merged in one PR** (#14; see BRANCH STATE above). *(This item said "PR the two stacked branches — S16's first, then S17's" and was already false when written, four lines below the note explaining why.)* **Superseding (1) for S18: the §8.1 alarm chain is BUILT** — `AlarmDriver` + `connectAlarmDrive` + `ConnectClient.queryAlerts` + `WebhookDataType.ALARM`, offline-green (`connectSelfTest` 11 → **12**, `[PASS] §8.1 alarm envelope`), dry-run exercised end to end against Denver's real `CS-01` geometry and a rule-derived tagged EPC. **Live fire is blocked on the admin action in (2), not on twin.**
 > **(2) ★ Restore `integration:manage` + grant `alert:read`** on `M8TRX_TWIN_BEARER` — **one admin action**, and twin cannot self-serve it (SEC-1 subset guard + the key surface is `CONNECT_NOT_EXPOSED`). Unblocks FR-INTEG-16, the §7 DLQ, and the `/alerts/query` half of the EAS test.
 > **(3) LP chain end to end** once BW-TRIAD applies mig 205 and BW-CONNECT registers `twin-eas`: alarm → `alert` → routed to an LP role → visible on `/alerts` → dispositioned, **each hop verified**. ⚠ **Twin owes substrate first — see (6).**
 > **(4) directive→task follow-up — a DECISION, not build work.** Twin can drive the input and read the output but **cannot cause the middle**: `/activate` and `/evaluate` are `CONNECT_NOT_EXPOSED`. Either expose a scoped activation or declare the loop deliberately human-gated. *("Needs a backend watcher" understates it — a watcher observes; what is missing is an actor.)*
@@ -189,13 +189,16 @@
 
 ---
 
-## Store Concept (locked Session 3)
+## Store Concept — ⚠ SUPERSEDED (locked Session 3, outgrown Session 6; kept as lineage)
+
+> **This single-store concept is history.** The build is a **14-site chain** (10 retail + 4 office) and the drive target is **`dec-us-denver`** (Denver, CO — flagship, 600 m², 2,586 SKUs, 15,005 EPCs). NYC is one of the 10 stores, not *the* store. Kept because the concept lineage explains why the grammar looks the way it does — **not** as a description of anything current.
 
 **Decathlon Manhattan** — Decathlon City format, NOT running specialty.
 - Concept evolution: started as Bordeaux running specialty (160 sqm) → Florence CAD grammar showed the correct scale → 600 sqm Decathlon City format adopted
 - Address: 620 6th Avenue, New York, NY 10011 (Flatiron District)
 - Currency: USD
-- SKU mix: running (primary) + fitness + hiking + swim + cycling + accessories + GPS watches
+- SKU mix: running (primary) + fitness + hiking + swim + cycling + accessories ~~+ GPS watches~~
+  ⚠ **"GPS watches" struck 2026-08-01 — the live catalog has ZERO watch SKUs** and `scenarioSelfTest` asserts their absence. This is the *same dead anchor* the LP line below was corrected for on 2026-07-31; the correction was applied there and missed here, in the same file.
 - LP scenario anchor: **EAS-tagged premium concealable stock — `price_usd >= $150 AND category != "outdoor"`, 271 of 2,586 SKUs**, concentrated on `PE-02`/`PW-02` (Kiprun premium footwear). Gate is `CS-01` "Main Entrance Gate". Rule lives in `layer2/EasTagging.kt`; tag state is **twin-side, not the platform's**.
   ⚠ **Corrected 2026-07-31** — was *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"*. **Zero watch SKUs exist in the live catalog**; that anchor belonged to the superseded 920-SKU concept and Session 8 flagged it unclosed. Asserted absent by `scenarioSelfTest`.
 
@@ -205,16 +208,16 @@
 
 | Artifact | Path | Status |
 |---|---|---|
-| Kotlin project | `~/IdeaProjects/m8trx-twin/` | ✅ Compiles, NATS smoke passed |
-| NATS emitter | `src/main/kotlin/com/m8trx/twin/layer0/NatsEmitter.kt` | ✅ Dual-publishes legacy + new pattern |
-| REST emitter | `src/main/kotlin/com/m8trx/twin/layer0/RestEmitter.kt` | ✅ Written, untested (service bearer 401) |
-| Store layout doc | `reference/data/STORE-LAYOUT.md` | ✅ 600 sqm, full fixture spec |
-| Floor plan SVG | `reference/data/floor-plans/decathlon-running-medium.svg` | ✅ Generated |
-| Snapshot JSON | `reference/data/snapshots/decathlon-running-small/day-start.json` | ⚠ Outdated (300 sqm) — update to 600 sqm |
-| Seed script | `scripts/seed_store.py` | ✅ Live on mother |
-| Raw catalog | `reference/sample_stores/decathlon-korea-raw.csv` | ✅ 56,003 rows |
-| Curated catalog | `reference/data/catalog/decathlon-korea-curated.csv` | ✅ 920 SKUs, USD prices |
-| Final SKU file | `reference/data/catalog/decathlon-manhattan-skus.csv` | ✅ English names, ready |
+| Kotlin project | `~/IdeaProjects/m8trx-twin/` | ✅ Compiles; ktlint clean; `connectSelfTest` **12** · `peopleSelfTest` 50 · `scenarioSelfTest` 37 |
+| NATS emitter | `src/main/kotlin/com/m8trx/twin/layer0/NatsEmitter.kt` | ✅ Dual-publishes legacy + new pattern. **Publishes to `:4223` only** — `:4222` is the production office edge |
+| REST emitter | `src/main/kotlin/com/m8trx/twin/layer0/RestEmitter.kt` | ⚠ **UNWIRED SCAFFOLD — zero callers anywhere in `src/`** (re-verified 2026-08-01). *(Was "✅ Written, untested (service bearer 401)" — the 401 reason has been dead since S9/S11 proved the Bearer plane; the real state is that nothing calls it. Live REST goes through `connect/ConnectClient`.)* |
+| Store layout doc | `reference/data/STORE-LAYOUT.md` | ✅ Current — per-store parametric, redesigned 2026-06-22 (flagship ~600 m² → medium ~400 m²) |
+| Floor plan SVGs | `reference/data/floor-plans/` | ✅ Generated, all 10 stores (`scripts/render_floorplans.py`) |
+| ~~Snapshot JSON~~ | ~~`reference/data/snapshots/decathlon-running-small/day-start.json`~~ | ⛔ **FILE DOES NOT EXIST** (checked 2026-08-01). Listed here as "⚠ Outdated (300 sqm) — update to 600 sqm" for months; there is nothing to update. Day state is generated at runtime by `layer3/DayDrive.kt` |
+| Seed script | `scripts/seed_store.py` | ⚠ **SUPERSEDED** — the 920-SKU single-store seeder. Chain seeding is `build_chain.py` → `DEPLOY-HANDOFF.md`; RE-RESEED v2 (2026-06-26) is what is live |
+| Raw catalog | `reference/sample_stores/decathlon-korea-raw.csv` | ✅ 56,003 rows — the input to curation |
+| ~~Curated catalog~~ | `reference/data/catalog/decathlon-korea-curated.csv` | ⚠ **SUPERSEDED, 920 SKUs** — the Manhattan-era cut. Live catalog is the **2,586-SKU** chain master (`reference/data/chain/`) |
+| ~~Final SKU file~~ | `reference/data/catalog/decathlon-manhattan-skus.csv` | ⚠ **SUPERSEDED** — same 920-SKU concept; "ready" refers to a store that was never built. ★ **This file is the literal provenance of the dead watch anchor: exactly 40 rows in category `watch_gps`, $22.99–$89.99** (verified 2026-08-01). That is the "W-series sports watches, EAS-tagged, 40 items" line — real here, absent from every one of the 10 live stores |
 | Florence CAD ref | `reference/sample_stores/deacthlon_florence/` | ✅ 4 files |
 | API surface doc | `reference/integration/M8TRX-API-SURFACE.md` | ✅ 27 atoms mapped |
 
@@ -230,7 +233,7 @@
 | **TWIN-REQ-004 Connect READ surface** | ✅ **SATISFIED — CLOSED 2026-07-31 by twin as external prover.** All four §6.5 reads callable; rule-2 confinement proven on all four with negative controls by slug AND UUID; omitted-site returns 1 of 14. All three §4 interim positions retired with evidence (fixture-map CSV → `/spatial/identity`; human `psql` → 3,119 rows reproduced in code; engineer-watched task smoke → `/tasks/query`). | — |
 | **FR-INTEG-16 two-system reconciliation** — *feasibility asked of twin* | ✅ **ANSWERED 2026-07-31: YES.** Three of four steps live-proven; step 1 blocked only on `integration:manage` (a scope, restorable). `hmac_secret` at channel creation means the case never needs a key mint. | one scope grant |
 | TWIN-REQ-003 compliance/directive read-back (Connect Mode-3) | ✅ **SATISFIED** (2026-07-02; core PR #76 `925f9a4` — `POST /api/v2/compliance/state` live; twin part-3 smoke GREEN 28/28 · 25/2/1 · 0.893) | — |
-| **TWIN-REQ-004 Connect READ surface** (task read · space/zone read · impression read) | ✅ **ABSORBED core-side 2026-07-30** (`m8trx-shared/status/briefs/BRIEF-CONNECT-READ-SURFACE-2026-07-30.md`) — **sequenced behind the Traffic reference surface, so not yet shipped**; interim positions (fixture-map CSV · NATS impression observation · watched task smoke) remain the operating mode, and `connectSiteScopeAudit` re-runs against every new endpoint on ship. Filed 2026-07-28. | integrator self-verification; `items/receive` uncallable by a third party without out-of-band UUIDs |
+| ~~TWIN-REQ-004 (duplicate row)~~ | ⛔ **REMOVED 2026-08-01 — this was a second, contradictory TWIN-REQ-004 row in the same table.** It claimed *"ABSORBED core-side 2026-07-30 — sequenced behind the Traffic reference surface, **so not yet shipped**; interim positions remain the operating mode"* while the row above it recorded the requirement **shipped, proven and CLOSED** on 2026-07-31 with all three interim positions retired with evidence. The row above is correct; this one was 24 hours stale and read as authoritative. **One requirement, one row.** | — |
 | CORE-REQ-001 catalog attribute enrichment (brand · classification · coded attrs) — **inverse, core→twin** | ✅ **ABSORBED** 2026-06-21 (core loaded + verified; merged-commit `eb39526`) | — |
 | CORE-REQ-002 `site_category` (functional role `store/office/warehouse`) — **inverse, core→twin** | ✅ **LIVE on mother** (RE-RESEED v2, 2026-06-26; core mig 146) | — |
 | CORE-REQ-003 build Connect simulators — **inverse, core→twin** | ✅ **DONE** (S11 — all 5 P0 sims live end-to-end) + **Planogram Mode 3 driver LIVE-PROVEN** (S12, PR #7 — directive→targets→resolved, triple-verified) | — |
@@ -243,12 +246,14 @@
 
 ---
 
-## Deploy State (Session 3)
+## Deploy State — ⚠ SUPERSEDED (Session 3 snapshot; every line below is now false)
 
-- m8trx-twin: uncommitted (coordinator handles commit)
-- M8trxDemo on mother: 160 zones + 920 products live
-- NATS: smoke objLocation published successfully to .29
-- Service API key: active, `principal_kind=service` — auth works on NATS, fails on REST inventory endpoints
+> Retained only as a marker of how far the build has moved. **Current deploy state is `### What's LIVE on mother` above and TRACK-TWIN § Current State.** Struck 2026-08-01 because a reader scrolling here found four confident, wrong facts.
+
+- ~~m8trx-twin: uncommitted (coordinator handles commit)~~ → the repo is on `main` `5e4b81a`, PRs #1–#14 merged
+- ~~M8trxDemo on mother: 160 zones + 920 products live~~ → **929 zones · 2,586 products · 102,675 items** across 14 sites (RE-RESEED v2)
+- ~~NATS: smoke objLocation published successfully to .29~~ → 1.1M+ samples per full-day drive, to **`.29:4223`** specifically
+- ~~Service API key: … auth works on NATS, fails on REST inventory endpoints~~ → **the REST/Bearer plane works** (core #51/#52, proven S9/S11); twin self-verifies SOLD through `items/details` and reads impressions through §6.5
 
 ---
 

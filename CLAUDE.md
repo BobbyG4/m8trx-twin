@@ -19,7 +19,8 @@ Digital twin of a retail store, generating realistic event streams through M8TRX
 
 - **REST** — m8trx-services public endpoints (`api.m8trx.com`, `dev.m8trx.com`, internal LAN equivalents)
 - **GraphQL** — Hasura v2 (`mother.m8trx.com/v2/v1/graphql`)
-- **Streaming** — NATS JetStream (`192.168.55.29:4222`) and NATS WebSocket (`192.168.55.29:8443`)
+- **Streaming** — NATS JetStream (`192.168.55.29:`**`4223`**) and NATS WebSocket (`192.168.55.29:8443`)
+  ⛔ **TWO EDGES SHARE `.29` — twin publishes to `:4223` ONLY.** `:4223` = `edge-twin-denver` (twin's). `:4222` = `edge-itx-office`, **production, real Xovis hardware** — publishing there injects synthetic people into a live office deployment. This line named `:4222` until 2026-08-01, i.e. the hard-rule doc pointed at production; every code path had it right (`TwinConfig.kt:16`, `PeopleDrive.kt:32`, `DayDrive.kt:39`) and `DayDrive.kt:193` refuses to publish unless the broker's `server_name` matches the twin edge. The guard is in code because a doc cannot enforce anything.
 - **Webhook ingest** — `POST /v1/webhook/{tenantId}/{integrationKey}` (HMAC-signed)
 
 ### Authentication
@@ -73,12 +74,13 @@ Five layers. Each layer's interface is the contract for the layer above. Detaile
 
 ## Reference Store
 
-Decathlon Korea, mid-format running + fitness specialty. ~2,000-3,000 SKUs curated from the full catalog (~20k items).
+**A 14-site Decathlon chain, not one store** — 10 retail + 4 office under the single M8trxDemo tenant. ⚠ **This section described a single ~1,500 sqm Decathlon Korea running-specialty store until 2026-08-01; that concept was superseded by the Wave-1 chain build in Session 6 (2026-06-22) and the description simply never followed.** The single-store concepts it went through (Bordeaux 160 sqm → Decathlon City 600 sqm → Manhattan) are history; STATUS's `## Store Concept (locked Session 3)` records that lineage.
 
-- **Layout source** — authored from research (Decathlon store walkthroughs, public press kits, store concept renders); no real plan available. Detail in `reference/data/STORE-LAYOUT.md` (TBD).
-- **Footprint** — ~30m × 50m, ~1,500 sqm
-- **SKU curation** — filter Decathlon Korea catalog by category (Kalenji + Kiprun running, Domyos fitness, Geologic accessories, selected Quechua crossover); variant-expand by size/color; anchor to fixtures. Detail in `reference/data/SKU-CURATION.md` (TBD).
-- **Try-on zones** — apparel fitting rooms (4-6 stalls), footwear bench area, GPS watch demo station. Three behavioral profiles, not one. Note: current core schema's `fitting_room` table is apparel-specific (filed as core requirement: generalize to `try_on_zone`).
+- **Reference store / drive target** — **`dec-us-denver`** (Denver, CO, 1515 16th Street Mall), tier `flagship`, **600 m²**. Every people-drive, impression run, planogram directive, and alarm this project has fired went at Denver. The other 9 retail stores are real and seeded but rarely driven.
+- **Layout source** — generated, not authored: `scripts/build_layout.py` derives each store's footprint, gondola grid, aisle widths, and fixture counts deterministically from `sha256(store_id)` → `reference/data/chain/stores/<slug>/layout.json`, one unique floor per retail store. `reference/data/STORE-LAYOUT.md` documents the shared grammar and is **current** (redesigned 2026-06-22); the generator is authoritative for coordinates.
+- **Spatial model** — each retail store = **3 spaces** (`sales_floor` / `stockroom` / `fitting_room`), each its own SRF frame; departments are `region` zones *inside* the sales floor. 30 spaces / 929 zones chain-wide.
+- **Catalog** — **2,586-SKU master** (Decathlon Korea raw catalog → coded + USD-priced), 22,975 SKU rows across the 10 stores, **102,675 EPCs** (~18% staged back-of-house). Curation and placement live in `scripts/build_chain.py` + `reference/data/chain/CHAIN-DATA-SPEC.md`. ⚠ **`reference/data/SKU-CURATION.md` was referenced by this doc for months and has never existed** — the curation that actually shipped is the code above.
+- **Try-on zones** — apparel fitting rooms, footwear bench area, and the GPS demo cases (`Z-06`, 6 fixtures in Denver). Three behavioral profiles, not one. ⚠ The GPS cases are real **fixtures** and are browsed by generated shoppers, but **no watch SKU exists to demo** (see the EAS note below) — the fixture is real, the merchandise is not. Note: core's `fitting_room` table was apparel-specific; generalized to `try_on_zone` via TWIN-REQ-001 (ABSORBED 2026-05-09, mig 127).
 - **EAS gates** — 1 main entrance (`CS-01` "Main Entrance Gate", present in all 10 stores as an `eas_gate` crossing slice with real SRF geometry). **EAS-tagged stock is defined by a RULE, not a list** — `price_usd >= $150 AND category != "outdoor"`, i.e. premium *and* concealable, since every bulky line (road bikes, tents, trainers) lives in `outdoor`. Yields **271 of Denver's 2,586 SKUs**, concentrated on `PE-02`/`PW-02` Kiprun premium footwear. Rule + rationale: `layer2/EasTagging.kt`.
   ⚠ **Tag state is TWIN-SIDE. The platform does not know it and never sees it** — a real third-party EAS owns tag state. That makes twin minting it faithful emulation, *provided* it is never implied to be something M8TRX stores or could verify.
   ⚠ **Corrected 2026-07-31:** this line previously named *"Garmin watches"* and STATUS named *"W-series sports watches ($29.99–$89.99), EAS-tagged, 40 items"*. **The live 2,586-SKU chain catalog has ZERO watch SKUs** — that anchor belonged to the superseded 920-SKU Manhattan concept. Session 8's static-seed audit flagged it and it went unclosed for two months. `scenarioSelfTest` now asserts the absence so it cannot be restored by accident.
@@ -101,12 +103,14 @@ The **M8trxDemo** tenant is the canonical instance. Lives on mother alongside re
 
 Running list of schema/API improvements the demo work makes obvious. Each gets filed back to core as a requirement brief; track status here.
 
-- **`fitting_room` → `try_on_zone` generalization** — current Layer-1 spatial primitive is apparel-specific; demo needs footwear bench + watch demo station rendered as try-on zones. Same behavioral analytics work across all kinds. Status: under discussion (Bob + Amy / call); NOT YET FILED.
+- **`fitting_room` → `try_on_zone` generalization** — Layer-1 spatial primitive was apparel-specific; the demo needs the footwear bench and GPS demo cases rendered as try-on zones too. Status: ✅ **ABSORBED 2026-05-09 as TWIN-REQ-001** (core mig 127); 53 try-on zones live on mother. *(This line read "under discussion; NOT YET FILED" until 2026-08-01 — stale by ~3 months, and contradicted by STATUS's own ledger.)*
 - **`commerce_projection` writer** — substrate (mig 112) exists; writer unfed. Headline blocker for the demo's commercial story (3 of 5 scenario scripts depend on it). Pattern: Hasura event trigger on `item_custody_event` SOLD transitions → controller → projection hypertable. Precedent: audit-log capture chain (mig 101). Status: **FILED 2026-06-11 as TWIN-REQ-002** (`~/IdeaProjects/m8trx-shared/twin/requirements/TWIN-REQ-002-commerce-projection-writer.md`), AWAITING ABSORPTION.
 - **`inventory:sell` capability split** — currently piggybacks `inventory:transfer`. Surfaces when scenarios author a "cashier" persona. Status: PRE-EXISTING (in core's CLEANUP-TASKS.md).
 - **Per-vendor field mapping (Lightspeed Retail)** — optional; lets the demo claim "this is Decathlon's real Lightspeed feed" defensibly. Lower priority than commerce_projection. Status: NOT YET FILED.
+- **A Connect integrator cannot acquire a capability it was not minted with** — the admin-only key surface and SEC-1's subset guard are each correct alone and together leave no path; §7's documented route (`PATCH /connect/service-keys/{keyId}/scopes`) is `CONNECT_NOT_EXPOSED` to every Connect key. Status: **FILED 2026-07-31 as TWIN-REQ-005**. Twin is not blocked — twin asks a human, which is exactly what a real integrator cannot do.
+- **Connect READ surface** (task · space/zone · impression read) — Status: ✅ **SATISFIED, closed 2026-07-31 as TWIN-REQ-004**, with twin as the external prover. **`commerce_projection` read-back** (TWIN-REQ-003) likewise SATISFIED 2026-07-02.
 
-Append new findings here. When a finding moves from *discovered* to *filed*, note the brief path inline.
+Append new findings here. When a finding moves from *discovered* to *filed*, note the brief path inline. **The ledger of record is STATUS.md § Active Requirements Filed Back to Core** — when these two disagree, STATUS wins and this list is the one to fix.
 
 ---
 
@@ -149,14 +153,25 @@ If a session believes it must do any of the above, it stops and asks. The Destru
 | **Briefs** | `status/briefs/` (unfired) · `status/active/` (in-flight) · `status/archive/sprint/` (done) |
 | **Sister project contract** | `~/IdeaProjects/m8trx-shared/twin/SISTER-PROJECT.md` — relationship rules, brief-filing protocol |
 | Layer 4 config schema | `reference/architecture/LAYER4-CONFIG-SCHEMA.md` |
-| Scenario library | `reference/scenarios/` (TBD per script) |
-| SKU curation spec | `reference/data/SKU-CURATION.md` |
-| Store layout reference | `reference/data/STORE-LAYOUT.md` |
+| ~~Scenario library~~ | ~~`reference/scenarios/`~~ — **does not exist.** Scenarios live in code: `layer2/Journeys.kt` (incl. `Shoplift`), `layer3/{OperatingModel,TrafficGenerator,ScenarioRun,DayDrive}.kt`, asserted by `scenarioSelfTest` |
+| ~~SKU curation spec~~ | ~~`reference/data/SKU-CURATION.md`~~ — **never existed.** See `scripts/build_chain.py` + `reference/data/chain/CHAIN-DATA-SPEC.md` |
+| Store layout reference | `reference/data/STORE-LAYOUT.md` — current (redesigned 2026-06-22, per-store parametric) |
+| Chain dataset spec | `reference/data/chain/CHAIN-DATA-SPEC.md` · reseed hand-off `DEPLOY-HANDOFF.md` |
 | API surface | `reference/integration/M8TRX-API-SURFACE.md` |
-| Tenant provisioning | `reference/ops/TENANT-PROVISIONING.md` (TBD) |
+| Connect drive run-card | `status/tracks/TRACK-TWIN.md` § Drive run-card — env + the four-number protocol for any live drive |
+| Tenant provisioning | `reference/ops/TENANT-PROVISIONING.md` — exists, but **DRAFT 2026-05-10 and never verified against live mother** (predates the chain build and RE-RESEED v2) |
 
 ---
 
 ## Current Phase
 
-**Active development.** Kotlin scaffold compiles, NATS live, Decathlon Manhattan store seeded (Session 3). Next: item/EPC seeding + TrafficGenerator. See `status/STATUS.md` and `status/tracks/TRACK-TWIN.md` for current priorities.
+**Active development, Session 18 (2026-08-01).** ⚠ *This section described Session 3 — "Kotlin scaffold compiles, NATS live, Manhattan store seeded; next item/EPC seeding + TrafficGenerator" — until 2026-08-01. All of that shipped long ago (chain seeded S6, RE-RESEED v2 verified S8, `TrafficGenerator` built S15).*
+
+Where the project actually is:
+
+- **Data** — 14-site chain live on M8trxDemo, verified byte-for-byte against the committed dataset (RE-RESEED v2, 2026-06-26).
+- **Connect** — the entire surface is live-exercised from outside: inbound webhooks (6 data-types, 7th in flight), Bearer data plane, §6.5 read half, §9 outbound, planogram/movement/receive drivers. 13+ `connect*` gradle drivers.
+- **People pipeline** — proven camera-free at full-day volume, and as of 2026-07-31 with **zero persistence loss** (oracle 1512 = wire 1512 = rows 1512).
+- **★ Standing role** — **`./gradlew connectAcceptance` is the Connect ship gate**, because no CI suite anywhere drives a Connect key against a Connect endpoint. Green before ship; extend it as the surface grows; declared coverage gaps print alongside failures. Detail + the non-vacuity rule: `status/tracks/TRACK-TWIN.md` § STANDING ROLE. A second standing gate — the **cold-onboarding peer test** — must be run by a *fresh* session holding only the published Connect doc, never by a lane that helped design the surface.
+
+Authoritative for what's next: `status/STATUS.md` § ⚠ NEXT SESSION PRIORITIES, then `status/tracks/TRACK-TWIN.md`.
