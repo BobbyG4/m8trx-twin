@@ -42,8 +42,13 @@ import kotlin.system.exitProcess
  * ## Coverage is reported, never implied
  *
  * A run that silently skips an endpoint is the false-green class this exists to prevent, so [COVERED] and
- * [NOT_COVERED] are declared literals and both are printed. When the surface grows — alarm ingest is next —
- * the new data-type gets a row in one list or the other, and "we forgot" stops being expressible.
+ * [NOT_COVERED] are declared literals and both are printed. When the surface grows, the new data-type gets a
+ * row in one list or the other, and "we forgot" stops being expressible.
+ *
+ * ⚠ **A gap literal rots like any other claim.** The alarm row here said *"NOT YET BUILT; envelope pending
+ * BW-CONNECT"* for a day after the alarm driver was built and self-tested — a stale gap reads as a decision
+ * not to cover something, which is exactly the false confidence the two lists exist to remove. Re-read them
+ * when the surface changes, not only when a check fails.
  *
  * Exit 0 = all PASS. Exit 1 = any FAIL. INDETERMINATE never passes the gate on its own.
  *
@@ -66,7 +71,10 @@ private val NOT_COVERED = listOf(
     "§9 outbound webhook (stocktake_result) — exercised by connectOutboundReceiver, not gated here",
     "§6 data-plane writes (/scans · items/receive) — write path, deliberately out of a read-oriented gate",
     "§7 control plane (integration create/update/keys) — twin's key currently lacks integration:manage (see RESULTS-TWIN-2026-07-31 F: FR-INTEG-16)",
-    "alarm ingest (7th inbound data-type) — NOT YET BUILT; envelope pending BW-CONNECT. Add here when it lands.",
+    "alarm ingest (7th inbound data-type) — BUILT (AlarmDriver · connectAlarmDrive) and offline-gated by connectSelfTest's " +
+        "§8.1 envelope case, but the LIVE chain is NOT gated here: every documented diagnostic (alerts/query · §7 DLQ · " +
+        "health) refuses twin's key, so a run could prove the send and nothing after it. Promote to COVERED when a key " +
+        "holds alert:read — offline conformance is not chain evidence.",
     "cross-TENANT confinement — twin holds one tenant's key and cannot obtain another's; only in-tenant/out-of-scope is reachable",
 )
 

@@ -2,6 +2,8 @@ package com.m8trx.twin.connect
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.AlertQueryRequest
+import com.m8trx.twin.connect.model.bearer.AlertQueryResponse
 import com.m8trx.twin.connect.model.bearer.ChannelConfig
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
 import com.m8trx.twin.connect.model.bearer.ImpressionQueryRequest
@@ -21,8 +23,10 @@ import com.m8trx.twin.connect.model.webhook.ProductCatalogItem
 import com.m8trx.twin.connect.model.webhook.SaleEvent
 import com.m8trx.twin.connect.model.webhook.ShipmentLine
 import com.m8trx.twin.connect.model.webhook.ShipmentManifest
+import com.m8trx.twin.connect.model.webhook.WebhookAck
 import com.m8trx.twin.connect.setup.ApiKeyBootstrap
 import com.m8trx.twin.connect.setup.Provisioner
+import com.m8trx.twin.connect.sim.AlarmDriver
 import com.m8trx.twin.connect.sim.FullLoopDriver
 import com.m8trx.twin.connect.sim.OutboundReceiver
 import com.m8trx.twin.connect.sim.PlanogramDirectiveDriver
@@ -59,6 +63,7 @@ fun main() {
     saleStreamEpcLoader()
     planogramDirectiveCasing()
     inventoryMovementCasing()
+    alarmEnvelopeCasing()
     readPlaneCasing()
     readPlaneCaps()
     fullLoopPlan()
@@ -259,6 +264,69 @@ private fun dtoCasingRoundTrip() {
     }
     check(ConnectMappers.camel.readValue<StocktakeResult>(stkJson) == stk) { "stocktake_result must round-trip" }
     log.info("[PASS] DTO casing + round-trip (snake webhook / camel bearer+outbound)")
+}
+
+/**
+ * §8.1 `alarm` — the seventh inbound data-type, and the one twin drives as an outside vendor.
+ *
+ * Two things are pinned here because getting either wrong sends an alarm that acks `200` and then
+ * dead-letters, which is the exact defect family this arc exists to close:
+ *
+ *  1. **The vendor's own fields must land at the TOP level, keys verbatim.** §8.1's *"anything else —
+ *     your fields stay yours"* is served by `@JsonAnyGetter`, and any-getter keys bypass the naming
+ *     strategy. Supply them snake_case or they arrive camelCase and are silently ignored.
+ *  2. **Both subject spellings must survive**, because §8.1 (`subject_id`, exampled as a UUID) and
+ *     `DESIGN` §2 (`subject_ref`) disagree, and a vendor holds an EPC, never a UUID. Twin sends the
+ *     ref and reports the substitution rather than resolving the disagreement unilaterally.
+ */
+private fun alarmEnvelopeCasing() {
+    val driver = AlarmDriver(WebhookClient(ConnectConfig.fromEnv()))
+    val epc = "30395DFA819EE940001EACB5"
+    val at = 1_785_458_523_115L
+
+    val published = driver.gateExitUnpaid("twin-eas", "dec-us-denver", "CS-01", epc, at)
+    val json = ConnectMappers.snake.writeValueAsString(published)
+    listOf("source", "kind", "site_ref", "zone_ref", "occurred_at", "dedupe_key", "severity", "subject_type", "subject_ref").forEach {
+        check(json.contains("\"$it\"")) { "alarm envelope must serialize snake field $it: $json" }
+    }
+    listOf("epc_list", "antenna_group", "native_level", "footfall_direction", "staff_mode_active", "gate_id").forEach {
+        check(json.contains("\"$it\"")) { "§8.1 vendor fields must land TOP-LEVEL with keys verbatim, not nested or re-cased: $json" }
+    }
+    check(!json.contains("siteRef") && !json.contains("dedupeKey") && !json.contains("occurredAt")) {
+        "webhook plane must not leak camelCase: $json"
+    }
+    check(!json.contains("\"payload\"")) { "the §8.1 shape must NOT nest under payload — that is the §2 shape: $json" }
+    check(!json.contains("\"condition_key\"")) { "a point event carries dedupe_key and omits condition_key (NON_NULL): $json" }
+    check(json.contains("\"$epc\"")) { "the subject EPC must appear — it is the only item identifier a gate vendor holds: $json" }
+    check(published.dedupeKey == "CS-01:$epc:$at") { "dedupe_key must be stable across a retry: ${published.dedupeKey}" }
+
+    // The DESIGN §2 shape: same facts, detail nested. Both must be expressible from one DTO.
+    val designShape = driver.gateExitUnpaidDesignShape("twin-eas", "dec-us-denver", "CS-01", epc, at)
+    val designJson = ConnectMappers.snake.writeValueAsString(designShape)
+    check(designJson.contains("\"payload\"")) { "the §2 shape must nest vendor detail under payload: $designJson" }
+    check(designJson.contains("\"antenna_group\"")) { "nested vendor keys stay verbatim inside payload: $designJson" }
+
+    // §8's ack is camelCase even though its request bodies are snake — parse it with the right mapper.
+    val ack = ConnectMappers.camel.readValue<WebhookAck>(
+        """{"accepted":true,"integrationId":"5dfba5cd-fd74-4fb8-9c73-2a495419f863","receivedAt":"2026-08-01T00:00:00Z"}""",
+    )
+    check(ack.accepted == true && ack.integrationId != null) { "the §8 ack binds off the CAMEL mapper, not snake" }
+
+    // The read half is written against the contract, since no key holds alert:read yet.
+    val q = ConnectMappers.camel.writeValueAsString(AlertQueryRequest(siteRef = "dec-us-denver", source = listOf("twin-eas"), limit = 500))
+    listOf("site_ref", "source", "limit").forEach { check(q.contains("\"$it\"")) { "alerts/query must serialize snake field $it: $q" } }
+    check(!q.contains("siteRef")) { "alerts/query must not leak camelCase: $q" }
+    val row = ConnectMappers.camel.readValue<AlertQueryResponse>(
+        """{"count":1,"truncated":false,"alerts":[{"alert_id":"a-1","source":"twin-eas","kind":"gate_exit_unpaid",
+           "severity":"info","native_level":"critical","status":"active","dedupe_key":"CS-01:$epc:$at",
+           "payload":{"antenna_group":"A2"}}]}
+        """.trimIndent(),
+    )
+    check(row.alerts.single().severity == "info" && row.alerts.single().nativeLevel == "critical") {
+        "severity (routed) and native_level (proposed) must bind SEPARATELY — reporting one without the other loses the finding"
+    }
+    check(row.alerts.single().payload["antenna_group"] == "A2") { "the vendor's own fields must come back verbatim in payload" }
+    log.info("[PASS] §8.1 alarm envelope — top-level vendor fields, both subject spellings, §2 nesting, camel ack, alerts/query shape")
 }
 
 /** The richest offline test: a localhost POST loop through the real OutboundReceiver. */
