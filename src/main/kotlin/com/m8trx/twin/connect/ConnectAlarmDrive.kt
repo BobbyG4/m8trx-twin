@@ -1,6 +1,8 @@
 package com.m8trx.twin.connect
 
 import com.m8trx.twin.connect.http.ConnectResponse
+import com.m8trx.twin.connect.model.bearer.AlertClearRequest
+import com.m8trx.twin.connect.model.bearer.AlertIngestAck
 import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import com.m8trx.twin.connect.model.webhook.AlarmEnvelope
 import com.m8trx.twin.connect.sim.AlarmDriver
@@ -21,32 +23,48 @@ import kotlin.random.Random
  *
  * ## What this run actually proves, and what it cannot
  *
- * The send is twin's. **Every step after it is observed through a documented diagnostic, and twin's
- * key holds the capability for none of them** — measured before the first alarm, not inherited:
+ * The send is twin's; every step after it is observed only through a documented diagnostic. **State
+ * moved twice on 2026-08-01, so this block records what is measured and when — nothing is inherited:**
  *
  * ```
- * POST /alerts/query            403 PERMISSION_DENIED   (needs alert:read — no key holds it)
- * GET  /integrations/{id}/dead-letter  403 PERMISSION_DENIED   (needs integration:manage — revoked from twin's key)
- * GET  /integrations/{id}/health       403 PERMISSION_DENIED   (same)
- * POST /alerts                  403 CONNECT_NOT_EXPOSED (the Bearer ack endpoint, not yet Connect-exposed)
+ * MEASURED 2026-08-01 08:07Z, twin's actual key (`twin-s280-lockdown`, Denver-bound):
+ *   POST /alerts/query                   403 PERMISSION_DENIED   (alert:read NOT held)
+ *   GET  /integrations/{id}/dead-letter  403 PERMISSION_DENIED   (integration:manage NOT held)
+ *   GET  /integrations/{id}/health       403 PERMISSION_DENIED   (same)
+ *   POST /alerts        (§6.6 ingest)    deployed 07:55Z; needs `alert:ingest` — NOT held
+ *   POST /alerts/clear  (§6.6)           deployed same release
+ * HELD, proven the same minute by `connectReadProbe`:
+ *   inventory:read · vision_ai:view · task:read       — all SITE-scoped to Denver
  * ```
  *
- * So §8.1's own instruction — *"poll the §7 DLQ rather than assuming a 200 meant it landed"* — names
- * a diagnostic the vendor it was written for cannot call. That is the finding this run is for, and it
- * is why the verdict below can honestly read **SENT, UNPROVEN**. Twin does not close the gap with a
- * `psql` it neither holds nor could justify: a verification a vendor cannot perform says nothing
- * about whether the contract works for a vendor.
+ * ⚠ **`M8TRX_TWIN_BEARER` is `twin-s280-lockdown`, NOT `twin-data-plane-bearer`.** Two twin keys exist
+ * and both carry the post-SEC-3 `vision_ai:view` + `task:read` pair, so **scope shape identifies a
+ * key's vintage, never its row.** A grant of `alert:read` was written to the *other* row on 2026-08-01
+ * and reported as live; twin ran this drive against that premise and got three `403`s. What resolved
+ * it was `api_key.last_used_at`: twin's requests moved `twin-s280-lockdown`, while the edited row had
+ * not moved since 2026-07-30. **Identify a key by what its traffic touches, not by its name or its
+ * scope shape.** Recorded as a recurring class in TWIN-REQ-005 § Update 2026-08-01.
  *
- * The run re-probes all four on every execution, so the moment an administrator lands the grant the
- * same command upgrades from *unproven* to *proven* with no code change.
+ * Two lessons are encoded here rather than in a status doc. First, §8.1's own instruction — *"poll the
+ * §7 DLQ rather than assuming a 200 meant it landed"* — named a diagnostic the vendor it was written
+ * for could not call, which is why the verdict is allowed to read **SENT, UNPROVEN**. Second, and the
+ * reason this driver re-probes on every run: **twin's first two live alarms (03:16Z) acked `200`, wrote
+ * their `alert` rows, then dead-lettered** on an `alert_event` CHECK violation. Nobody could see it,
+ * so `SENT, UNPROVEN` was the correct verdict and the defect stayed open for hours. Twin does not
+ * close such a gap with a `psql` it neither holds nor could justify — a verification a vendor cannot
+ * perform says nothing about whether the contract works for a vendor.
  *
- * ## The three sends
+ * ## The sends
  *
  * 1. **A1** — the published §8.1 shape (source detail top-level), as a vendor reading the contract
- *    would author it.
+ *    would author it. Webhook plane.
  * 2. **A1 repeat** — byte-identical. Dedupe must collapse it; two rows would be a finding.
  * 3. **A2** — different `dedupe_key`, same kind, in the `DESIGN` §2 shape (detail nested under
  *    `payload`). The two documents disagree, so twin sends both rather than picking one.
+ * 4. **B1–B4 (§6.6 Bearer arm)** — raise → byte-identical retry (must answer `deduped`) → clear by
+ *    the vendor's own `dedupe_key` → a deliberate refusal (`reason=acknowledged`, rejected by design).
+ *    This arm's ack is the point: `severity` · `autoRegistered` · `proposedSeverityIgnored` answer
+ *    **"will this alarm page anyone?"**, which `{accepted:true}` structurally cannot.
  *
  * Every fact in the alarm is real: the gate is `CS-01` read from Denver's own layout (`eas_gate`
  * crossing slice, real SRF geometry), the EPC is a live Denver unit whose state is checked through
@@ -59,7 +77,12 @@ import kotlin.random.Random
  * `M8TRX_ALARM_LIVE=true` to send (default = dry-run, prints the exact bytes) ·
  * `M8TRX_ALARM_SOURCE` (default `twin-eas`, the registered `alert_source`) ·
  * `M8TRX_ALARM_SITE` (default `dec-us-denver`) · `M8TRX_ALARM_SEED` (default 4242) ·
- * `M8TRX_ALARM_INTEGRATION_ID` (for the DLQ/health probes) · `M8TRX_CHAIN_DIR`.
+ * `M8TRX_ALARM_INTEGRATION_ID` (for the DLQ/health probes) ·
+ * `M8TRX_ALARM_LOOKBACK_MIN` (read-back window, default 60 — widen it to see earlier alarms) ·
+ * `M8TRX_CHAIN_DIR`.
+ *
+ * **A dry-run is not a no-op**: it still runs the pre-flight diagnostics, so it is the right way to
+ * test a scope grant or read back existing alarms without writing anything.
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ConnectAlarmDrive")
 
@@ -95,8 +118,14 @@ fun main() {
     log.info("subject EPC {} — {} at USD {} on fixture {}", subject.epc, subject.name, subject.priceUsd, subject.fixture)
 
     // ── pre-flight: what can this vendor observe BEFORE it sends anything? ─────────────────────────
+    //
+    // The window matters and was a bug: a hardcoded 1h lookback could not see twin's own 03:16Z
+    // alarms from earlier the same day, so the read-back would have reported an empty history and
+    // looked like "no rows" rather than "wrong window". Same class as the S17 query-window errors.
     log.info("── pre-flight: the documented diagnostics, measured not inherited ──")
-    val before = driver.verify(integrationId, source, siteSlug, Instant.now().minusSeconds(3600))
+    val lookbackMin = System.getenv("M8TRX_ALARM_LOOKBACK_MIN")?.toLongOrNull() ?: 60L
+    log.info("   read-back window: last {} min (M8TRX_ALARM_LOOKBACK_MIN)", lookbackMin)
+    val before = driver.verify(integrationId, source, siteSlug, Instant.now().minusSeconds(lookbackMin * 60))
     reportDiagnostics(before)
     if (live) {
         when (val d = client.itemDetails(ItemDetailsRequest(listOf(subject.epc)))) {
@@ -108,16 +137,32 @@ fun main() {
     // ── the three sends ───────────────────────────────────────────────────────────────────────────
     val occurredAt = System.currentTimeMillis()
     val a1 = driver.gateExitUnpaid(source, siteSlug, gate.code, subject.epc, occurredAt)
-    val a2 = driver.gateExitUnpaidDesignShape(source, siteSlug, gate.code, second.epc, occurredAt + 7_000)
+
+    // ⚠ A2 is offset into the PAST, never the future. It only needs a distinct dedupe_key, and the
+    // sign of that offset is load-bearing: `alert.created_at` is taken from the vendor's
+    // `occurred_at` and `/alerts/query`'s window is `[now-24h, now)`, so a future-dated alarm acks
+    // 200 and is then invisible to its own read-back until wall-clock catches up. This line said
+    // `+ 7_000` until 2026-08-01 — A2 would have been unfindable while A1 read back fine, which
+    // presents as "A2 never landed" rather than "A2 is dated wrong". Past-dating is always in-window;
+    // vendor clocks skew both ways and only one direction is safe.
+    val a2 = driver.gateExitUnpaidDesignShape(source, siteSlug, gate.code, second.epc, occurredAt - 7_000)
 
     log.info("── A1: the published §8.1 shape (source detail top-level) ──")
     log.info("{}", driver.dryRun(a1))
     log.info("── A2: the DESIGN §2 shape (source detail nested under payload) ──")
     log.info("{}", driver.dryRun(a2))
 
+    // ── B: the §6.6 Bearer arm — same envelope, synchronous ack that says what the alarm BECAME ──
+    val b1 = driver.gateExitUnpaid(source, siteSlug, gate.code, subject.epc, occurredAt - 21_000, antennaGroup = "A4")
+    log.info("── B1: §6.6 Bearer ingest `POST /alerts` (scope alert:ingest) ──")
+    log.info("{}", client.mapper.writeValueAsString(b1))
+    log.info("── B3: `POST /alerts/clear` keyed on the VENDOR's dedupe_key ──")
+    log.info("{}", client.mapper.writeValueAsString(AlertClearRequest(b1.dedupeKey!!, "no_longer_present", source, siteSlug)))
+
     if (!live) {
         log.info("")
         log.info("DRY-RUN — nothing sent. Re-run with M8TRX_ALARM_LIVE=true to drive the chain.")
+        log.info("Expected on the Bearer arm: 403 PERMISSION_DENIED — the 2026-08-01 grant was alert:read, NOT alert:ingest.")
         return
     }
 
@@ -127,6 +172,18 @@ fun main() {
         "A2 (§2 shape, distinct dedupe_key)" to driver.drive(a2),
     )
 
+    // ── B live: raise → retry (must dedupe) → clear → a refusal. Acks printed VERBATIM. ──
+    log.info("── B: §6.6 Bearer arm, live ──")
+    val bearer = mutableListOf<Pair<String, ConnectResponse>>()
+    bearer += "B1 raise (POST /alerts)" to client.ingestAlert(b1)
+    bearer += "B2 retry, byte-identical (must be disposition=deduped)" to client.ingestAlert(b1)
+    bearer += "B3 clear by dedupe_key" to client.clearAlert(AlertClearRequest(b1.dedupeKey!!, "no_longer_present", source, siteSlug))
+    // A deliberate refusal probe: `acknowledged` is documented as rejected — clearing is not acknowledging.
+    bearer += "B4 clear reason=acknowledged (MUST be refused by design)" to
+        client.clearAlert(AlertClearRequest(b1.dedupeKey, "acknowledged", source, siteSlug))
+    bearer.forEach { (name, r) -> log.info("  [{}] {} → {}", if (r.isOk) "ok" else r.status, name, r.rawBody.take(400)) }
+    reportIngestAck(client, bearer.firstOrNull()?.second, b1.dedupeKey)
+
     // Async ingest: the ack returned before the ingester ran, so give it a beat before looking.
     Thread.sleep(8_000)
 
@@ -135,6 +192,44 @@ fun main() {
     reportDiagnostics(after)
 
     verdict(sends, after, a1, a2)
+}
+
+/**
+ * The one question a vendor could never answer before §6.6: **will this alarm page anyone?**
+ *
+ * Reports the three fields separately because `twin-eas` reaches `info` by two independent roads —
+ * an auto-registered kind AND `may_set_severity=false` — and a single effective number cannot say
+ * which applied, nor whether anyone has ever reviewed what this alarm means.
+ */
+private fun reportIngestAck(client: ConnectClient, raise: ConnectResponse?, sentDedupeKey: String) {
+    val ok = raise as? ConnectResponse.Ok ?: return
+    val ack = runCatching { client.mapper.readValue(ok.rawBody, AlertIngestAck::class.java) }.getOrNull()
+    if (ack == null) {
+        log.warn("  [!!] could not bind the §6.6 ack — shape differs from §6.6 as published: {}", ok.rawBody.take(400))
+        return
+    }
+    log.info("  ── does the ack tell the truth about severity? ──")
+    log.info("     routed severity ......... {}", ack.severity ?: "(absent)")
+    log.info("     proposed but ignored .... {}", ack.proposedSeverityIgnored ?: "(none — proposal honored)")
+    log.info("     kind auto-registered .... {}", ack.autoRegistered ?: "(absent)")
+    log.info("     disposition ............. {}", ack.disposition ?: "(absent)")
+    ack.warnings.forEach { log.info("     warning: {}", it) }
+    if (ack.dedupeKey != null && ack.dedupeKey != sentDedupeKey) {
+        log.error(
+            "  ⛔ FINDING: ack echoed dedupe_key '{}' but '{}' was sent — dedupe identity is not what the vendor thinks",
+            ack.dedupeKey,
+            sentDedupeKey,
+        )
+    }
+    if (ack.severity == "critical" && ack.proposedSeverityIgnored == null) {
+        log.warn("  ⚠ the proposal was HONORED — that contradicts may_set_severity=false. Report it; do not assume the doc is right.")
+    }
+    if (ack.severity != null && ack.severity != "critical") {
+        log.warn(
+            "  ★ a theft alarm routes as '{}'. Correct per the registration — and the reason the LP story needs a severity decision, not more code.",
+            ack.severity,
+        )
+    }
 }
 
 private fun reportDiagnostics(v: AlarmDriver.VerifyAttempt) {

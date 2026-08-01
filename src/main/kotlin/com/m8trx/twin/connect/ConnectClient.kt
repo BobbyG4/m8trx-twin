@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.AlertClearRequest
 import com.m8trx.twin.connect.model.bearer.AlertQueryRequest
 import com.m8trx.twin.connect.model.bearer.ComplianceStateRequest
 import com.m8trx.twin.connect.model.bearer.CreateApiKeyRequest
@@ -19,6 +20,7 @@ import com.m8trx.twin.connect.model.bearer.TestRequest
 import com.m8trx.twin.connect.model.bearer.TransformsRequest
 import com.m8trx.twin.connect.model.bearer.UpdateChannelRequest
 import com.m8trx.twin.connect.model.bearer.UpdateIntegrationRequest
+import com.m8trx.twin.connect.model.webhook.AlarmEnvelope
 
 /**
  * Bearer-plane client — Connect API doc §6 (data) + §7 (control). One gateway: every call carries
@@ -108,6 +110,31 @@ class ConnectClient(
         }
         return send("POST", "/alerts/query", req)
     }
+
+    /**
+     * `POST /alerts` — the §6.6 Bearer **ingest** arm (scope **`alert:ingest`**, SITE-scoped).
+     *
+     * Same §8.1 envelope as the webhook plane, same server-side parser — but the ack is
+     * [com.m8trx.twin.connect.model.bearer.AlertIngestAck], which answers **synchronously** and tells
+     * the vendor what its alarm became (`severity` · `autoRegistered` · `proposedSeverityIgnored`).
+     * That is the question the webhook plane's `{accepted:true}` structurally cannot answer.
+     *
+     * ⚠ **Twin's key does not hold `alert:ingest`** as of the 2026-08-01 grant, whose measured scope
+     * set was `integration:manage · scan:submit · inventory:create · inventory:read · vision_ai:view ·
+     * task:read · alert:read`. Expect `403 PERMISSION_DENIED` until an administrator adds it — the
+     * TWIN-REQ-005 pattern recurring on the same day it was filed: **a new write shipped and no key
+     * holds its capability.** Measured on every run rather than assumed.
+     *
+     * ⚠ [AlarmEnvelope] carries explicit `@JsonProperty` names, so it is safe through this client's
+     * camel mapper. Do not "simplify" those away.
+     */
+    fun ingestAlert(env: AlarmEnvelope): ConnectResponse = send("POST", "/alerts", env)
+
+    /**
+     * `POST /alerts/clear` — clear by the vendor's OWN `dedupe_key` (§6.6).
+     * `cleared: 0` is an idempotent **success**, not a 404. `reason=acknowledged` is refused by design.
+     */
+    fun clearAlert(req: AlertClearRequest): ConnectResponse = send("POST", "/alerts/clear", req)
 
     // ── Control plane (§7) ────────────────────────────────────────────────────
     fun createIntegration(req: CreateIntegrationRequest): ConnectResponse = send("POST", "/integrations", req)

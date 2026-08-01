@@ -24,10 +24,10 @@ import java.time.Instant
  * ## The trap this driver is built around
  *
  * **`200 {accepted:true}` is not evidence.** `WebhookDispatcher` is `@Async` by documented contract
- * for all seven data-types, so the ack returns *before* ingest runs — and in S11 five real core
- * defects sat behind `200` acks on other data-types, found only by verifying server-side. *(This note
- * previously claimed twin had seen an alarm ack 200 then dead-letter; twin has never sent one outside
- * dry-run and cannot read a DLQ. Corrected 2026-08-01.)* So [drive] logs the ack as a *receipt*, never as a result, and
+ * for all seven data-types, so the ack returns *before* ingest runs — **and twin's own first two live
+ * alarms (2026-08-01 `03:16Z`) acked `200`, wrote their `alert` rows, and then dead-lettered.** They
+ * are 2 of the 3 `status='failed'` alarm rows in `integration_event`. S11 is the same lesson on other
+ * data-types: five core defects, all behind `200` acks. So [drive] logs the ack as a *receipt*, never as a result, and
  * [verify] is a separate step whose honest answer is allowed to be **UNPROVEN**. Reporting
  * "unproven" is a real outcome here; substituting a `psql` twin does not hold, and a vendor could
  * never run, would prove nothing about the contract.
@@ -156,6 +156,14 @@ class AlarmDriver(private val webhook: WebhookClient, private val client: Connec
      *
      * Returns the raw responses rather than a verdict: an outside prover's job is to report what the
      * surface did, and "all three refused" is the finding, not a failure to try hard enough.
+     *
+     * ⚠ **Interpretive caveat for any report built on this.** The query below passes an explicit
+     * `to = now + 60s`. If the server honours it, a *future-dated* alarm is findable here that the
+     * **default** 24h window `[now-24h, now)` would hide — so "twin found its alarm" does not by
+     * itself mean a vendor using the defaults would. Read a positive result together with the
+     * `occurred_at` actually sent. The reverse is the more dangerous case and is why alarms are
+     * past-dated at the call site: an empty result is the least trustworthy outcome this can return,
+     * and *wrong window* outranks *nothing landed* as the leading hypothesis.
      */
     fun verify(integrationId: String?, source: String, siteSlug: String?, since: Instant): VerifyAttempt {
         val c = client ?: return VerifyAttempt(null, null, null)

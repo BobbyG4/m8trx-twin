@@ -2,6 +2,9 @@ package com.m8trx.twin.connect
 
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.AlertClearAck
+import com.m8trx.twin.connect.model.bearer.AlertClearRequest
+import com.m8trx.twin.connect.model.bearer.AlertIngestAck
 import com.m8trx.twin.connect.model.bearer.AlertQueryRequest
 import com.m8trx.twin.connect.model.bearer.AlertQueryResponse
 import com.m8trx.twin.connect.model.bearer.ChannelConfig
@@ -306,6 +309,41 @@ private fun alarmEnvelopeCasing() {
     check(designJson.contains("\"payload\"")) { "the §2 shape must nest vendor detail under payload: $designJson" }
     check(designJson.contains("\"antenna_group\"")) { "nested vendor keys stay verbatim inside payload: $designJson" }
 
+    // ★ THE INVARIANT THAT MAKES ONE ENVELOPE SAFE ON TWO PLANES.
+    // The same AlarmEnvelope now goes to the §8 webhook plane (snake mapper) and to the §6.6 Bearer
+    // arm `POST /alerts` (camel mapper, via ConnectClient). Every property carries an explicit
+    // @JsonProperty, so both mappers must emit BYTE-IDENTICAL JSON. Without that, the Bearer send
+    // would have emitted siteRef/occurredAt/dedupeKey — rejected, or worse, silently mis-parsed while
+    // the webhook send stayed green. Assert equality rather than trusting the annotations.
+    check(ConnectMappers.camel.writeValueAsString(published) == json) {
+        "AlarmEnvelope must serialize identically through BOTH mappers — the Bearer arm uses camel:\n" +
+            "camel: ${ConnectMappers.camel.writeValueAsString(published)}\nsnake: $json"
+    }
+
+    // The §6.6 ingest ack: camelCase, and the three severity fields must bind SEPARATELY.
+    val ingestAck = ConnectMappers.camel.readValue<AlertIngestAck>(
+        """{"alertId":"al-1","disposition":"recorded","dedupeKey":"CS-01:$epc:$at","severity":"info",
+           "autoRegistered":true,"proposedSeverityIgnored":"critical","warnings":["kind auto-registered"]}
+        """.trimIndent(),
+    )
+    check(ingestAck.severity == "info" && ingestAck.proposedSeverityIgnored == "critical" && ingestAck.autoRegistered == true) {
+        "severity (routed) · proposedSeverityIgnored (dropped) · autoRegistered (unreviewed kind) are THREE facts, not one"
+    }
+    check(ingestAck.dedupeKey == published.dedupeKey) { "the ack must echo the dedupe_key that was sent" }
+    check(ingestAck.disposition == "recorded") { "first raise is 'recorded'; a retry must come back 'deduped'" }
+
+    // Clear is keyed on the VENDOR's dedupe_key, snake on the wire, and `cleared:0` is a success.
+    val clearJson = ConnectMappers.camel.writeValueAsString(
+        AlertClearRequest(dedupeKey = published.dedupeKey!!, reason = "no_longer_present", source = "twin-eas", siteRef = "dec-us-denver"),
+    )
+    listOf("dedupe_key", "reason", "source", "site_ref").forEach {
+        check(clearJson.contains("\"$it\"")) { "alerts/clear must serialize snake field $it: $clearJson" }
+    }
+    check(!clearJson.contains("dedupeKey")) { "alerts/clear must not leak camelCase: $clearJson" }
+    check(ConnectMappers.camel.readValue<AlertClearAck>("""{"cleared":0}""").cleared == 0) {
+        "cleared:0 must bind as 0, not null — it is an idempotent SUCCESS and must not read as 'no answer'"
+    }
+
     // §8's ack is camelCase even though its request bodies are snake — parse it with the right mapper.
     val ack = ConnectMappers.camel.readValue<WebhookAck>(
         """{"accepted":true,"integrationId":"5dfba5cd-fd74-4fb8-9c73-2a495419f863","receivedAt":"2026-08-01T00:00:00Z"}""",
@@ -326,7 +364,10 @@ private fun alarmEnvelopeCasing() {
         "severity (routed) and native_level (proposed) must bind SEPARATELY — reporting one without the other loses the finding"
     }
     check(row.alerts.single().payload["antenna_group"] == "A2") { "the vendor's own fields must come back verbatim in payload" }
-    log.info("[PASS] §8.1 alarm envelope — top-level vendor fields, both subject spellings, §2 nesting, camel ack, alerts/query shape")
+    log.info(
+        "[PASS] §8.1 alarm envelope — top-level vendor fields · both subject spellings · §2 nesting · " +
+            "BYTE-IDENTICAL through both mappers · §6.6 ingest ack (3 severity facts) · clear keyed on dedupe_key",
+    )
 }
 
 /** The richest offline test: a localhost POST loop through the real OutboundReceiver. */

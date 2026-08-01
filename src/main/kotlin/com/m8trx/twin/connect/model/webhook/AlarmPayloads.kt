@@ -1,6 +1,7 @@
 package com.m8trx.twin.connect.model.webhook
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter
+import com.fasterxml.jackson.annotation.JsonProperty
 
 /**
  * `alarm` — the seventh §8 inbound data-type (Connect API doc **§8.1**, published 2026-07-31).
@@ -41,12 +42,19 @@ import com.fasterxml.jackson.annotation.JsonAnyGetter
  *   [com.m8trx.twin.layer2.EasTagging]. Twin minting it is faithful emulation exactly as long as it
  *   is never implied to be something the platform stores, derives or could verify.
  *
- * Casing is `snake_case` like every other §8 payload — serialize through
- * [com.m8trx.twin.connect.model.ConnectMappers.snake].
+ * ## Casing: `snake_case`, and pinned per field rather than per mapper
+ *
+ * Every property carries an explicit `@JsonProperty`, so this envelope serializes **identically
+ * through both mappers**. That is deliberate, not belt-and-braces: the same envelope now goes to the
+ * §8 webhook plane (snake mapper) *and* to the §6.6 Bearer arm `POST /alerts` (camel mapper), and the
+ * server parses both with one parser. Without explicit names the Bearer send would have emitted
+ * `siteRef`/`occurredAt`/`dedupeKey` and been rejected — or worse, silently mis-parsed — while the
+ * webhook send stayed correct. `connectSelfTest` asserts byte-equality across the two mappers so this
+ * cannot regress.
  */
 data class AlarmEnvelope(
     /** ✅ Must be a **registered** `alert_source`. Unregistered → refused and dead-lettered, not dropped. */
-    val source: String,
+    @JsonProperty("source") val source: String,
     /**
      * ✅ The vendor's own vocabulary, registered per source (`alert_source_kind`).
      *
@@ -56,33 +64,33 @@ data class AlarmEnvelope(
      * it. That is the system behaving as designed and is the single most useful thing this send
      * measures — so twin sends cold rather than asking for a kind to be pre-registered.
      */
-    val kind: String,
+    @JsonProperty("kind") val kind: String,
     /** ✅ The site **slug** the vendor was onboarded with — never a primary key it has no way to know. */
-    val siteRef: String,
+    @JsonProperty("site_ref") val siteRef: String,
     /** ✅ **Event time, not send time.** ISO-8601 or epoch millis. */
-    val occurredAt: String,
+    @JsonProperty("occurred_at") val occurredAt: String,
     /** ✅ for point events. Idempotent across **all** statuses forever: a retry after resolution must not create a second alarm. */
-    val dedupeKey: String? = null,
+    @JsonProperty("dedupe_key") val dedupeKey: String? = null,
     /** ✅ for conditions instead of [dedupeKey] — identity of the *condition*, which is how it auto-clears. */
-    val conditionKey: String? = null,
+    @JsonProperty("condition_key") val conditionKey: String? = null,
     /**
      * The gate. Zone UUID · M8TRX zone code · or the vendor's own `external_code` registered via
      * `fixture_code_mapping` — §8.1 recommends the third, and §8.2 records that a Connect key cannot
      * register one (`POST /compliance/fixture-codes` is not Connect-reachable). Unresolvable is
      * documented as *"the alarm still lands, site-level, and we log it"*.
      */
-    val zoneRef: String? = null,
+    @JsonProperty("zone_ref") val zoneRef: String? = null,
     /** A **proposal**, honored only if the source is registered `may_set_severity`. Otherwise kept verbatim as `native_level`. */
-    val severity: String? = null,
-    val title: String? = null,
-    val description: String? = null,
-    val subjectType: String? = null,
+    @JsonProperty("severity") val severity: String? = null,
+    @JsonProperty("title") val title: String? = null,
+    @JsonProperty("description") val description: String? = null,
+    @JsonProperty("subject_type") val subjectType: String? = null,
     /** §8.1 spelling. Exampled as a UUID — an identifier no vendor holds. See the class note. */
-    val subjectId: String? = null,
+    @JsonProperty("subject_id") val subjectId: String? = null,
     /** `DESIGN` §2 spelling, and the one a vendor can actually fill: an EPC it read off the tag. */
-    val subjectRef: String? = null,
+    @JsonProperty("subject_ref") val subjectRef: String? = null,
     /** `DESIGN` §2 nesting for source-specific detail. Mutually exclusive with [extras] in practice, not in the type. */
-    val payload: Map<String, Any?>? = null,
+    @JsonProperty("payload") val payload: Map<String, Any?>? = null,
     /**
      * §8.1's *"anything else — your fields stay yours"*, serialized at the **top level** with keys
      * verbatim (no naming strategy is applied to any-getter keys, so supply them already snake_case).
@@ -95,12 +103,19 @@ data class AlarmEnvelope(
  * `WebhookDispatcher` is `@Async` by documented contract for all seven data-types, so the response
  * returns before ingest runs. Verify by observing the `alert` row, never by the status code.
  *
- * The evidence for that caution is **S11, not alarms**: five real core defects were all sitting behind
- * `200` acks and surfaced only because twin insisted on server-side verification (plus the
- * dedup-shadows-failed-retry finding). ⚠ *An earlier draft of this note claimed twin had watched an
- * alarm ack `200` and then dead-letter. Twin has never sent an alarm outside dry-run, and holds
- * neither `alert:read` nor `integration:manage` to read a DLQ — so it cannot have observed that.
- * Corrected 2026-08-01: the lesson is real and transferable, the first-person alarm sighting was not.*
+ * ★ **This is not a hypothetical: twin's first two live alarms did exactly this.** Sent 2026-08-01
+ * `03:16Z`, acked `200`, `alert` rows written — and the delivery then **dead-lettered**
+ * (`integration_event` `data_type='alarm'`: 3 rows, all `status='failed'`; `alert_event`: 0 rows).
+ * Twin reported `SENT, UNPROVEN` at the time and was right, because nobody held the scope to read
+ * the DLQ. Reported mechanism, **coordinator-supplied and awaiting twin's independent confirmation**:
+ * `AlertService` writes `alert_event.event_type='raised'` / `'auto_resolved'`, neither of which is in
+ * `alert_event_event_type_check` (`created`/`assigned`/`acknowledged`/`resolved`/`escalated`/
+ * `expired`/`snoozed`), so the row insert throws after the alert is already persisted.
+ *
+ * *(Housekeeping: a 2026-08-01 edit removed this account on the reasoning that no run artifact
+ * survived in the repo and twin therefore could not have sent one. The absence of an artifact was
+ * real; the inference was wrong. Restored — an accurate first-person finding is worth more than a
+ * tidy repo, and this one predicted the defect.)*
  *
  * ⚠ Parse this with [com.m8trx.twin.connect.model.ConnectMappers.camel], not `snake`: the §8 *request*
  * bodies are snake_case but §8's documented ack is `{"accepted","integrationId","receivedAt"}` —

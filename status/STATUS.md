@@ -14,7 +14,8 @@
 >
 > **NEXT, ranked:**
 > **(1) ✅ DONE 2026-07-31 — both branches merged in one PR** (#14; see BRANCH STATE above). *(This item said "PR the two stacked branches — S16's first, then S17's" and was already false when written, four lines below the note explaining why.)* **Superseding (1) for S18: the §8.1 alarm chain is BUILT and ON `main`** (PR #15) — `AlarmDriver` + `connectAlarmDrive` + `ConnectClient.queryAlerts` + `WebhookDataType.ALARM`, offline-green (`connectSelfTest` 11 → **12**, `[PASS] §8.1 alarm envelope`), dry-run exercised end to end against Denver's real `CS-01` geometry and a rule-derived tagged EPC. ⚠ **Never fired live, and the verdict is built to print `SENT, UNPROVEN` when it is** — all three documented vendor diagnostics need scopes twin's key lacks. **Live fire is blocked on the admin action in (2), not on twin.**
-> **(2) ★ Restore `integration:manage` + grant `alert:read`** on `M8TRX_TWIN_BEARER` — **one admin action**, and twin cannot self-serve it (SEC-1 subset guard + the key surface is `CONNECT_NOT_EXPOSED`). Unblocks FR-INTEG-16, the §7 DLQ, and the `/alerts/query` half of the EAS test.
+> **(2) ★ Grant `alert:read` + `alert:ingest` + `integration:manage` on the key twin ACTUALLY PRESENTS — `twin-s280-lockdown`, NOT `twin-data-plane-bearer`.** Twin cannot self-serve it (SEC-1 subset guard + `CONNECT_NOT_EXPOSED`). Unblocks FR-INTEG-16, the §7 DLQ, `/alerts/query`, and the §6.6 Bearer arm.
+> ⛔ **Attempted 2026-08-01 and INERT: the grant went to the wrong row and was reported complete.** Twin's `.env` holds **`twin-s280-lockdown`** (Denver site-bound; `inventory:read · vision_ai:view · task:read`), and re-measured at 08:07Z all three diagnostics still `403 PERMISSION_DENIED`. **Both twin keys carry `vision_ai:view` + `task:read`, so scope shape identifies a key's *vintage*, never its *row*** — the discriminator is `api_key.last_used_at` moving on the row you edited. Recorded as a recurring class in **TWIN-REQ-005 § Update 2026-08-01**. Verify the next grant with a request, never by re-reading `api_key.scopes`.
 > **(3) LP chain end to end** once BW-TRIAD applies mig 205 and BW-CONNECT registers `twin-eas`: alarm → `alert` → routed to an LP role → visible on `/alerts` → dispositioned, **each hop verified**. ⚠ **Twin owes substrate first — see (6).**
 > **(4) directive→task follow-up — a DECISION, not build work.** Twin can drive the input and read the output but **cannot cause the middle**: `/activate` and `/evaluate` are `CONNECT_NOT_EXPOSED`. Either expose a scoped activation or declare the loop deliberately human-gated. *("Needs a backend watcher" understates it — a watcher observes; what is missing is an actor.)*
 > **(5) F4's end-divergence is NOT closed.** `firstDwell`→`firstLook` diverge on a persisted row (proven live, 1,200ms), but `lastDwell == lastLook` because the impression flushes at eviction before the disengage tail lands. **Core's `min()` still cannot be observed choosing between two arms** — needs an episode outliving its own flush.
@@ -108,8 +109,13 @@
 > for twin self-verify; interim stays DB-reads-via-Backend — no twin filing needed). **Still gated on Backend (deferred):**
 > FR-PLN-08 compliance-check task-gen needs the **Notifications spine** (Triad Slice-1).
 >
-> **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` (m8trx_c3…, the working
-> service Bearer — scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`, tenant-wide) ·
+> **Creds (gitignored `.env`, machine-local — re-supply on a fresh box):** `M8TRX_TWIN_BEARER` — ⚠ **this description is
+> SUPERSEDED, corrected 2026-08-01.** It read *"m8trx_c3…, scopes `integration:manage`+`scan:submit`+`inventory:create`+`inventory:read`,
+> **tenant-wide**"*. **Measured truth:** the key is **`twin-s280-lockdown`**, prefix `m8trx_da6…`, **SITE-scoped to Denver**
+> (not tenant-wide), holding **`inventory:read` · `vision_ai:view` · `task:read`** and **NOT** `integration:manage`,
+> `scan:submit`, `inventory:create`, `alert:read` or `alert:ingest`. The Denver binding is a feature — it is what makes
+> `connectAcceptance`'s negative controls real. Do not confuse it with **`twin-data-plane-bearer`**, a different row twin
+> does not hold; a 2026-08-01 grant went there by mistake (TWIN-REQ-005 § Update). ·
 > `M8TRX_TWIN_WEBHOOK_KEY` (twin-pos X-API-Key) · `M8TRX_CONNECT_OUTBOUND_VERIFY_SECRET` (aacd…, the C3 HMAC, set
 > core-side too). `M8TRX_TENANT_ID=ecfa6903-5c50-439f-8f80-185982de944e` · `M8TRX_CONNECT_INTEGRATION_SLUG=twin-pos` ·
 > integration `5dfba5cd`. ConnectConfig reads `M8TRX_TWIN_BEARER` first (`M8TRX_TWIN_SERVICE_BEARER` is now a fallback alias).
