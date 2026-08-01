@@ -100,6 +100,9 @@ fun main() {
     val siteSlug = System.getenv("M8TRX_ALARM_SITE") ?: "dec-us-denver"
     val seed = System.getenv("M8TRX_ALARM_SEED")?.toLongOrNull() ?: 4242L
     val integrationId = System.getenv("M8TRX_ALARM_INTEGRATION_ID") ?: DEFAULT_INTEGRATION_ID
+    // `resolved` | `expired` | `auto_resolved` — the set the server's own 400 named when twin guessed
+    // `no_longer_present`. Configurable so the refusal path stays drivable without editing code.
+    val clearReason = System.getenv("M8TRX_ALARM_CLEAR_REASON") ?: "resolved"
     val chainDir = Path.of(System.getenv("M8TRX_CHAIN_DIR") ?: "reference/data/chain")
     val storeDir = chainDir.resolve("stores").resolve(siteSlug)
 
@@ -138,8 +141,12 @@ fun main() {
     }
 
     // ── the three sends ───────────────────────────────────────────────────────────────────────────
+    // Every occurred_at is strictly in the PAST, A1 included. `/alerts/query`'s window is
+    // `[now-24h, now)` with an EXCLUSIVE upper bound, so an alarm stamped exactly `now` sits on the
+    // boundary. The margin costs nothing and removes the last way this run could report a row as
+    // missing when it landed.
     val occurredAt = System.currentTimeMillis()
-    val a1 = driver.gateExitUnpaid(source, siteSlug, gate.code, subject.epc, occurredAt)
+    val a1 = driver.gateExitUnpaid(source, siteSlug, gate.code, subject.epc, occurredAt - 3_000)
 
     // ⚠ A2 is offset into the PAST, never the future. It only needs a distinct dedupe_key, and the
     // sign of that offset is load-bearing: `alert.created_at` is taken from the vendor's
@@ -160,12 +167,12 @@ fun main() {
     log.info("── B1: §6.6 Bearer ingest `POST /alerts` (scope alert:ingest) ──")
     log.info("{}", client.mapper.writeValueAsString(b1))
     log.info("── B3: `POST /alerts/clear` keyed on the VENDOR's dedupe_key ──")
-    log.info("{}", client.mapper.writeValueAsString(AlertClearRequest(b1.dedupeKey!!, "no_longer_present", source, siteSlug)))
+    log.info("{}", client.mapper.writeValueAsString(AlertClearRequest(b1.dedupeKey!!, clearReason, source, siteSlug)))
 
     if (!live) {
         log.info("")
         log.info("DRY-RUN — nothing sent. Re-run with M8TRX_ALARM_LIVE=true to drive the chain.")
-        log.info("Expected on the Bearer arm: 403 PERMISSION_DENIED — the 2026-08-01 grant was alert:read, NOT alert:ingest.")
+        log.info("Bearer arm: `alert:ingest` granted 2026-08-01 at SITE scope, so B1–B4 are expected to answer, not 403.")
         return
     }
 
@@ -180,15 +187,39 @@ fun main() {
     val bearer = mutableListOf<Pair<String, ConnectResponse>>()
     bearer += "B1 raise (POST /alerts)" to client.ingestAlert(b1)
     bearer += "B2 retry, byte-identical (must be disposition=deduped)" to client.ingestAlert(b1)
-    bearer += "B3 clear by dedupe_key" to client.clearAlert(AlertClearRequest(b1.dedupeKey, "no_longer_present", source, siteSlug))
+    bearer += "B3 clear by dedupe_key" to client.clearAlert(AlertClearRequest(b1.dedupeKey, clearReason, source, siteSlug))
     // A deliberate refusal probe: `acknowledged` is documented as rejected — clearing is not acknowledging.
     bearer += "B4 clear reason=acknowledged (MUST be refused by design)" to
         client.clearAlert(AlertClearRequest(b1.dedupeKey, "acknowledged", source, siteSlug))
     bearer.forEach { (name, r) -> log.info("  [{}] {} → {}", if (r.isOk) "ok" else r.status, name, r.rawBody.take(400)) }
     reportIngestAck(client, bearer.firstOrNull()?.second, b1.dedupeKey)
 
-    // Async ingest: the ack returned before the ingester ran, so give it a beat before looking.
-    Thread.sleep(8_000)
+    // ⛔ The clear is a SUCCESS that did nothing, and the contract makes that unreadable.
+    // Measured: B1 raised `dedupe_key` X (disposition=recorded), B2 re-sent X (disposition=deduped, SAME
+    // alertId — so the platform certainly knows X), B3 cleared X with reason=`resolved` (a value the
+    // server itself named) → `{"cleared":0,"alertIds":[]}`, and the row was still `status=active` on
+    // read-back. `cleared:0` is documented as an idempotent success, which makes "nothing matched"
+    // indistinguishable from "the thing I just raised was not cleared". Note the ack echoes
+    // `conditionKey:null`: the clear may be built for CONDITIONS, which auto-clear, and not for point
+    // events at all — in which case telling a vendor to clear by `dedupe_key` is the defect.
+    val clearedNothing = (bearer.getOrNull(2)?.second as? ConnectResponse.Ok)?.rawBody?.contains("\"cleared\":0") == true
+    if (clearedNothing) {
+        log.error("  ⛔ FINDING — clear returned cleared:0 for a dedupe_key raised seconds earlier and still active.")
+        log.error("     A vendor cannot tell an idempotent no-op from a clear that silently failed.")
+        log.error("     Suggest: distinguish them — 404/`matched:false` for an unknown key, or state that")
+        log.error("     point events are not clearable and only `condition_key` alarms are.")
+    }
+
+    // ⚠ MEASURED 2026-08-01, and 8s was NOT enough. The two planes settle at different speeds:
+    //   · §6.6 Bearer raise — readable IMMEDIATELY (the ack is synchronous with the write)
+    //   · §8 webhook alarm  — still absent at ~9s, present by ~50s (@Async dispatch)
+    // At the old 8s this read reported 4 rows where 6 existed, i.e. a vendor doing
+    // send → short wait → read-back sees its own alarm missing and concludes it never landed. That is
+    // a false negative manufactured by the client, and it is the mirror of the window bugs above.
+    // Configurable because the right value belongs to the environment, not to this source file.
+    val settleMs = System.getenv("M8TRX_ALARM_SETTLE_MS")?.toLongOrNull() ?: 60_000L
+    log.info("── waiting {}ms for @Async webhook ingest to settle (Bearer rows are already readable) ──", settleMs)
+    Thread.sleep(settleMs)
 
     log.info("── post-send: the same diagnostics, re-probed ──")
     val after = driver.verify(integrationId, source, siteSlug, Instant.ofEpochMilli(occurredAt).minusSeconds(120))

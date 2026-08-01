@@ -162,16 +162,29 @@ data class AlertIngestAck(
  * already-cleared or never-raised key is a no-op rather than an error. Reading `0` as failure is the
  * mistake this note exists to prevent.
  *
- * ⚠ **SHAPE PARTIALLY INFERRED — flagged, not guessed silently.** The contract states that the clear
- * is keyed on `dedupe_key` and that `reason: acknowledged` is **refused on purpose** (clearing is not
- * acknowledging). It does not state the full field list, so [source] and [siteRef] are twin's
- * inference from the §8.1 envelope's own required fields. Twin's dry-run prints these exact bytes for
- * confirmation before any live call, and a `400` here should be read as **a doc gap to file, not a
- * server defect** — see the §6.6 question raised with the surface's author.
+ * ## ✅ Shape CONFIRMED live 2026-08-01, and the one thing twin got wrong
+ *
+ * The field list was inferred ([source] and [siteRef] from the §8.1 envelope's required fields) and
+ * **the inference was right** — the request bound and reached `reason` validation. What twin got wrong
+ * was the *enum*, which no document twin held had published:
+ * ```
+ * sent: {"dedupe_key":"CS-01:…","reason":"no_longer_present","source":"twin-eas","site_ref":"dec-us-denver"}
+ * got:  400 INVALID_REQUEST  "reason 'no_longer_present' is not one of [resolved, expired, auto_resolved]"
+ * ```
+ * ★ **The refusal named the valid set, so the API closed its own documentation gap.** That is the
+ * behaviour to keep: an integrator who guesses wrong is told what is right, in one round trip, without
+ * asking a human. Compare the `alert_source` registrations, where a wrong guess yields nothing to act on.
+ *
+ * `acknowledged` is refused **by design**, and the message says why rather than just refusing:
+ * *"a person SEEING an alarm is not the alarm being over"* — confirmed live, and it is a distinction
+ * an LP workflow depends on.
  */
 data class AlertClearRequest(
     @JsonProperty("dedupe_key") val dedupeKey: String,
-    /** Why it cleared. ⚠ `acknowledged` is refused by design — acknowledging ≠ clearing. */
+    /**
+     * One of **`resolved` · `expired` · `auto_resolved`** (measured from the server's own 400).
+     * ⚠ `acknowledged` is refused by design — acknowledging ≠ clearing.
+     */
     @JsonProperty("reason") val reason: String? = null,
     /** Inferred: the same registered `alert_source` that raised it. */
     @JsonProperty("source") val source: String? = null,
