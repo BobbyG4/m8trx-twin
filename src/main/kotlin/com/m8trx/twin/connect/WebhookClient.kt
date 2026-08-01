@@ -27,6 +27,15 @@ object WebhookDataType {
      * `in_stock`) — rides the existing twin-pos webhook auth, no dedicated channel needed to fire.
      */
     const val INVENTORY_MOVEMENT = "inventory_movement"
+
+    /**
+     * Third-party alarm ingest — the **seventh** inbound data-type (Connect §8.1, published
+     * 2026-07-31; `IntegrationIngesters.kt:55` routes `"alarm" -> ingestAlarm(...)`). Twin drives it
+     * as an outside EAS gate vendor: `source` must be a registered `alert_source`, the payload is the
+     * §8.1 envelope, and it rides the existing `twin-pos` webhook auth — a vendor cannot create its
+     * own integration (`POST /integrations` needs `integration:manage`, which twin's key does not hold).
+     */
+    const val ALARM = "alarm"
 }
 
 /**

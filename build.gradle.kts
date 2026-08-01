@@ -174,6 +174,25 @@ tasks.register<JavaExec>("connectReceiveDrive") {
     )
 }
 
+// §A alarm-chain drive — twin as a THIRD-PARTY EAS GATE VENDOR pushing alarms in over Connect §8.1
+// (the seventh inbound data-type). §A of the Connect definition of done is the one item where "done"
+// means something TRAVERSED the path: external source → alert row → routed to an LP role → visible on
+// /alerts → dispositioned. Sends A1 (published §8.1 shape) → A1 byte-identical (dedupe) → A2 (DESIGN §2
+// shape, distinct dedupe_key), then re-probes every documented diagnostic and reports the step it
+// stopped at. A 200 is a receipt, never evidence — ingest is @Async and can still dead-letter.
+// SAFE: dry-run by default (prints the exact bytes). M8TRX_ALARM_LIVE=true to send.
+tasks.register<JavaExec>("connectAlarmDrive") {
+    group = "verification"
+    description = "Drive the §8.1 alarm chain as an outside EAS vendor. Dry-run unless M8TRX_ALARM_LIVE=true."
+    mainClass.set("com.m8trx.twin.connect.ConnectAlarmDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // Full-loop drive (CORE-REQ-005 part 1) — composes the built P0 drivers into ONE parameterized run of the
 // path-(b) demo-nucleus loop: (opt) directive → sale-drift → items/details assert (SOLD) → movement/scan
 // remediate → items/details assert (present) → per-target compliance expectation (the backend session's oracle).

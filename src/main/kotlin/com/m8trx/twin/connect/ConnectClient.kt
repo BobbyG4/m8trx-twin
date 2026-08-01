@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.AlertQueryRequest
 import com.m8trx.twin.connect.model.bearer.ComplianceStateRequest
 import com.m8trx.twin.connect.model.bearer.CreateApiKeyRequest
 import com.m8trx.twin.connect.model.bearer.CreateIntegrationRequest
@@ -92,6 +93,21 @@ class ConnectClient(
 
     /** `POST /compliance/state` — directive + per-fixture compliance (`inventory:read`; TWIN-REQ-003). */
     fun complianceState(req: ComplianceStateRequest): ConnectResponse = send("POST", "/compliance/state", req)
+
+    /**
+     * `POST /alerts/query` — read back the alarms you raised (**`alert:read`**, §8.2).
+     *
+     * ⚠ **No api_key held `alert:read` when this was written** (verified across all 11 keys, and
+     * re-verified live by [com.m8trx.twin.connect.sim.AlarmDriver] on every run), so this returns
+     * `403 PERMISSION_DENIED` until an administrator grants it. `PERMISSION_DENIED` ≠
+     * `CONNECT_NOT_EXPOSED`: the endpoint is reachable and the gate is the key's scope set.
+     */
+    fun queryAlerts(req: AlertQueryRequest): ConnectResponse {
+        require(req.limit == null || req.limit in 1..ReadCaps.ROWS_MAX) {
+            "limit must be 1..${ReadCaps.ROWS_MAX} (asked for ${req.limit}) — the server refuses with 400, it does not clamp"
+        }
+        return send("POST", "/alerts/query", req)
+    }
 
     // ── Control plane (§7) ────────────────────────────────────────────────────
     fun createIntegration(req: CreateIntegrationRequest): ConnectResponse = send("POST", "/integrations", req)
