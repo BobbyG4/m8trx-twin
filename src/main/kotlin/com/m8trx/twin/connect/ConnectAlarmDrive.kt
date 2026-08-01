@@ -3,6 +3,8 @@ package com.m8trx.twin.connect
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.bearer.AlertClearRequest
 import com.m8trx.twin.connect.model.bearer.AlertIngestAck
+import com.m8trx.twin.connect.model.bearer.AlertQueryResponse
+import com.m8trx.twin.connect.model.bearer.AlertRow
 import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import com.m8trx.twin.connect.model.webhook.AlarmEnvelope
 import com.m8trx.twin.connect.sim.AlarmDriver
@@ -127,6 +129,7 @@ fun main() {
     log.info("   read-back window: last {} min (M8TRX_ALARM_LOOKBACK_MIN)", lookbackMin)
     val before = driver.verify(integrationId, source, siteSlug, Instant.now().minusSeconds(lookbackMin * 60))
     reportDiagnostics(before)
+    reportAlerts(client, before.alertsQuery, source, gate.code)
     if (live) {
         when (val d = client.itemDetails(ItemDetailsRequest(listOf(subject.epc)))) {
             is ConnectResponse.Ok -> log.info("  [ok] items/details — subject EPC resolves server-side: {}", d.rawBody.take(220))
@@ -177,7 +180,7 @@ fun main() {
     val bearer = mutableListOf<Pair<String, ConnectResponse>>()
     bearer += "B1 raise (POST /alerts)" to client.ingestAlert(b1)
     bearer += "B2 retry, byte-identical (must be disposition=deduped)" to client.ingestAlert(b1)
-    bearer += "B3 clear by dedupe_key" to client.clearAlert(AlertClearRequest(b1.dedupeKey!!, "no_longer_present", source, siteSlug))
+    bearer += "B3 clear by dedupe_key" to client.clearAlert(AlertClearRequest(b1.dedupeKey, "no_longer_present", source, siteSlug))
     // A deliberate refusal probe: `acknowledged` is documented as rejected — clearing is not acknowledging.
     bearer += "B4 clear reason=acknowledged (MUST be refused by design)" to
         client.clearAlert(AlertClearRequest(b1.dedupeKey, "acknowledged", source, siteSlug))
@@ -190,6 +193,7 @@ fun main() {
     log.info("── post-send: the same diagnostics, re-probed ──")
     val after = driver.verify(integrationId, source, siteSlug, Instant.ofEpochMilli(occurredAt).minusSeconds(120))
     reportDiagnostics(after)
+    reportAlerts(client, after.alertsQuery, source, gate.code)
 
     verdict(sends, after, a1, a2)
 }
@@ -229,6 +233,85 @@ private fun reportIngestAck(client: ConnectClient, raise: ConnectResponse?, sent
             "  ★ a theft alarm routes as '{}'. Correct per the registration — and the reason the LP story needs a severity decision, not more code.",
             ack.severity,
         )
+    }
+}
+
+/**
+ * Print the `/alerts/query` result row by row, because the interesting facts are per-row and a
+ * truncated raw body hides exactly the ones worth reporting.
+ *
+ * ★ The pair under test is **[AlertRow.severity] (routed) vs [AlertRow.nativeLevel] (what the vendor
+ * proposed)**. §8.2 documents that when a source is not `may_set_severity`, the proposal is *preserved
+ * verbatim* as `native_level` rather than discarded — that promise is the only thing that lets a vendor
+ * report *"we sent critical, the platform routed info, and it kept our critical"*. If `native_level`
+ * comes back null on a row whose severity was down-routed, **the proposal is gone and the promise is
+ * not kept** — which is a finding, not a cosmetic gap.
+ */
+private fun reportAlerts(client: ConnectClient, resp: ConnectResponse?, source: String, gateCode: String) {
+    val ok = resp as? ConnectResponse.Ok ?: return
+    val parsed = runCatching { client.mapper.readValue(ok.rawBody, AlertQueryResponse::class.java) }.getOrNull()
+    if (parsed == null) {
+        log.warn("  [!!] /alerts/query body did not bind to the §8.2 shape: {}", ok.rawBody.take(600))
+        return
+    }
+    log.info("  ── /alerts/query: {} row(s), truncated={}, site_id={} ──", parsed.count, parsed.truncated, parsed.siteId)
+    log.info("     summary: {}", parsed.summary)
+    // ⚠ `source` does NOT identify the producer. Every lane's CI drives also post as `twin-eas`, so
+    // four of the six rows on the first real read-back were other sessions' tests. Twin's own alarms are
+    // identified by the dedupe_key COMPOSITION its driver mints — `<gate>:<epc>:<millis>` — not by a
+    // shared source name. Same lesson as the api_key row: identify by evidence, never by name.
+    fun isTwins(a: AlertRow): Boolean {
+        val k = a.dedupeKey ?: return false
+        return k.startsWith("$gateCode:") && k.count { c -> c == ':' } == 2
+    }
+    parsed.alerts.forEach { a ->
+        val mine = when {
+            isTwins(a) -> "TWIN"
+            a.source == source -> "other-lane"
+            else -> "other-src"
+        }
+        log.info(
+            "     [{}] {} {} sev={} native={} status={} zone={} occurred={} dedupe={}",
+            mine,
+            a.source,
+            a.kind,
+            a.severity,
+            a.nativeLevel ?: "NULL",
+            a.status,
+            a.zoneCode ?: a.zoneId,
+            a.occurredAt,
+            a.dedupeKey,
+        )
+        if (a.payload.isNotEmpty()) log.info("            payload: {}", a.payload)
+        if (a.title != null) log.info("            title: {}", a.title)
+    }
+    val mine = parsed.alerts.filter { isTwins(it) }
+    val proposalLost = mine.filter { it.severity != null && it.severity != "critical" && it.nativeLevel == null }
+    if (proposalLost.isNotEmpty()) {
+        log.error("")
+        log.error("  ⛔ FINDING — proposed severity is NOT recoverable on {} of twin's {} row(s).", proposalLost.size, mine.size)
+        log.error(
+            "     Twin sent severity='critical' on every alarm. These rows read sev='{}' with native_level=NULL.",
+            proposalLost.first().severity,
+        )
+        log.error("     §8.2 documents the proposal being PRESERVED verbatim as native_level when may_set_severity=false.")
+        log.error("     If it is null, proposed-vs-effective cannot be reported by the vendor at all — the routing")
+        log.error("     decision is visible and the input to it is gone. A vendor cannot show it asked for critical.")
+    }
+    log.info("     → {} of {} row(s) were minted by THIS driver; the rest share the source name.", mine.size, parsed.count)
+    val zoneUnresolved = parsed.alerts.filter { it.zoneId == null && it.zoneCode == null }
+    if (zoneUnresolved.isNotEmpty()) {
+        log.warn("  ⚠ zone UNRESOLVED on {} of {} row(s) — landed site-level.", zoneUnresolved.size, parsed.count)
+        log.warn("     Twin sent zone_ref='{}', a real crossing-slice code from Denver's own layout. §8.1 allows", gateCode)
+        log.warn("     site-level fallback, so this may be correct — but a gate is not a `zone`, so a vendor")
+        log.warn("     given a gate code has no zone to name and every alarm loses its location.")
+    }
+    val subjectDemoted = mine.filter { it.subjectRef == null && it.payload.keys.any { k -> k == "subject_ref" } }
+    if (subjectDemoted.isNotEmpty()) {
+        log.error("  ⛔ FINDING — `subject_ref` is NOT bound as the subject on {} row(s); it is buried in payload.", subjectDemoted.size)
+        log.error("     §8.1 documents `subject_id` (a UUID no vendor holds); the DESIGN doc says `subject_ref`.")
+        log.error("     The deployed server treats `subject_ref` as an unknown vendor field, so the ONLY subject")
+        log.error("     identifier a gate vendor can supply is silently demoted to opaque vendor data.")
     }
 }
 

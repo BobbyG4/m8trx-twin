@@ -82,29 +82,38 @@ data class AlertQueryResponse(
  * `critical`"* — which is a far more useful finding than either number alone.
  */
 data class AlertRow(
-    @JsonProperty("alert_id") val alertId: String? = null,
-    @JsonProperty("source") val source: String? = null,
-    @JsonProperty("kind") val kind: String? = null,
-    @JsonProperty("type") val type: String? = null,
-    @JsonProperty("severity") val severity: String? = null,
-    @JsonProperty("native_level") val nativeLevel: String? = null,
-    @JsonProperty("status") val status: String? = null,
-    @JsonProperty("site_id") val siteId: String? = null,
-    @JsonProperty("zone_id") val zoneId: String? = null,
-    @JsonProperty("zone_code") val zoneCode: String? = null,
-    @JsonProperty("occurred_at") val occurredAt: String? = null,
-    @JsonProperty("dedupe_key") val dedupeKey: String? = null,
-    @JsonProperty("condition_key") val conditionKey: String? = null,
-    @JsonProperty("title") val title: String? = null,
-    @JsonProperty("description") val description: String? = null,
-    @JsonProperty("subject_type") val subjectType: String? = null,
-    @JsonProperty("subject_ref") val subjectRef: String? = null,
-    @JsonProperty("assigned_to") val assignedTo: String? = null,
-    @JsonProperty("assigned_to_role") val assignedToRole: String? = null,
-    @JsonProperty("acknowledged_at") val acknowledgedAt: String? = null,
-    @JsonProperty("resolved_at") val resolvedAt: String? = null,
-    @JsonProperty("created_at") val createdAt: String? = null,
-    @JsonProperty("payload") val payload: Map<String, Any?> = emptyMap(),
+    // ⚠ MEASURED 2026-08-01: the ROWS are camelCase under a snake_case envelope — the same mixed
+    // shape §6.5's impression rows use. These carried snake `@JsonProperty` names until this was run
+    // live, which bound `occurredAt`/`dedupeKey`/`zoneCode` to null and made twin's first read-back
+    // report three fields as "absent from the server" when the server was sending them. The
+    // self-test fixture was snake too, so it passed and agreed with the bug. Fixture the SHAPE THE
+    // SERVER SENDS, never the shape the doc describes.
+    val alertId: String? = null,
+    val source: String? = null,
+    val kind: String? = null,
+    val type: String? = null,
+    /** What the platform routes on. */
+    val severity: String? = null,
+    /** The vendor's proposal, documented as preserved verbatim when `may_set_severity=false`. */
+    val nativeLevel: String? = null,
+    val status: String? = null,
+    val siteId: String? = null,
+    val zoneId: String? = null,
+    val zoneCode: String? = null,
+    val occurredAt: String? = null,
+    val createdAt: String? = null,
+    val dedupeKey: String? = null,
+    val conditionKey: String? = null,
+    val title: String? = null,
+    val description: String? = null,
+    val subjectType: String? = null,
+    val subjectRef: String? = null,
+    val assignedTo: String? = null,
+    val assignedToRole: String? = null,
+    val acknowledgedAt: String? = null,
+    val resolvedAt: String? = null,
+    /** The vendor's own fields, echoed. Keys stay verbatim as sent (snake), so no annotation here. */
+    val payload: Map<String, Any?> = emptyMap(),
 )
 
 /**

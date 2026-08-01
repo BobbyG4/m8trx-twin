@@ -354,16 +354,28 @@ private fun alarmEnvelopeCasing() {
     val q = ConnectMappers.camel.writeValueAsString(AlertQueryRequest(siteRef = "dec-us-denver", source = listOf("twin-eas"), limit = 500))
     listOf("site_ref", "source", "limit").forEach { check(q.contains("\"$it\"")) { "alerts/query must serialize snake field $it: $q" } }
     check(!q.contains("siteRef")) { "alerts/query must not leak camelCase: $q" }
+    // ⚠ This fixture is the shape the DEPLOYED SERVER SENT on 2026-08-01, not the shape §8.2 describes:
+    // snake_case ENVELOPE (`site_id`) with camelCase ROWS (`alertId`, `nativeLevel`, `dedupeKey`), the
+    // same split §6.5's impression rows use. It was authored snake-all-through, which made it agree with
+    // a real DTO bug — three fields bound to null and twin's first read-back nearly reported them as
+    // "the server omits these". A fixture copied from a doc validates the doc, not the integration.
     val row = ConnectMappers.camel.readValue<AlertQueryResponse>(
-        """{"count":1,"truncated":false,"alerts":[{"alert_id":"a-1","source":"twin-eas","kind":"gate_exit_unpaid",
-           "severity":"info","native_level":"critical","status":"active","dedupe_key":"CS-01:$epc:$at",
-           "payload":{"antenna_group":"A2"}}]}
+        """{"site_id":"84f2a1c1","count":1,"truncated":false,"summary":{"active":1},
+           "alerts":[{"alertId":"a-1","source":"twin-eas","kind":"gate_exit_unpaid","severity":"info",
+           "nativeLevel":"critical","status":"active","dedupeKey":"CS-01:$epc:$at","zoneCode":"CS-01",
+           "occurredAt":"2026-08-01T03:16:00Z","subjectRef":"$epc","payload":{"antenna_group":"A2"}}]}
         """.trimIndent(),
     )
-    check(row.alerts.single().severity == "info" && row.alerts.single().nativeLevel == "critical") {
-        "severity (routed) and native_level (proposed) must bind SEPARATELY — reporting one without the other loses the finding"
+    check(row.siteId == "84f2a1c1" && row.summary["active"] == 1) { "the ENVELOPE is snake_case: site_id + summary must bind" }
+    val r = row.alerts.single()
+    check(r.severity == "info" && r.nativeLevel == "critical") {
+        "severity (routed) and nativeLevel (proposed) must bind SEPARATELY — reporting one without the other loses the finding"
     }
-    check(row.alerts.single().payload["antenna_group"] == "A2") { "the vendor's own fields must come back verbatim in payload" }
+    check(r.alertId == "a-1" && r.dedupeKey == "CS-01:$epc:$at" && r.zoneCode == "CS-01" && r.occurredAt != null) {
+        "camelCase ROW fields must bind: alertId/dedupeKey/zoneCode/occurredAt — snake names here silently yield null"
+    }
+    check(r.subjectRef == epc) { "subjectRef must bind at the TOP level of a row, not only inside payload" }
+    check(r.payload["antenna_group"] == "A2") { "the vendor's own fields must come back verbatim in payload" }
     log.info(
         "[PASS] §8.1 alarm envelope — top-level vendor fields · both subject spellings · §2 nesting · " +
             "BYTE-IDENTICAL through both mappers · §6.6 ingest ack (3 severity facts) · clear keyed on dedupe_key",
