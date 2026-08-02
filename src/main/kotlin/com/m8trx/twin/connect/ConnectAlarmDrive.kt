@@ -29,15 +29,24 @@ import kotlin.random.Random
  * moved twice on 2026-08-01, so this block records what is measured and when — nothing is inherited:**
  *
  * ```
- * MEASURED 2026-08-01 08:07Z, twin's actual key (`twin-s280-lockdown`, Denver-bound):
- *   POST /alerts/query                   403 PERMISSION_DENIED   (alert:read NOT held)
- *   GET  /integrations/{id}/dead-letter  403 PERMISSION_DENIED   (integration:manage NOT held)
- *   GET  /integrations/{id}/health       403 PERMISSION_DENIED   (same)
- *   POST /alerts        (§6.6 ingest)    deployed 07:55Z; needs `alert:ingest` — NOT held
- *   POST /alerts/clear  (§6.6)           deployed same release
- * HELD, proven the same minute by `connectReadProbe`:
- *   inventory:read · vision_ai:view · task:read       — all SITE-scoped to Denver
+ * 2026-08-01 08:07Z   alert:read 403 · integration:manage 403 · held: inventory:read, vision_ai:view, task:read
+ * 2026-08-01 08:2x-08:51Z  ★ alert:read + alert:ingest TEMPORARILY GRANTED → the whole chain ran (below)
+ * 2026-08-02 12:23Z   ⛔ REVERTED. alert:read 403 again. Key is back to its original three scopes.
  * ```
+ *
+ * ⚠⚠ **READ THIS BEFORE QUOTING ANY RESULT FROM THIS DRIVER.** The successful run happened inside a
+ * window where twin's key held `alert:read` + `alert:ingest` **by way of unapproved production writes,
+ * which were subsequently reverted** (core `mig-211`, *"revert every unapproved S285 production
+ * write"*). So the two claims must never be merged:
+ *
+ *  - **The mechanism is PROVEN.** Raise, dedupe, refusal semantics, ack contents, read-back — all
+ *    measured from outside, by this driver, and reproducible the moment the scopes exist.
+ *  - **The access path is NOT.** No sanctioned route ever granted those scopes. The only way the chain
+ *    has ever traversed is a write that had to be undone — which is TWIN-REQ-005 demonstrated rather
+ *    than argued, and a stronger form of it than the brief originally made.
+ *
+ * A re-run today stops at the pre-flight with three `403`s. That is the correct current state, not a
+ * regression in this code.
  *
  * ⚠ **`M8TRX_TWIN_BEARER` is `twin-s280-lockdown`, NOT `twin-data-plane-bearer`.** Two twin keys exist
  * and both carry the post-SEC-3 `vision_ai:view` + `task:read` pair, so **scope shape identifies a
@@ -172,7 +181,7 @@ fun main() {
     if (!live) {
         log.info("")
         log.info("DRY-RUN — nothing sent. Re-run with M8TRX_ALARM_LIVE=true to drive the chain.")
-        log.info("Bearer arm: `alert:ingest` granted 2026-08-01 at SITE scope, so B1–B4 are expected to answer, not 403.")
+        log.info("Bearer arm: `alert:ingest` was granted 2026-08-01 and REVERTED by mig-211 — expect 403 until it is re-granted.")
         return
     }
 

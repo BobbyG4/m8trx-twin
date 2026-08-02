@@ -9,7 +9,7 @@ import com.m8trx.twin.connect.model.webhook.WebhookAck
  * **`alert:read`**), shaped exactly like the four §6.5 reads: resolve by the ref you supplied,
  * site-confined, bounded, truncation announced, one capability per plane.
  *
- * ## ⚠ No key holds `alert:read`, so this is written against the contract, not against a 200
+ * ## ⚠ The scope has been granted twice and reverted once — read the arc, not a snapshot
  *
  * Measured 2026-08-01, before the first alarms were sent that morning:
  * ```
@@ -17,10 +17,20 @@ import com.m8trx.twin.connect.model.webhook.WebhookAck
  * got: 403 {"error":"PERMISSION_DENIED","message":"Insufficient permissions"}
  * ```
  * `PERMISSION_DENIED`, **not** `CONNECT_NOT_EXPOSED` — the endpoint is Connect-reachable and the gate
- * is the key's scope set. **⛔ STILL 403 as of 2026-08-01 08:07Z, re-measured.** `alert:read` *was*
- * granted that day — **to `twin-data-plane-bearer`, which is not the key twin uses.** Twin presents
- * `twin-s280-lockdown` (Denver-bound; `inventory:read · vision_ai:view · task:read`), so this read
- * remains uncallable and the §8.2 read half is still unproven by anyone.
+ * is the key's scope set.
+ *
+ * ## The full arc, because each state was real and none of them lasted
+ *
+ * ```
+ * 08-01 08:07Z  403 — granted, but to `twin-data-plane-bearer`, a row twin does not use
+ * 08-01 08:2xZ  200 — re-granted to `twin-s280-lockdown`, the row twin presents. THE READ HALF WORKED.
+ * 08-02 12:23Z  403 — reverted by core `mig-211` (unapproved production writes undone)
+ * ```
+ *
+ * ★ **So §8.2's read half IS proven to work, and is currently unreachable.** Those are both true and
+ * the distinction is the whole point: the shapes below were validated against real responses (that is
+ * why [AlertRow] is camelCase — measured, not read off a doc), while the capability to call them has
+ * never existed by a sanctioned route. Do not soften either half.
  *
  * ⚠ **The lesson worth more than the fix:** `api_key.scopes` reading correct is not evidence the
  * caller holds the capability — **only a request is** — and a grant reported as live can be inert if
@@ -37,8 +47,10 @@ import com.m8trx.twin.connect.model.webhook.WebhookAck
  * reasoning that no artifact of the probe survived in the repo. The probe was real — the same sitting
  * that ran it sent the `03:16Z` alarms. Restored as a measurement.)*
  *
- * These DTOs exist so the read is *ready* the moment the grant lands, and so the shape twin asserts
- * against is the documented one rather than whatever the first live response happens to contain.
+ * These DTOs were written before the first 200 so the read would be *ready* the moment a grant landed,
+ * and they have since been corrected **against real responses** — which is why [AlertRow] is camelCase.
+ * That correction is the argument for building the consumer ahead of the capability: the doc-shaped
+ * version compiled, self-tested green, and was wrong.
  * [com.m8trx.twin.connect.sim.AlarmDriver] re-probes on every run and reports **unproven** rather
  * than substituting a DB query — twin does not hold a mother credential and would not use one here
  * if it did: a vendor cannot, so a verification a vendor cannot perform proves nothing about the
