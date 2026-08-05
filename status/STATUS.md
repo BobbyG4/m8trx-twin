@@ -2,9 +2,35 @@
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated **2026-08-04** — **Session 18 CLOSED** · ★ **§A ALARM CHAIN DRIVEN: mechanism PROVEN, access path NOT** · scopes granted then **reverted by `mig-211`** · ~15 false doc claims corrected, incl. the hard rule pointing at **production NATS**)
+## ⚠ NEXT SESSION PRIORITIES (updated **2026-08-05** — **Session 19 CLOSED** · ★ **SOLVER TEST-SPACE MATRIX DELIVERED AS A FILE** · the spatial write path proven absent → **TWIN-REQ-006 FILED** · zero rows touched on mother)
 
-> **PICK UP HERE (Session 19).** Read first: `status/session-notes/2026-08-01-session-18-alarm-chain-driven-and-doc-integrity.md` — the *don't-repeat* record is **§ FAILED APPROACHES, and four of the six errors were my own, all one shape: acting on state someone reported rather than state someone measured.**
+> **PICK UP HERE (Session 20).** Read first: `status/session-notes/2026-08-05-session-19-solver-matrix-and-the-spatial-write-wall.md` — its *don't-repeat* record is **§6 FAILED APPROACHES** (`build_layout.py` assumed reusable and is not · `qlmanage` hung · a coarse ASCII raster's own false alarm · nearly under-filing the finding).
+>
+> **✅ BRANCH STATE — `main` = `07f41e2`, clean, matches origin. ONE OPEN PR: [#16](https://github.com/BobbyG4/m8trx-twin/pull/16)** (`feat/solver-test-space-matrix`, 1 commit `0fe2667`). ⚠ *The S18 block below says `main` = `496e78d`; that was already stale when written — S18 closed on `f6df80d`.*
+>
+> **★ S19 IN ONE LINE.** Executed `BRIEF-TWIN-SOLVER-MATRIX-GENERATOR-2026-08-05`: **14 spaces · 49 zones · 374 fixtures · 7 doorways · 7,577 m²** of SRF-metre geometry emitted to `reference/data/solver/solver-matrix.json` (a full ingest = 1 site + 14 spaces + **423** zones). **Nothing was created on mother** — the brief's §1.5 assumed a twin spatial write path and **there is none**.
+>
+> **★ THE FINDING, WITH ITS CAVEAT ATTACHED — never separate them.** `POST /spatial/identity` **200**; `POST /sites` · `/spatial/sites` · `/spaces` · `/spatial/spaces` · `/zones` · `/spatial/zones` · `/compliance/fixture-codes` **all 403 `CONNECT_NOT_EXPOSED`**. ⚠ **`/spatial/site` — a path twin invented — returns the identical 403**, so the gate fires **ahead of routing**: this proves **UNREACHABILITY, NOT ABSENCE**, and is not an endpoint inventory. **It is also not a scope gap** — `CONNECT_NOT_EXPOSED` is the endpoint-level annotation, so a key minted with every scope hits the same wall (same door as TWIN-REQ-005; unlike `alert:read`, **no grant closes it**). Bob's mid-session temp-key offer was **declined on that reasoning**. Mother's 30 spaces / 929 zones got there by **core running direct `psql`** (`DEPLOY-HANDOFF.md:21`), Off-Limits here and unavailable to any third party. **Bob's ruling: no DB writes at all — twin emits, core ingests.**
+>
+> **NEXT, ranked (S20):**
+> **(1) PR #16 review/merge.** Then the S18 queue resumes unchanged.
+> **(2) Core owes the allocated id map** for the solver matrix, recorded back onto the brief. Until then `Solver Test Facility` is a **requested** identity, not an allocated one, and §1.4's one-scripted-pass cleanup cannot be written.
+> **(3) ★ RE-GRANT `alert:read` + `alert:ingest` by a SANCTIONED route — unchanged from S18, and still the top *build* blocker.** See the S18 block below; S19 touched none of it. Verify by watching `api_key.last_used_at` move on the row edited, never by re-reading `api_key.scopes`.
+> **(4) Fire `A3`** (built, unfired) — needs (3).
+> **(5) Three findings need a core RULING**, unchanged: `cleared:0` on a live alarm · zone unresolved (*an `eas_gate` is not a `zone`*) · `alert_source` having no self-serve registration.
+> **(6) ⛔ The cold peer test on the alarm surface stays CLOSED TO THIS LANE.**
+>
+> **⚠ FOUR NEW `space_type` TOKENS ARE NOW IN A TWIN ARTIFACT** — `warehouse` / `showroom` / `concourse` / `back_office`, flagged `NEW-provisional` per space. `space_type` still has **no `CREATE TYPE`/CHECK in 7a** six weeks after `SPATIAL-HIERARCHY.md:48` said so. **Ratifying or renaming is BW's call**; they are labelled so they are adopted deliberately, not inherited by accident.
+>
+> **⚠ UNITS TRAP:** `solver-matrix.json` is **METRES**; `reference/data/chain/stores/*/layout.json` is **MILLIMETRES**. Do not mix them.
+>
+> **↓ Everything below is the S18 block, unchanged and still authoritative for the alarm work.**
+
+---
+
+## ⚠ SESSION 18 PRIORITIES (superseded as the entry point 2026-08-05, but the alarm queue below is untouched and still current)
+
+> **Read first:** `status/session-notes/2026-08-01-session-18-alarm-chain-driven-and-doc-integrity.md` — the *don't-repeat* record is **§ FAILED APPROACHES, and four of the six errors were my own, all one shape: acting on state someone reported rather than state someone measured.**
 >
 > **★ VERIFY BEFORE YOU BUILD.** This session's opener was contradicted by its own docs within minutes (a completed action listed as next-up; ~730 lines of finished work uncommitted and unrecorded). **Establish state from git + a live probe, then read STATUS/TRACK for intent.** Verified at close 2026-08-04 09:40Z by twin's own probe: `main` `f6df80d` clean/pushed · key `twin-s280-lockdown` holds `inventory:read · vision_ai:view · task:read` Denver-scoped · **`alert:read` 403 · `integration:manage` 403.**
 >
@@ -200,6 +226,7 @@
 
 ### Blocked on core
 
+- **★ Spatial provisioning: an integrator can READ the tree but cannot CREATE one (NEW, S19 — TWIN-REQ-006).** `POST /spatial/identity` **200**; `POST /sites` · `/spatial/sites` · `/spaces` · `/spatial/spaces` · `/zones` · `/spatial/zones` · `/compliance/fixture-codes` **all 403 `CONNECT_NOT_EXPOSED`** (measured 2026-08-05). **Not a scope gap** — the endpoint-level annotation, not the capability check, so **no grant closes it**; it is the TWIN-REQ-005 door, not the `alert:read` lock. ⚠ **The caveat must travel with the result: `/spatial/site`, a path twin invented, returns the identical 403** — the gate fires ahead of routing, so this proves **unreachability, not absence**, and is not an endpoint inventory. Mother's 30 spaces / 929 zones exist only because **core ran direct `psql`** (`DEPLOY-HANDOFF.md:21`). **Third instance of one pattern:** TWIN-REQ-004 identifier *unreadable* → TWIN-REQ-005 capability *unobtainable* → TWIN-REQ-006 subject *unprovisionable*. `M8TRX-CONNECT-API.md:312` calls `/spatial/identity` *"the endpoint that makes self-serve onboarding possible"* — it made the identifier readable without making the container creatable, so onboarding a **new** site still terminates in a human at M8TRX. Worked example already in hand and blocked on nothing but the door: `reference/data/solver/solver-matrix.json` (1 site + 14 spaces + 423 zones, generated + verified).
 - **Connect: provision + transition, not read (NEW, S17 — one decision, not three).** An integrator can write and increasingly read, but cannot **provision or transition**: `/activate` + `/evaluate` are `CONNECT_NOT_EXPOSED` (directive→task cannot be closed unaided) · `alert_source`/`alert_source_kind` registration has **no path for anyone short of psql** (§8.2's own measurement) · `POST /api/v2/compliance/fixture-codes` is not Connect-reachable, so §8.1's recommended `zone_ref` path is one a vendor cannot take · and **`PATCH /connect/service-keys/{keyId}/scopes`, documented in §7 as the supported way to add scopes, is `CONNECT_NOT_EXPOSED` to every Connect key** — with SEC-1's subset guard, no Connect key can ever obtain a new capability without an admin.
 - **`alert:read` + `alert:ingest` held by no key twin can reach (S17, and WORSE after S18)** — both shipped, both Connect-reachable, neither callable. Twin's view: *"a new write ships with its read"* wants a second clause — **and with a route for a key to obtain the capability.**
   ★ **S18 escalates this from argument to demonstration.** The scopes *were* granted, twin drove the entire §A chain with them, and the grants were then **reverted as unapproved production writes** (`mig-211`). Re-probed 2026-08-02 and 2026-08-04: both `403`. **So the only time the alarm chain has ever traversed, it did so on access that had to be undone — and there is still no sanctioned route to it.** Recorded in **TWIN-REQ-005 § Update 2026-08-01** (pushed, `7e6cb156`), along with the sibling failure where a correct grant was applied to the wrong key row and reported complete.
@@ -258,6 +285,7 @@
 |---|---|---|
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
+| **TWIN-REQ-006 — Connect spatial provisioning** | 📨 **FILED 2026-08-05** (`m8trx-shared/twin/requirements/TWIN-REQ-006-connect-spatial-provisioning.md`). Connect's spatial surface is **read-only** — an integrator can reference a `spaceId` but cannot bring one into existence; **no grant closes it** (endpoint annotation, not capability). Twin partially blocked: it can *generate* spatial data and did (14 spaces), but cannot make it *exist*. Third parties blocked absolutely — they have no equivalent of "ask Bob". | Any twin deliverable whose output is a space/zone/fixture; **all** third-party site onboarding |
 | **TWIN-REQ-005 — Connect capability acquisition** | 📨 **FILED 2026-07-31** (`m8trx-shared/twin/requirements/TWIN-REQ-005-connect-capability-acquisition.md`). No Connect key can obtain a capability it was not minted with, and §7's documented path (`PATCH …/service-keys/{keyId}/scopes`) is `CONNECT_NOT_EXPOSED` to every Connect key. Two individually-correct mechanisms (the admin-only door + SEC-1's subset guard) that together leave **no path at all**. Twin NOT blocked — twin asks a human, which is exactly what a real integrator cannot do. | `/alerts/query` uncallable by anyone; 2nd instance after `vision_ai:*` |
 | **TWIN-REQ-004 Connect READ surface** | ✅ **SATISFIED — CLOSED 2026-07-31 by twin as external prover.** All four §6.5 reads callable; rule-2 confinement proven on all four with negative controls by slug AND UUID; omitted-site returns 1 of 14. All three §4 interim positions retired with evidence (fixture-map CSV → `/spatial/identity`; human `psql` → 3,119 rows reproduced in code; engineer-watched task smoke → `/tasks/query`). | — |
 | **FR-INTEG-16 two-system reconciliation** — *feasibility asked of twin* | ✅ **ANSWERED 2026-07-31: YES.** Three of four steps live-proven; step 1 blocked only on `integration:manage` (a scope, restorable). `hmac_secret` at channel creation means the case never needs a key mint. | one scope grant |
