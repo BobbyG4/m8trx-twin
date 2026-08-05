@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1148" height="804" viewBox="0 0 1148 804">
+<rect width="1148" height="804" fill="#fff"/>
+<path d="M 24.0,780.2 L 1124.0,780.2 L 1124.0,629.0 L 24.0,629.0 L 24.0,780.2 Z" fill="#fff2cc" stroke="#ccc" stroke-width="1"/>
+<path d="M 30.9,629.0 L 383.8,629.0 L 383.8,24.0 L 30.9,24.0 L 30.9,629.0 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 397.5,629.0 L 750.5,629.0 L 750.5,24.0 L 397.5,24.0 L 397.5,629.0 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 764.2,629.0 L 1117.1,629.0 L 1117.1,24.0 L 764.2,24.0 L 764.2,629.0 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 24.0,780.2 L 1124.0,780.2 L 1124.0,24.0 L 24.0,24.0 L 24.0,780.2 Z" fill="none" stroke="#111" stroke-width="3"/>
+<path d="M 24.0,635.9 L 169.5,635.9 L 169.5,622.1 L 24.0,622.1 L 24.0,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 245.2,635.9 L 390.6,635.9 L 390.6,622.1 L 245.2,622.1 L 245.2,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 383.8,622.1 L 397.5,622.1 L 397.5,24.0 L 383.8,24.0 L 383.8,622.1 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 124.9,144.3 L 289.9,144.3 L 289.9,96.2 L 124.9,96.2 L 124.9,144.3 Z" fill="#7f8c8d" fill-opacity="0.75" stroke="#7f8c8d" stroke-width="1"/>
+<path d="M 390.6,635.9 L 536.2,635.9 L 536.2,622.1 L 390.6,622.1 L 390.6,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 611.8,635.9 L 757.4,635.9 L 757.4,622.1 L 611.8,622.1 L 611.8,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 750.5,622.1 L 764.2,622.1 L 764.2,24.0 L 750.5,24.0 L 750.5,622.1 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 491.5,144.3 L 656.5,144.3 L 656.5,96.2 L 491.5,96.2 L 491.5,144.3 Z" fill="#7f8c8d" fill-opacity="0.75" stroke="#7f8c8d" stroke-width="1"/>
+<path d="M 757.4,635.9 L 902.8,635.9 L 902.8,622.1 L 757.4,622.1 L 757.4,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 978.5,635.9 L 1124.0,635.9 L 1124.0,622.1 L 978.5,622.1 L 978.5,635.9 Z" fill="#4a4a4a" fill-opacity="0.75" stroke="#4a4a4a" stroke-width="1"/>
+<path d="M 858.1,144.3 L 1023.1,144.3 L 1023.1,96.2 L 858.1,96.2 L 858.1,144.3 Z" fill="#7f8c8d" fill-opacity="0.75" stroke="#7f8c8d" stroke-width="1"/>
+<line x1="169.5" y1="629.0" x2="245.2" y2="629.0" stroke="#e11" stroke-width="5" stroke-linecap="round"/>
+<line x1="536.2" y1="629.0" x2="611.8" y2="629.0" stroke="#e11" stroke-width="5" stroke-linecap="round"/>
+<line x1="902.8" y1="629.0" x2="978.5" y2="629.0" stroke="#e11" stroke-width="5" stroke-linecap="round"/>
+<text x="24" y="16" font-family="monospace" font-size="15" fill="#111">SOLVER-MULTIROOM-02 · multi_room · 176 m² · 11 fixtures · 3 openings</text>
+</svg>

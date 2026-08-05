@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1148" height="873" viewBox="0 0 1148 873">
+<rect width="1148" height="873" fill="#fff"/>
+<path d="M 24.0,849.0 L 1124.0,849.0 L 1124.0,436.5 L 24.0,436.5 L 24.0,849.0 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 24.0,436.5 L 574.0,436.5 L 574.0,24.0 L 24.0,24.0 L 24.0,436.5 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 24.0,849.0 L 1124.0,849.0 L 1124.0,436.5 L 574.0,436.5 L 574.0,24.0 L 24.0,24.0 L 24.0,849.0 Z" fill="none" stroke="#111" stroke-width="3"/>
+<path d="M 134.0,757.3 L 189.0,757.3 L 189.0,528.2 L 134.0,528.2 L 134.0,757.3 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 386.1,757.3 L 441.1,757.3 L 441.1,528.2 L 386.1,528.2 L 386.1,757.3 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 638.2,757.3 L 693.2,757.3 L 693.2,528.2 L 638.2,528.2 L 638.2,757.3 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 890.2,757.3 L 945.3,757.3 L 945.3,528.2 L 890.2,528.2 L 890.2,757.3 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 111.1,344.8 L 166.1,344.8 L 166.1,115.7 L 111.1,115.7 L 111.1,344.8 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 276.1,344.8 L 331.1,344.8 L 331.1,115.7 L 276.1,115.7 L 276.1,344.8 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 441.1,344.8 L 496.1,344.8 L 496.1,115.7 L 441.1,115.7 L 441.1,344.8 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 596.9,477.8 L 624.4,477.8 L 624.4,450.3 L 596.9,450.3 L 596.9,477.8 Z" fill="#222" fill-opacity="0.75" stroke="#222" stroke-width="1"/>
+<path d="M 785.2,550.8 L 848.7,514.1 L 812.0,450.6 L 748.5,487.2 L 785.2,550.8 Z" fill="#8e44ad" fill-opacity="0.75" stroke="#8e44ad" stroke-width="1"/>
+<text x="24" y="16" font-family="monospace" font-size="15" fill="#111">SOLVER-NONCONVEX-01 · pathology_non_convex · 324 m² · 9 fixtures · 0 openings</text>
+</svg>

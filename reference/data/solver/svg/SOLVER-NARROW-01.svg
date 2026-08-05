@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1148" height="904" viewBox="0 0 1148 904">
+<rect width="1148" height="904" fill="#fff"/>
+<path d="M 24.0,879.6 L 1124.0,879.6 L 1124.0,24.0 L 24.0,24.0 L 24.0,879.6 Z" fill="#f4f4f4" stroke="#ccc" stroke-width="1"/>
+<path d="M 24.0,879.6 L 1124.0,879.6 L 1124.0,24.0 L 24.0,24.0 L 24.0,879.6 Z" fill="none" stroke="#111" stroke-width="3"/>
+<path d="M 115.7,787.9 L 189.0,787.9 L 189.0,115.7 L 115.7,115.7 L 115.7,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 256.2,787.9 L 329.6,787.9 L 329.6,115.7 L 256.2,115.7 L 256.2,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 396.8,787.9 L 470.1,787.9 L 470.1,115.7 L 396.8,115.7 L 396.8,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 537.3,787.9 L 610.7,787.9 L 610.7,115.7 L 537.3,115.7 L 537.3,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 677.9,787.9 L 751.2,787.9 L 751.2,115.7 L 677.9,115.7 L 677.9,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 818.4,787.9 L 891.8,787.9 L 891.8,115.7 L 818.4,115.7 L 818.4,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<path d="M 959.0,787.9 L 1032.3,787.9 L 1032.3,115.7 L 959.0,115.7 L 959.0,787.9 Z" fill="#2f6f9f" fill-opacity="0.75" stroke="#2f6f9f" stroke-width="1"/>
+<text x="24" y="16" font-family="monospace" font-size="15" fill="#111">SOLVER-NARROW-01 · pathology_narrow_aisle · 252 m² · 7 fixtures · 0 openings</text>
+</svg>
