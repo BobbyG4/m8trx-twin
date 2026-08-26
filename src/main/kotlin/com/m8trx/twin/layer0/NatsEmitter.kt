@@ -70,8 +70,11 @@ private fun domain(eventType: String): String = when (eventType) {
     -> "fitting"
 
     "alarmEvent" -> "eas"
+
     "scanEvent", "inventoryUpdate" -> "rfid"
+
     "arDevicePosition", "xovisCalibration.progress", "xovisCalibration.complete" -> "ar"
+
     else -> "edge"
 }
 

@@ -74,6 +74,7 @@ data class Fixture(
     /** True when [p] lies inside the ring (ray-casting). Circles fall back to radius. */
     fun contains(p: Pt): Boolean = when (kind) {
         Kind.CIRCLE -> radiusMm != null && hypot(p.x - centre.x, p.y - centre.y) <= radiusMm
+
         Kind.POLYGON -> {
             var inside = false
             var j = ring.size - 1

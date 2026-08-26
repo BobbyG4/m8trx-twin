@@ -1,6 +1,6 @@
 package com.m8trx.twin.connect.model.webhook
 
-/**
+/*
  * Inbound webhook ingester payloads — Connect API doc §8, serialized snake_case via
  * [com.m8trx.twin.connect.model.ConnectMappers.snake]. These are the canonical shapes the
  * ingester reads AFTER any per-channel field map is applied; twin's MVP sends them canonical.
@@ -59,7 +59,6 @@ data class SaleEvent(
     }
 }
 
-/** `product_catalog` — requires [sku] + [name]; any extra keys land in `product.metadata` server-side. */
 /**
  * `product_catalog` — one product per event.
  *

@@ -1,6 +1,6 @@
 package com.m8trx.twin.connect.model.bearer
 
-/**
+/*
  * Bearer data-plane DTOs — Connect API doc §6, camelCase via
  * [com.m8trx.twin.connect.model.ConnectMappers.camel].
  */

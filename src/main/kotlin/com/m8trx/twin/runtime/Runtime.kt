@@ -8,7 +8,7 @@ import java.util.PriorityQueue
 import java.util.Random
 import kotlin.reflect.KClass
 
-/**
+/*
  * Orchestrator runtime skeleton — the Layer-4 contract locked in `LAYER4-CONFIG-SCHEMA.md` §Runtime model
  * (Q2 Generator / Q3 Scheduler / Q6 EventBus, all LOCKED 2026-05-09).
  *

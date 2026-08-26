@@ -47,6 +47,7 @@ fun main() {
             log.info("[OK] webhook ack {} → {}", resp.status, resp.rawBody)
             maybePollDlq(client, resp.rawBody)
         }
+
         is ConnectResponse.Err ->
             log.error("[ERR] webhook {} {} → {}", resp.error.status, resp.error.code, resp.error.rawBody)
     }
@@ -65,6 +66,7 @@ private fun maybePollDlq(client: ConnectClient, ackBody: String) {
             log.info("DLQ integrationId={} count={}", integrationId, dlq.count)
             dlq.events.forEach { log.warn("DLQ dataType={} status={} error={}", it.dataType, it.status, it.errorDetail) }
         }
+
         is ConnectResponse.Err ->
             log.warn("DLQ poll unavailable with this key (HTTP {} {}); needs a Bearer with integration:manage", resp.error.status, resp.error.code)
     }

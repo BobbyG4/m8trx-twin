@@ -40,6 +40,7 @@ class HasuraClient(private val url: String, private val http: ConnectHttp = Conn
                     GqlResult.Count(data.path(first).path("aggregate").path("count").asInt(-1))
                 }
             }
+
             is ConnectResponse.Err -> GqlResult.Error("HTTP ${resp.error.status} ${resp.error.code ?: ""}".trim())
         }
     }

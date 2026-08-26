@@ -266,6 +266,7 @@ class FullLoopDriver(
                         soldEpcs += epc
                         appendSold(soldLog, epc)
                     }
+
                     is ConnectResponse.Err -> log.error("[loop][2-drift] sale {} epc={} FAILED", saleId, epc)
                 }
                 if (i < driftJobs.size - 1) Thread.sleep(jitterGapMs(p.durationSec, driftJobs.size, rng))
@@ -371,6 +372,7 @@ class FullLoopDriver(
                 )
                 hits
             }
+
             is ConnectResponse.Err -> {
                 log.error("[loop][{}] items/details FAILED status={} code={}", phase, resp.error.status, resp.error.code)
                 0

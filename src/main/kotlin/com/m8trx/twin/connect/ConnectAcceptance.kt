@@ -146,6 +146,7 @@ private fun scopeConfinement(client: ConnectClient, ownSite: String, inventory: 
     inventory.forEach { s ->
         when (val r = client.spatialIdentity(SpatialIdentityRequest(siteRef = s.code, includeZones = false))) {
             is ConnectResponse.Ok -> reachable += s.code
+
             is ConnectResponse.Err -> {
                 if (r.error.status == 403) {
                     refused += s.code
@@ -193,14 +194,17 @@ private fun scopeConfinement(client: ConnectClient, ownSite: String, inventory: 
             when {
                 leaked.isNotEmpty() ->
                     record("rule2/omitted-site", R.FAIL, "omitted site returned $leaked which the key CANNOT reach individually — scope leak")
+
                 returned != expected ->
                     record("rule2/omitted-site", R.FAIL, "omitted site returned $returned but the key reaches $expected — the two must agree exactly")
+
                 body.siteCount >= inventory.size ->
                     record(
                         "rule2/omitted-site",
                         R.FAIL,
                         "omitted site returned ${body.siteCount} of ${inventory.size} known tenant sites — 'every site this key may see' has become 'every site in the tenant'",
                     )
+
                 else ->
                     record(
                         "rule2/omitted-site",
@@ -209,6 +213,7 @@ private fun scopeConfinement(client: ConnectClient, ownSite: String, inventory: 
                     )
             }
         }
+
         is ConnectResponse.Err -> record(
             "rule2/omitted-site",
             R.FAIL,
@@ -283,6 +288,7 @@ private fun refusalSemantics(client: ConnectClient, ownSite: String) {
                 "bogus site → ${e.status} ${e.code} msg=${e.message?.take(60) ?: "(NONE — untyped refusal)"}",
             )
         }
+
         is ConnectResponse.Ok -> record("refusal/site-not-found-typed", R.FAIL, "a bogus site returned 200 — refusals must not succeed")
     }
 
@@ -296,6 +302,7 @@ private fun refusalSemantics(client: ConnectClient, ownSite: String) {
                 "bogus directive → ${e.status} ${e.code} (404 means fix your ref; must NOT be an empty 200)",
             )
         }
+
         is ConnectResponse.Ok -> record(
             "refusal/directive-not-found-typed",
             R.FAIL,
@@ -323,6 +330,7 @@ private fun refusalSemantics(client: ConnectClient, ownSite: String) {
                 "right ref + empty window → 200 count=$n (must be 0, and must not 404)",
             )
         }
+
         is ConnectResponse.Err -> record(
             "refusal/empty-scope-is-200-count0",
             R.FAIL,
@@ -373,10 +381,13 @@ private fun reachability(client: ConnectClient, ownSite: String) {
                     "SITE_ACCESS_DENIED" ->
                         "403 SITE_ACCESS_DENIED — wrong SITE for this key, not a missing scope. " +
                             "Set M8TRX_ACCEPT_SITE to a site the key is scoped to."
+
                     "PERMISSION_DENIED" ->
                         "403 PERMISSION_DENIED — key lacks $scope; grant via PATCH /connect/service-keys/{keyId}/scopes"
+
                     "CONNECT_NOT_EXPOSED" ->
                         "403 CONNECT_NOT_EXPOSED — closed to every Connect key by design; not fixable with a grant"
+
                     else -> "${r.status} ${(r as? ConnectResponse.Err)?.error?.code ?: ""} — unexpected; read the raw body"
                 }
             },

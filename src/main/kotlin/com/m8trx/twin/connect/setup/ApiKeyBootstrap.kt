@@ -46,6 +46,7 @@ class ApiKeyBootstrap(private val client: ConnectClient) {
                 }
                 key
             }
+
             is ConnectResponse.Err -> {
                 val e = resp.error
                 log.error("mint failed: status={} code={} message={}", e.status, e.code, e.message)

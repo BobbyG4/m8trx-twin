@@ -459,10 +459,12 @@ private fun splitCsv(line: String): List<String> {
     for (ch in line) {
         when {
             ch == '"' -> inQuotes = !inQuotes
+
             ch == ',' && !inQuotes -> {
                 out += sb.toString()
                 sb.clear()
             }
+
             else -> sb.append(ch)
         }
     }

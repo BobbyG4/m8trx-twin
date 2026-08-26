@@ -83,6 +83,7 @@ fun main() {
                 appendSold(soldLog, epc)
                 log.info("[{}/{}] {} epc={} → ack {}", i + 1, n, saleId, epc, resp.status)
             }
+
             is ConnectResponse.Err -> {
                 err++
                 log.error("[{}/{}] {} epc={} → ERR {} {}", i + 1, n, saleId, epc, resp.error.status, resp.error.code)

@@ -155,6 +155,7 @@ private class Fetcher(private val client: ConnectClient, private val siteRef: St
             )
         return when (val resp = client.queryImpressions(req)) {
             is ConnectResponse.Ok -> client.mapper.readValue<ImpressionQueryResponse>(resp.rawBody)
+
             is ConnectResponse.Err -> {
                 val e = resp.error
                 if (e.status == 403) {

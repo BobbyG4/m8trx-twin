@@ -134,8 +134,10 @@ class StressHarness(
                         val (epc, sku) = epcIter.next()
                         jobs += SaleJob(storeCode, siteId, arm, sku, saleId, epc = epc)
                     }
+
                     SaleArm.STORE_XREF ->
                         jobs += SaleJob(storeCode, siteId, arm, skus[rng.nextInt(skus.size)], saleId)
+
                     SaleArm.SITE_SCOPED ->
                         jobs += SaleJob(storeCode, siteId, arm, skus[rng.nextInt(skus.size)], saleId)
                 }
@@ -295,6 +297,7 @@ class StressHarness(
     /** items/details read-back on a sample — how many of [epcs] the server reports `state=sold`. */
     private fun verifySold(epcs: List<String>): Int = when (val resp = client.itemDetails(ItemDetailsRequest(epcs))) {
         is ConnectResponse.Ok -> client.mapper.readValue<List<ItemDetail>>(resp.rawBody).count { it.state == "sold" }
+
         is ConnectResponse.Err -> {
             log.warn("[stress] SOLD-verify items/details failed — status={} code={}", resp.error.status, resp.error.code)
             0

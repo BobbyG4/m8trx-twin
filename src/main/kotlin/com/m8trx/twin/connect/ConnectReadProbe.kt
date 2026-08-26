@@ -102,6 +102,7 @@ fun main() {
 private fun probe(name: String, scope: String, call: () -> ConnectResponse): ProbeResult = try {
     when (val resp = call()) {
         is ConnectResponse.Ok -> ProbeResult(name, scope, Verdict.HELD, "200")
+
         is ConnectResponse.Err -> {
             val e = resp.error
             val verdict = when {

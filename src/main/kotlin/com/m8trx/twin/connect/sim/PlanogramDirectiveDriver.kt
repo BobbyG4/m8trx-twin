@@ -76,6 +76,7 @@ class PlanogramDirectiveDriver(private val webhook: WebhookClient) {
                     directive.targets.size,
                     resp.status,
                 )
+
             is ConnectResponse.Err ->
                 log.error(
                     "drivePlanogram extId={} failed status={} code={} message={}",

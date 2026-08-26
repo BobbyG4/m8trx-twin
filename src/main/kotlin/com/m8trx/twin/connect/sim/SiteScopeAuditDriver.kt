@@ -97,6 +97,7 @@ class SiteScopeAuditDriver(private val config: ConnectConfig, hasuraUrl: String,
                     r.n > 1 -> Verdict.RED
                     else -> Verdict.GREEN
                 }
+
                 is GqlResult.Error -> r.message.take(60) to Verdict.ERR
             }
             rows += Row("picker", u.label, "sites_visible", obs, v)
@@ -114,6 +115,7 @@ class SiteScopeAuditDriver(private val config: ConnectConfig, hasuraUrl: String,
                             r.n > 0 -> "${r.n} rows" to Verdict.RED
                             else -> "0 rows" to Verdict.GREEN
                         }
+
                         is GqlResult.Error -> r.message.take(50) to Verdict.ERR
                     }
                     rows += Row("read", "${u.label}→${site.name}", p.table, obs, v)

@@ -144,6 +144,7 @@ class Provisioner(private val client: ConnectClient) {
                 channelIds = body.channels.map { it.id },
             )
         }
+
         is ConnectResponse.Err -> {
             val e = resp.error
             log.error("Provisioner: create failed — HTTP {} code={} message={}", e.status, e.code, e.message)

@@ -43,6 +43,7 @@ fun main() {
                 miss,
             )
         }
+
         is ConnectResponse.Err ->
             log.error("Self-verify failed — HTTP {} {} → {}", resp.error.status, resp.error.code, resp.error.rawBody)
     }

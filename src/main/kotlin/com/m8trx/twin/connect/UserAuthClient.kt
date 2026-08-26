@@ -46,6 +46,7 @@ class UserAuthClient(private val config: ConnectConfig, private val http: Connec
                     decode(email, token, node)
                 }
             }
+
             is ConnectResponse.Err -> {
                 log.warn("login {} FAILED — status={} code={}", email, resp.error.status, resp.error.code)
                 null

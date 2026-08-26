@@ -110,13 +110,22 @@ object ZoneAffinityModel {
     fun fixtureBrowseRate(role: ZoneRole): Double = when (role) {
         // Destination zones — the shopper went there to look at the merchandise.
         ZoneRole.DEPARTMENT_BAND -> 0.95
+
         ZoneRole.GPS_ACCESSORIES -> 0.90
+
         ZoneRole.GAIT_ANALYSIS -> 0.85
+
         ZoneRole.ACCESSORIES_WALL -> 0.85
+
         ZoneRole.FOOTWEAR_BENCH -> 0.80
+
         // Transit zones — a fixture is there, most people walk past it.
-        ZoneRole.CHECKOUT -> 0.25 // the impulse rack (`CO-IR`), not the counters
-        ZoneRole.ENTRANCE -> 0.15 // promo islands catch a minority on the way in
+        ZoneRole.CHECKOUT -> 0.25
+
+        // the impulse rack (`CO-IR`), not the counters
+        ZoneRole.ENTRANCE -> 0.15
+
+        // promo islands catch a minority on the way in
         // No browsable fixtures inside these (or staff-only).
         else -> 0.0
     }
@@ -143,9 +152,11 @@ object ZoneRoleResolver {
         val prefix = code.substringBefore("-")
         return when {
             spaceType == "sales_floor" && zoneType == "entry_exit" -> ZoneRole.ENTRANCE
+
             spaceType == "sales_floor" && zoneType == "checkout" -> ZoneRole.CHECKOUT
 
             spaceType == "sales_floor" && zoneType == "region" && department != null -> ZoneRole.DEPARTMENT_BAND
+
             spaceType == "sales_floor" && zoneType == "region" -> when (code) {
                 "Z-03" -> ZoneRole.NON_RETAIL
                 "Z-06" -> ZoneRole.GPS_ACCESSORIES
@@ -163,9 +174,11 @@ object ZoneRoleResolver {
             spaceType == "fitting_room" && zoneType == "try_on_zone" -> ZoneRole.FITTING_ROOM
 
             spaceType == "stockroom" && zoneType == "fixture" && prefix == "RCV" -> ZoneRole.RECEIVING
+
             spaceType == "stockroom" && zoneType == "fixture" && prefix == "BR" -> ZoneRole.BACKROOM_RACK
 
             zoneType == "fixture" -> ZoneRole.FIXTURE
+
             else -> null
         }
     }

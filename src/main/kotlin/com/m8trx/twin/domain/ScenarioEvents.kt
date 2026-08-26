@@ -3,7 +3,7 @@ package com.m8trx.twin.domain
 import com.m8trx.twin.runtime.DomainEvent
 import java.time.Instant
 
-/**
+/*
  * DomainEvent taxonomy for the scenario runtime — bus-internal correlation, NOT the M8TRX wire.
  * Shapes are from `LAYER4-CONFIG-SCHEMA.md` §Runtime model Q6.
  *

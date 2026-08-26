@@ -2,7 +2,7 @@ package com.m8trx.twin.connect.model.bearer
 
 import com.fasterxml.jackson.annotation.JsonProperty
 
-/**
+/*
  * Bearer READ-plane DTOs — Connect API doc **§6.5** ("the READ half", live 2026-07-30, PR #210).
  *
  * ## Casing — read this before adding a field

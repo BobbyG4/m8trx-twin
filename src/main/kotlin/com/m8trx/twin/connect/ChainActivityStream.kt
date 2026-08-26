@@ -126,6 +126,7 @@ private fun fire(
             if (resp is ConnectResponse.Ok) appendSold(soldLog, epc)
             logFire(seq, type, store, "epc=$epc", resp)
         }
+
         Activity.RESTOCK -> {
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
@@ -133,6 +134,7 @@ private fun fire(
             val resp = driver.pushShipment(ShipmentManifest(id, store.siteId, lines), WebhookClient.AuthMode.API_KEY)
             logFire(seq, type, store, "site=${store.siteId} lines=${lines.size}", resp)
         }
+
         Activity.PRICING -> {
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
@@ -141,6 +143,7 @@ private fun fire(
             val resp = driver.pushPricing(PricingUpdate(sk.itemCd, churned, gtin = sk.ean), WebhookClient.AuthMode.API_KEY)
             logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->$churned", resp)
         }
+
         Activity.CATALOG -> {
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
@@ -161,6 +164,7 @@ private fun logFire(seq: Int, type: Activity, store: Store, detail: String, resp
         log.info("[{}] {} @{} {} → ack {}", seq, type, store.code, detail, resp.status)
         "ok"
     }
+
     is ConnectResponse.Err -> {
         log.error("[{}] {} @{} {} → ERR {} {}", seq, type, store.code, detail, resp.error.status, resp.error.code)
         "err"
@@ -246,11 +250,14 @@ private fun splitCsv(line: String): List<String> {
                 sb.append('"')
                 i++
             }
+
             ch == '"' -> inQuotes = !inQuotes
+
             ch == ',' && !inQuotes -> {
                 out.add(sb.toString())
                 sb.setLength(0)
             }
+
             else -> sb.append(ch)
         }
         i++

@@ -96,6 +96,7 @@ class InboundPushDriver(private val webhook: WebhookClient, private val client: 
             }
             dlq
         }
+
         is ConnectResponse.Err -> {
             log.error(
                 "DLQ poll failed integrationId={} status={} code={} message={}",
@@ -111,6 +112,7 @@ class InboundPushDriver(private val webhook: WebhookClient, private val client: 
     private fun logResponse(op: String, resp: ConnectResponse) {
         when (resp) {
             is ConnectResponse.Ok -> log.info("{} ack status={}", op, resp.status)
+
             is ConnectResponse.Err ->
                 log.error(
                     "{} failed status={} code={} message={}",

@@ -456,11 +456,14 @@ class StoreCatalog(private val skus: List<Sku>) {
                         sb.append('"')
                         i++
                     }
+
                     ch == '"' -> inQuotes = !inQuotes
+
                     ch == ',' && !inQuotes -> {
                         out.add(sb.toString())
                         sb.setLength(0)
                     }
+
                     else -> sb.append(ch)
                 }
                 i++

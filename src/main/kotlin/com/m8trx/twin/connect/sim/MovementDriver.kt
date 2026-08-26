@@ -57,6 +57,7 @@ class MovementDriver(private val webhook: WebhookClient) {
                     mv.items.size,
                     resp.status,
                 )
+
             is ConnectResponse.Err ->
                 log.error(
                     "driveMovement extId={} toFixture={} failed status={} code={} message={}",

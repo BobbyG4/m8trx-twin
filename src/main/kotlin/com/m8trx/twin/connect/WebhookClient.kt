@@ -67,6 +67,7 @@ class WebhookClient(
                 put("X-Data-Type", dataType)
                 when (auth) {
                     AuthMode.API_KEY -> put("X-API-Key", config.requireWebhookApiKey())
+
                     AuthMode.HMAC ->
                         put(
                             "X-M8TRX-Signature",
