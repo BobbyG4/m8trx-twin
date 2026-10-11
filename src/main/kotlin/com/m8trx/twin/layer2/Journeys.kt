@@ -308,11 +308,25 @@ class Journeys(
 
 private fun java.util.Random.asKotlinRandom(): KRandom = KRandom(this.nextLong())
 
-/** Real SKUs off the store's `assortment.csv`, used to build priced baskets. */
-class StoreCatalog(private val skus: List<Sku>) {
+/**
+ * Real SKUs off the store's `assortment.csv`, used to build priced baskets.
+ *
+ * [departmentWeights] (default empty = the original behaviour, byte-for-byte, no extra RNG draws) lets the
+ * history generator express category seasonality and a slow department without a second basket model: a
+ * drawn line is ACCEPTED with probability `weight(department) / max(1, maxWeight)` and otherwise redrawn
+ * whole (category and price), up to [MAX_REDRAWS] times. Unit counts per basket are untouched — demand shifts
+ * between departments, it does not appear or vanish.
+ */
+class StoreCatalog(private val skus: List<Sku>, private val departmentWeights: Map<String, Double> = emptyMap()) {
     data class Sku(val itemCd: String, val ean: String, val priceUsd: Double, val department: String, val fixture: String, val category: String)
 
     private val byCategory: Map<String, List<Sku>> = skus.groupBy { it.category }
+
+    /** The same catalog with department acceptance weights — see the class doc. */
+    fun withDepartmentWeights(weights: Map<String, Double>): StoreCatalog = StoreCatalog(skus, weights)
+
+    /** Every SKU this store carries (read-only view, for lookups such as price by EAN). */
+    val all: List<Sku> get() = skus
 
     /**
      * The stock a vendor's EAS system would have tagged — see [EasTagging] for the rule and, importantly,
@@ -348,10 +362,21 @@ class StoreCatalog(private val skus: List<Sku>) {
         val targetLine = model.basket.avgLinePriceUsd.value
 
         return (1..units).map {
-            val pool = if (mix.isNotEmpty()) byCategory[weightedPick(mix, rng)] ?: skus else skus
-            val sku = nearestPriced(pool, drawTargetPrice(targetLine, rng), rng)
+            var sku = drawLine(mix, targetLine, rng)
+            if (departmentWeights.isNotEmpty()) {
+                val maxW = maxOf(1.0, departmentWeights.values.max())
+                var tries = 0
+                while (tries++ < MAX_REDRAWS && rng.nextDouble() >= (departmentWeights[sku.department] ?: 1.0) / maxW) {
+                    sku = drawLine(mix, targetLine, rng)
+                }
+            }
             SaleLine(sku.itemCd, sku.ean, sku.priceUsd, sku.department, sku.fixture)
         }
+    }
+
+    private fun drawLine(mix: Map<String, Double>, targetLine: Double, rng: KRandom): Sku {
+        val pool = if (mix.isNotEmpty()) byCategory[weightedPick(mix, rng)] ?: skus else skus
+        return nearestPriced(pool, drawTargetPrice(targetLine, rng), rng)
     }
 
     /**
@@ -417,6 +442,8 @@ class StoreCatalog(private val skus: List<Sku>) {
     }
 
     companion object {
+        private const val MAX_REDRAWS = 12
+
         fun load(assortmentCsv: java.nio.file.Path): StoreCatalog {
             val lines = java.nio.file.Files.readAllLines(assortmentCsv)
             val header = splitCsv(lines.first())

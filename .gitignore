@@ -29,3 +29,6 @@ reference/data/*.sql
 # pull loop). Derived CSVs in reference/data/analysis/ ARE tracked.
 reference/data/us-catalog/
 # (Tracked: reference/data/analysis/*.csv — the assortment + EPC data products)
+
+# Generated history output (BRIEF-TWIN-HISTORY-GENERATOR) - re-derivable from seed; handed over as files, never committed
+out/
