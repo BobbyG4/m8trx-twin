@@ -232,7 +232,7 @@ class HistoryGenerator(
     class Output(val days: List<DayRows>, val files: Map<String, Int>, val wallMs: Long)
 
     fun generateDays(): List<DayRows> {
-        val runners = stores.associate { it.slug to HistoryDayRunner(it, model, chainDir) }
+        val runners = stores.associate { it.slug to HistoryDayRunner(it, model, chainDir, story::departmentWeights) }
         runners.values.forEach {
             log.info(
                 "  {} sampler targets: units {} · line price \${} (model {} · \${}; tagged SKUs {})",

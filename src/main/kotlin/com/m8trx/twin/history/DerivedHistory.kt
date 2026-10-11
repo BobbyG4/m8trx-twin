@@ -135,7 +135,7 @@ class DerivedHistory(private val gen: HistoryGenerator, private val chainDir: Pa
                         r < 0.80 -> "false_alarm"
                         else -> "not_recovered"
                     }
-                    AlarmRow(store, a.at, epc, a.ean, a.fixture, resolution, at.plusSeconds(180L + rng.nextInt(22 * 60)))
+                    AlarmRow(store, at, epc, a.ean, a.fixture, resolution, at.plusSeconds(180L + rng.nextInt(22 * 60)))
                 }
             }
         }

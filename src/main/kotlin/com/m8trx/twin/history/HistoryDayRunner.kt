@@ -51,7 +51,13 @@ import java.time.ZonedDateTime
  *  - Fixture `impression` = distinct shoppers with an impression there; `dwell` = sum of impression
  *    durations (s); `engagement` = units picked up there (bought lines + concealed units).
  */
-class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: OperatingModel, chainDir: Path) {
+class HistoryDayRunner(
+    val store: ChainKeys.Store,
+    private val baseModel: OperatingModel,
+    chainDir: Path,
+    /** the seasonal department factors on a date (the story's), so the ATV can be held level through the year */
+    private val seasonalWeights: (LocalDate) -> Map<String, Double> = { emptyMap() },
+) {
     private val log = LoggerFactory.getLogger(HistoryDayRunner::class.java)
     private val layout = chainDir.resolve("stores/${store.slug}/layout.json")
     private val fixtures: FixtureSet = FixtureSet.load(layout)
@@ -105,6 +111,33 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
         }
         target to weights
     }
+
+    /**
+     * The seasonal department factors move the sold mix through the year (more cycling in spring, less snow
+     * in July), and with it the ATV. This holds it level: the line price target at each mid-month is the
+     * calibrated one rescaled by how much that month's weights move the mean line price (same random stream
+     * both sides, so the ratio is steady), interpolated by day between mid-months.
+     */
+    private val monthlyPriceTarget: DoubleArray = run {
+        val target = calibration.first
+        val base = meanLinePrice(target, calibration.second, MONTHLY_BASKETS)
+        DoubleArray(12) { m ->
+            val w = calibration.second.mapValues { (d, v) -> v * (seasonalWeights(LocalDate.of(MONTHLY_YEAR, m + 1, 15))[d] ?: 1.0) }
+            target * base / meanLinePrice(target, w, MONTHLY_BASKETS)
+        }
+    }
+
+    /** The line price target on [date]: the store's calibrated one, corrected for the season's department mix. */
+    fun samplerLinePriceTarget(date: LocalDate): Double {
+        val mid = LocalDate.of(date.year, date.monthValue, 15)
+        val (a, b) = if (date.isBefore(mid)) mid.minusMonths(1) to mid else mid to mid.plusMonths(1)
+        val t = java.time.temporal.ChronoUnit.DAYS.between(a, date).toDouble() / java.time.temporal.ChronoUnit.DAYS.between(a, b)
+        val pa = monthlyPriceTarget[a.monthValue - 1]
+        val pb = monthlyPriceTarget[b.monthValue - 1]
+        return pa + (pb - pa) * t
+    }
+
+    /** The calibrated base line price target (mid-year season-neutral weights). */
     val samplerLinePriceTarget: Double get() = calibration.first
 
     /** The store's base department acceptance weights (heaviest = 1.0), before the day's seasonal factors. */
@@ -113,13 +146,13 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
     private fun samplerModel(linePriceTarget: Double): OperatingModel =
         baseModel.copy(basket = baseModel.basket.copy(unitsPerTxn = Tagged(samplerUnitTarget), avgLinePriceUsd = Tagged(linePriceTarget)))
 
-    private fun meanLinePrice(target: Double, weights: Map<String, Double>): Double {
+    private fun meanLinePrice(target: Double, weights: Map<String, Double>, baskets: Int = CALIBRATION_BASKETS): Double {
         val m = samplerModel(target)
         val rng = kotlin.random.Random(CALIBRATION_SEED)
         val weighted = catalog.withDepartmentWeights(weights)
         var units = 0L
         var value = 0.0
-        repeat(CALIBRATION_BASKETS) {
+        repeat(baskets) {
             weighted.sampleBasket(rng, m).forEach {
                 units++
                 value += it.priceUsd
@@ -331,7 +364,7 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
         val k = p * (pm.browseAndLeave + plan.shopliftShare) / ((1 - p) * buyers)
         return baseModel.copy(
             conversion = baseModel.conversion.copy(overallRate = Tagged(p)),
-            basket = baseModel.basket.copy(unitsPerTxn = Tagged(samplerUnitTarget), avgLinePriceUsd = Tagged(samplerLinePriceTarget)),
+            basket = baseModel.basket.copy(unitsPerTxn = Tagged(samplerUnitTarget), avgLinePriceUsd = Tagged(samplerLinePriceTarget(plan.date))),
             personaMix = pm.copy(
                 shopAndBuy = pm.shopAndBuy * k,
                 tryOnAndPartialBuy = pm.tryOnAndPartialBuy * k,
@@ -346,6 +379,8 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
 
         private const val CALIBRATION_PASSES = 3
         private const val CALIBRATION_ROUNDS = 3
+        private const val MONTHLY_BASKETS = 8_000
+        private const val MONTHLY_YEAR = 2026
         private const val CALIBRATION_BASKETS = 20_000
         private const val CALIBRATION_SEED = 20261016L
 
