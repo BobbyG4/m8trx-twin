@@ -24,7 +24,8 @@ import kotlin.math.exp
  *    ⚠ The brief named Chuseok "Oct 3–6, 2026". Chuseok 2026 is **Sep 24–26** (Thu–Sat, the day itself
  *    the 25th); Oct 3 is Gaecheonjeol. The real dates are used and the correction is in the RESULTS file.
  *  - **Store stories** — Marseille consistently below plan; Lille below plan in H1 and turned around in
- *    Q3; Denver the best store in the US; the rest near plan.
+ *    Q3; Denver the best store in the US; the rest at plan (NYC, SF about 1.0 — two below-plan stories
+ *    is the whole story; four read as a sick chain).
  *  - **One slow category chain-wide** — Climbing & Mountaineering, a planner beat, plus ordinary category
  *    seasonality (snow in winter, cycling/hiking in summer, running in January and September).
  *
@@ -153,9 +154,9 @@ class StoryCalendar(private val model: OperatingModel, private val referenceArea
 
         // the best store in the US
 
-        "dec-us-nyc" -> 0.97 to 0.95
+        "dec-us-nyc" -> 1.00 to 1.00
 
-        "dec-us-sf" -> 0.94 to 0.98
+        "dec-us-sf" -> 0.99 to 1.00
 
         "dec-fr-paris" -> 1.02 to 1.00
 
@@ -191,7 +192,7 @@ class StoryCalendar(private val model: OperatingModel, private val referenceArea
     private val departmentAnchors: Map<String, DoubleArray> = mapOf(
         "snow" to doubleArrayOf(1.80, 1.60, 1.00, 0.50, 0.30, 0.30, 0.30, 0.30, 0.50, 0.90, 1.40, 1.80),
         "cycling" to doubleArrayOf(0.60, 0.70, 1.00, 1.30, 1.40, 1.40, 1.30, 1.10, 1.00, 0.80, 0.70, 0.70),
-        "hike_camp" to doubleArrayOf(0.70, 0.80, 0.95, 1.10, 1.25, 1.35, 1.40, 1.25, 1.00, 0.90, 0.80, 0.80),
+        "hike_camp" to doubleArrayOf(0.85, 0.90, 0.97, 1.05, 1.12, 1.18, 1.20, 1.12, 1.00, 0.95, 0.90, 0.88),
         "running" to doubleArrayOf(1.20, 1.05, 1.15, 1.15, 1.10, 1.00, 0.90, 0.95, 1.15, 1.10, 1.00, 1.00),
         "water" to doubleArrayOf(0.60, 0.60, 0.70, 0.90, 1.20, 1.60, 1.70, 1.60, 1.00, 0.70, 0.60, 0.60),
         // THE SLOW CATEGORY — Climbing & Mountaineering under-sells everywhere, and slips through the year.
@@ -250,5 +251,56 @@ class StoryCalendar(private val model: OperatingModel, private val referenceArea
     companion object {
         const val PROMO_VISITS = 1.35
         const val PROMO_CONVERSION = 1.20
+
+        /**
+         * Neutral (before the seasonal factors and the slow category's slide) department share of SALES VALUE
+         * a sporting-goods store should show, as relative weights per department slug — hiking and camping the
+         * anchor, running and cycling next, the rest small. [A-new]: authored for a believable demo mix, not
+         * calibrated research. The Climbing slide ([departmentAnchors]) takes `climb` from ~5 % to ~3 %.
+         */
+        private val SALES_WEIGHT = mapOf(
+            "hike_camp" to 27.0,
+            "running" to 18.0,
+            "cycling" to 16.0,
+            "snow" to 11.0,
+            "climb" to 5.0,
+            "water" to 2.0,
+        )
+
+        /** General / Multi-sport: a handful of SKUs is a corner, hundreds is a department. */
+        private fun generalWeight(skus: Int) = if (skus < 100) 8.0 else 18.0
+
+        /** No department above this share in a store with three or more; two departments split at 50 %. */
+        private const val CAP = 0.34
+
+        /**
+         * Department sales-share targets for a store that carries the departments in [skuCounts]: the
+         * [SALES_WEIGHT]s of the departments present, normalized, with any department over [CAP] held there
+         * and its excess spread over the rest by weight (a two-department store caps at 50 %, a single one at
+         * 100 %). Keys are the store's departments; values sum to 1.
+         */
+        fun departmentSalesTargets(skuCounts: Map<String, Int>): Map<String, Double> {
+            val raw = skuCounts.mapValues { (d, n) -> if (d == "general") generalWeight(n) else SALES_WEIGHT[d] ?: 5.0 }
+            val cap = when (raw.size) {
+                1 -> 1.0
+                2 -> 0.5
+                else -> CAP
+            }
+            val share = HashMap<String, Double>()
+            val free = raw.keys.toMutableSet()
+            var budget = 1.0
+            while (free.isNotEmpty()) {
+                val total = free.sumOf { raw.getValue(it) }
+                val over = free.filter { raw.getValue(it) / total * budget > cap + 1e-9 }
+                if (over.isEmpty()) {
+                    free.forEach { share[it] = raw.getValue(it) / total * budget }
+                    break
+                }
+                over.forEach { share[it] = cap }
+                budget -= cap * over.size
+                free.removeAll(over.toSet())
+            }
+            return share
+        }
     }
 }

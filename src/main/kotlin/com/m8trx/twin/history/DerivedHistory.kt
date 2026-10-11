@@ -84,7 +84,9 @@ class DerivedHistory(private val gen: HistoryGenerator, private val chainDir: Pa
         val targets = store.fixtures.count { !it.department.isNullOrBlank() }
         val marseille = store.slug == "dec-fr-marseille"
         generateSequence(gen.params.from.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY))) { it.plusWeeks(1) }
-            .takeWhile { !it.plusDays(6).isAfter(last) }
+            // a trailing PARTIAL week is scored once the store's last day is at least week_start + 5 (a Saturday):
+            // the US stores' Oct 3 cut-off still scores the week of Sep 28; the loader's offsets 1, 2, 4, 5 all fit
+            .takeWhile { !it.plusDays(5).isAfter(last) }
             .map { week ->
                 val rng = Random(HistoryCsv.derive(seed, store.slug, week, "compliance"))
                 var score = baseScore(store.slug, week) + rng.nextGaussian() * 2.0
@@ -121,9 +123,11 @@ class DerivedHistory(private val gen: HistoryGenerator, private val chainDir: Pa
                 val pool = epcsByEan[slug]?.get(a.ean)
                 if (pool.isNullOrEmpty()) return@mapIndexedNotNull null
                 val epc = pool[rng.nextInt(pool.size)]
+                // a gate crossing late in the last hour can be stamped a few seconds past close — clamp to close − 1 s
+                val at = minOf(a.at, gen.closeUtc(store, d.date).minusSeconds(1))
                 val recent = ChronoUnit.DAYS.between(d.date, last) < 14
                 if (recent && rng.nextDouble() < OPEN_ALARM_SHARE) {
-                    AlarmRow(store, a.at, epc, a.ean, a.fixture, null, null)
+                    AlarmRow(store, at, epc, a.ean, a.fixture, null, null)
                 } else {
                     val r = rng.nextDouble()
                     val resolution = when {
@@ -131,7 +135,7 @@ class DerivedHistory(private val gen: HistoryGenerator, private val chainDir: Pa
                         r < 0.80 -> "false_alarm"
                         else -> "not_recovered"
                     }
-                    AlarmRow(store, a.at, epc, a.ean, a.fixture, resolution, a.at.plusSeconds(180L + rng.nextInt(22 * 60)))
+                    AlarmRow(store, a.at, epc, a.ean, a.fixture, resolution, at.plusSeconds(180L + rng.nextInt(22 * 60)))
                 }
             }
         }

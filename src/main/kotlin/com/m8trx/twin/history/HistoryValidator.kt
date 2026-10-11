@@ -267,6 +267,14 @@ class HistoryValidator(private val gen: HistoryGenerator, private val dir: Path)
             },
         )
         check("compliance weeks start on Mondays", comp.all { LocalDate.parse(it[1]).dayOfWeek == java.time.DayOfWeek.MONDAY })
+        // the trailing partial week (last day >= week_start + 5) is scored, none beyond it
+        val lastWeek = comp.groupBy { it[0] }.mapValues { (_, r) -> r.maxOf { LocalDate.parse(it[1]) } }
+        val trailing = gen.stores.filter { s ->
+            val last = gen.lastDay(s) ?: return@filter false
+            val expected = last.minusDays(5).with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+            lastWeek[s.slug] != expected
+        }
+        check("compliance scores the trailing partial week", trailing.isEmpty(), "e.g. ${trailing.take(3).map { it.slug to lastWeek[it.slug] }}")
     }
 
     // ── tasks ─────────────────────────────────────────────────────────────────
@@ -316,6 +324,15 @@ class HistoryValidator(private val gen: HistoryGenerator, private val dir: Path)
                     it[5] in setOf("critical", "warning")
             },
         )
+        // a gate alarm is a customer leaving: never stamped at or after close, nor before open
+        val afterHours = rows.filter { r ->
+            val s = gen.keys.store(r[0])
+            val at = ts(r[1])
+            val day = at.atZone(s.zone).toLocalDate()
+            val close = gen.closeUtc(s, day)
+            !at.isBefore(close) || at.isBefore(close.minusSeconds(3600L * openHours))
+        }
+        check("alarm created_at falls inside operating hours (close − 1 s at the latest)", afterHours.isEmpty(), "e.g. ${afterHours.firstOrNull()}")
         val weeks = gen.stores.sumOf { gen.days(it).size } / 7.0
         val perStoreWeek = if (weeks == 0.0) 0.0 else rows.size / weeks
         check("2–4 gate alarms per store-week (chain mean)", perStoreWeek in 1.8..4.2, "%.2f".format(perStoreWeek))

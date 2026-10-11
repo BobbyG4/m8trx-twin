@@ -74,7 +74,9 @@ class StoryChecks(private val gen: HistoryGenerator, private val dir: Path) {
         val usSales = us.associateWith { s -> days.filterKeys { it.first == s }.values.sumOf { it.cents } }
         check("Denver has the highest sales in the US", usSales.maxBy { it.value }.key == "dec-us-denver", usSales.toString())
 
-        // the slow category — climbing's sales per SKU carried is the chain's lowest
+        // the slow category — climbing is the chain's lowest department in ABSOLUTE sales (what a chart of
+        // department sales shows), among the departments with a real assortment (> 100 SKUs chain-wide; the
+        // 7-SKU Water corner in Paris and NYC is a token department, not a category)
         val dept = HistoryCsv.read(dir.resolve("commerce_department_daily.csv")).second
         val deptCents = dept.groupBy { r -> gen.keys.store(r[0]).departments.first { it.name == r[1] }.department!! }
             .mapValues { (_, rs) -> rs.sumOf { HistoryReport.cents(it[5]) }.toDouble() }
@@ -83,11 +85,35 @@ class StoryChecks(private val gen: HistoryGenerator, private val dir: Path) {
                 rows.map { it[h.indexOf("department")] }
             }
         }.groupingBy { it }.eachCount()
-        val perSku = deptCents.filterKeys { (skuCount[it] ?: 0) > 100 }.mapValues { (k, v) -> v / skuCount.getValue(k) }
+        val real = deptCents.filterKeys { (skuCount[it] ?: 0) > 100 }
         check(
-            "one slow category chain-wide: '${gen.story.slowDepartment}' has the lowest sales per SKU carried",
-            perSku.minByOrNull { it.value }?.key == gen.story.slowDepartment,
-            perSku.mapValues { "%.0f".format(it.value / 100) }.toString(),
+            "one slow category chain-wide: '${gen.story.slowDepartment}' has the lowest ABSOLUTE department sales",
+            real.minByOrNull { it.value }?.key == gen.story.slowDepartment,
+            real.mapValues { "%.0f".format(it.value / 100) }.toString(),
+        )
+        val denver = dept.filter { it[0] == "dec-us-denver" }.groupBy { it[1] }.mapValues { (_, rs) -> rs.sumOf { HistoryReport.cents(it[5]) } }
+        check(
+            "Denver: Climbing & Mountaineering is the lowest department in absolute sales",
+            denver.minBy { it.value }.key == "Climbing & Mountaineering",
+            denver.toString(),
+        )
+
+        // the department mix is believable: no department above ~40 % of a store's sales (a two-department
+        // store splits at 50 %), and Hiking & Camping is the largest in the reference store
+        val perStore = dept.groupBy {
+            it[0]
+        }.mapValues { (_, rs) -> rs.groupBy { it[1] }.mapValues { (_, d) -> d.sumOf { HistoryReport.cents(it[5]) } } }
+        val tooBig = perStore.filter { (_, m) ->
+            val cap = if (m.size <= 2) 0.52 else 0.42
+            m.values.max().toDouble() / m.values.sum() > cap
+        }
+        check("no department above 42 % of a store's sales (52 % in a two-department store)", tooBig.isEmpty(), tooBig.keys.toString())
+        val dm = perStore.getValue("dec-us-denver")
+        val dShare = dm.mapValues { it.value.toDouble() / dm.values.sum() }
+        check(
+            "Denver: Hiking, Trekking & Camping is the largest department at 28–36 %",
+            dm.maxBy { it.value }.key == "Hiking, Trekking & Camping" && dShare.getValue("Hiking, Trekking & Camping") in 0.28..0.36,
+            dShare.mapValues { "%.1f%%".format(it.value * 100) }.toString(),
         )
         val snowJan = dept.filter { it[1] == "Snow & Ski" && it[2].startsWith("2026-01") }.sumOf { HistoryReport.cents(it[5]) }
         val snowJul = dept.filter { it[1] == "Snow & Ski" && it[2].startsWith("2026-07") }.sumOf { HistoryReport.cents(it[5]) }

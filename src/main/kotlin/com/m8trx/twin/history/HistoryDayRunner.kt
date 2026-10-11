@@ -86,20 +86,41 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
      * catalog, same price-band shape — the year simply ties out to $58 an order.
      */
     val samplerUnitTarget: Double = solveUnitTarget(baseModel.basket.unitsPerTxn.value)
-    val samplerLinePriceTarget: Double = run {
-        val want = baseModel.basket.atvUsd.value / baseModel.basket.unitsPerTxn.value
-        var target = baseModel.basket.avgLinePriceUsd.value
-        repeat(CALIBRATION_PASSES) { target *= want / meanLinePrice(target) }
-        target
-    }
 
-    private fun meanLinePrice(target: Double): Double {
-        val m = baseModel.copy(basket = baseModel.basket.copy(unitsPerTxn = Tagged(samplerUnitTarget), avgLinePriceUsd = Tagged(target)))
+    /**
+     * The department mix and the line price target are solved TOGETHER: the department weights move which
+     * SKUs get sold (a running shoe is not a hike-camp sock), and the price target must land the ATV with
+     * those weights in force. Three alternating rounds, each department-first; fixed seed, so deterministic.
+     * Weights are the store's BASE acceptance weights (see [StoryCalendar.departmentSalesTargets] for the
+     * mix they aim at); the day's seasonal factors multiply them in [run].
+     */
+    private val calibration: Pair<Double, Map<String, Double>> = run {
+        val want = baseModel.basket.atvUsd.value / baseModel.basket.unitsPerTxn.value
+        val shareTargets = StoryCalendar.departmentSalesTargets(catalog.all.groupingBy { it.department }.eachCount())
+        var target = baseModel.basket.avgLinePriceUsd.value
+        var weights: Map<String, Double> = emptyMap()
+        repeat(CALIBRATION_ROUNDS) {
+            weights = catalog.calibrateDepartmentWeights(shareTargets, samplerModel(target), CALIBRATION_SEED)
+            repeat(CALIBRATION_PASSES) { target *= want / meanLinePrice(target, weights) }
+        }
+        target to weights
+    }
+    val samplerLinePriceTarget: Double get() = calibration.first
+
+    /** The store's base department acceptance weights (heaviest = 1.0), before the day's seasonal factors. */
+    val departmentBase: Map<String, Double> get() = calibration.second
+
+    private fun samplerModel(linePriceTarget: Double): OperatingModel =
+        baseModel.copy(basket = baseModel.basket.copy(unitsPerTxn = Tagged(samplerUnitTarget), avgLinePriceUsd = Tagged(linePriceTarget)))
+
+    private fun meanLinePrice(target: Double, weights: Map<String, Double>): Double {
+        val m = samplerModel(target)
         val rng = kotlin.random.Random(CALIBRATION_SEED)
+        val weighted = catalog.withDepartmentWeights(weights)
         var units = 0L
         var value = 0.0
         repeat(CALIBRATION_BASKETS) {
-            catalog.sampleBasket(rng, m).forEach {
+            weighted.sampleBasket(rng, m).forEach {
                 units++
                 value += it.priceUsd
             }
@@ -190,7 +211,9 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
 
     fun run(plan: DayPlan): DayResult {
         val model = adjustedModel(plan)
-        val journeys = Journeys(fixtures, zones, catalog.withDepartmentWeights(plan.departmentWeights), model).withGates(gates)
+        // the store's base mix × the day's seasonal factor, per department the store carries
+        val dayWeights = departmentBase.mapValues { (d, w) -> w * (plan.departmentWeights[d] ?: 1.0) }
+        val journeys = Journeys(fixtures, zones, catalog.withDepartmentWeights(dayWeights), model).withGates(gates)
 
         val openTime = LocalTime.parse(model.store.operatingHours.open)
         val openUtc = ZonedDateTime.of(plan.date, openTime, store.zone).toInstant()
@@ -322,6 +345,7 @@ class HistoryDayRunner(val store: ChainKeys.Store, private val baseModel: Operat
         const val TRANSIT_MAX_MS = 5 * 60_000L
 
         private const val CALIBRATION_PASSES = 3
+        private const val CALIBRATION_ROUNDS = 3
         private const val CALIBRATION_BASKETS = 20_000
         private const val CALIBRATION_SEED = 20261016L
 
