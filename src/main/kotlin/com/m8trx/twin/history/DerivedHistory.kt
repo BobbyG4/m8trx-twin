@@ -9,7 +9,6 @@ import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.time.temporal.TemporalAdjusters
@@ -52,8 +51,13 @@ class DerivedHistory(private val gen: HistoryGenerator, private val chainDir: Pa
     }
     private val epcsByEan: Map<String, Map<String, List<String>>> = epcs.mapValues { (_, l) -> l.groupBy({ it.second }, { it.first }) }
 
+    /**
+     * A local wall-clock time on [date]. Built from the LOCAL date-time, never "midnight + minutes": on a DST
+     * switch day (US Mar 8, EU Mar 29) midnight-plus-minutes lands an hour off, which put a Denver task at
+     * 21:08 on Mar 8 in the first full-year run.
+     */
     private fun local(store: ChainKeys.Store, date: LocalDate, minutesAfterMidnight: Int): Instant =
-        ZonedDateTime.of(date, LocalTime.MIDNIGHT, store.zone).plusMinutes(minutesAfterMidnight.toLong()).toInstant()
+        ZonedDateTime.of(date.atStartOfDay().plusMinutes(minutesAfterMidnight.toLong()), store.zone).toInstant()
 
     private val openMin = 10 * 60
     private val closeMin = 21 * 60

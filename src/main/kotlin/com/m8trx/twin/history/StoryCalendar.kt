@@ -53,7 +53,7 @@ class StoryCalendar(private val model: OperatingModel, private val referenceArea
     private val seasonAnchors: Map<Country, DoubleArray> = mapOf(
         Country.US to doubleArrayOf(0.80, 0.86, 0.95, 1.00, 1.05, 1.10, 1.20, 1.12, 1.04, 0.98, 1.00, 1.10),
         // the August dip — Paris empties; the rentrée makes September strong
-        Country.FR to doubleArrayOf(0.80, 0.86, 0.96, 1.02, 1.06, 1.10, 1.14, 0.78, 1.10, 1.00, 1.00, 1.10),
+        Country.FR to doubleArrayOf(0.80, 0.86, 0.96, 1.02, 1.06, 1.10, 1.14, 0.75, 1.10, 1.00, 1.00, 1.10),
         // the Korean school year starts in March; summer vacation July-August
         Country.KR to doubleArrayOf(0.82, 0.88, 1.02, 1.00, 1.06, 1.06, 1.14, 1.12, 1.04, 1.00, 1.00, 1.08),
     )

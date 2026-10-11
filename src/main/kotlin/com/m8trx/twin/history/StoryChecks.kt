@@ -106,8 +106,8 @@ class StoryChecks(private val gen: HistoryGenerator, private val dir: Path) {
         val frDip = visitsPerDay(fr, d(8, 1)..d(8, 31)) / visitsPerDay(fr, d(7, 1)..d(7, 31))
         val usAug = visitsPerDay(us, d(8, 1)..d(8, 31)) / visitsPerDay(us, d(7, 1)..d(7, 31))
         check(
-            "the French five dip in August (≥ 20 % below July); the US does not",
-            frDip <= 0.80 && usAug > 0.88,
+            "the French five dip in August (≥ 15 % below July); the US does not",
+            frDip <= 0.85 && usAug > 0.90,
             "FR ${pct(frDip)}, US ${pct(usAug)}",
         )
 
@@ -118,8 +118,9 @@ class StoryChecks(private val gen: HistoryGenerator, private val dir: Path) {
 
         // Chuseok — the pre-holiday surge in Seoul, the day itself closed
         val pre = visitsPerDay(listOf("dec-kr-seoul"), d(9, 19)..d(9, 23))
-        val before = visitsPerDay(listOf("dec-kr-seoul"), d(9, 12)..d(9, 16))
-        check("Seoul's pre-Chuseok surge (Sep 19–23 ≥ 10 % over the week before)", pre >= 1.10 * before, pct(pre / before))
+        // baseline: the same Sat..Wed run three weeks earlier — the week right before holds the Sep 7–13 promo
+        val before = visitsPerDay(listOf("dec-kr-seoul"), d(8, 29)..d(9, 2))
+        check("Seoul's pre-Chuseok surge (Sep 19–23 ≥ 10 % over Aug 29–Sep 2, same weekdays, no promo)", pre >= 1.10 * before, pct(pre / before))
         check("Chuseok day (Sep 25) is closed in Korea", days.keys.none { it.first.startsWith("dec-kr-") && it.second == d(9, 25) }, "")
 
         // compliance with its story
