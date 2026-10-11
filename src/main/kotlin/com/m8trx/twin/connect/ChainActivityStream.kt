@@ -32,6 +32,10 @@ import kotlin.random.Random
  * M8TRX_ACTIVITY_DURATION_SEC (300), weights M8TRX_W_SALE/_RESTOCK/_PRICING/_CATALOG (70/12/10/8),
  * M8TRX_ACTIVITY_VALIDATE (fire exactly 1 of each type + stop, unpaced), M8TRX_STREAM_SOLD_LOG,
  * M8TRX_STREAM_SEED, M8TRX_RUN_ID. Run: `./gradlew connectChainActivity`.
+ *
+ * **Dated mode** (2026-10-12): set `M8TRX_STREAM_DATE` and the run streams that day for every store at model
+ * volume — sales at their own times, plus restock / pricing / catalog — see [DatedStream] (dry-run unless
+ * `M8TRX_STREAM_LIVE=true`). Unset, nothing here changes.
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ChainActivityStream")
 
@@ -44,11 +48,16 @@ private data class Store(val code: String, val siteId: String)
  * two prices. This record used to be deduped on [itemCd], which silently dropped the second variant and
  * left twin emitting a style code the platform then applied to both product rows.
  */
-private data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
+internal data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
 
 fun main() {
+    if (!System.getenv("M8TRX_STREAM_DATE").isNullOrBlank()) {
+        val chain = Path.of(env("M8TRX_CHAIN_DIR", "reference/data/chain"))
+        DatedStream.run(defaultStores = loadStores(chain.resolve("site_ids.csv")).map { it.code }, chainOps = true)
+        return
+    }
     val config = ConnectConfig.fromEnv()
     val driver = InboundPushDriver(WebhookClient(config), ConnectClient(config))
     val chainDir = Path.of(env("M8TRX_CHAIN_DIR", "reference/data/chain"))
@@ -188,7 +197,7 @@ private fun loadStores(file: Path): List<Store> {
 }
 
 /** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, price as store-currency minor units). */
-private fun loadAssortment(file: Path): List<Sku> {
+internal fun loadAssortment(file: Path): List<Sku> {
     if (!Files.exists(file)) return emptyList()
     val lines = Files.readAllLines(file)
     if (lines.size < 2) return emptyList()

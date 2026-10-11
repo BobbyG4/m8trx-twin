@@ -8,6 +8,7 @@ import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.webhook.DirectiveTarget
 import com.m8trx.twin.connect.model.webhook.PlanogramDirective
 import com.m8trx.twin.connect.model.webhook.PlanogramDocument
+import com.m8trx.twin.connect.model.webhook.PlanogramLine
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -42,13 +43,14 @@ class PlanogramDirectiveDriver(private val webhook: WebhookClient) {
         name: String = "Twin planogram — ${doc.storeId} (${doc.directiveRef})",
         effectiveDate: String? = null,
         fixtures: Set<String> = emptySet(),
+        lines: List<PlanogramLine> = doc.lines,
     ): PlanogramDirective {
-        val lines = if (fixtures.isEmpty()) doc.lines else doc.lines.filter { it.fixtureCode in fixtures }
+        val selected = if (fixtures.isEmpty()) lines else lines.filter { it.fixtureCode in fixtures }
         return PlanogramDirective(
             name = name,
             externalDirectiveId = externalDirectiveId,
             effectiveDate = effectiveDate,
-            targets = lines.map {
+            targets = selected.map {
                 DirectiveTarget(
                     siteId = siteId,
                     rawFixtureCode = it.fixtureCode,
@@ -59,6 +61,44 @@ class PlanogramDirectiveDriver(private val webhook: WebhookClient) {
                 )
             },
         )
+    }
+
+    companion object {
+        /** The default curated grain — the size of the Denver plan that has been live since S12. */
+        const val CURATED_LINES = 28
+
+        /** `PLN-<slug>-<yyyymmdd>` — one external ref per store AND per plan version (a re-send with the same ref rebuilds its targets). */
+        fun externalRef(storeSlug: String, planDate: java.time.LocalDate): String =
+            "PLN-$storeSlug-${planDate.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)}"
+
+        /**
+         * The curated slice of a store's plan: [n] lines spread over the store's **department walls** — the
+         * fixtures the key export gives a department ([wallDepartments]: fixture code → department).
+         *
+         * Walls are ordered department-interleaved (departments sorted, codes sorted inside each, then
+         * round-robin), so the first lines touch every department before any department gets a second wall.
+         * Pass k takes each wall's k-th line by `position_sequence`; one line per wall while walls last, a
+         * second pass only where a store has fewer walls than [n] (Bordeaux, Marseille and Busan). Pure and
+         * deterministic — no RNG — so the same plan file always yields the same 28 targets.
+         */
+        fun curate(doc: PlanogramDocument, wallDepartments: Map<String, String>, n: Int = CURATED_LINES): List<PlanogramLine> {
+            val byFixture = doc.lines.filter { it.fixtureCode in wallDepartments }
+                .groupBy { it.fixtureCode }
+                .mapValues { (_, ls) -> ls.sortedWith(compareBy({ it.positionSequence }, { it.ean })) }
+            val perDept = byFixture.keys.groupBy { wallDepartments.getValue(it) }.toSortedMap().mapValues { (_, cs) -> cs.sorted() }
+            val walls = ArrayList<String>()
+            val depth = perDept.values.maxOfOrNull { it.size } ?: 0
+            for (i in 0 until depth) perDept.values.forEach { cs -> cs.getOrNull(i)?.let(walls::add) }
+            val out = ArrayList<PlanogramLine>()
+            val maxPass = byFixture.values.maxOfOrNull { it.size } ?: 0
+            for (k in 0 until maxPass) {
+                for (code in walls) {
+                    if (out.size >= n) return out
+                    byFixture.getValue(code).getOrNull(k)?.let(out::add)
+                }
+            }
+            return out
+        }
     }
 
     /** Serialize the directive WITHOUT sending — the offline assertion path + the dry-run log shape. */

@@ -37,6 +37,8 @@ import com.m8trx.twin.connect.sim.RemediateMode
 import com.m8trx.twin.connect.sim.SaleArm
 import com.m8trx.twin.connect.sim.SftpDropDriver
 import com.m8trx.twin.connect.sim.StressHarness
+import com.m8trx.twin.history.ChainKeys
+import com.m8trx.twin.history.RecentDay
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
@@ -71,6 +73,10 @@ fun main() {
     readPlaneCaps()
     fullLoopPlan()
     stressPlan()
+    tenStorePlanRefs()
+    datedSaleOccurredAt()
+    alarmDayEnvelope()
+    multiStoreMoves()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -632,4 +638,135 @@ private fun post(http: HttpClient, url: String, body: ByteArray, signature: Stri
     if (signature != null) builder.header("X-M8TRX-Signature", signature)
     builder.POST(HttpRequest.BodyPublishers.ofByteArray(body))
     return http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
+
+// ── recent window (2026-10-12) ────────────────────────────────────────────────────────────────────────────
+
+private val CHAIN: Path = Path.of("reference/data/chain")
+
+/**
+ * The ten-store plans: one external ref per store (a shared ref would make each send rebuild the last store's
+ * targets), and the curated 28-line grain spread over every department wall a store has.
+ */
+private fun tenStorePlanRefs() {
+    val keys = ChainKeys.load()
+    val date = java.time.LocalDate.of(2026, 10, 12)
+    val refs = keys.stores.map { PlanogramDirectiveDriver.externalRef(it.slug, date) }
+    check(refs.size == 10) { "ten stores in the key export, got ${refs.size}" }
+    check(refs.toSet().size == refs.size) { "per-store external refs must be distinct: $refs" }
+    check(refs.all { Regex("PLN-dec-[a-z]{2}-[a-z]+-20261012").matches(it) }) { "ref shape PLN-<slug>-<yyyymmdd>: $refs" }
+    check(PlanogramDirectiveDriver.externalRef("dec-us-nyc", date.plusDays(1)) != PlanogramDirectiveDriver.externalRef("dec-us-nyc", date)) {
+        "a new plan version must get a new ref"
+    }
+    val driver = PlanogramDirectiveDriver(WebhookClient(ConnectConfig.fromEnv()))
+    for (st in keys.stores) {
+        val walls = st.fixtures.filter { !it.department.isNullOrBlank() }.associate { it.code to it.department!! }
+        val doc = driver.loadDocument(CHAIN.resolve("stores/${st.slug}/planogram.json"))
+        val lines = PlanogramDirectiveDriver.curate(doc, walls)
+        check(lines.size == PlanogramDirectiveDriver.CURATED_LINES) { "${st.slug}: curated plan must be 28 lines, got ${lines.size}" }
+        check(lines.all { it.fixtureCode in walls }) { "${st.slug}: every curated line sits on a department wall" }
+        val wallsInPlan = doc.lines.map { it.fixtureCode }.filter { it in walls }.toSet()
+        val distinctWalls = lines.map { it.fixtureCode }.toSet().size
+        check(distinctWalls == minOf(28, wallsInPlan.size)) {
+            "${st.slug}: one line per wall while walls last — $distinctWalls of ${wallsInPlan.size}"
+        }
+        check(
+            lines.map {
+                walls.getValue(it.fixtureCode)
+            }.toSet() == wallsInPlan.map { walls.getValue(it) }.toSet(),
+        ) { "${st.slug}: every department is covered" }
+        check(lines.map { it.fixtureCode to it.ean }.toSet().size == lines.size) { "${st.slug}: no duplicate (wall, sku) target" }
+        check(PlanogramDirectiveDriver.curate(doc, walls) == lines) { "${st.slug}: curation must be deterministic" }
+    }
+    log.info("[recent] ten-store plans: 10 distinct refs, 28 curated lines each, every department wall covered ✓")
+}
+
+/** A backdated sale carries its own `occurred_at`, inside the store's hours, spread across the day; each EPC sells once. */
+private fun datedSaleOccurredAt() {
+    val recent = RecentDay(chainDir = CHAIN)
+    val date = java.time.LocalDate.of(2026, 10, 6) // a Tuesday in the recent window, already in the past
+    val day = checkNotNull(recent.run("dec-us-denver", date)) { "Denver is open on $date" }
+    val plan = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        emptySet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(plan.sales.size in 150..450) { "Denver weekday volume from the model, got ${plan.sales.size} transactions" }
+    val first = plan.sales.first()
+    val json = ConnectMappers.snake.writeValueAsString(DatedStream.toSaleEvent(first))
+    check(json.contains("\"occurred_at\":\"${first.at}\"")) { "a backdated sale must carry its own occurred_at (${first.at}): $json" }
+    check(first.at.isBefore(java.time.Instant.now())) { "the self-test day is in the past" }
+    val zone = recent.store("dec-us-denver").zone
+    val local = plan.sales.map { it.at.atZone(zone) }
+    check(local.all { it.toLocalDate() == date && it.hour in 10..20 }) { "every sale on $date inside 10:00–21:00 local" }
+    check(local.map { it.hour }.toSet().size >= 10) { "sales spread across the operating hours, not a burst: hours ${local.map { it.hour }.toSet()}" }
+    val epcs = plan.sales.flatMap { it.epcs }
+    check(epcs.toSet().size == epcs.size) { "each EPC sells once" }
+    check(plan.droppedLines == 0) { "no basket line dropped on a stocked store: ${plan.droppedLines}" }
+    check(plan.fromBackOfHouse > 0) { "back-of-house stock goes first" }
+    check(plan.sales.map { it.saleId }.toSet().size == plan.sales.size) { "external_sale_id unique per sale" }
+    check(json.contains("\"external_sale_id\"") && !json.contains("externalSaleId")) { "webhook plane stays snake_case: $json" }
+    val again = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        emptySet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(again.sales == plan.sales) { "allocation must be deterministic" }
+    val excluded = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        epcs.take(50).toSet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(excluded.sales.flatMap { it.epcs }.none { it in epcs.take(50).toSet() }) { "a sold/reserved EPC never sells again" }
+    log.info(
+        "[recent] dated sale: {} txn / {} units on {} (BOH {}, substituted {}), first occurred_at {} ✓",
+        plan.sales.size,
+        plan.units,
+        date,
+        plan.fromBackOfHouse,
+        plan.substitutedLines,
+        first.at,
+    )
+}
+
+/** A day alarm's envelope carries the crossing's own time as `occurred_at` and the store's gate as `zone_ref`. */
+private fun alarmDayEnvelope() {
+    val at = java.time.Instant.parse("2026-10-13T20:07:00Z")
+    val a = AlarmDay.PlannedAlarm("dec-us-denver-s0", "dec-us-denver", at, "CS-01", "3039606303C19FC000000001", "3608439438110", scripted = true)
+    val json = ConnectMappers.snake.writeValueAsString(
+        AlarmDay.envelope(AlarmDriver(WebhookClient(ConnectConfig.fromEnv()), ConnectClient(ConnectConfig.fromEnv())), "twin-eas", a),
+    )
+    check(json.contains("\"occurred_at\":\"2026-10-13T20:07:00Z\"")) { "alarm occurred_at = the event time: $json" }
+    check(json.contains("\"zone_ref\":\"CS-01\"") && json.contains("\"site_ref\":\"dec-us-denver\"")) { "gate code + site slug: $json" }
+    check(json.contains("\"dedupe_key\":\"CS-01:3039606303C19FC000000001:${at.toEpochMilli()}\"")) { "dedupe key gate:epc:millis: $json" }
+    val script = AlarmDay.parseScript("dec-us-denver@14:07, dec-kr-seoul@11:30")
+    check(script == listOf("dec-us-denver" to java.time.LocalTime.of(14, 7), "dec-kr-seoul" to java.time.LocalTime.of(11, 30))) {
+        "script parse: $script"
+    }
+    log.info("[recent] alarm day envelope: occurred_at = event time, zone_ref = gate ✓")
+}
+
+/** N moves per store: distinct ids and walls, back-of-house units only, never a unit twice. */
+private fun multiStoreMoves() {
+    val date = java.time.LocalDate.of(2026, 10, 12)
+    val moves = ChainKeys.load().stores.flatMap { planMoves(CHAIN, it.slug, date, 3, RecentDay.HISTORY_SEED, emptySet()) }
+    check(moves.size == 30) { "3 moves × 10 stores, got ${moves.size}" }
+    check(moves.map { it.extId }.toSet().size == moves.size) { "movement ids distinct" }
+    check(moves.groupBy { it.store }.values.all { ms -> ms.map { it.toFixture }.toSet().size == ms.size }) { "distinct walls per store-day" }
+    val epcs = moves.flatMap { it.epcs }
+    check(epcs.toSet().size == epcs.size) { "no unit moved twice" }
+    check(moves.all { it.epcs.size in 2..6 }) { "2–6 units per move" }
+    check(moves.all { it.toZoneId != null }) { "every destination wall has a zone in the key export" }
+    check(
+        planMoves(CHAIN, "dec-us-denver", date, 3, RecentDay.HISTORY_SEED, emptySet()) == moves.filter {
+            it.store == "dec-us-denver"
+        },
+    ) { "deterministic" }
+    log.info("[recent] multi-store moves: 30 moves, distinct ids/walls/units ✓")
 }

@@ -26,6 +26,10 @@ import kotlin.random.Random
  * (180), `M8TRX_STREAM_WARMUP` (fire 1 + stop — the validate-first gate), `M8TRX_STREAM_SEED`,
  * `M8TRX_RUN_ID`, `M8TRX_STREAM_EXCLUDE` (extra EPCs, comma-sep), `M8TRX_STREAM_SOLD_LOG` (a local
  * auto-exclude list of already-sold EPCs, appended per sale). Run: `./gradlew connectSaleStream`.
+ *
+ * **Dated mode** (2026-10-12): set `M8TRX_STREAM_DATE` and the run streams that day's Denver transactions at
+ * their own times instead — see [DatedStream] (dry-run unless `M8TRX_STREAM_LIVE=true`). Unset, nothing here
+ * changes.
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.SaleStream")
 
@@ -37,6 +41,10 @@ private val SOLD_ARTIFACTS = setOf(
 )
 
 fun main() {
+    if (!System.getenv("M8TRX_STREAM_DATE").isNullOrBlank()) {
+        DatedStream.run(defaultStores = listOf("dec-us-denver"), chainOps = false)
+        return
+    }
     val config = ConnectConfig.fromEnv()
     val driver = InboundPushDriver(WebhookClient(config), ConnectClient(config))
 

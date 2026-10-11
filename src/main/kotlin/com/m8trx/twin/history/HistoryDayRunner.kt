@@ -5,6 +5,7 @@ import com.m8trx.twin.domain.CustomerExited
 import com.m8trx.twin.domain.EasGateCrossed
 import com.m8trx.twin.domain.ItemConcealed
 import com.m8trx.twin.domain.SaleCompleted
+import com.m8trx.twin.domain.SaleLine
 import com.m8trx.twin.layer1.FixtureSet
 import com.m8trx.twin.layer1.ImpressionOracle
 import com.m8trx.twin.layer1.ZoneRoleResolver
@@ -208,6 +209,14 @@ class HistoryDayRunner(
 
     data class Sold(val fixture: String, val ean: String)
 
+    /**
+     * One till transaction, stamped when the shopper LEAVES — the journey publishes `SaleCompleted` at its
+     * arrival instant (journeys run whole at arrival), and `CustomerExited` fires at the end of the checkout
+     * dwell, which is when the receipt is printed. Used by the dated sale stream (2026-10-12); the history files
+     * never read it, so adding it changes no byte of their output.
+     */
+    data class Txn(val at: Instant, val customerId: String, val lines: List<SaleLine>)
+
     class DayResult(
         val date: LocalDate,
         val openUtc: Instant,
@@ -218,6 +227,8 @@ class HistoryDayRunner(
         val alarms: List<Alarm>,
         val sold: List<Sold>,
         val schedulerErrors: Int,
+        /** every till transaction with its exit-time stamp, in the order they closed */
+        val txns: List<Txn> = emptyList(),
     ) {
         val visits: Int get() = hours.sumOf { it.visits }
         val transactions: Int get() = hours.sumOf { it.transactions }
@@ -260,6 +271,8 @@ class HistoryDayRunner(
         val fixtureAgg = HashMap<String, Fix>()
         val alarms = ArrayList<Alarm>()
         val sold = ArrayList<Sold>()
+        val txns = ArrayList<Txn>()
+        val pendingSale = HashMap<String, SaleCompleted>()
         val entryMs = HashMap<String, Long>()
         val concealed = HashMap<String, ItemConcealed>()
         val departmentCode: Map<String, String> = store.departments.associate { it.department!! to it.code }
@@ -289,6 +302,7 @@ class HistoryDayRunner(
             hourOf(it.customerId).visits++
         }
         bus.subscribe(CustomerExited::class) {
+            pendingSale.remove(it.customerId)?.let { s -> txns += Txn(it.at, s.customerId, s.lines) }
             val start = entryMs[it.customerId] ?: return@subscribe
             val ms = it.at.toEpochMilli() - start
             hourOf(it.customerId).apply {
@@ -298,6 +312,7 @@ class HistoryDayRunner(
             }
         }
         bus.subscribe(SaleCompleted::class) { s ->
+            pendingSale[s.customerId] = s
             val h = hourOf(s.customerId)
             h.transactions++
             h.units += s.units
@@ -348,7 +363,9 @@ class HistoryDayRunner(
         generator.stop(ctx)
 
         // Fixtures with nothing at all still get a zero row (a measured zero for a fixture the pipeline sees).
-        return DayResult(plan.date, openUtc, hours, departments, fixtureAgg, alarms, sold, scheduler.errorCount)
+        // a sale whose exit never fired (none expected) keeps its arrival stamp rather than vanishing
+        pendingSale.values.sortedBy { it.at }.forEach { txns += Txn(it.at, it.customerId, it.lines) }
+        return DayResult(plan.date, openUtc, hours, departments, fixtureAgg, alarms, sold, scheduler.errorCount, txns)
     }
 
     /**
