@@ -29,9 +29,9 @@ import kotlin.random.Random
  *    `dec-us-denver@14:07` — the demo script's Tuesday alarm at 14:07 store-local time).
  *  - **`occurred_at` = the crossing's own time** (the end of the walk-out), so `alert.created_at` lands on the
  *    store's hours once core honors it.
- *  - **`zone_ref` = the store's gate code** (`CS-01`, read from its layout). It resolves to a zone only where the
- *    gate is registered in `fixture_code_mapping`; otherwise the alarm lands site-level (§8.1) — the
- *    Coordinator holds the one-row registration per store.
+ *  - **`zone_ref` = `M8TRX_ALARM_ZONE_REF`** when set (the platform zone's own code — the chain's Entrance zones are
+ *    `Z-01`, which core resolves directly), else the store's layout gate code (`CS-01`), which resolves only where
+ *    that label is registered in `fixture_code_mapping`; otherwise the alarm lands site-level (§8.1).
  *  - **The subject is a real unit**: a floor EPC of the concealed EAN (a shoplifter takes from the floor),
  *    never one already sold or reserved by a dated sale plan. A scripted alarm takes a floor unit that
  *    [EasTagging]'s rule would have tagged.
@@ -189,11 +189,17 @@ object AlarmDay {
     ): List<PlannedAlarm> {
         val store = recent.store(slug)
         val storeDir = chainDir.resolve("stores/$slug")
-        val gate = EasTagging.loadGates(storeDir.resolve("layout.json")).firstOrNull()?.code
-        if (gate == null) {
+        val layoutGate = EasTagging.loadGates(storeDir.resolve("layout.json")).firstOrNull()?.code
+        if (layoutGate == null) {
             log.warn("  {} has no eas_gate crossing slice — no alarms (absence stays absence)", slug)
             return emptyList()
         }
+        // The platform places an alarm by `zone_ref`: a zone UUID, the zone's own code (`zone.properties.code`), or a
+        // label registered in `fixture_code_mapping`. The layout's crossing slice (`CS-01`) is twin-side only and a gate
+        // label cannot be registered through the product today (the fixture-code save accepts fixture zones only), so
+        // M8TRX_ALARM_ZONE_REF names the platform zone to send instead — the chain's Entrance zones all carry `Z-01`.
+        // Unset, the layout code is sent and the alarm lands site-level (§8.1).
+        val gate = System.getenv("M8TRX_ALARM_ZONE_REF")?.takeIf { it.isNotBlank() } ?: layoutGate
         val floor = DatedStream.loadEpcRows(storeDir.resolve("epcs.csv")).filter { !it.backOfHouse && it.epc !in excluded }.sortedBy { it.epc }
         val byEan = floor.groupBy { it.ean }
         val used = HashSet<String>()

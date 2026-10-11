@@ -113,7 +113,7 @@ Runway is ≥ 15 days at a Saturday's rate for every store. The brief's budget i
 
 - **Coordinator:** resolve the nine refs → ids, `/evaluate` each, report resolved/unresolved per store, and re-run mig 259's compliance part.
 - **Core timestamp fixes deployed** (BRIEF-CORE-ROLLUP-AND-SCORECARD § 2.3) → then `day.sh --live-stream --live-alarm --live-move` (webhook plane, anywhere), then `--live-day` (LAN, `:4223`, edge interlock in code). For the moving dots, use a `--slice … --compress 1` whose start is in the past.
-- **Gate registration:** one `CS-01` row per store in `fixture_code_mapping` for the alarms (Coordinator).
+- **Gate registration:** ~~one `CS-01` row per store in `fixture_code_mapping` for the alarms (Coordinator)~~ **closed 2026-10-12 (Coordinator):** core resolves `zone_ref` by the zone's own code (`zone.properties.code`) before any mapping, every store's Entrance zone is `Z-01`, and the fixture-code save refuses non-fixture zones anyway (core cleanup F-6) — `AlarmDay` now sends `M8TRX_ALARM_ZONE_REF` (day.sh defaults it to `Z-01`), the layout's `CS-01` only when unset.
 - **Stocktakes:** not built. They need `connectScanSweep` + the sessions REST with deliberate shortfalls, plus a grant: the key currently presents `twin-s280-lockdown` (read scopes only).
 - **Try-on sessions:** not built. The edge-side try-on config is unproven.
 - **Cron:** `day.sh` is cron-ready (sources `.env`, idempotent per date). The schedule and host are Bob's call (MacBook or box).

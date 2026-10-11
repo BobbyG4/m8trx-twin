@@ -8,7 +8,8 @@
 #   1. stream  connectChainActivity, dated: all ten stores' sales at their own times (+ restock/pricing/catalog)
 #   2. day     connectDayDrive on Denver in PLAN epoch mode (wire ts = the plan's store-local hours), the whole
 #              day compressed (~40 min at 18x) — or a slice at compress 1 with --slice (the live moving dots)
-#   3. alarm   connectAlarmDrive, day mode: the day's gate alarms (+ the scripted Denver 14:07 on 2026-10-13)
+#   3. alarm   connectAlarmDrive, day mode: the day's gate alarms (+ the scripted Denver 14:07 on 2026-10-13);
+#              zone_ref = M8TRX_ALARM_ZONE_REF (default Z-01, every store's Entrance zone code — core resolves it)
 #   4. move    connectMovementDrive, N moves per store from the stockroom onto the plan's walls
 #   5. stock   stocktakes (SF / Seoul / Denver)            — NOT BUILT this round, reported SKIPPED
 #   6. tryon   try-on-zone sessions with unreturned items  — NOT BUILT this round, reported SKIPPED
@@ -132,7 +133,7 @@ fi
 if want alarm; then
   run_step alarm "$LIVE_ALARM" connectAlarmDrive \
     M8TRX_ALARM_DATE="$DATE" M8TRX_ALARM_SEED="$SEED" M8TRX_ALARM_LIVE="$LIVE_ALARM" M8TRX_ALARM_ALLOW_FUTURE="$ALLOW_FUTURE" \
-    M8TRX_ALARM_SCRIPT="$ALARM_SCRIPT"
+    M8TRX_ALARM_SCRIPT="$ALARM_SCRIPT" M8TRX_ALARM_ZONE_REF="${M8TRX_ALARM_ZONE_REF:-Z-01}"
 fi
 
 if want move; then
