@@ -5,7 +5,9 @@
 # run with no flags (that is how it is tested), and nothing reaches mother or the twin edge without an explicit
 # --live-* on the command line.
 #
-#   1. stream  connectChainActivity, dated: all ten stores' sales at their own times (+ restock/pricing/catalog)
+#   1. stream  connectChainActivity, dated: all ten stores' sales at their own times (+ restock/pricing/catalog).
+#              The run id (plan + sent ledger + sale ids) is per date: twin-day-<yyyymmdd>-<seed>, overriding any
+#              M8TRX_RUN_ID in .env — a fixed id made every day after the first reuse the first day's plan (2026-10-12).
 #   2. day     connectDayDrive on Denver in PLAN epoch mode (wire ts = the plan's store-local hours), the whole
 #              day compressed (~40 min at 18x) — or a slice at compress 1 with --slice (the live moving dots)
 #   3. alarm   connectAlarmDrive, day mode: the day's gate alarms (+ the scripted Denver 14:07 on 2026-10-13);
@@ -118,6 +120,7 @@ echo "═══ day.sh  date=$DATE seed=$SEED steps=$STEPS live: stream=$LIVE_ST
 
 if want stream; then
   run_step stream "$LIVE_STREAM" connectChainActivity \
+    M8TRX_RUN_ID="twin-day-${DATE//-/}-$SEED" \
     M8TRX_STREAM_DATE="$DATE" M8TRX_STREAM_SEED="$SEED" M8TRX_STREAM_LIVE="$LIVE_STREAM" M8TRX_STREAM_ALLOW_FUTURE="$ALLOW_FUTURE"
 fi
 
