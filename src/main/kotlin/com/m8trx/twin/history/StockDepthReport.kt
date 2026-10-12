@@ -244,6 +244,11 @@ object StockDepthReport {
         perEan.entries.sortedWith(compareBy({ -it.value }, { it.key })).take(10).forEach { (e, n) ->
             sb.append("| $e | ${names.values.firstNotNullOfOrNull { it[e] }?.replace("|", "/")} | $n |\n")
         }
+        sb.append("\n## Notes\n\n- Margin units: ${perStore.values.sumOf { it[5] } * margin} of ${sum[4]} ($margin per store and EAN).\n")
+        sb.append(
+            "- `zone_id` is BLANK: neither keys-2026-10-11.csv nor fixture_ids.csv carries stockroom (BR-*) zones, and layout.json has codes only. ",
+        )
+        sb.append("The loader joins (site_slug, fixture) to the stockroom zone; `stockroom_fixtures.csv` lists the 62 racks.\n")
         Files.writeString(out.resolve("summary.md"), sb.toString())
     }
 }
