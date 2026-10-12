@@ -147,7 +147,14 @@ if want receive; then
 fi
 
 if want day; then
-  DAY_ENV=(M8TRX_DAY_DATE="$DATE" M8TRX_DAY_SEED="$SEED" M8TRX_DAY_EPOCH_MODE=plan M8TRX_DAY_LIVE="$LIVE_DAY" M8TRX_DAY_ALLOW_FUTURE="$ALLOW_FUTURE"
+  # Each date gets its own crowd: the people plane re-runs the same scenario for the same seed (ScenarioRun is
+  # deterministic in seed, not date), so a fixed seed drew the identical 857 shoppers every day (seen 2026-10-12 on
+  # Oct 5-7). Seed = SEED + day-of-year; scale by weekday (Sat/Sun up, Mon/Tue down) the way the history's days vary.
+  DAY_ORD=$(date -j -f %Y-%m-%d "$DATE" +%j 2>/dev/null || date -d "$DATE" +%j); DAY_ORD=$((10#$DAY_ORD))
+  DAY_DOW=$(date -j -f %Y-%m-%d "$DATE" +%u 2>/dev/null || date -d "$DATE" +%u)
+  case "$DAY_DOW" in 6) DAY_SCALE=1.25 ;; 7) DAY_SCALE=1.15 ;; 1) DAY_SCALE=0.85 ;; 2) DAY_SCALE=0.9 ;; 5) DAY_SCALE=1.1 ;; *) DAY_SCALE=1.0 ;; esac
+  DAY_SCALE="${M8TRX_DAY_SCALE:-$DAY_SCALE}"
+  DAY_ENV=(M8TRX_DAY_DATE="$DATE" M8TRX_DAY_SEED="$((SEED + DAY_ORD))" M8TRX_DAY_SCALE="$DAY_SCALE" M8TRX_DAY_EPOCH_MODE=plan M8TRX_DAY_LIVE="$LIVE_DAY" M8TRX_DAY_ALLOW_FUTURE="$ALLOW_FUTURE"
            M8TRX_DAY_TAG="day-$DATE" M8TRX_DAY_COMPRESS="$COMPRESS")
   if [[ -n "$SLICE" ]]; then
     DAY_ENV+=(M8TRX_DAY_FROM_HOUR="${SLICE%-*}" M8TRX_DAY_TO_HOUR="${SLICE#*-}" M8TRX_DAY_TAG="slice-$DATE-$SLICE")
