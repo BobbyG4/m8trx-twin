@@ -77,6 +77,7 @@ fun main() {
     datedSaleOccurredAt()
     alarmDayEnvelope()
     multiStoreMoves()
+    restockMovesPlan()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -769,4 +770,84 @@ private fun multiStoreMoves() {
         },
     ) { "deterministic" }
     log.info("[recent] multi-store moves: 30 moves, distinct ids/walls/units ✓")
+}
+
+/**
+ * Restock moves on a synthetic store-day: picks exactly the sold wall units' EANs from the stockroom, skips
+ * stockroom sales and unsent sales, honors the ledger on a re-run, resolves placements first, and reports shortfall.
+ */
+private fun restockMovesPlan() {
+    val date = java.time.LocalDate.of(2026, 10, 6)
+    fun row(n: Int, ean: String, fixture: String) = DatedStream.EpcRow("E%03d".format(n), ean, fixture)
+    val rows = listOf(
+        row(1, "A", "W1"), row(2, "A", "W1"), row(3, "A", "W1"), // wall W1 holds A x3
+        row(4, "B", "W2"), // wall W2 holds B x1
+        row(5, "D", "W3"), row(6, "D", "W3"), // wall W3 holds D x2 — the stockroom has none
+        row(10, "A", "BR-01"), row(11, "A", "BR-01"), row(12, "A", "BR-02"), row(13, "A", "BR-02"), // stockroom A x6 with 16 and 17
+        row(16, "A", "BR-02"), row(17, "A", "BR-01"),
+        row(14, "B", "BR-01"), // stockroom B x1
+        row(15, "A", "W1"), // a placed unit (see below)
+    )
+    val placements = mapOf("E015" to "W9") // E015 was moved onto W9 on an earlier day; the CSV still says W1
+    val sales = listOf(
+        DatedStream.PlannedSale("s-1", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E001", "E002", "E004", "E010")),
+        DatedStream.PlannedSale("s-2", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E003")), // planned, never sent
+        DatedStream.PlannedSale("s-3", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E005", "E006", "E015")),
+        DatedStream.PlannedSale("o-1", "other", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E001")), // another store's row
+    )
+    val sent = setOf("s-1", "s-3", "o-1")
+    // E010 sold from the stockroom (taken); E011 reserved by another date's plan
+    val taken = setOf("E010", "E011") + placements.keys + setOf("E001", "E002", "E004", "E005", "E006")
+    fun plan(ledger: Set<String>, pl: Map<String, String>, sentIds: Set<String> = sent, sl: List<DatedStream.PlannedSale> = sales) =
+        RestockMoves.plan("s1", date, rows, sl, sentIds, taken, ledger, pl, mapOf("W1" to "zone-w1"))
+
+    val p = plan(emptySet(), placements)
+    val byKey = p.moves.associateBy { it.toFixture to it.ean }
+    check(p.soldWallUnits == 6 && p.soldBohUnits == 1) { "sold: wall 6 (A x2 on W1, B on W2, D x2 on W3, A on W9), stockroom 1: $p" }
+    check(byKey.keys == setOf("W1" to "A", "W2" to "B", "W9" to "A")) { "one move per sold (fixture, ean), placements resolved first: ${byKey.keys}" }
+    check(byKey.getValue("W1" to "A").epcs == listOf("E012", "E013")) { "W1/A: the 2 sold, from the stockroom A (E010 sold, E011 reserved): $p" }
+    check(byKey.getValue("W2" to "B").epcs == listOf("E014")) { "W2/B: the one stockroom B" }
+    check(byKey.getValue("W9" to "A").epcs == listOf("E016")) { "W9/A: the placed unit that sold, next stockroom A: $p" }
+    check(
+        p.moves.all { m ->
+            m.epcs.all { e -> rows.first { it.epc == e }.let { it.backOfHouse && it.ean == m.ean } }
+        },
+    ) { "only stockroom units of the sold EAN" }
+    check(p.moves.flatMap { it.epcs }.toSet().size == p.units && p.units == 4) { "no unit moved twice, 4 units: $p" }
+    check(p.shortfallUnits == 2) { "W3/D: 2 owed, the stockroom holds none → shortfall 2: $p" }
+    check(byKey.getValue("W1" to "A").toZoneId == "zone-w1" && byKey.getValue("W2" to "B").toZoneId == null) { "zone ids from the key export" }
+    check(p.moves.map { it.extId }.toSet().size == p.moves.size && p.moves.all { it.extId.startsWith("RS-s1-20261006-") }) { "ids distinct" }
+
+    // a re-run after the sends is a no-op for the moves; the shortfall is still owed
+    val sentEpcs = p.moves.flatMap { it.epcs }.toSet()
+    val pl2 = placements + p.moves.flatMap { m -> m.epcs.map { it to m.toFixture } }
+    val again = plan(sentEpcs, pl2)
+    check(again.moves.isEmpty() && again.units == 0) { "idempotent re-run: ${again.moves}" }
+    check(again.shortfallUnits == 2 && again.alreadyRestocked == 4) { "the shortfall persists, 4 already restocked: $again" }
+
+    // more sales sent later the same date → only the new ones, with a fresh id suffix
+    val later = sales + DatedStream.PlannedSale("s-4", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E003"))
+    val laterPlan = plan(sentEpcs, pl2, sent + "s-4", later)
+    check(laterPlan.moves.size == 1 && laterPlan.moves.single().let { it.toFixture == "W1" && it.epcs == listOf("E017") }) {
+        "one new wall unit sold → one move of the next stockroom unit: ${laterPlan.moves}"
+    }
+    check(laterPlan.moves.single().extId.endsWith("-W1-A-2")) { "id suffix = units already moved: ${laterPlan.moves.single().extId}" }
+
+    // nothing sent → nothing to restock
+    check(plan(emptySet(), placements, emptySet()).let { it.moves.isEmpty() && it.shortfallUnits == 0 }) { "an unsent plan is not restocked" }
+
+    // state files round-trip
+    val dir = java.nio.file.Files.createTempDirectory("restock-selftest")
+    val ledger = RestockMoves.ledgerFile(dir, date, 1L)
+    RestockMoves.appendLedger(ledger, listOf("E012", "E013"))
+    RestockMoves.appendLedger(ledger, listOf("E014"))
+    check(RestockMoves.readLedger(ledger) == setOf("E012", "E013", "E014")) { "ledger round-trip" }
+    val pf = dir.resolve("placements.csv")
+    RestockMoves.appendPlacements(pf, listOf("E012"), "W1", date)
+    RestockMoves.appendPlacements(pf, listOf("E014"), "W2", date)
+    check(RestockMoves.readPlacements(pf) == mapOf("E012" to "W1", "E014" to "W2")) { "placements round-trip" }
+    check(RestockMoves.readLedger(dir.resolve("absent")).isEmpty() && RestockMoves.readPlacements(dir.resolve("absent")).isEmpty()) {
+        "absent = empty"
+    }
+    log.info("[restock] picks the sold EANs from the stockroom, skips unsent/stockroom sales, idempotent on re-run, shortfall counted ✓")
 }

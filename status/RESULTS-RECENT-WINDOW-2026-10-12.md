@@ -118,3 +118,48 @@ Runway is ≥ 15 days at a Saturday's rate for every store. The brief's budget i
 - **Stocktakes:** not built. They need `connectScanSweep` + the sessions REST with deliberate shortfalls, plus a grant: the key currently presents `twin-s280-lockdown` (read scopes only).
 - **Try-on sessions:** not built. The edge-side try-on config is unproven.
 - **Cron:** `day.sh` is cron-ready (sources `.env`, idempotent per date). The schedule and host are Bob's call (MacBook or box).
+
+## Restock moves (2026-10-12)
+
+Bob's ruling, "yes do the restock moves": after each day's sales, refill the walls that sold down, so the platform's compliance (re-evaluated when an item moves or sells) holds where the backfilled history left it. **Branch:** `feat/restock-moves-1012` off `feat/recent-window-1012`. **Deletions: none.** Dry runs only; nothing was sent.
+
+**What it does.** `M8TRX_MOVEMENT_RESTOCK=true` on `connectMovementDrive` (default false; `day.sh`'s `move` step defaults it to true, `M8TRX_MOVEMENT_RESTOCK=false` switches it off). It reads the date's persisted sales plan (`.twin-state/stream/twin-day-<yyyymmdd>-<seed>.plan.csv`) and its `.sent` ledger. If the plan is absent it says so and does nothing. Per store, per (fixture, EAN), it counts the **sent** sales that left a wall, then sends ONE `inventory_movement` (same `MovementDriver` envelope as the random moves) carrying the same number of stockroom (`BR-*`) units of that EAN to that wall. Code: `connect/RestockMoves.kt` (pure `plan()`), wired in `ConnectMovementDrive.multiStore`.
+
+- A unit that sold out of the stockroom leaves no hole on a wall and is skipped (counted as `stockroom` in the per-store line).
+- Stockroom units picked are lowest-EPC first and never: in the sold log, reserved by ANY persisted sales plan, already moved (placements / ledger), or taken by this run's random moves. Fewer stockroom units than sold: move what exists, count the rest as `shortfall_units`. No EPC is invented.
+- The random moves are unchanged (`M8TRX_MOVEMENT_PER_STORE` > 0); restock runs in addition, and works with PER_STORE unset or 0.
+- External id `RS-<slug>-<yyyymmdd>-<fixture>-<ean>-<n>`, `n` = units of that (fixture, EAN) already restocked for the date. Ids are strictly increasing within a date, so a resumed batch never reuses one and a failed send retries the same id.
+- Destination: fixture code (default) or the wall's zone UUID with `M8TRX_MOVEMENT_TARGET=zone`. All 371 Oct 6 moves had a zone id in the key export.
+- Live sends are paced `M8TRX_MOVEMENT_GAP_MS` (default 120) apart, like the sale stream (a restock is hundreds of sends).
+
+**Env:** `M8TRX_MOVEMENT_RESTOCK` · `M8TRX_MOVEMENT_DATE` · `M8TRX_MOVEMENT_SEED` (20261016) · `M8TRX_MOVEMENT_STORES` · `M8TRX_MOVEMENT_TARGET` · `M8TRX_MOVEMENT_GAP_MS` · `M8TRX_STREAM_SOLD_LOG` (state dir derives from it) · `M8TRX_MOVEMENT_LIVE`.
+
+**Ledgers (`.twin-state/moves/`, gitignored, written only on an accepted live send):**
+- `restock-<yyyymmdd>-<seed>.sent`: EPCs this date's restock moved. A re-run of the date owes only `sold − already restocked` per (fixture, EAN), so with no new sales it sends nothing (self-tested); sales sent later in the day produce only the new units.
+- `placements.csv` (`epc,fixture,date`): where a moved unit now sits, for restock AND random moves. Restock reads it first when it resolves a sold EPC's fixture or a stockroom candidate, and the random planner now also excludes placed EPCs (previously a later day could re-pick a unit the day before had already moved).
+
+**Output.** `PLAN: restock N moves / M units, shortfall K (stores 10)` (the line `day.sh` surfaces), one `restock <slug> sold: … wall + … stockroom · … moves / … units · shortfall …` line per store, and `SIM-RUN movement date= seed= moves= units= restock_moves= restock_units= shortfall_units= sent_ok= sent_err= wall=`.
+
+**Self-test:** `connectSelfTest` → `[restock] picks the sold EANs from the stockroom, skips unsent/stockroom sales, idempotent on re-run, shortfall counted ✓` (synthetic plan + epcs.csv: exact EANs from the stockroom, an unsent sale and a stockroom sale not restocked, a placed EPC resolved first, ledger re-run = 0 moves, a later sale = one move with id suffix `-2`, shortfall when the stockroom lacks the EAN, state-file round trips). `compileKotlin`, `ktlintCheck`, `connectSelfTest` pass.
+
+### Dry-run numbers for 2026-10-06 (`scripts/demo/day.sh --date 2026-10-06 --steps move`)
+
+Oct 6 plan: 1,397 sales in `twin-day-20261006-20261016.plan.csv` (copied read-only from the main checkout with its `.sent` ledger and `sold-epcs.txt`). Two views, because the main checkout's sold log already holds Oct 7-12 (the Oct 7-12 sales had drained the stockroom by the time of this run):
+
+| view | restock moves | restock units | shortfall units | sold from a wall |
+|---|---:|---:|---:|---:|
+| **As of the end of Oct 6** (sold log = sales up to Oct 6, only Oct 5-6 plans reserved; what the drive sees if it runs right after the day's stream) | **371** | **486** | **2,045** (81 % of owed) | 2,531 |
+| Today's state (full sold log, as `day.sh` literally runs now) | 17 | 19 | 2,512 | 2,531 |
+
+As-of view, per store (wall units sold → moves / units / shortfall): bordeaux 174 → 17/18/156 · lille 290 → 32/38/252 · lyon 230 → 37/44/186 · marseille 129 → 25/32/97 · paris 286 → 50/78/208 · busan 152 → 24/25/127 · seoul 316 → 43/56/260 · denver 380 → 54/74/306 · nyc 263 → 49/66/197 · sf 311 → 40/55/256. Per-move size: 286 of 371 moves carry 1 unit, 61 carry 2, 20 carry 3, 4 carry 4+. (Stockroom sales: 29-86 per store, skipped.)
+
+The `day.sh` dry-run line as run in the worktree: `PLAN: restock 17 moves / 19 units, shortfall 2512 (stores 10)` (today's state view).
+
+### Limitations
+
+1. **The shortfall is structural, not a bug: ~80 % of what sells off a wall has no stockroom unit of the same EAN left.** The dated stream sells the stockroom (`BR-*`) first, the basket sampler concentrates on ~100 EANs per store, and a store holds ~6 units per EAN. On Denver, of 100 EANs that sold from a wall on Oct 6, 91 had stockroom units at the start but only 4 still had a free one afterwards. The restock refills only what the stockroom still holds, so on its own it slows the wall drain by about one fifth, it does not hold compliance flat. Closing the gap needs more stock of the sold EANs (a stockroom top-up with new EPCs, which is a data-generation change, or a stream that sells the floor before the stockroom), or Bob's call that a partial refill is enough for the demo. Not built, not decided here.
+2. **Run it right after the day's stream.** Ordering matters: restock uses the sold log as the stockroom's state, so a late run (after later days sold) finds even less stock. `day.sh` runs `move` after `stream` for the same date, which is the right order.
+3. **The dated sales stream does not read placements.** It allocates from the `epcs.csv` fixtures. A restocked unit still looks like stockroom stock to it, so a later day can sell it "from the stockroom". The platform sees the sale of an item that is physically on the wall (what actually happened), and the next restock resolves that EPC through placements and refills the wall it left. Sales are by EPC, so the demo is unaffected. Making `DatedStream.allocate` placement-aware would change the persisted-plan semantics of future dates and was left alone.
+4. No event time on the movement contract: restock moves land at send time, as the random moves do.
+5. Compliance behavior itself is unproven here: nothing was sent. Whether the platform keeps a target compliant from these moves is for the first live day to show (the Coordinator fires live).
+6. Placements record a move only after an accepted send; a crash between the send and the ledger append can leave a sent batch unrecorded, and a re-run would re-send the same ids (the webhook is idempotent on `external_movement_id`).

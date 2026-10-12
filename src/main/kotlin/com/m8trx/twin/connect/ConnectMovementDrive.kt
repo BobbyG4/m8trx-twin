@@ -46,6 +46,17 @@ import kotlin.random.Random
  * UUID from the key export (no mapping needed). ⚠ The movement payload has no event time: it lands at send time.
  * Env: M8TRX_MOVEMENT_PER_STORE · M8TRX_MOVEMENT_STORES (csv, default all ten) · M8TRX_MOVEMENT_DATE (today) ·
  * M8TRX_MOVEMENT_SEED (20261016) · M8TRX_MOVEMENT_TARGET (code|zone) · M8TRX_MOVEMENT_LIVE · M8TRX_STREAM_SOLD_LOG.
+ *
+ * ## Restock moves (2026-10-12, Bob: "yes do the restock moves")
+ *
+ * `M8TRX_MOVEMENT_RESTOCK=true` (default false) adds, after the random moves, one `inventory_movement` per
+ * (fixture, EAN) that the date's SENT sales drew down: the same number of stockroom units of that EAN, moved onto the
+ * wall that sold them — so compliance holds where the history left it. Reads the date's sales plan
+ * (`.twin-state/stream/twin-day-<yyyymmdd>-<seed>.plan.csv` + its `.sent` ledger; absent → says so and does nothing),
+ * keeps `.twin-state/moves/restock-<yyyymmdd>-<seed>.sent` (idempotent, resumable) and `moves/placements.csv`
+ * (epc,fixture,date — where a moved unit now sits). Works with `M8TRX_MOVEMENT_PER_STORE` unset or 0 (restock only).
+ * Live sends are paced `M8TRX_MOVEMENT_GAP_MS` (120) apart, like the sale stream.
+ * Full rules, ids and the limitation (the sales stream does not read placements): [RestockMoves].
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ConnectMovementDrive")
 
@@ -53,8 +64,10 @@ fun main() {
     val config = ConnectConfig.fromEnv()
     val driver = MovementDriver(WebhookClient(config))
     val live = System.getenv("M8TRX_MOVEMENT_LIVE")?.toBooleanStrictOrNull() ?: false
-    System.getenv("M8TRX_MOVEMENT_PER_STORE")?.toIntOrNull()?.let { perStore ->
-        multiStore(driver, perStore, live)
+    val perStore = System.getenv("M8TRX_MOVEMENT_PER_STORE")?.toIntOrNull()
+    val restock = System.getenv("M8TRX_MOVEMENT_RESTOCK")?.toBooleanStrictOrNull() ?: false
+    if (perStore != null || restock) {
+        multiStore(driver, perStore ?: 0, restock, live)
         return
     }
     val epcFile = Path.of(env("M8TRX_MOVEMENT_EPC_FILE", "reference/data/chain/stores/dec-us-denver/movement-epcs.txt"))
@@ -146,14 +159,26 @@ fun planMoves(chainDir: Path, slug: String, date: LocalDate, perStore: Int, seed
     }
 }
 
-private fun multiStore(driver: MovementDriver, perStore: Int, live: Boolean) {
+/** One movement to send: a random stockroom → wall move, or a restock of what sold. */
+private data class Outgoing(
+    val kind: String,
+    val extId: String,
+    val store: String,
+    val toFixture: String,
+    val toZoneId: String?,
+    val ean: String,
+    val epcs: List<String>,
+)
+
+private fun multiStore(driver: MovementDriver, perStore: Int, restock: Boolean, live: Boolean) {
     val chainDir = Path.of(env("M8TRX_CHAIN_DIR", "reference/data/chain"))
     val date = System.getenv("M8TRX_MOVEMENT_DATE")?.takeIf { it.isNotBlank() }?.let(LocalDate::parse) ?: LocalDate.now()
     val seed = System.getenv("M8TRX_MOVEMENT_SEED")?.toLongOrNull() ?: RecentDay.HISTORY_SEED
     val byZone = env("M8TRX_MOVEMENT_TARGET", "code").equals("zone", ignoreCase = true)
     val soldLog = Path.of(env("M8TRX_STREAM_SOLD_LOG", ".twin-state/sold-epcs.txt"))
+    val keys = ChainKeys.load(chainDir.resolve(ChainKeys.DEFAULT_PATH.fileName))
     val stores = System.getenv("M8TRX_MOVEMENT_STORES")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
-        ?: ChainKeys.load(chainDir.resolve(ChainKeys.DEFAULT_PATH.fileName)).stores.map { it.slug }
+        ?: keys.stores.map { it.slug }
     val streamDir = soldLog.parent?.resolve("stream")
     val reserved = if (streamDir != null && Files.isDirectory(streamDir)) {
         Files.list(streamDir).use { s ->
@@ -162,26 +187,83 @@ private fun multiStore(driver: MovementDriver, perStore: Int, live: Boolean) {
     } else {
         emptySet()
     }
-    val excluded = readPriorSold(soldLog) + reserved
+    val movesDir = RestockMoves.movesDir(soldLog)
+    val placementsFile = movesDir.resolve("placements.csv")
+    val placements = RestockMoves.readPlacements(placementsFile)
+    val excluded = readPriorSold(soldLog) + reserved + placements.keys
     val t0 = System.currentTimeMillis()
     log.info(
-        "Movement drive (multi) → date={} stores={} perStore={} target={} live={}",
+        "Movement drive (multi) → date={} stores={} perStore={} restock={} target={} live={}",
         date,
         stores.size,
         perStore,
+        restock,
         if (byZone) "zone_id" else "fixture_code",
         live,
     )
-    val moves = stores.flatMap { planMoves(chainDir, it, date, perStore, seed, excluded) }
+    val random = if (perStore > 0) stores.flatMap { planMoves(chainDir, it, date, perStore, seed, excluded) } else emptyList()
+
+    // restock: what the date's SENT sales drew down from the walls, refilled from the stockroom
+    val restockPlans = if (restock) {
+        val planFile = RestockMoves.planFile(requireNotNull(streamDir), date, seed)
+        if (!Files.exists(planFile)) {
+            log.info("  restock: no sales plan at {} — the sales have not been planned/sent; nothing to restock", planFile)
+            emptyList()
+        } else {
+            val sentFile = planFile.resolveSibling(planFile.fileName.toString().removeSuffix(".plan.csv") + ".sent")
+            val sentIds = RestockMoves.readLedger(sentFile)
+            val sales = DatedStream.readPlan(planFile)
+            val ledger = RestockMoves.readLedger(RestockMoves.ledgerFile(movesDir, date, seed))
+            val taken = excluded + random.flatMap { it.epcs }
+            stores.map { slug ->
+                val zoneIds = keys.store(slug).zones.associate { it.code to it.zoneId }
+                RestockMoves.plan(
+                    slug, date, DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                    sales.filter { it.store == slug }, sentIds, taken, ledger, placements, zoneIds,
+                )
+            }
+        }
+    } else {
+        emptyList()
+    }
+    restockPlans.filter { it.soldWallUnits + it.soldBohUnits > 0 }.forEach { p ->
+        log.info(
+            "  restock {} sold: {} wall + {} stockroom · already restocked {} · {} moves / {} units · shortfall {}",
+            p.store,
+            p.soldWallUnits,
+            p.soldBohUnits,
+            p.alreadyRestocked,
+            p.moves.size,
+            p.units,
+            p.shortfallUnits,
+        )
+    }
+    val restockMoves = restockPlans.flatMap { it.moves }
+    val restockUnits = restockMoves.sumOf { it.epcs.size }
+    val shortfall = restockPlans.sumOf { it.shortfallUnits }
+    if (restock) {
+        log.info("PLAN: restock {} moves / {} units, shortfall {} (stores {})", restockMoves.size, restockUnits, shortfall, stores.size)
+    }
+
+    val outgoing = random.map { Outgoing("random", it.extId, it.store, it.toFixture, it.toZoneId, it.ean, it.epcs) } +
+        restockMoves.map { Outgoing("restock", it.extId, it.store, it.toFixture, it.toZoneId, it.ean, it.epcs) }
+    val ledgerFile = RestockMoves.ledgerFile(movesDir, date, seed)
     var ok = 0
     var err = 0
-    for (m in moves) {
+    var unmapped = 0
+    val gapMs = System.getenv("M8TRX_MOVEMENT_GAP_MS")?.toLongOrNull() ?: 120L
+    for ((i, m) in outgoing.withIndex()) {
         val mv = driver.build(toFixtureCode = m.toFixture, epcs = m.epcs, externalMovementId = m.extId).let {
-            if (byZone && m.toZoneId != null) it.copy(toFixtureCode = null, toZoneId = m.toZoneId) else it
+            when {
+                byZone && m.toZoneId != null -> it.copy(toFixtureCode = null, toZoneId = m.toZoneId)
+                byZone -> it.also { unmapped++ }
+                else -> it
+            }
         }
         log.info(
-            "  {} {} {} → {} ({}) ean={} units={}",
+            "  {} {} {} {} → {} ({}) ean={} units={}",
             if (live) "[LIVE]" else "[DRY]",
+            m.kind,
             m.store,
             m.extId,
             m.toFixture,
@@ -191,7 +273,12 @@ private fun multiStore(driver: MovementDriver, perStore: Int, live: Boolean) {
         )
         if (!live) continue
         when (val r = driver.drive(mv, WebhookClient.AuthMode.API_KEY)) {
-            is ConnectResponse.Ok -> ok++
+            is ConnectResponse.Ok -> {
+                ok++
+                RestockMoves.appendPlacements(placementsFile, m.epcs, m.toFixture, date)
+                if (m.kind == "restock") RestockMoves.appendLedger(ledgerFile, m.epcs)
+                if (i < outgoing.size - 1) Thread.sleep(gapMs) // a restock is hundreds of sends: stay under the measured ingest ceiling
+            }
 
             is ConnectResponse.Err -> {
                 err++
@@ -200,17 +287,19 @@ private fun multiStore(driver: MovementDriver, perStore: Int, live: Boolean) {
             }
         }
     }
-    moves.firstOrNull()?.let {
+    if (unmapped > 0) log.warn("  {} restock/random move(s) had no zone id in the key export and went by fixture code", unmapped)
+    outgoing.firstOrNull()?.let {
         log.info("  first envelope: {}", driver.dryRun(driver.build(toFixtureCode = it.toFixture, epcs = it.epcs, externalMovementId = it.extId)))
     }
     log.info(
-        "SIM-RUN movement date={} seed={} moves={} units={} sent_ok={} sent_err={} wall={}s",
+        "SIM-RUN movement date={} seed={} moves={} units={} restock_moves={} restock_units={} shortfall_units={} sent_ok={} sent_err={} wall={}s",
         date,
         seed,
-        moves.size,
-        moves.sumOf {
-            it.epcs.size
-        },
+        random.size,
+        random.sumOf { it.epcs.size },
+        restockMoves.size,
+        restockUnits,
+        shortfall,
         ok,
         err,
         (System.currentTimeMillis() - t0) / 1000,

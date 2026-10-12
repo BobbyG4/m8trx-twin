@@ -12,7 +12,13 @@
 #              day compressed (~40 min at 18x) — or a slice at compress 1 with --slice (the live moving dots)
 #   3. alarm   connectAlarmDrive, day mode: the day's gate alarms (+ the scripted Denver 14:07 on 2026-10-13);
 #              zone_ref = M8TRX_ALARM_ZONE_REF (default Z-01, every store's Entrance zone code — core resolves it)
-#   4. move    connectMovementDrive, N moves per store from the stockroom onto the plan's walls
+#   4. move    connectMovementDrive, N random moves per store from the stockroom onto the plan's walls, PLUS the
+#              restock: after the day's sales, every (fixture, EAN) that sold down gets the same number of stockroom
+#              units moved back onto it (one inventory_movement each), so compliance holds where the backfilled
+#              history left it instead of draining with the live week. M8TRX_MOVEMENT_RESTOCK defaults to true here
+#              (export it =false to switch off). Reads the step-1 sales plan + sent ledger for the date, so a date
+#              whose sales were not sent restocks nothing; idempotent per date (.twin-state/moves/). Summary line adds
+#              restock_moves= restock_units= shortfall_units= (stockroom had fewer units of the EAN than sold).
 #   5. stock   stocktakes (SF / Seoul / Denver)            — NOT BUILT this round, reported SKIPPED
 #   6. tryon   try-on-zone sessions with unreturned items  — NOT BUILT this round, reported SKIPPED
 #   then, with --verify: connectAcceptance (the Connect ship gate, read-only) + impressionVerify for Denver.
@@ -60,7 +66,7 @@ while [[ $# -gt 0 ]]; do
     --alarm-script) ALARM_SCRIPT="$2"; shift 2 ;;
     --allow-future) ALLOW_FUTURE=true; shift ;;
     --verify) VERIFY=true; shift ;;
-    -h|--help) sed -n '2,32p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,40p' "$0"; exit 0 ;;
     *) echo "day.sh: unknown argument $1" >&2; exit 2 ;;
   esac
 done
@@ -141,7 +147,8 @@ fi
 
 if want move; then
   run_step move "$LIVE_MOVE" connectMovementDrive \
-    M8TRX_MOVEMENT_PER_STORE="$MOVES" M8TRX_MOVEMENT_DATE="$DATE" M8TRX_MOVEMENT_SEED="$SEED" M8TRX_MOVEMENT_LIVE="$LIVE_MOVE"
+    M8TRX_MOVEMENT_PER_STORE="$MOVES" M8TRX_MOVEMENT_DATE="$DATE" M8TRX_MOVEMENT_SEED="$SEED" M8TRX_MOVEMENT_LIVE="$LIVE_MOVE" \
+    M8TRX_MOVEMENT_RESTOCK="${M8TRX_MOVEMENT_RESTOCK:-true}"
 fi
 
 want stock && skip_step stock "stocktake sessions (connectScanSweep + sessions REST, deliberate shortfalls) not built this round"
