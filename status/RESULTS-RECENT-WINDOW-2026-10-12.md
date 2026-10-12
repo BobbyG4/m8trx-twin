@@ -163,3 +163,54 @@ The `day.sh` dry-run line as run in the worktree: `PLAN: restock 17 moves / 19 u
 4. No event time on the movement contract: restock moves land at send time, as the random moves do.
 5. Compliance behavior itself is unproven here: nothing was sent. Whether the platform keeps a target compliant from these moves is for the first live day to show (the Coordinator fires live).
 6. Placements record a move only after an accepted send; a crash between the send and the ledger append can leave a sent batch unrecorded, and a re-run would re-send the same ids (the webhook is idempotent on `external_movement_id`).
+
+## Receiving (2026-10-12)
+
+The restock's measured gap (finding 8, "Restock moves" limitation 1): the stockroom was drained and the platform's `shipment_manifest` ingest records only EXPECTED quantities, it creates no units. `POST /api/v2/inventory/items/receive` does (core `InventoryActionService.receiveItems`, FR-INV-07 auto-creates unknown EPCs; the twin's data-plane bearer holds `inventory:create`). So the loop is now: manifest (expected) -> **receive** (new units land in the stockroom) -> restock moves (stockroom -> walls). **Branch:** `feat/restock-moves-1012`. **Deletions: none.** Dry runs and self-tests only; nothing was sent.
+
+**What it does.** `connectReceiveDrive` with `M8TRX_RECEIVE_DATE` set (without it the old single-store EPC-file drive is unchanged). For the date's persisted plan (`.twin-state/stream/twin-day-<yyyymmdd>-<seed>.plan.csv` + `.sent`) and per store:
+1. Reproduces the day's restock manifest lines with `DatedStream.manifestLines` (the stream's own function, extracted): units sold per item code, most-sold first, **rounded up to cases of 6**. Stockroom sales count too (the manifest never excluded them). Only SENT sales count. A style code carrying two sizes is split over its EANs: each EAN gets what it sold, the case-rounding surplus goes to the best seller, so the receipt totals exactly the manifest line.
+2. Mints NEW EPCs for those EANs (`Sgtin96`, the chain's own Decathlon SGTIN-96 layout, verified against `epcs.csv` rows: re-encode = identity, decode = EAN). Serial from the **receiving block `[1,000,000,000 .. 11,000,000,000)`**; all chain serials lie in 1,000..9,999,999, so the block cannot collide with chain data by construction. The draw is `SHA-256(seed, slug, date, ean, index, attempt)` (replay-stable); a hit on any known EPC (the store's `epcs.csv`, the sold log, earlier receipts, this run) re-draws with the next attempt. Index `k` of an EAN is its k-th unit that date, so a re-run mints the same EPCs and later sales mint only the indices past the ledger.
+3. Sends ONE `items/receive` per store (chunked at 200 EPCs): `{siteId, spaceId, items:[{epc}]}`. `siteId` from `site_ids.csv`; `spaceId` = the store's **stockroom space** (see limitations: not in the key export; read from `M8TRX_RECEIVE_SPACES` csv `slug,space_id` (default `reference/data/chain/stockroom_spaces.csv`), then `.twin-state/receive/stockroom-spaces.csv`, else looked up live once through `POST /spatial/identity` (`space_type` stockroom) and cached there). A refused lookup skips the store and counts an error; it never falls back to the sales floor. Only when the lookup succeeds and the site has no stockroom space does it use the sales-floor space, with a warning.
+
+**Env:** `M8TRX_RECEIVE_DATE` · `M8TRX_RECEIVE_SEED` (20261016) · `M8TRX_RECEIVE_LIVE` (false) · `M8TRX_RECEIVE_STORES` (csv, all ten) · `M8TRX_RECEIVE_GAP_MS` (250) · `M8TRX_RECEIVE_SPACES` · `M8TRX_CHAIN_DIR` · `M8TRX_STREAM_SOLD_LOG` (state dir). `M8TRX_DAY_MANIFEST_LINES` (see decision below).
+
+**Ledgers (`.twin-state/receive/`, gitignored, written only after an accepted send):**
+- `receive-<yyyymmdd>-<seed>.sent`: EPCs received for that date. A re-run of the date owes `target - already received` per EAN, so with no new sales it receives nothing (self-tested, including `planAll` from disk).
+- `received-stock.csv` (`epc,ean,slug,fixture,date`): every received unit, booked on the twin side to a `BR-*` fixture of its store (deterministic per EAN). `RestockMoves` reads it as stockroom stock through `ConnectMovementDrive` (lowest EPC first still applies; a placement overrides the fixture once a unit moves to a wall).
+- A batch with per-EPC `errors` whose reason matches `exist|already|duplicate|in stock` counts as already received (a retry of an accepted batch); any other per-EPC error stays out of the ledger, is counted `epc_errors=` and fails the run. An HTTP refusal stops the run, a re-run resumes.
+
+**Decision to confirm: the stream's manifest changed.** `plannedOps` used to send the day's top **5** item codes, counted from the planned basket lines. For "received equals promised" it now counts the **allocated** sales (the EPCs that actually sell, substitutions included) and sends every sold item code (`M8TRX_DAY_MANIFEST_LINES=5` restores the old cap). Manifest ids already sent (Oct 5-12) are skipped by the sent ledger, so those days keep their top-5 manifests on the platform and a receive for them exceeds what was promised. For the days not yet streamed the manifest is ~70-140 lines per store (one webhook), larger than anything sent so far.
+
+**day.sh.** New step `receive` between `stream` and `day` (`--live-receive`, included in `--all-live`; default steps `stream,receive,day,alarm,move,stock,tryon`). SIM-RUN line: `SIM-RUN receive date= seed= stores= lines= units= sent_ok= sent_err= epc_errors= received= wall=` (`sent_ok/err` count requests). A dry `move` that follows a dry `receive` sets `M8TRX_MOVEMENT_ASSUME_RECEIVED=true`: the receive PLAN counts as landed so the dry numbers chain (refused with live moves). With `--live-move` but a dry receive, `move` sees only what real receives wrote.
+
+**Self-test:** `connectSelfTest` -> `[receive] SGTIN-96 round-trip, manifest rule shared, minted EPCs unique/in-block/EAN-decodable, ledger resume, dry chain refills 11/11 (was 1/11)`. Covers: the encoder against real `epcs.csv` rows; the manifest rule (rounding, order, cap); a synthetic store-day (24 units = the manifest's cases, per-EAN split incl. a two-size style, all EPCs unique, in-block, decodable, not in `epcs.csv`, booked to a `BR-*` fixture, deterministic); nothing sold or sent -> nothing; ledger re-run = 0; a half-done ledger resumes with the same EPCs; 6 more sales mint only 6 new units; a taken EPC is re-drawn; state files round-trip; `planAll` from disk; the end-to-end dry chain (sell -> restock plan refills 1 of 11 -> after receive 11 of 11, shortfall 0). `compileKotlin`, `ktlintCheck`, `connectSelfTest` pass.
+
+### Dry-run numbers for 2026-10-06 (`scripts/demo/day.sh --date 2026-10-06 --steps receive,move`, worktree state: Oct 6 plan + sent ledger, the main checkout's sold log)
+
+`PLAN: receive 7374 units / 1103 manifest lines in 41 requests (stores 10)`; `PLAN: restock 963 moves / 2531 units, shortfall 0 (stores 10)`. Before receiving, the same state gave `restock 17 moves / 19 units, shortfall 2512` (Restock moves section).
+
+| store | wall units sold | all units sold | manifest lines | units to receive | restock moves / units | shortfall |
+|---|---:|---:|---:|---:|---:|---:|
+| bordeaux | 174 | 203 | 117 | 720 | 108 / 174 | 0 |
+| lille | 290 | 355 | 143 | 918 | 127 / 290 | 0 |
+| lyon | 230 | 280 | 106 | 684 | 99 / 230 | 0 |
+| marseille | 129 | 149 | 69 | 450 | 60 / 129 | 0 |
+| paris | 286 | 343 | 110 | 768 | 93 / 286 | 0 |
+| busan | 152 | 187 | 94 | 570 | 82 / 152 | 0 |
+| seoul | 316 | 376 | 128 | 840 | 116 / 316 | 0 |
+| denver | 380 | 466 | 122 | 906 | 100 / 380 | 0 |
+| nyc | 263 | 317 | 103 | 726 | 84 / 263 | 0 |
+| sf | 311 | 380 | 111 | 792 | 94 / 311 | 0 |
+
+Receive = the manifest's cases exactly (every row is a multiple of 6). The 30 random moves of `--moves 3` are unchanged.
+
+### Limitations
+
+1. **The request carries a space, not a zone, and no shipment id.** `ItemReceiveRequest` is `{siteId, spaceId, items:[{epc}]}` (nothing else is documented in `M8TRX-API-SURFACE.md` #25 or `DataPlane.kt`). The unit lands in the stockroom SPACE; the `BR-*` fixture is the twin's own bookkeeping, and the platform does not know which back-room zone holds it. There is no `external_shipment_id` field, so the receipt cannot name the manifest it fulfils (FR-INV-05 reconciliation can only match by product and site, if at all); the manifest id lives in the twin's logs. I did not add unknown fields to the body. If the reconciliation matters for the demo it is a TWIN-REQ to core, not a shim.
+2. **The stockroom space UUID is not known offline.** The key export (`keys-2026-10-11.csv`) holds only the SALES FLOOR space. The first live run resolves it per store through `spatial/identity` (needs `inventory:read` on the bearer; if the bearer lacks it the store is skipped with an error). To avoid that, put `slug,space_id` rows in `reference/data/chain/stockroom_spaces.csv`. In a dry run the space prints as a placeholder.
+3. **Unproven on the platform:** whether it resolves the product for a minted EPC exactly as for the seeded chain units (same encoding, but the chain was bulk-seeded, not auto-created from an EPC); whether it dedupes on EPC on a retry (the API-surface note says an existing IN_STOCK EPC comes back in `errors`; the reason text is a guess in the `exist|already|duplicate|in stock` match); whether it caps a request below 200. Suggested canary before `--live-receive` on all ten: `M8TRX_RECEIVE_STORES=dec-us-denver M8TRX_RECEIVE_LIVE=true`, then read the stockroom count back and run `connectReadProbe`.
+4. **Case rounding over-supplies.** Most items sell 1 unit and are received as 6, so Oct 6 receives 7,374 units against 2,531 wall units sold: ~4,800 surplus units stay in the stockroom (and Oct 6's stockroom sales, 441, are replaced too). Every dated day adds its own; later days' restocks draw on the whole of `received-stock.csv`.
+5. **The sales stream does not sell received units** (it allocates from `epcs.csv` only), and still does not read placements (Restock limitation 3). Received units therefore only ever move to walls; the walls hold more units than the chain data after a restock.
+6. Receive lands at send time (no event time on the contract), like the moves.
+7. As with the moves, a crash between an accepted send and the ledger append leaves a sent batch unrecorded; the re-run mints the same EPCs and the platform's reply to them (already in stock) is treated as received.

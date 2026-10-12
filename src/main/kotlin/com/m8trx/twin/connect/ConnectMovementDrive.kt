@@ -56,6 +56,8 @@ import kotlin.random.Random
  * keeps `.twin-state/moves/restock-<yyyymmdd>-<seed>.sent` (idempotent, resumable) and `moves/placements.csv`
  * (epc,fixture,date — where a moved unit now sits). Works with `M8TRX_MOVEMENT_PER_STORE` unset or 0 (restock only).
  * Live sends are paced `M8TRX_MOVEMENT_GAP_MS` (120) apart, like the sale stream.
+ * Units the `connectReceiveDrive` step created (`.twin-state/receive/received-stock.csv`) count as stockroom stock;
+ * `M8TRX_MOVEMENT_ASSUME_RECEIVED=true` (dry runs only) counts the receive step's PLAN as already landed.
  * Full rules, ids and the limitation (the sales stream does not read placements): [RestockMoves].
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ConnectMovementDrive")
@@ -215,10 +217,19 @@ private fun multiStore(driver: MovementDriver, perStore: Int, restock: Boolean, 
             val sales = DatedStream.readPlan(planFile)
             val ledger = RestockMoves.readLedger(RestockMoves.ledgerFile(movesDir, date, seed))
             val taken = excluded + random.flatMap { it.epcs }
+            // stockroom units the receive step created (.twin-state/receive/received-stock.csv), lowest EPC first like the rest
+            val received = ReceiveStock.readStock(ReceiveStock.stockFile(ReceiveStock.receiveDir(soldLog)))
+            // DRY chain: with M8TRX_MOVEMENT_ASSUME_RECEIVED=true the receive step's PLAN for the date counts as already
+            // received, so a dry run shows the restock AFTER receiving. Never with live moves: those EPCs do not exist yet.
+            val assume = System.getenv("M8TRX_MOVEMENT_ASSUME_RECEIVED")?.toBooleanStrictOrNull() ?: false
+            require(!(assume && live)) { "M8TRX_MOVEMENT_ASSUME_RECEIVED is for dry runs only - a live move of un-received EPCs would be refused" }
+            val assumed = if (assume) ReceiveStock.planAll(chainDir, soldLog, date, seed, stores, log).flatMap { it.toReceive } else emptyList()
+            if (assume) log.info("  restock: assuming {} planned receipts already landed (dry chain)", assumed.size)
             stores.map { slug ->
                 val zoneIds = keys.store(slug).zones.associate { it.code to it.zoneId }
+                val extra = ReceiveStock.stockRows(received + assumed, slug)
                 RestockMoves.plan(
-                    slug, date, DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                    slug, date, DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")) + extra,
                     sales.filter { it.store == slug }, sentIds, taken, ledger, placements, zoneIds,
                 )
             }

@@ -8,6 +8,13 @@
 #   1. stream  connectChainActivity, dated: all ten stores' sales at their own times (+ restock/pricing/catalog).
 #              The run id (plan + sent ledger + sale ids) is per date: twin-day-<yyyymmdd>-<seed>, overriding any
 #              M8TRX_RUN_ID in .env — a fixed id made every day after the first reuse the first day's plan (2026-10-12).
+#   1b. receive connectReceiveDrive, dated: the unit-creating half of the restock loop. The step-1 manifest only records
+#              EXPECTED quantities; this step reads the date's sales plan + sent ledger, reproduces each store's manifest
+#              lines (units sold per item code, rounded up to cases of 6 - the stream's own function), mints new SGTIN-96
+#              EPCs for them (serial block 1,000,000,000+, never colliding with the chain data) and receives them into the
+#              store's STOCKROOM space (POST /inventory/items/receive, one request per store, <= 200 EPCs each), so the
+#              move step has stock to refill the walls from. Ledger .twin-state/receive/ (idempotent per date; a re-run
+#              receives nothing). In a dry run `move` counts the receive PLAN as already landed so the numbers chain.
 #   2. day     connectDayDrive on Denver in PLAN epoch mode (wire ts = the plan's store-local hours), the whole
 #              day compressed (~40 min at 18x) — or a slice at compress 1 with --slice (the live moving dots)
 #   3. alarm   connectAlarmDrive, day mode: the day's gate alarms (+ the scripted Denver 14:07 on 2026-10-13);
@@ -33,8 +40,8 @@
 #     and a live re-run of the same date resumes from its ledger in .twin-state/ without re-selling a unit.
 #
 # Usage:
-#   scripts/demo/day.sh [--date YYYY-MM-DD] [--seed N] [--steps stream,day,alarm,move,stock,tryon]
-#                       [--live-stream] [--live-day] [--live-alarm] [--live-move] [--all-live]
+#   scripts/demo/day.sh [--date YYYY-MM-DD] [--seed N] [--steps stream,receive,day,alarm,move,stock,tryon]
+#                       [--live-stream] [--live-receive] [--live-day] [--live-alarm] [--live-move] [--all-live]
 #                       [--slice FROM-TO] [--compress X] [--moves N] [--alarm-script slug@HH:mm,...]
 #                       [--allow-future] [--verify]
 # Cron (unattended): run from the repo root; .env is sourced here (gradle's JavaExec does not read it).
@@ -45,8 +52,8 @@ ROOT="$(pwd)"
 
 DATE="$(date +%F)"
 SEED=20261016
-STEPS="stream,day,alarm,move,stock,tryon"
-LIVE_STREAM=false LIVE_DAY=false LIVE_ALARM=false LIVE_MOVE=false
+STEPS="stream,receive,day,alarm,move,stock,tryon"
+LIVE_STREAM=false LIVE_RECEIVE=false LIVE_DAY=false LIVE_ALARM=false LIVE_MOVE=false
 SLICE="" COMPRESS="18.0" MOVES=3 ALLOW_FUTURE=false VERIFY=false
 ALARM_SCRIPT=""
 
@@ -56,10 +63,11 @@ while [[ $# -gt 0 ]]; do
     --seed) SEED="$2"; shift 2 ;;
     --steps) STEPS="$2"; shift 2 ;;
     --live-stream) LIVE_STREAM=true; shift ;;
+    --live-receive) LIVE_RECEIVE=true; shift ;;
     --live-day) LIVE_DAY=true; shift ;;
     --live-alarm) LIVE_ALARM=true; shift ;;
     --live-move) LIVE_MOVE=true; shift ;;
-    --all-live) LIVE_STREAM=true; LIVE_DAY=true; LIVE_ALARM=true; LIVE_MOVE=true; shift ;;
+    --all-live) LIVE_STREAM=true; LIVE_RECEIVE=true; LIVE_DAY=true; LIVE_ALARM=true; LIVE_MOVE=true; shift ;;
     --slice) SLICE="$2"; shift 2 ;;
     --compress) COMPRESS="$2"; shift 2 ;;
     --moves) MOVES="$2"; shift 2 ;;
@@ -83,7 +91,7 @@ export M8TRX_SITE_ID="${M8TRX_SITE_ID:-84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e}"
 export M8TRX_TENANT_ID="${M8TRX_TENANT_ID:-unset-dry-run}"
 
 ANY_LIVE=false
-for f in $LIVE_STREAM $LIVE_DAY $LIVE_ALARM $LIVE_MOVE; do [[ $f == true ]] && ANY_LIVE=true; done
+for f in $LIVE_STREAM $LIVE_RECEIVE $LIVE_DAY $LIVE_ALARM $LIVE_MOVE; do [[ $f == true ]] && ANY_LIVE=true; done
 
 RUN_DIR="out/day-runs/$DATE-$(date +%H%M%S)"
 mkdir -p "$RUN_DIR"
@@ -122,12 +130,17 @@ skip_step() {
   LOG_LINES+=("| $DATE | $SEED | $1 | SKIPPED: $2 | 0s | - |")
 }
 
-echo "═══ day.sh  date=$DATE seed=$SEED steps=$STEPS live: stream=$LIVE_STREAM day=$LIVE_DAY alarm=$LIVE_ALARM move=$LIVE_MOVE  logs → $RUN_DIR"
+echo "═══ day.sh  date=$DATE seed=$SEED steps=$STEPS live: stream=$LIVE_STREAM receive=$LIVE_RECEIVE day=$LIVE_DAY alarm=$LIVE_ALARM move=$LIVE_MOVE  logs → $RUN_DIR"
 
 if want stream; then
   run_step stream "$LIVE_STREAM" connectChainActivity \
     M8TRX_RUN_ID="twin-day-${DATE//-/}-$SEED" \
     M8TRX_STREAM_DATE="$DATE" M8TRX_STREAM_SEED="$SEED" M8TRX_STREAM_LIVE="$LIVE_STREAM" M8TRX_STREAM_ALLOW_FUTURE="$ALLOW_FUTURE"
+fi
+
+if want receive; then
+  run_step receive "$LIVE_RECEIVE" connectReceiveDrive \
+    M8TRX_RECEIVE_DATE="$DATE" M8TRX_RECEIVE_SEED="$SEED" M8TRX_RECEIVE_LIVE="$LIVE_RECEIVE"
 fi
 
 if want day; then
@@ -146,9 +159,13 @@ if want alarm; then
 fi
 
 if want move; then
+  # A dry `move` that follows a dry `receive` counts the receive plan as landed (nothing is written in a dry run, so
+  # without this the restock would see the drained stockroom). Never with live moves: those EPCs would not exist yet.
+  ASSUME_RECEIVED=false
+  if want receive && [[ $LIVE_RECEIVE == false && $LIVE_MOVE == false ]]; then ASSUME_RECEIVED=true; fi
   run_step move "$LIVE_MOVE" connectMovementDrive \
     M8TRX_MOVEMENT_PER_STORE="$MOVES" M8TRX_MOVEMENT_DATE="$DATE" M8TRX_MOVEMENT_SEED="$SEED" M8TRX_MOVEMENT_LIVE="$LIVE_MOVE" \
-    M8TRX_MOVEMENT_RESTOCK="${M8TRX_MOVEMENT_RESTOCK:-true}"
+    M8TRX_MOVEMENT_RESTOCK="${M8TRX_MOVEMENT_RESTOCK:-true}" M8TRX_MOVEMENT_ASSUME_RECEIVED="$ASSUME_RECEIVED"
 fi
 
 want stock && skip_step stock "stocktake sessions (connectScanSweep + sessions REST, deliberate shortfalls) not built this round"

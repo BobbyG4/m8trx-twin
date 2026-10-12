@@ -78,6 +78,7 @@ fun main() {
     alarmDayEnvelope()
     multiStoreMoves()
     restockMovesPlan()
+    receiveStockPlan()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -850,4 +851,119 @@ private fun restockMovesPlan() {
         "absent = empty"
     }
     log.info("[restock] picks the sold EANs from the stockroom, skips unsent/stockroom sales, idempotent on re-run, shortfall counted ✓")
+}
+
+/**
+ * Receiving (the unit-creating step before the restock): SGTIN-96 round-trip against the chain's own EPCs, the manifest
+ * rule shared with the stream, minted EPCs unique / in the reserved block / EAN-decodable, ledger re-run sends nothing,
+ * and the end-to-end dry chain sell -> receive -> restock plan refills 100 %.
+ */
+private fun receiveStockPlan() {
+    // 1. the encoder is the chain's own: every sampled epcs.csv row re-encodes to itself and decodes to its EAN
+    val denver = Path.of("reference/data/chain/stores/dec-us-denver/epcs.csv")
+    if (Files.exists(denver)) {
+        val sample = DatedStream.loadEpcRows(denver).filterIndexed { i, _ -> i % 50 == 0 }
+        check(sample.isNotEmpty()) { "no sample rows" }
+        sample.forEach { r ->
+            check(Sgtin96.decodeEan(r.epc) == r.ean) { "decode ${r.epc} != ${r.ean}" }
+            check(Sgtin96.encode(r.ean, Sgtin96.serial(r.epc)) == r.epc) { "re-encode ${r.epc}" }
+            check(Sgtin96.serial(r.epc) < ReceiveStock.SERIAL_BASE) { "chain serial inside the receiving block: ${r.epc}" }
+        }
+    }
+
+    // 2. the manifest rule: most sold first (ties by key), rounded up to cases of 6, optional cap
+    val rule = DatedStream.manifestLines(mapOf("a" to 1, "b" to 6, "c" to 7, "d" to 7, "e" to 0), 99)
+    check(rule.map { it.sku to it.expectedQuantity } == listOf("c" to 12, "d" to 12, "b" to 6, "a" to 6)) { "manifest rule: $rule" }
+    check(DatedStream.manifestLines(mapOf("a" to 1, "b" to 6, "c" to 7), 2).map { it.sku } == listOf("c", "b")) { "manifest cap" }
+
+    // 3. a synthetic store-day: three item codes, one of them with two sizes (EANs)
+    fun ean(prefix12: String): String {
+        val d = prefix12.map { it - '0' }
+        return prefix12 + ((10 - d.withIndex().sumOf { (i, x) -> if (i % 2 == 0) x else 3 * x } % 10) % 10)
+    }
+    val eA = ean("360844984703")
+    val eB = ean("360844984704")
+    val eC1 = ean("360844984705")
+    val eC2 = ean("360844984706")
+    var n = 0
+    fun unit(ean: String, itemCd: String, fixture: String) = DatedStream.EpcRow(Sgtin96.encode(ean, 1000L + n++), ean, fixture, itemCd)
+    val wallA = List(8) { unit(eA, "I1", "W1") }
+    val wallB = List(3) { unit(eB, "I2", "W2") }
+    val wallC1 = List(2) { unit(eC1, "I3", "W3") }
+    val wallC2 = List(1) { unit(eC2, "I3", "W3") }
+    val bohA = listOf(unit(eA, "I1", "BR-02"))
+    val rows = wallA + wallB + wallC1 + wallC2 + bohA
+    val at = java.time.Instant.parse("2026-10-06T12:00:00Z")
+    val date = java.time.LocalDate.of(2026, 10, 6)
+    fun sale(id: String, store: String, units: List<DatedStream.EpcRow>) = DatedStream.PlannedSale(id, store, at, units.map { it.epc })
+    val sales = listOf(
+        sale("s-1", "s1", wallA.take(7)), // I1: 7 sold -> a case-rounded 12
+        sale("s-2", "s1", wallB.take(1) + wallC1 + wallC2), // I2: 1 -> 6; I3: 3 over two EANs -> 6
+        sale("s-3", "s1", listOf(wallA[7])), // planned, never sent
+        sale("o-1", "other", listOf(wallA[0])), // another store's row
+    )
+    val sent = setOf("s-1", "s-2", "o-1")
+    val soldWall = sales.filter { it.saleId in sent && it.store == "s1" }.flatMap { it.epcs }.toSet()
+    fun plan(
+        ledger: Set<String> = emptySet(),
+        taken: Set<String> = emptySet(),
+        sl: List<DatedStream.PlannedSale> = sales,
+        sentIds: Set<String> = sent,
+    ) = ReceiveStock.plan("s1", date, 20261016L, rows, sl, sentIds, ledger, taken)
+
+    val p = plan()
+    check(p.lines.map { it.sku to it.expectedQuantity } == listOf("I1" to 12, "I3" to 6, "I2" to 6)) { "manifest lines: ${p.lines}" }
+    check(p.lines == DatedStream.manifestLines(mapOf("I1" to 7, "I2" to 1, "I3" to 3))) { "receipt lines = the stream's manifest lines" }
+    check(p.units == 24 && p.targetUnits == 24 && p.soldUnits == 11) { "24 units = the manifest's cases: $p" }
+    val byEan = p.toReceive.groupingBy { it.ean }.eachCount()
+    check(byEan == mapOf(eA to 12, eB to 6, eC1 to 5, eC2 to 1)) { "per-EAN split (sold, surplus on the best seller): $byEan" }
+    check(p.toReceive.map { it.epc }.toSet().size == 24) { "minted EPCs unique" }
+    check(p.toReceive.none { r -> rows.any { it.epc == r.epc } }) { "no collision with the store's epcs" }
+    check(p.toReceive.all { Sgtin96.decodeEan(it.epc) == it.ean }) { "every minted EPC decodes to its EAN" }
+    check(p.toReceive.all { Sgtin96.serial(it.epc) in ReceiveStock.SERIAL_BASE until ReceiveStock.SERIAL_BASE + ReceiveStock.SERIAL_SPAN }) {
+        "serials inside the receiving block"
+    }
+    check(p.toReceive.all { it.fixture == "BR-02" }) { "booked to a BR fixture of the store: ${p.toReceive.map { it.fixture }.toSet()}" }
+    check(plan().toReceive == p.toReceive) { "deterministic from (seed, slug, date, ean, index)" }
+    check(plan(sl = emptyList()).units == 0 && plan(sentIds = emptySet()).units == 0) { "nothing sold/sent -> nothing received" }
+
+    // 4. ledger: a re-run receives nothing; a half-done run resumes with the same EPCs; later sales add only the new units
+    val all = p.toReceive.map { it.epc }.toSet()
+    check(plan(ledger = all, taken = all).let { it.units == 0 && it.alreadyReceived == 24 }) { "ledger re-run receives nothing" }
+    val firstFive = p.toReceive.take(5).map { it.epc }.toSet()
+    val resumed = plan(ledger = firstFive, taken = firstFive)
+    check(resumed.toReceive.map { it.epc }.toSet() == all - firstFive) { "a resumed run mints the same remaining EPCs" }
+    val extra = List(6) { DatedStream.EpcRow(Sgtin96.encode(eA, 5000L + it), eA, "W1", "I1") } // 6 more I1 sold later the same date
+    val more = sales + sale("s-4", "s1", extra)
+    val moreRows = rows + extra
+    val grown = ReceiveStock.plan("s1", date, 20261016L, moreRows, more, sent + "s-4", all, all)
+    check(
+        grown.units == 6 && grown.toReceive.all {
+            it.ean == eA
+        } && grown.toReceive.none { it.epc in all },
+    ) { "13 sold -> 18: 6 new units only: ${grown.units}" }
+    // a collision with an earlier receipt re-draws; the plan stays whole
+    val clash = plan(taken = setOf(p.toReceive.first().epc))
+    check(clash.units == 24 && clash.toReceive.first().epc != p.toReceive.first().epc && clash.toReceive.first().ean == p.toReceive.first().ean) {
+        "a taken EPC is re-drawn, never reused"
+    }
+
+    // 5. state files round-trip
+    val dir = Files.createTempDirectory("receive-selftest")
+    ReceiveStock.appendStock(ReceiveStock.stockFile(dir), ReceiveStock.ledgerFile(dir, date, 1L), p.toReceive.take(3))
+    ReceiveStock.appendStock(ReceiveStock.stockFile(dir), ReceiveStock.ledgerFile(dir, date, 1L), p.toReceive.drop(3).take(2))
+    check(ReceiveStock.readStock(ReceiveStock.stockFile(dir)) == p.toReceive.take(5)) { "received-stock.csv round-trip" }
+    check(RestockMoves.readLedger(ReceiveStock.ledgerFile(dir, date, 1L)) == p.toReceive.take(5).map { it.epc }.toSet()) { "receive ledger" }
+    check(ReceiveStock.readStock(dir.resolve("absent")).isEmpty()) { "absent stock = empty" }
+
+    // 6. the dry chain: sell -> (stockroom holds 1 A) restock refills little -> receive -> restock refills everything
+    fun restock(extra: List<DatedStream.EpcRow>) = RestockMoves.plan("s1", date, rows + extra, sales, sent, soldWall, emptySet(), emptyMap())
+    val before = restock(emptyList())
+    check(before.soldWallUnits == 11 && before.units == 1 && before.shortfallUnits == 10) { "before receiving: 1 of 11 refilled: $before" }
+    val after = restock(ReceiveStock.stockRows(p.toReceive, "s1"))
+    check(after.soldWallUnits == 11 && after.units == 11 && after.shortfallUnits == 0) { "after receiving: 11 of 11 refilled, shortfall 0: $after" }
+    check(after.moves.flatMap { it.epcs }.toSet().size == 11) { "no unit moved twice" }
+    log.info(
+        "[receive] SGTIN-96 round-trip, manifest rule shared, minted EPCs unique/in-block/EAN-decodable, ledger resume, dry chain refills 11/11 (was 1/11) ✓",
+    )
 }

@@ -55,7 +55,7 @@ import kotlin.random.Random
 object DatedStream {
     private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.DatedStream")
 
-    data class EpcRow(val epc: String, val ean: String, val fixture: String) {
+    data class EpcRow(val epc: String, val ean: String, val fixture: String, val itemCd: String = "") {
         val backOfHouse: Boolean get() = fixture.startsWith("BR-")
     }
 
@@ -82,7 +82,7 @@ object DatedStream {
     /** `epcs.csv` (epc,ean,item_cd,category,fixture,store_id) → rows, header dropped, blanks skipped. */
     fun loadEpcRows(file: Path): List<EpcRow> = Files.readAllLines(file).drop(1).mapNotNull { line ->
         val c = line.split(",")
-        if (c.size < 6 || c[0].isBlank()) null else EpcRow(c[0].trim(), c[1].trim(), c[4].trim())
+        if (c.size < 6 || c[0].isBlank()) null else EpcRow(c[0].trim(), c[1].trim(), c[4].trim(), c[2].trim())
     }
 
     /** `assortment.csv` → EAN → (department, price_usd): what a substitute is matched on. */
@@ -229,9 +229,8 @@ object DatedStream {
         val priorSold = readPriorSold(soldLog)
         val reservedElsewhere = reservedByOtherPlans(stateDir, planFile)
         val reused = live && Files.exists(planFile)
-        val days = HashMap<String, RecentDay.Day>()
         val plans: List<StorePlan> = stores.map { slug ->
-            val day = recent.run(slug, date)?.also { days[slug] = it }
+            val day = recent.run(slug, date)
             if (day == null) {
                 StorePlan(slug, date, true, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, null, null)
             } else {
@@ -278,7 +277,7 @@ object DatedStream {
             )
         }
 
-        val ops: List<OpItem> = if (chainOps) plannedOps(plans, days, chainDir, seed, runId) else emptyList()
+        val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
         val items: List<Item> = (sales.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
         val now = Instant.now()
@@ -358,7 +357,22 @@ object DatedStream {
         )
     }
 
-    private fun plannedOps(plans: List<StorePlan>, days: Map<String, RecentDay.Day>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
+    /**
+     * Manifest lines for a restock: the day's sold quantities (keyed by whatever the caller counts: the stream keys by item
+     * code, receiving by EAN), most-sold first (ties by key), each ROUNDED UP TO CASES OF 6. [maxLines] caps the list (the
+     * old fixed top-5 is `M8TRX_DAY_MANIFEST_LINES=5`; the default is every line). ONE rule for the stream's
+     * `shipment_manifest` and for [ReceiveStock], so what is received is what the manifest promised.
+     */
+    fun manifestLines(sold: Map<String, Int>, maxLines: Int = manifestMaxLines()): List<ShipmentLine> =
+        sold.entries.filter { it.key.isNotBlank() && it.value > 0 }
+            .sortedWith(compareBy({ -it.value }, { it.key }))
+            .take(maxLines)
+            .map { ShipmentLine(it.key, ((it.value + 5) / 6) * 6) }
+
+    /** `M8TRX_DAY_MANIFEST_LINES`: cap on manifest lines per store-day; unset or 0 = every sold line. */
+    fun manifestMaxLines(): Int = System.getenv("M8TRX_DAY_MANIFEST_LINES")?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
+
+    private fun plannedOps(plans: List<StorePlan>, sales: List<PlannedSale>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
         val pricings = System.getenv("M8TRX_DAY_PRICINGS")?.toIntOrNull() ?: 2
         val catalogs = System.getenv("M8TRX_DAY_CATALOGS")?.toIntOrNull() ?: 1
         val siteIds = readSiteIds(chainDir.resolve("site_ids.csv"))
@@ -370,16 +384,15 @@ object DatedStream {
             fun at(): Instant = p.open.plusSeconds((span * rng.nextDouble()).toLong())
             val skus = loadAssortment(chainDir.resolve("stores/${p.store}/assortment.csv"))
             val byEan = skus.associateBy { it.ean }
-            // Restock what sold: the day's top item codes, rounded up to cases of 6 — 30 min after open.
-            val day = days[p.store]
+            // Restock what sold: the day's sold units by item code, rounded up to cases of 6 - 30 min after open.
+            // Counted from the ALLOCATED plan (the EPCs that actually sell, substitutions included), the same count
+            // ReceiveStock reads, so the manifest and the receipt agree.
             val siteId = siteIds[p.store]
-            if (day != null && siteId != null) {
-                val sold = day.txns.flatMap { it.lines }.groupingBy { it.itemCd }.eachCount().filterKeys { it.isNotBlank() }
-                val lines = sold.entries.sortedWith(
-                    compareBy({
-                        -it.value
-                    }, { it.key }),
-                ).take(5).map { ShipmentLine(it.key, ((it.value + 5) / 6) * 6) }
+            if (siteId != null) {
+                val itemCdByEpc = loadEpcRows(chainDir.resolve("stores/${p.store}/epcs.csv")).associate { it.epc to it.itemCd }
+                val sold = sales.filter { it.store == p.store }.flatMap { it.epcs }.mapNotNull { itemCdByEpc[it] }
+                    .filter { it.isNotBlank() }.groupingBy { it }.eachCount()
+                val lines = manifestLines(sold)
                 if (lines.isNotEmpty()) {
                     out +=
                         OpItem(
@@ -424,7 +437,7 @@ object DatedStream {
         PlannedSale(c[0], c[1], Instant.parse(c[2]), c[3].split(";"))
     }
 
-    private fun readSiteIds(file: Path): Map<String, String> = if (!Files.exists(file)) {
+    internal fun readSiteIds(file: Path): Map<String, String> = if (!Files.exists(file)) {
         emptyMap()
     } else {
         Files.readAllLines(file).drop(1).mapNotNull { l ->
