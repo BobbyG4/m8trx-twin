@@ -436,6 +436,21 @@ tasks.register<JavaExec>("historySelfTest") {
     )
 }
 
+// Stock-depth file (2026-10-12): the new stockroom units a numbered migration loads so the restock moves can refill the walls
+// Oct 5 -> Oct 16. OFFLINE; reads .twin-state, writes only out/stock-depth-2026-10/. Env: see StockDepthReport.kt.
+tasks.register<JavaExec>("stockDepthReport") {
+    group = "verification"
+    description = "Write out/stock-depth-2026-10/stock_depth.csv + MANIFEST.csv + summary.md (offline, no sends)."
+    mainClass.set("com.m8trx.twin.history.StockDepthReport")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
 // The offline suite in one go — every self-test that needs no network, no credentials and no edge.
 tasks.register("offlineSelfTest") {
     group = "verification"
