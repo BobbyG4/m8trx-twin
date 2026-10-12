@@ -93,8 +93,12 @@ object ReceiveStock {
     /** Width of the receiving block; base + span stays far below the 2^38 serial ceiling. */
     const val SERIAL_SPAN = 10_000_000_000L
 
-    /** Largest `items` list sent in one request (saleNative's own 200 cap; `items/receive` documents none). */
-    const val BATCH_MAX = 200
+    /**
+     * Largest `items` list sent in one request. `M8TRX_RECEIVE_BATCH` (default 50): auto-creating a unit costs the
+     * platform ~0.75 s, and a 200-EPC batch (saleNative's own cap) ran ~150 s — past the gateway's timeout, which
+     * answered 504 while the server went on creating (measured 2026-10-12, Denver canary).
+     */
+    val BATCH_MAX: Int = System.getenv("M8TRX_RECEIVE_BATCH")?.toIntOrNull()?.takeIf { it in 1..200 } ?: 50
 
     data class ReceivedRow(val epc: String, val ean: String, val slug: String, val fixture: String, val date: LocalDate)
 

@@ -139,7 +139,10 @@ if want stream; then
 fi
 
 if want receive; then
+  # items/receive is the daily drive's only Bearer WRITE (inventory:create). The client reads M8TRX_TWIN_BEARER, which
+  # is the read-only lockdown key by design; hand this step the data-plane service bearer instead (2026-10-12: 403 otherwise).
   run_step receive "$LIVE_RECEIVE" connectReceiveDrive \
+    M8TRX_TWIN_BEARER="${M8TRX_TWIN_SERVICE_BEARER:-$M8TRX_TWIN_BEARER}" \
     M8TRX_RECEIVE_DATE="$DATE" M8TRX_RECEIVE_SEED="$SEED" M8TRX_RECEIVE_LIVE="$LIVE_RECEIVE"
 fi
 
