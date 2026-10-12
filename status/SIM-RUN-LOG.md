@@ -80,3 +80,9 @@ One line per step per live run of `scripts/demo/day.sh`. Counts are the drivers'
 | 2026-10-08 | 20261016 | move | SIM-RUN movement date=2026-10-08 seed=20261016 moves=0 units=0 restock_moves=235 restock_units=662 shortfall_units=0 sent_ok=235 sent_err=0 wall=127s | 132s | LIVE |
 | 2026-10-11 | 20261016 | move | SIM-RUN movement date=2026-10-11 seed=20261016 moves=0 units=0 restock_moves=0 restock_units=0 shortfall_units=0 sent_ok=0 sent_err=0 wall=0s | 4s | LIVE |
 | 2026-10-12 | 20261016 | move | SIM-RUN movement date=2026-10-12 seed=20261016 moves=0 units=0 restock_moves=0 restock_units=0 shortfall_units=0 sent_ok=0 sent_err=0 wall=0s | 4s | LIVE |
+| 2026-10-05 | 20261016 | day | SIM-RUN day date=2026-10-05 seed=20261016 epoch=PLAN shoppers=857 samples=1362729 expected_impressions=4374 published=1362729 wall=0h43m59s | 2677s | LIVE |
+| 2026-10-06 | 20261016 | day | SIM-RUN day date=2026-10-06 seed=20261016 epoch=PLAN shoppers=857 samples=1362729 expected_impressions=4374 published=1362729 wall=0h43m59s | 2664s | LIVE |
+| 2026-10-07 | 20261016 | day | SIM-RUN day date=2026-10-07 seed=20261016 epoch=PLAN shoppers=857 samples=1362729 expected_impressions=4374 published=1362729 wall=0h43m59s | 2663s | LIVE |
+| 2026-10-08 | 20261016 | day | SIM-RUN day date=2026-10-08 seed=20261016 epoch=PLAN shoppers=857 samples=1362729 expected_impressions=4374 published=1362729 wall=0h43m59s | 2663s | LIVE |
+| 2026-10-09 | 20261016 | day | SIM-RUN day date=2026-10-09 seed=20261298 epoch=PLAN shoppers=933 samples=1495333 expected_impressions=4798 published=1495333 wall=0h45m25s | 2748s | LIVE |
+| 2026-10-10 | 20261016 | day | SIM-RUN day date=2026-10-10 seed=20261299 epoch=PLAN shoppers=1795 samples=2852422 expected_impressions=9227 published=2852422 wall=0h48m27s | 2953s | LIVE |
