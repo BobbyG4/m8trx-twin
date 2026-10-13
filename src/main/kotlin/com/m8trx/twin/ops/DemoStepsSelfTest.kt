@@ -385,6 +385,16 @@ private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
         ) / 100.0} m2 -> chosen $pick",
     )
 
+    // the demo week's moves at the two proof stores, planned vs chosen against the committed layout
+    for (slug in listOf("dec-us-denver", "dec-fr-lyon")) {
+        val (fx, room) = layoutOf(chain, slug)
+        FixtureMoves.week(keys.store(slug), LocalDate.parse("2026-10-12"), SEED, 3, emptyMap()).forEach { m ->
+            val rest = fx.filterKeys { it != m.code }.values
+            val pick = FixtureMoves.choose(m, fx.getValue(m.code), 0.0 to 0.0, rest, room)
+            println("      $slug ${m.date} ${m.code}: planned (${m.dxMm}, ${m.dyMm}) -> chosen $pick")
+        }
+    }
+
     // every store, four weeks of three moves: whatever choose() returns is clean; count how many first choices were not
     var total = 0
     var firstClean = 0
