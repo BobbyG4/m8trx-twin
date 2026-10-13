@@ -3,12 +3,14 @@ package com.m8trx.twin.ops
 import com.m8trx.twin.history.ChainKeys
 import com.m8trx.twin.history.HistoryCsv
 import com.m8trx.twin.history.HistoryGenerator
+import com.m8trx.twin.layer1.FixtureSet
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.Base64
 import kotlin.math.abs
 
 /**
@@ -23,8 +25,11 @@ fun main() {
         "stock: plan shape per store-day (1-2 counts, 2-4 fixtures, 2-4 missing, 1-2 over)" to { stockShape(chain, keys) },
         "stock: read sets — missing never read, over homed outside the scope, no blip, frames <= 250" to { stockReadSets(chain, keys) },
         "stock: deterministic, ids stable, a new date or seed changes the plan" to { stockDeterminism(chain, keys) },
+        "stock: platform truth - read sets from the platform's locations (drifted units never read at a wall)" to { stockPlatformTruth(chain, keys) },
         "stock: Denver full floor covers every stocked wall fixture (6-10 missing, over from the stockroom)" to { stockFullFloor(chain, keys) },
         "fixmoves: N per store-week, Mon-Sat, distinct walls, bounded offsets, stable through the week" to { fixMoves(keys) },
+        "fixmoves: geometry - overlap, boundary, the Lyon GB-R1-U1 / GF-R1-U1 case, every chosen move clean" to { fixMovesGeometry(chain, keys) },
+        "ops: login pacing (<= 6/min), JWT exp decode" to { loginPacing() },
         "tasks: backlog, target, top-up, assignees, completion shares, carried" to { taskDay() },
         "traffic9: HISTORY_ONLY=people writes exactly the three people files + MANIFEST" to { traffic9() },
     )
@@ -269,4 +274,177 @@ private fun traffic9() {
         ),
     ).generate()
     check(o2.files.getValue("traffic_store_hourly.csv") > 0) { "a one-day SF people run came out empty (cutoff)" }
+}
+
+/**
+ * The platform's locations, not the twin's record, decide a count's reads. Every 4th wall unit is re-homed to a Back Room zone
+ * (as 26 % of Denver's are on the platform) and every plan must then (a) never read one at a wall except as a deliberate
+ * `over` unit, (b) pick `missing` only among units the platform has AT the counted wall, (c) take `over` from units the
+ * platform has elsewhere (another wall or the Back Room).
+ */
+private fun stockPlatformTruth(chain: Path, keys: ChainKeys) {
+    var drifted = 0
+    for (s in keys.stores) {
+        val twin = stockOf(chain, s.slug)
+        val zoneOfCode = s.zones.associate { it.code to it.zoneId }
+        val backZone = "bbbbbbbb-0000-0000-0000-000000000001"
+        val backRoom = HashSet<String>()
+        var i = 0
+        val located = twin.byFixture.flatMap { (code, units) ->
+            units.map { u ->
+                val z = zoneOfCode[code]
+                if (z == null || (!StoreStock.isBoh(code) && i++ % 4 == 0)) {
+                    backRoom += u
+                    if (z != null) drifted++
+                    StoreStock.Located(backZone, u)
+                } else {
+                    StoreStock.Located(z, u)
+                }
+            }
+        }
+        val platform = StoreStock.fromPlatform(s, located, emptySet())
+        check(platform.wall.values.flatten().none { it in backRoom }) { "${s.slug}: a Back Room unit counted as wall stock" }
+        check(platform.backroom.toSet() == backRoom) { "${s.slug}: back room != the units the platform keeps there" }
+        for (p in StockCounts.plan(s, DATE, SEED, platform, fullFloor = false)) {
+            val overEpcs = p.over.map { it.epc }.toSet()
+            val read = p.pulls.flatMap { it.epcs }.toSet()
+            check((read - overEpcs).none { it in backRoom }) { "${s.slug}: a Back Room unit read at a wall (it would be an unplanned over)" }
+            p.missing.forEach { m ->
+                check(m.epc in platform.wall.getValue(m.fixture)) { "${s.slug}: missing ${m.epc} is not at ${m.fixture} on the platform" }
+            }
+            p.over.forEach { o ->
+                check(o.epc in platform.byFixture.getValue(o.fromFixture) && o.fromFixture !in p.pulls.map { it.code }) {
+                    "${s.slug}: over ${o.epc} is not elsewhere on the platform"
+                }
+            }
+        }
+    }
+    check(drifted > 0) { "the test drifted nothing" }
+    println("      drifted $drifted wall units to the Back Room across ${keys.stores.size} stores; none read at a wall")
+}
+
+private fun pt(x: Double, y: Double) = PolyGeom.P(x, y)
+
+private fun rect(x0: Double, y0: Double, x1: Double, y1: Double) = listOf(pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1))
+
+/** Polygon fixtures (and circles as 32-gons) by code and the sales floor's boundary, from a store's committed layout.json. */
+private fun layoutOf(chain: Path, slug: String): Pair<Map<String, List<PolyGeom.P>>, List<PolyGeom.P>> {
+    val file = chain.resolve("stores/$slug/layout.json")
+    val fixtures = FixtureSet.load(file).fixtures.associate { f ->
+        f.code to
+            if (f.kind == com.m8trx.twin.layer1.Fixture.Kind.POLYGON) {
+                f.ring.dropLast(1).map { pt(it.x, it.y) }
+            } else {
+                PolyGeom.circle(f.centre.x, f.centre.y, f.radiusMm ?: 1.0, f.radiusMm ?: 1.0)
+            }
+    }
+    val sf = com.m8trx.twin.connect.model.ConnectMappers.camel.readTree(Files.readAllBytes(file)).path("spaces")
+        .first { it.path("space_type").asText() == "sales_floor" }.path("footprint_mm")
+    return fixtures to rect(0.0, 0.0, sf.path("width").asDouble(), sf.path("depth").asDouble())
+}
+
+private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
+    // the primitives
+    val a = rect(0.0, 0.0, 1000.0, 500.0)
+    check(!PolyGeom.overlaps(a, rect(1000.0, 0.0, 2000.0, 500.0))) { "a shared edge is not an overlap" }
+    check(PolyGeom.overlaps(a, rect(900.0, 0.0, 2000.0, 500.0))) { "100 mm x 500 mm of overlap missed" }
+    check(PolyGeom.overlaps(a, rect(0.0, 250.0, 1000.0, 750.0))) { "equal-width stacked overlap missed (shared side edges)" }
+    check(PolyGeom.overlaps(a, a)) { "identical rectangles" }
+    check(Math.abs(PolyGeom.overlapArea(a, rect(900.0, 0.0, 2000.0, 500.0)) - 50_000.0) < 1.0) { "overlap area" }
+    check(PolyGeom.within(a, rect(0.0, 0.0, 28500.0, 23000.0)) && !PolyGeom.within(rect(-1.0, 0.0, 999.0, 500.0), rect(0.0, 0.0, 28500.0, 23000.0))) {
+        "within"
+    }
+
+    // the Lyon case from the review (2026-10-13): GB-R1-U1's planned Oct 17 shift lands on GF-R1-U1
+    val (lyonFx, lyonRoom) = layoutOf(chain, "dec-fr-lyon")
+    val lyon = keys.store("dec-fr-lyon")
+    val week = FixtureMoves.week(lyon, LocalDate.parse("2026-10-12"), SEED, 3, emptyMap())
+    val gb = week.firstOrNull { it.code == "GB-R1-U1" } ?: error("the Lyon week no longer holds the GB-R1-U1 move: ${week.map { it.code }}")
+    val origin = lyonFx.getValue("GB-R1-U1")
+    val planned = PolyGeom.translate(origin, gb.dxMm, gb.dyMm)
+    val others = lyonFx.filterKeys { it != "GB-R1-U1" }
+    check(PolyGeom.overlapArea(planned, lyonFx.getValue("GF-R1-U1")) > 100_000.0) {
+        "expected the planned GB-R1-U1 shift (${gb.dxMm}, ${gb.dyMm}) to land on GF-R1-U1, overlap ${PolyGeom.overlapArea(
+            planned,
+            lyonFx.getValue("GF-R1-U1"),
+        )}"
+    }
+    val pick = FixtureMoves.choose(gb, origin, 0.0 to 0.0, others.values, lyonRoom)
+    check(pick != (gb.dxMm to gb.dyMm)) { "the overlapping planned shift was kept" }
+    if (pick != null) {
+        val moved = PolyGeom.translate(origin, pick.first, pick.second)
+        check(
+            others.values.none {
+                PolyGeom.overlaps(moved, it)
+            } && PolyGeom.within(moved, lyonRoom),
+        ) { "the alternative still overlaps or leaves the room" }
+    }
+    println(
+        "      lyon GB-R1-U1: planned (${gb.dxMm}, ${gb.dyMm}) overlaps GF-R1-U1 by ${Math.round(
+            PolyGeom.overlapArea(planned, lyonFx.getValue("GF-R1-U1")) / 1e6 * 100,
+        ) / 100.0} m2 -> chosen $pick",
+    )
+
+    // every store, four weeks of three moves: whatever choose() returns is clean; count how many first choices were not
+    var total = 0
+    var firstClean = 0
+    var rerouted = 0
+    var skipped = 0
+    for (s in keys.stores) {
+        val (fx, room) = layoutOf(chain, s.slug)
+        for (w in 0 until 4) {
+            for (m in FixtureMoves.week(s, LocalDate.parse("2026-10-12").plusWeeks(w.toLong()), SEED, 3, emptyMap())) {
+                val o = fx[m.code] ?: continue
+                if (o.size < 3) continue
+                total++
+                val rest = fx.filterKeys { it != m.code }.values
+                val p0 = PolyGeom.translate(o, m.dxMm, m.dyMm)
+                if (rest.none { PolyGeom.overlaps(p0, it) } && PolyGeom.within(p0, room)) firstClean++
+                val c = FixtureMoves.choose(m, o, 0.0 to 0.0, rest, room)
+                if (c == null) {
+                    skipped++
+                } else {
+                    if (c != (m.dxMm to m.dyMm)) rerouted++
+                    val moved = PolyGeom.translate(o, c.first, c.second)
+                    check(
+                        rest.none {
+                            PolyGeom.overlaps(moved, it)
+                        } && PolyGeom.within(moved, room),
+                    ) { "${s.slug} ${m.code}: chosen shift $c is not clean" }
+                    check(Math.abs(c.first) + Math.abs(c.second) in 250.0..500.0 && (c.first == 0.0 || c.second == 0.0)) {
+                        "$c: one axis, 250-500 mm"
+                    }
+                }
+            }
+        }
+    }
+    println(
+        "      ${keys.stores.size} stores x 4 weeks: $total moves - $firstClean first choices clean, $rerouted rerouted, $skipped skipped, every chosen move clean",
+    )
+    // the bound still holds for a rerouted move: a fixture already 600 mm out never goes further
+    val m0 = week.first()
+    val c0 = FixtureMoves.choose(m0, lyonFx.getValue(m0.code), 600.0 to 600.0, emptyList(), null)
+    check(c0 == null || (Math.abs(600.0 + c0.first) <= 600.0 && Math.abs(600.0 + c0.second) <= 600.0)) {
+        "offset bound crossed by a rerouted move: $c0"
+    }
+}
+
+private fun loginPacing() {
+    val p = LoginPacer()
+    var t = 1_000_000L
+    repeat(LoginPacer.MAX_PER_MINUTE) {
+        check(p.waitMs(t) == 0L) { "login ${it + 1} should go at once" }
+        p.record(t)
+        t += 1000
+    }
+    // the 7th waits until the first leaves the 60 s window
+    val w = p.waitMs(t)
+    check(w == 1_000_000L + LoginPacer.WINDOW_MS - t) { "7th login waits $w ms" }
+    t += w
+    check(p.waitMs(t) == 0L) { "after the wait the login goes" }
+    // a quiet minute clears the window
+    check(LoginPacer().also { q -> repeat(6) { q.record(0L) } }.waitMs(LoginPacer.WINDOW_MS) == 0L) { "a full minute later the window is empty" }
+    fun jwt(payload: String) = "h." + Base64.getUrlEncoder().withoutPadding().encodeToString(payload.toByteArray()) + ".s"
+    check(OpsClient.expiry(jwt("{\"exp\":1792000000}"))?.epochSecond == 1792000000L) { "exp decode" }
+    check(OpsClient.expiry(jwt("{\"sub\":\"x\"}")) == null && OpsClient.expiry("not-a-jwt") == null) { "no exp / not a JWT = null" }
 }

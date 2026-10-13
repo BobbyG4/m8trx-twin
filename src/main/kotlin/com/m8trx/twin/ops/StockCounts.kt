@@ -25,6 +25,11 @@ import kotlin.random.Random
  *    the stockroom. The count rule moves them (their home was not pulled and has no recent sighting), and the reconcile
  *    writes an `over` row (needs migration 272 on mother; without it the reconcile skips over rows with a WARN).
  *
+ * [stock] is whatever the caller holds: the twin's own record for a dry run and the tests, the PLATFORM's current
+ * locations ([StoreStock.fromPlatform]) for a live count — so "a wall's units" are the units the platform says are AT
+ * that wall, "missing" is chosen from those, and "over" from units the platform says are elsewhere (another wall, or the
+ * Back Room).
+ *
  * Plus 1–2 floor notes per count (3–4 on the full floor) as `stocktake_observation` rows on counted fixtures.
  *
  * Only EPCs that resolve to an item of the tenant are ever read (D39 ignores the rest), and the scope is declared
@@ -80,6 +85,16 @@ object StockCounts {
         val reads: Int get() = pulls.sumOf { it.epcs.size }
     }
 
+    /** How many counts the store gets on [date] — drawn first from the day's seed, so it does not depend on the stock. */
+    fun countsFor(store: ChainKeys.Store, date: LocalDate, seed: Long, fullFloor: Boolean): Int =
+        if (fullFloor) 1 else 1 + Random(HistoryCsv.derive(seed, store.slug, date, "stock")).nextInt(2)
+
+    fun countId(store: ChainKeys.Store, date: LocalDate, seed: Long, k: Int): String = uuid("twin-stock", store.slug, date, seed, k)
+
+    /** When count [k] starts (store-local 08:30 plus 75 minutes a count; the full floor opens at 07:00). */
+    fun startAt(store: ChainKeys.Store, date: LocalDate, k: Int, fullFloor: Boolean): Instant =
+        ZonedDateTime.of(date, if (fullFloor) FULL_FLOOR_START else DAY_START.plusMinutes(75L * k), store.zone).toInstant()
+
     fun uuid(vararg parts: Any): String = UUID.nameUUIDFromBytes(parts.joinToString("|").toByteArray()).toString()
 
     /**
@@ -91,7 +106,7 @@ object StockCounts {
         val zoneOf = store.fixtures.associate { it.code to it.zoneId }
         val eligible = stock.wall.filter { (code, units) -> code in zoneOf && units.size >= minUnits }.keys.sorted()
         if (eligible.isEmpty()) return emptyList()
-        val counts = if (fullFloor) 1 else 1 + rng.nextInt(2)
+        val counts = if (fullFloor) 1 else 1 + rng.nextInt(2) // == countsFor (the first draw of the day's rng)
         val pool = eligible.shuffled(rng).toMutableList()
         val out = ArrayList<CountPlan>()
         for (k in 0 until counts) {
@@ -119,7 +134,7 @@ object StockCounts {
         rng: Random,
         eligible: List<String>,
     ): CountPlan {
-        val countId = uuid("twin-stock", store.slug, date, seed, k)
+        val countId = countId(store, date, seed, k)
         // missing: drawn from the counted fixtures, each fixture keeps at least 2 units read
         val nMissing = if (fullFloor) 6 + rng.nextInt(5) else 2 + rng.nextInt(3)
         val candidates = chosen.flatMap { f -> stock.wall.getValue(f).drop(2).map { f to it } }.shuffled(rng)
@@ -137,8 +152,7 @@ object StockCounts {
         }.take(nOver)
         val over = overSources.map { (from, e) -> Over(e, from, chosen[rng.nextInt(chosen.size)]) }
 
-        val local = ZonedDateTime.of(date, if (fullFloor) FULL_FLOOR_START else DAY_START.plusMinutes(75L * k), store.zone).toInstant()
-        var t = local
+        var t = startAt(store, date, k, fullFloor)
         val pulls = chosen.map { code ->
             val read = stock.wall.getValue(code).filter { it !in missingSet }
             val tags = read.map { it to false } + over.filter { it.toFixture == code }.map { it.epc to true }

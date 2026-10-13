@@ -1,12 +1,15 @@
 package com.m8trx.twin.ops
 
 import com.m8trx.twin.connect.DatedStream
+import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.history.ChainKeys
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermissions
 import java.time.Instant
 import java.time.LocalDate
 import java.util.Base64
@@ -17,6 +20,12 @@ import java.util.UUID
  * driven against a local stub HTTP server on 127.0.0.1 instead of the platform. Nothing leaves the machine; the state
  * dir is a temp dir. Prints every route hit with its count and the first body sent to it — the request shapes — and
  * fails if a step errors or a route the step must call was never called.
+ *
+ * What the stub plays that matters to the review's findings: the platform's `thing_location` keeps every 4th wall unit in
+ * the Back Room (the twin's own record puts them on the wall) — the stock step must read none of them at a wall; the
+ * space holds a neighbor fixture in the +x direction of every moved fixture — the fixmoves step must route around it;
+ * and `/auth/login` hands out JWTs with an `exp` — a second driver on the same state dir must log nobody in again. A second
+ * stub then plays the rate limit (429) and a rejected cached token against the login policy of [OpsClient].
  */
 fun main() {
     val chain = Path.of("reference/data/chain")
@@ -24,15 +33,38 @@ fun main() {
     val mapper = ConnectMappers.camel
     val calls = LinkedHashMap<String, MutableList<String>>()
     val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-    val claims = mapper.writeValueAsString(
-        mapOf(
-            "tid" to "tenant-stub",
-            "https://hasura.io/jwt/claims" to mapOf("x-hasura-default-role" to "frontEnd"),
-        ),
-    )
-    val jwt = "h." + Base64.getUrlEncoder().withoutPadding().encodeToString(claims.toByteArray()) + ".s"
     val today = LocalDate.parse("2026-10-14")
     val now = Instant.parse("2026-10-14T23:00:00Z")
+    val keys = ChainKeys.load(chain.resolve(ChainKeys.DEFAULT_PATH.fileName))
+    val siteIds = DatedStream.readSiteIds(chain.resolve("site_ids.csv"))
+    val backRoomZone = "bbbbbbbb-0000-0000-0000-000000000001"
+    val backroom = HashSet<String>() // every unit the stub platform keeps in the Back Room (stockroom + the "drifted" wall units)
+    val located = HashMap<String, List<Pair<String, String>>>() // site id -> (zone id, epc)
+    for (slug in listOf("dec-us-denver", "dec-fr-lyon")) {
+        val zoneOf = keys.store(slug).fixtures.associate { it.code to it.zoneId }
+        var i = 0
+        located[siteIds.getValue(slug)] = DatedStream.loadEpcRows(chain.resolve("stores/$slug/epcs.csv")).map { r ->
+            val z = zoneOf[r.fixture]
+            if (z == null || i++ % 4 == 0) {
+                backroom += r.epc
+                backRoomZone to r.epc
+            } else {
+                z to r.epc
+            }
+        }
+    }
+    val pulled = HashMap<String, MutableSet<String>>() // countId -> every EPC pulled
+    val puts = ArrayList<com.fasterxml.jackson.databind.JsonNode>()
+    val loginAs = ArrayList<String>()
+    val blocker =
+        listOf(
+            listOf(2300.0, 900.0, 0.0),
+            listOf(3500.0, 900.0, 0.0),
+            listOf(3500.0, 1700.0, 0.0),
+            listOf(2300.0, 1700.0, 0.0),
+            listOf(2300.0, 900.0, 0.0),
+        )
+    val exp = Instant.now().plusSeconds(10 * 86_400L).epochSecond
 
     fun route(ex: HttpExchange): Pair<Int, Any> {
         val path = ex.requestURI.path
@@ -42,7 +74,51 @@ fun main() {
         calls.getOrPut(key) { ArrayList() } += body.take(600) + if (ex.requestURI.query != null) " ?${ex.requestURI.query}" else ""
         val node = if (body.isNotBlank()) mapper.readTree(body) else null
         return when {
-            path.endsWith("/auth/login") -> 200 to mapOf("accessToken" to jwt, "capabilities" to emptyList<String>())
+            path.endsWith("/auth/login") -> {
+                val who = node!!.path("email").asText()
+                loginAs += who
+                200 to mapOf("accessToken" to mkJwt(who, exp), "capabilities" to emptyList<String>())
+            }
+
+            path.endsWith("/graphql") && body.contains("TwinStockLocations") -> {
+                val v = node!!.path("variables")
+                val rows = located.getValue(v.path("site").asText())
+                val page = rows.drop(v.path("offset").asInt()).take(v.path("limit").asInt())
+                200 to mapOf(
+                    "data" to mapOf(
+                        "thing_location" to page.map { (z, e) ->
+                            mapOf("zone_id" to z, "item" to mapOf("item_identifiers" to listOf(mapOf("value" to e))))
+                        },
+                    ),
+                )
+            }
+
+            path.endsWith("/graphql") && body.contains("TwinSpaceFixtures") -> 200 to mapOf(
+                "data" to mapOf(
+                    "space_by_pk" to mapOf(
+                        "id" to node!!.path("variables").path("space").asText(),
+                        "boundary" to mapOf(
+                            "type" to "Polygon",
+                            "coordinates" to listOf(
+                                listOf(
+                                    listOf(0.0, 0.0, 0.0),
+                                    listOf(28500.0, 0.0, 0.0),
+                                    listOf(28500.0, 23000.0, 0.0),
+                                    listOf(0.0, 23000.0, 0.0),
+                                    listOf(0.0, 0.0, 0.0),
+                                ),
+                            ),
+                        ),
+                    ),
+                    "zone" to listOf(
+                        mapOf(
+                            "id" to "blocker-zone",
+                            "geometry_type" to "polygon",
+                            "geometry" to mapOf("type" to "Polygon", "coordinates" to listOf(blocker)),
+                        ),
+                    ),
+                ),
+            )
 
             path.endsWith("/graphql") && body.contains("zone_by_pk") -> 200 to mapOf(
                 "data" to mapOf(
@@ -92,13 +168,14 @@ fun main() {
                 ),
             )
 
-            path.endsWith("/inventory/items/details") -> 200 to node!!.path("epcs").map { mapOf("epc" to it.asText(), "state" to "in_stock") }
-
             m == "POST" && path.endsWith("/count") ->
                 201 to
                     mapOf("countId" to node!!.path("countId").asText(), "owner" to "cloud", "natsUrl" to null, "status" to "open")
 
-            path.endsWith("/count/pulls") -> 202 to mapOf("replay" to false)
+            path.endsWith("/count/pulls") -> {
+                pulled.getOrPut(node!!.path("countId").asText()) { HashSet() } += node.path("tags").map { it.path("identifier").asText() }
+                202 to mapOf("replay" to false)
+            }
 
             path.endsWith("/observations") -> 201 to mapOf("id" to UUID.randomUUID().toString())
 
@@ -108,7 +185,7 @@ fun main() {
                 200 to
                     mapOf("reconciled" to true, "totals" to mapOf("counted" to 0, "under" to 3, "over" to 1, "misplaced" to 1))
 
-            m == "PUT" && path.contains("/zones/") -> 200 to mapOf("id" to path.substringAfterLast('/'), "updated" to true)
+            m == "PUT" && path.contains("/zones/") -> puts.add(node!!).let { 200 } to mapOf("id" to path.substringAfterLast('/'), "updated" to true)
 
             path.endsWith("/tasks/assignees") -> 200 to mapOf(
                 "people" to listOf(
@@ -153,7 +230,7 @@ fun main() {
 
         fun cfg(date: LocalDate, stores: List<String>) = OpsConfig(
             apiBase = "$base/api/v2", hasuraUrl = "$base/graphql", chainDir = chain, stateDir = state, date = date, seed = 20261016L,
-            live = true, allowFuture = true, allowPast = true, stores = stores, password = "stub-password", dataBearer = "stub-bearer", now = now,
+            live = true, allowFuture = true, allowPast = true, stores = stores, password = "stub-password", now = now,
         )
         val stock = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon"))).run { false }
         val again = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon"))).run { false }
@@ -179,15 +256,166 @@ fun main() {
         listOf(
             "POST /api/v2/auth/login", "POST /api/v2/count", "POST /api/v2/count/pulls", "POST /api/v2/count/{id}/close",
             "GET /api/v2/count/{id}/exceptions", "POST /api/v2/stocktake/sessions/{id}/observations",
-            "POST /api/v2/inventory/items/details", "PUT /api/v2/zones/{id}",
+            "PUT /api/v2/zones/{id}", "POST /graphql",
             "GET /api/v2/tasks/assignees", "POST /api/v2/tasks", "POST /api/v2/tasks/{id}/cancel",
             "POST /api/v2/tasks/{id}/reassign", "POST /api/v2/tasks/{id}/start", "POST /api/v2/tasks/{id}/complete",
         ).forEach {
             check(it in calls) { "never called: $it" }
         }
+        // H1 — the platform's own locations decide the reads: a unit the platform keeps in the Back Room is read in a count
+        // only as one of its 1-2 deliberate `over` units, never as a wall's stock (the twin's record would have read ~25 % of them)
+        check("POST /api/v2/inventory/items/details" !in calls) { "the stock step still reads /inventory/items/details" }
+        check(calls.getValue("POST /graphql").any { it.contains("TwinStockLocations") && it.contains("thing_location") }) { "no thing_location read" }
+        check(pulled.isNotEmpty()) { "no pulls recorded" }
+        pulled.forEach { (id, epcs) ->
+            val fromBack = epcs.count { it in backroom }
+            check(fromBack <= 2) { "count $id read $fromBack back-room units (only its 1-2 deliberate over units may come from there)" }
+        }
+        println(
+            "stock reads: ${pulled.size} counts; back-room units read per count (<= 2 allowed): ${pulled.values.map { v ->
+                v.count { it in backroom }
+            }}",
+        )
+        // H2 — every PUT stays off the stub neighbor and inside the stub boundary, and the ledger holds the shift actually applied
+        check(puts.size == fix.sumOf { it.sent }) { "PUT count ${puts.size} != sent" }
+        val neighbor = PolyGeom.ring(blocker)
+        val room = PolyGeom.ring(
+            listOf(listOf(0.0, 0.0, 0.0), listOf(28500.0, 0.0, 0.0), listOf(28500.0, 23000.0, 0.0), listOf(0.0, 23000.0, 0.0), listOf(0.0, 0.0, 0.0)),
+        )
+        puts.forEach { b ->
+            val ring = PolyGeom.outerRing(b.path("geometry")) ?: error("a PUT without a polygon")
+            check(!PolyGeom.overlaps(ring, neighbor)) { "a moved fixture overlaps its neighbor: ${b.path("geometry")}" }
+            check(PolyGeom.within(ring, room)) { "a moved fixture left the room" }
+        }
+        val ledgerLines = StoreStock.readLines(state.resolve("fixmoves").resolve("applied.csv")).filter { !it.startsWith("extId") }
+        check(ledgerLines.size == puts.size) { "ledger lines ${ledgerLines.size} != PUTs ${puts.size}" }
+        ledgerLines.forEach { l ->
+            val c = l.split(",")
+            check(c[3].toDouble() != 0.0 || c[4].toDouble() != 0.0) { "a ledger line without a shift: $l" }
+        }
+        println("fixmoves: ${puts.size} PUTs, none on the stub neighbor (+x of every fixture), none outside the room")
+        // H3 — one login per person for the whole run (the JWTs are kept in state/ops/jwt, reused by every later driver)
+        check(loginAs.size == loginAs.toSet().size) { "logins: ${loginAs.size} calls for ${loginAs.toSet().size} people — the cache did not hold" }
+        val jwtDir = state.resolve("ops").resolve("jwt")
+        val files = Files.list(jwtDir).use { it.toList() }
+        check(files.size == loginAs.toSet().size) { "cached ${files.size} tokens for ${loginAs.toSet().size} logins" }
+        files.forEach { f ->
+            check(Files.getPosixFilePermissions(f) == PosixFilePermissions.fromString("rw-------")) { "$f is not mode 600" }
+        }
+        check(Files.getPosixFilePermissions(jwtDir) == PosixFilePermissions.fromString("rwx------")) { "the jwt dir is not mode 700" }
+        println(
+            "logins: ${loginAs.size} calls for ${loginAs.toSet().size} people over 5 driver runs (all five shared one state dir); cache files mode 600",
+        )
+        loginPolicy()
         val applied = StoreStock.readLines(state.resolve("fixmoves").resolve("applied.csv")).size - 1
         println("state: ${StoreStock.readLines(StoreStock.missingFile(state)).size} missing EPCs recorded · $applied fixture moves in the ledger")
         println("demoStepsStubRun: OK")
+    } finally {
+        server.stop(0)
+    }
+}
+
+private fun mkJwt(sub: String, expEpoch: Long, nonce: String = ""): String {
+    val claims = ConnectMappers.camel.writeValueAsString(
+        mapOf(
+            "sub" to sub,
+            "n" to nonce,
+            "tid" to "tenant-stub",
+            "exp" to expEpoch,
+            "https://hasura.io/jwt/claims" to mapOf("x-hasura-default-role" to "frontEnd"),
+        ),
+    )
+    return "h." + Base64.getUrlEncoder().withoutPadding().encodeToString(claims.toByteArray()) + ".s"
+}
+
+/**
+ * The login policy of [OpsClient] against a stub that plays the platform's rate limit and a token it no longer accepts.
+ * The clock is fake and a "sleep" only moves it, so the 60-second waits cost nothing and the sliding window is exact.
+ */
+private fun loginPolicy() {
+    val mapper = ConnectMappers.camel
+    val t0 = Instant.parse("2026-10-14T00:00:00Z")
+    var nowMs = t0.toEpochMilli()
+    val sleeps = ArrayList<Long>()
+    val stamps = ArrayList<Long>() // fake-clock time of every login that reached the stub
+    var limitFirst = 0 // answer the next N logins with 429
+    var serial = 0
+    val revoked = HashSet<String>() // tokens the stub no longer accepts
+    val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
+    server.createContext("/") { ex ->
+        val body = ex.requestBody.readBytes().toString(Charsets.UTF_8)
+        val (code, payload) = when {
+            ex.requestURI.path.endsWith("/auth/login") -> {
+                stamps += nowMs
+                if (limitFirst > 0) {
+                    limitFirst--
+                    429 to mapOf("error" to "RATE_LIMITED", "message" to "too many logins")
+                } else {
+                    val who = mapper.readTree(body).path("email").asText()
+                    200 to mapOf("accessToken" to mkJwt(who, t0.epochSecond + 10 * 86_400L, "n${++serial}"))
+                }
+            }
+
+            else -> {
+                val tok = ex.requestHeaders.getFirst("Authorization").removePrefix("Bearer ")
+                if (tok in revoked) 401 to mapOf("error" to "UNAUTHORIZED") else 200 to mapOf("ok" to true, "token" to tok)
+            }
+        }
+        val bytes = mapper.writeValueAsBytes(payload)
+        ex.responseHeaders.add("Content-Type", "application/json")
+        ex.sendResponseHeaders(code, bytes.size.toLong())
+        ex.responseBody.use { it.write(bytes) }
+    }
+    server.start()
+    try {
+        val base = "http://127.0.0.1:${server.address.port}/api/v2"
+        val state = Files.createTempDirectory("twin-login-policy")
+        fun client() = OpsClient(
+            base,
+            "$base/graphql",
+            { "pw" },
+            ConnectHttp(),
+            state,
+            clock = { Instant.ofEpochMilli(nowMs) },
+            sleepMs = { ms ->
+                sleeps += ms
+                nowMs += ms
+            },
+        )
+
+        // a 429 is waited out once (60 s) and the login retried; the answer is a token
+        limitFirst = 1
+        val c1 = client()
+        val t = c1.jwt("a@x.test")
+        check(t != null && sleeps.contains(OpsClient.RATE_LIMIT_WAIT_MS)) { "429 once: no 60 s wait and retry ($sleeps)" }
+        // a second 429 gives up on THAT login (null) and is not remembered: the next ask logs in again
+        limitFirst = 2
+        val none = c1.jwt("b@x.test")
+        check(none == null) { "429 twice must give null" }
+        check(c1.jwt("b@x.test") != null) { "a 429 was cached — the next ask did not try again" }
+        // pacing: the stub never sees more than 6 logins inside any 60 s of the fake clock
+        stamps.clear()
+        val c2 = client()
+        (1..13).forEach { c2.jwt("p$it@x.test") }
+        val worst = stamps.indices.maxOf { i -> stamps.count { it in stamps[i] until stamps[i] + 60_000L } }
+        check(worst <= LoginPacer.MAX_PER_MINUTE) { "pacing: $worst logins inside one minute" }
+        // reuse: a new client on the same state dir logs nobody in (the tokens are on disk, valid for days)
+        stamps.clear()
+        val c3 = client()
+        check(c3.jwt("a@x.test") == t && c3.jwt("p4@x.test") != null && c3.logins == 0 && stamps.isEmpty()) {
+            "cached login not reused (${c3.logins} logins)"
+        }
+        // a cached token the platform rejects (401) is dropped; the call is retried once on a fresh login
+        revoked += t!!
+        val c4 = client()
+        val tok = c4.jwt("a@x.test")!!
+        val r = c4.send(tok, "GET", "/ping")
+        check(r is com.m8trx.twin.connect.http.ConnectResponse.Ok && c4.logins == 1) { "401 was not retried on a fresh login (${c4.logins})" }
+        check(c4.jwt("a@x.test") != t) { "the rejected token is still cached" }
+        println(
+            "login policy: 429 -> wait 60 s, retry once · never cached · max $worst logins/min over 13 people · " +
+                "reused with 0 logins · rejected cached token refreshed once",
+        )
     } finally {
         server.stop(0)
     }

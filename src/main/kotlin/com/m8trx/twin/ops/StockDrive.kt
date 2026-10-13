@@ -1,11 +1,8 @@
 package com.m8trx.twin.ops
 
-import com.m8trx.twin.connect.ConnectClient
-import com.m8trx.twin.connect.ConnectConfig
 import com.m8trx.twin.connect.RestockMoves
 import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
-import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import org.slf4j.LoggerFactory
 import java.time.format.DateTimeFormatter
 
@@ -18,12 +15,13 @@ import java.time.format.DateTimeFormatter
  * the session gets its segments (one per counted fixture), its observations, its `stocktake_discrepancy` rows and the
  * `summary.totalScanned` / `summary.discrepancyCounts` the web's Stocktake list reads.
  *
- * Auth: the store manager's JWT (`stocktake:create_session` to open, `stocktake:execute` to pull and close,
- * `inventory:read` for the exceptions — the site-manager kit holds all three). The platform-truth filter
- * (`POST /inventory/items/details`) rides the tenant-wide data-plane bearer (`inventory:read`).
+ * Auth: the store manager's JWT throughout (`stocktake:create_session` to open, `stocktake:execute` to pull and close,
+ * `inventory:read` for the exceptions — the site-manager kit holds all three) — and for the one read that decides what
+ * the count reads: where the PLATFORM currently holds each in-stock unit (Hasura `thing_location`, `frontEnd` role). A live
+ * pass makes that read only for a store that has a count due (not closed, start time reached).
  *
  * SAFE BY DEFAULT — dry run (plans, prints the first request bodies, sends nothing, logs no one in).
- * `M8TRX_STOCK_LIVE=true` sends. Env: [OpsConfig] (prefix `M8TRX_STOCK`) plus
+ * `M8TRX_STOCK_LIVE=true` sends (a dry run uses the twin's own stock model and reads nothing). Env: [OpsConfig] (prefix `M8TRX_STOCK`) plus
  * `M8TRX_STOCK_FULL_FLOOR` (`dec-us-denver@2026-10-15`: slug@date pairs, csv — the demo-day whole-floor count; Denver
  * local Oct 15 is the morning of Oct 16 KST) · `M8TRX_STOCK_PULL_GAP_MS` (60).
  *
@@ -33,7 +31,7 @@ import java.time.format.DateTimeFormatter
  */
 class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = ConnectHttp()) {
     private val log = LoggerFactory.getLogger(StockDrive::class.java)
-    private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http)
+    private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http, cfg.stateDir)
 
     data class Summary(
         val counts: Int,
@@ -71,55 +69,86 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
                 held++
                 continue
             }
-            var stock = StoreStock.load(cfg.chainDir, cfg.stateDir, slug)
-            if (cfg.live) stock = stock.narrowedTo(inStock(stock.byFixture.values.flatten()))
-            val plans = StockCounts.plan(store, cfg.date, cfg.seed, stock, fullFloorOf(slug))
-            for (p in plans) {
-                counts++
-                fixtures += p.pulls.size
-                reads += p.reads
-                missing += p.missing.size
-                over += p.over.size
-                log.info(
-                    "  {} count#{} {} {} — {} fixtures {} · {} reads · {} missing · {} over · {}..{}",
-                    if (cfg.live) "[LIVE]" else "[DRY]",
-                    p.k,
-                    slug,
-                    p.countId,
-                    p.pulls.size,
-                    p.pulls.joinToString("/") { it.code }.take(120),
-                    p.reads,
-                    p.missing.size,
-                    p.over.size,
-                    p.startedAt,
-                    p.endedAt,
-                )
-                if (shapes.isEmpty()) shapes += shapeLines(p)
-                if (!cfg.live) continue
-                if (p.countId in done) {
-                    log.info("    already closed (ledger) — skipped")
-                    continue
+            // a store that fails (login, a refused read, a dropped connection) fails alone; the pass goes on to the next store
+            try {
+                val full = fullFloorOf(slug)
+                val ids = (0 until StockCounts.countsFor(store, cfg.date, cfg.seed, full)).map {
+                    it to
+                        StockCounts.countId(store, cfg.date, cfg.seed, it)
                 }
-                if (!cfg.allowFuture && p.endedAt.isAfter(cfg.now)) {
-                    log.info("    HELD — the count's last pull ends {} (future); set M8TRX_OPS_ALLOW_FUTURE=true or run later", p.endedAt)
-                    held++
-                    continue
+                val pending = ids.filter { (k, id) ->
+                    id !in done && (cfg.allowFuture || !StockCounts.startAt(store, cfg.date, k, full).isAfter(cfg.now))
                 }
-                when (val r = send(p, ledger, ledgerFile)) {
-                    null -> {
-                        closed++
-                        StoreStock.appendLines(ledgerFile, listOf("${p.countId},$slug,${p.k},closed"))
-                        StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), p.missing.map { it.epc })
-                        val placements = cfg.stateDir.resolve("moves").resolve("placements.csv")
-                        p.over.forEach { RestockMoves.appendPlacements(placements, listOf(it.epc), it.toFixture, cfg.date) }
-                    }
-
-                    else -> {
+                var jwt: String? = null
+                val stock = if (!cfg.live) {
+                    // a dry run is the twin's own model: no login, no read
+                    StoreStock.load(cfg.chainDir, cfg.stateDir, slug)
+                } else if (pending.isEmpty()) {
+                    log.info("  {} nothing to count this pass ({} count(s): closed, or not yet due) — no platform read", slug, ids.size)
+                    counts += ids.size
+                    held += ids.count { (k, id) -> id !in done && StockCounts.startAt(store, cfg.date, k, full).isAfter(cfg.now) }
+                    continue
+                } else {
+                    val email = cfg.actorEmail(slug)
+                    jwt = ops.jwt(email)
+                    if (jwt == null) {
                         err++
-                        log.error("    {} — stopping this store", r)
-                        break
+                        log.error("  {} login refused for {} — this store is skipped for the pass", slug, email)
+                        continue
+                    }
+                    platformStock(jwt, store, cfg.siteId(slug))
+                }
+                val plans = StockCounts.plan(store, cfg.date, cfg.seed, stock, full)
+                for (p in plans) {
+                    counts++
+                    fixtures += p.pulls.size
+                    reads += p.reads
+                    missing += p.missing.size
+                    over += p.over.size
+                    log.info(
+                        "  {} count#{} {} {} — {} fixtures {} · {} reads · {} missing · {} over · {}..{}",
+                        if (cfg.live) "[LIVE]" else "[DRY]",
+                        p.k,
+                        slug,
+                        p.countId,
+                        p.pulls.size,
+                        p.pulls.joinToString("/") { it.code }.take(120),
+                        p.reads,
+                        p.missing.size,
+                        p.over.size,
+                        p.startedAt,
+                        p.endedAt,
+                    )
+                    if (shapes.isEmpty()) shapes += shapeLines(p)
+                    if (!cfg.live) continue
+                    if (p.countId in done) {
+                        log.info("    already closed (ledger) — skipped")
+                        continue
+                    }
+                    if (!cfg.allowFuture && p.endedAt.isAfter(cfg.now)) {
+                        log.info("    HELD — the count's last pull ends {} (future); set M8TRX_OPS_ALLOW_FUTURE=true or run later", p.endedAt)
+                        held++
+                        continue
+                    }
+                    when (val r = send(p, ledger, ledgerFile)) {
+                        null -> {
+                            closed++
+                            StoreStock.appendLines(ledgerFile, listOf("${p.countId},$slug,${p.k},closed"))
+                            StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), p.missing.map { it.epc })
+                            val placements = cfg.stateDir.resolve("moves").resolve("placements.csv")
+                            p.over.forEach { RestockMoves.appendPlacements(placements, listOf(it.epc), it.toFixture, cfg.date) }
+                        }
+
+                        else -> {
+                            err++
+                            log.error("    {} — stopping this store", r)
+                            break
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                err++
+                log.error("  {} FAILED — {}: {} (the pass goes on to the next store)", slug, e.javaClass.simpleName, e.message)
             }
         }
         log.info(
@@ -178,17 +207,27 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
         return null
     }
 
-    /** The platform's own answer to "which of these units are in stock" (tenant-wide data-plane bearer, `inventory:read`). */
-    private fun inStock(epcs: List<String>): Set<String> {
-        val bearer = cfg.dataBearer ?: error("M8TRX_TWIN_SERVICE_BEARER is not set — the stock step's in-stock filter reads /inventory/items/details")
-        val client = ConnectClient(ConnectConfig(cfg.apiBase, "", null, null, bearer, null, null, null), http)
-        val keep = HashSet<String>()
-        for (chunk in epcs.chunked(200)) {
-            val r = client.itemDetails(ItemDetailsRequest(chunk))
-            if (r !is ConnectResponse.Ok) error("items/details refused: ${ops.describe(r)}")
-            client.mapper.readTree(r.rawBody).forEach { if (it.path("state").asText() == "in_stock") keep += it.path("epc").asText() }
+    /**
+     * Where the PLATFORM says each in-stock unit of the store is right now — one Hasura read as the store manager
+     * (`thing_location` ∪ `item.state = in_stock` ∪ `item_identifiers`, all selectable by the `frontEnd` role), paged. The
+     * read sets are built from THIS, never from the twin's own wall record: a unit the platform keeps in the Back Room is
+     * never read at a wall (it would come out as an `over` row), and a unit it keeps at a wall is the one a `missing` is
+     * chosen from. A read that returns no unit at all is an error, not an empty store.
+     */
+    private fun platformStock(jwt: String, store: com.m8trx.twin.history.ChainKeys.Store, siteId: String): StoreStock {
+        val located = ArrayList<StoreStock.Located>()
+        var offset = 0
+        while (true) {
+            val page = ops.query(jwt, LOCATIONS_GQL, mapOf("site" to siteId, "limit" to LOCATION_PAGE, "offset" to offset)).path("thing_location")
+            if (page.size() == 0) break
+            page.forEach { row ->
+                val zone = row.path("zone_id").asText("").ifBlank { null } ?: return@forEach
+                row.path("item").path("item_identifiers").forEach { located += StoreStock.Located(zone, it.path("value").asText()) }
+            }
+            offset += page.size()
         }
-        return keep
+        check(located.isNotEmpty()) { "the platform reports no located in-stock unit for ${store.slug} — refusing to count blind" }
+        return StoreStock.fromPlatform(store, located, StoreStock.readLines(StoreStock.missingFile(cfg.stateDir)))
     }
 
     private fun shapeLines(p: StockCounts.CountPlan): List<String> {
@@ -208,6 +247,13 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
     }
 
     companion object {
+        const val LOCATION_PAGE = 5000
+
+        const val LOCATIONS_GQL = "query TwinStockLocations(\$site: uuid!, \$limit: Int!, \$offset: Int!) { " +
+            "thing_location(where: {site_id: {_eq: \$site}, item: {state: {_eq: in_stock}}}, " +
+            "order_by: {item_id: asc}, limit: \$limit, offset: \$offset) " +
+            "{ zone_id item { item_identifiers(where: {identifier_type: {_eq: epc}}) { value } } } }"
+
         fun observationBody(o: StockCounts.Observation): Map<String, Any?> = mapOf(
             "zoneId" to o.zoneId,
             "observationType" to o.type,

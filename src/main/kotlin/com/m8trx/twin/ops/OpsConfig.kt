@@ -15,8 +15,8 @@ import java.time.LocalDate
  * integration: the platform keeps every one of these verbs off the Connect surface by design (the count inbox, the zone
  * update and the task lifecycle are user-JWT endpoints; a service key gets `403 CONNECT_NOT_EXPOSED` or `401 User context
  * required`). So each store's work is done under the login of that store's manager (users.csv), with the shared demo
- * password supplied out of band — the same posture `connectSiteScopeAudit` takes. The one API-key read is the stock step's
- * platform-truth filter (`POST /inventory/items/details`, `inventory:read`, the tenant-wide data-plane bearer).
+ * password supplied out of band — the same posture `connectSiteScopeAudit` takes. No API key is used: the stock step's
+ * platform-truth read (where each unit is) is a Hasura read as the same manager.
  *
  * Env (all optional except the password on a live run):
  *  - `M8TRX_OPS_PASSWORD` (falls back to `M8TRX_AUDIT_PASSWORD`) — the demo users' shared password. Never committed.
@@ -42,7 +42,6 @@ data class OpsConfig(
     val allowPast: Boolean,
     val stores: List<String>,
     val password: String?,
-    val dataBearer: String?,
     val now: Instant = Instant.now(),
     private val emailOverrides: Map<String, String> = emptyMap(),
     private val globalEmail: String? = null,
@@ -95,7 +94,6 @@ data class OpsConfig(
                 allowPast = flag("M8TRX_OPS_ALLOW_PAST") || flag("${prefix}_ALLOW_PAST"),
                 stores = stores,
                 password = env("M8TRX_OPS_PASSWORD") ?: env("M8TRX_AUDIT_PASSWORD"),
-                dataBearer = env("M8TRX_TWIN_SERVICE_BEARER") ?: env("M8TRX_TWIN_BEARER"),
                 emailOverrides = keys.stores.mapNotNull { s -> env("M8TRX_OPS_EMAIL_${envKey(s.slug)}")?.let { s.slug to it } }.toMap(),
                 globalEmail = env("M8TRX_OPS_EMAIL"),
             )

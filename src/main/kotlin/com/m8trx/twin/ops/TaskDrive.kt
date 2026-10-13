@@ -31,7 +31,7 @@ import java.time.ZonedDateTime
  */
 class TaskDrive(private val cfg: OpsConfig, private val http: ConnectHttp = ConnectHttp()) {
     private val log = LoggerFactory.getLogger(TaskDrive::class.java)
-    private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http)
+    private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http, cfg.stateDir)
     private val dir = cfg.stateDir.resolve("tasks")
 
     data class Summary(
@@ -119,103 +119,121 @@ class TaskDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Conn
                 created += p.create.size
                 continue
             }
-            val refusal = cfg.pastRefusal(slug)
-            if (refusal != null) {
-                log.warn("  {} HELD — {}", slug, refusal)
-                held++
-                continue
-            }
-            val email = cfg.actorEmail(slug)
-            val jwt = ops.jwt(email)
-            if (jwt == null) {
-                log.error("  {} login refused for {}", slug, email)
+            // a store that fails (login, a refused read, a dropped connection) fails alone; the pass goes on to the next store
+            try {
+                val refusal = cfg.pastRefusal(slug)
+                if (refusal != null) {
+                    log.warn("  {} HELD — {}", slug, refusal)
+                    held++
+                    continue
+                }
+                val email = cfg.actorEmail(slug)
+                val jwt = ops.jwt(email)
+                if (jwt == null) {
+                    log.error("  {} login refused for {}", slug, email)
+                    err++
+                    continue
+                }
+                val open = readOpen(jwt, siteId)
+                val people = readPeople(jwt, siteId)
+                val managerName = cfg.staff.rows.firstOrNull { it.email == email }?.name
+                val manager = people.firstOrNull { it.name.equals(managerName, true) }
+                val carried = open.filter { it.id in carriedAll }.map { it.id }
+                val backlogFlag = dir.resolve("backlog-$slug.done")
+                // the day's target is a daily total: what earlier passes of this date already assigned or created counts against it
+                val already = today.count { it.slug == slug && (it.action == "assign" || it.action == "create") }
+                val p = TaskDay.plan(
+                    slug, cfg.date, store.zone, cfg.seed, open, people, manager, sold, zoneOf, carried, backlogBefore,
+                    Files.exists(
+                        backlogFlag,
+                    ),
+                    close, already,
+                )
+                log.info(
+                    "  [LIVE] {} open={} people={} backlog={} assign={} create={} completeToday={} carried={}",
+                    slug,
+                    open.size,
+                    people.size,
+                    p.cancel.size,
+                    p.assign.size,
+                    p.create.size,
+                    p.completeToday.size,
+                    p.completeCarried.size,
+                )
+                fun record(action: String, id: String, user: String) = StoreStock.appendLines(ledgerFile(cfg.date), listOf("$action,$id,$user,$slug"))
+
+                // the list goes into the run's output BEFORE the first cancel (a cancel is terminal; undoing one is a DB write)
+                p.cancel.forEach {
+                    log.info("    SIM-CANCEL-PLAN {} {} status={} created={} \"{}\"", slug, it.id, it.status, it.createdAt, it.title.take(100))
+                }
+                var cancelFailed = false
+                for (t in p.cancel) {
+                    if ("cancel:${t.id}" in doneIds) continue
+                    val r = ops.send(jwt, "POST", "/tasks/${t.id}/cancel", mapOf("reason" to TaskDay.CANCEL_REASON))
+                    if (r is ConnectResponse.Ok) {
+                        cancelled++
+                        record("cancel", t.id, email)
+                        log.info("    SIM-CANCELLED {} {} status={} created={}", slug, t.id, t.status, t.createdAt)
+                        StoreStock.appendLines(
+                            dir.resolve("cancelled.csv"),
+                            listOf("${cfg.now},$slug,${t.id},${t.status},${t.createdAt},${t.title.replace(',', ';').replace('\n', ' ').take(100)}"),
+                        )
+                    } else {
+                        err++
+                        cancelFailed = true
+                        log.error("    cancel {} refused: {} — the backlog stays open for the next pass", t.id, ops.describe(r))
+                    }
+                }
+                // the one-time backlog close is marked only when every cancel went through; a failed cancel is retried next pass
+                if (!cancelFailed && !Files.exists(backlogFlag)) StoreStock.appendLines(backlogFlag, listOf("${cfg.now}"))
+
+                val toComplete = HashMap<String, TaskDay.Person>()
+                for ((t, who) in p.assign) {
+                    if ("assign:${t.id}" in doneIds) continue
+                    val r = ops.send(jwt, "POST", "/tasks/${t.id}/reassign", mapOf("assigned_to" to who.userId))
+                    if (r is ConnectResponse.Ok) {
+                        assigned++
+                        record("assign", t.id, who.userId)
+                        if (t.id in p.completeToday) toComplete[t.id] = who
+                    } else {
+                        err++
+                        log.error("    reassign {} refused: {}", t.id, ops.describe(r))
+                    }
+                }
+                for ((c, who) in p.create) {
+                    if (today.any { it.action == "create" && it.user.endsWith("|${c.key}") }) continue
+                    val r = ops.send(jwt, "POST", "/tasks", createBody(siteId, store.salesFloorSpaceId, c, who))
+                    val id = if (r is ConnectResponse.Ok) ops.json(r).path("task_id").asText("") else ""
+                    if (id.isNotBlank()) {
+                        created++
+                        record("create", id, "${who.userId}|${c.key}")
+                        if (c.key in p.completeToday) toComplete[id] = who
+                    } else {
+                        err++
+                        log.error("    create {} refused: {}", c.key, ops.describe(r))
+                    }
+                }
+                for (id in p.completeCarried) {
+                    val who = people.firstOrNull { pp -> yesterday.any { it.id == id && it.user.startsWith(pp.userId) } }
+                    if (who != null) toComplete[id] = who
+                }
+                for ((id, who) in toComplete) {
+                    if ("complete:$id" in doneIds) continue
+                    val asEmail = cfg.staff.emailByName(slug, who.name)
+                    val asJwt = asEmail?.let { ops.jwt(it) } ?: jwt
+                    ops.send(asJwt, "POST", "/tasks/$id/start")
+                    val r = ops.send(asJwt, "POST", "/tasks/$id/complete", emptyMap())
+                    if (r is ConnectResponse.Ok) {
+                        completed++
+                        record("complete", id, asEmail ?: email)
+                    } else {
+                        err++
+                        log.error("    complete {} refused: {}", id, ops.describe(r))
+                    }
+                }
+            } catch (e: Exception) {
                 err++
-                continue
-            }
-            val open = readOpen(jwt, siteId)
-            val people = readPeople(jwt, siteId)
-            val managerName = cfg.staff.rows.firstOrNull { it.email == email }?.name
-            val manager = people.firstOrNull { it.name.equals(managerName, true) }
-            val carried = open.filter { it.id in carriedAll }.map { it.id }
-            val backlogFlag = dir.resolve("backlog-$slug.done")
-            // the day's target is a daily total: what earlier passes of this date already assigned or created counts against it
-            val already = today.count { it.slug == slug && (it.action == "assign" || it.action == "create") }
-            val p = TaskDay.plan(
-                slug, cfg.date, store.zone, cfg.seed, open, people, manager, sold, zoneOf, carried, backlogBefore,
-                Files.exists(
-                    backlogFlag,
-                ),
-                close, already,
-            )
-            log.info(
-                "  [LIVE] {} open={} people={} backlog={} assign={} create={} completeToday={} carried={}",
-                slug,
-                open.size,
-                people.size,
-                p.cancel.size,
-                p.assign.size,
-                p.create.size,
-                p.completeToday.size,
-                p.completeCarried.size,
-            )
-            fun record(action: String, id: String, user: String) = StoreStock.appendLines(ledgerFile(cfg.date), listOf("$action,$id,$user,$slug"))
-
-            for (t in p.cancel) {
-                if ("cancel:${t.id}" in doneIds) continue
-                val r = ops.send(jwt, "POST", "/tasks/${t.id}/cancel", mapOf("reason" to TaskDay.CANCEL_REASON))
-                if (r is ConnectResponse.Ok) {
-                    cancelled++
-                    record("cancel", t.id, email)
-                } else {
-                    err++
-                    log.error("    cancel {} refused: {}", t.id, ops.describe(r))
-                }
-            }
-            if (p.cancel.isNotEmpty() || !Files.exists(backlogFlag)) StoreStock.appendLines(backlogFlag, listOf("${cfg.now}"))
-
-            val toComplete = HashMap<String, TaskDay.Person>()
-            for ((t, who) in p.assign) {
-                if ("assign:${t.id}" in doneIds) continue
-                val r = ops.send(jwt, "POST", "/tasks/${t.id}/reassign", mapOf("assigned_to" to who.userId))
-                if (r is ConnectResponse.Ok) {
-                    assigned++
-                    record("assign", t.id, who.userId)
-                    if (t.id in p.completeToday) toComplete[t.id] = who
-                } else {
-                    err++
-                    log.error("    reassign {} refused: {}", t.id, ops.describe(r))
-                }
-            }
-            for ((c, who) in p.create) {
-                if (today.any { it.action == "create" && it.user.endsWith("|${c.key}") }) continue
-                val r = ops.send(jwt, "POST", "/tasks", createBody(siteId, store.salesFloorSpaceId, c, who))
-                val id = if (r is ConnectResponse.Ok) ops.json(r).path("task_id").asText("") else ""
-                if (id.isNotBlank()) {
-                    created++
-                    record("create", id, "${who.userId}|${c.key}")
-                    if (c.key in p.completeToday) toComplete[id] = who
-                } else {
-                    err++
-                    log.error("    create {} refused: {}", c.key, ops.describe(r))
-                }
-            }
-            for (id in p.completeCarried) {
-                val who = people.firstOrNull { pp -> yesterday.any { it.id == id && it.user.startsWith(pp.userId) } }
-                if (who != null) toComplete[id] = who
-            }
-            for ((id, who) in toComplete) {
-                if ("complete:$id" in doneIds) continue
-                val asEmail = cfg.staff.emailByName(slug, who.name)
-                val asJwt = asEmail?.let { ops.jwt(it) } ?: jwt
-                ops.send(asJwt, "POST", "/tasks/$id/start")
-                val r = ops.send(asJwt, "POST", "/tasks/$id/complete", emptyMap())
-                if (r is ConnectResponse.Ok) {
-                    completed++
-                    record("complete", id, asEmail ?: email)
-                } else {
-                    err++
-                    log.error("    complete {} refused: {}", id, ops.describe(r))
-                }
+                log.error("  {} FAILED — {}: {} (the pass goes on to the next store)", slug, e.javaClass.simpleName, e.message)
             }
         }
         log.info(

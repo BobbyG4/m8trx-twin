@@ -16,6 +16,9 @@ import kotlin.random.Random
  * along one floor axis (a merchandiser re-spacing an aisle, not a re-plan), and never more than [maxOffsetMm] from where
  * the platform had it when the twin first touched it — a move that would cross that bound goes the other way.
  *
+ * The plan only draws the FIRST choice (it knows no geometry); the drive then tries [candidates] against the room's real
+ * fixtures and boundary ([choose]) and skips the move when none fits. Half the planned shifts would land on a neighbor otherwise.
+ *
  * The plan is per WEEK so the daily run for any date executes exactly that date's share and the week adds up to
  * [perWeek] whatever day the driver starts on. Fixtures are distinct within a week.
  */
@@ -67,6 +70,41 @@ object FixtureMoves {
 
     fun forDate(store: ChainKeys.Store, date: LocalDate, seed: Long, perWeek: Int, offsets: Map<String, Pair<Double, Double>>): List<Move> =
         week(store, date, seed, perWeek, offsets).filter { it.date == date }
+
+    /**
+     * The shifts to try for [m], in seed order: the planned one first, then its opposite, then the other axis both ways —
+     * first at the drawn magnitude, then at 250 mm. Deterministic in the move alone (it carries the seed's draw).
+     */
+    fun candidates(m: Move): List<Pair<Double, Double>> {
+        val alongX = m.dxMm != 0.0
+        val sign = Math.signum(if (alongX) m.dxMm else m.dyMm)
+        val mag = abs(m.dxMm) + abs(m.dyMm)
+        val dirs = listOf(alongX to sign, alongX to -sign, !alongX to sign, !alongX to -sign)
+        return listOf(mag, 250.0).distinct().flatMap { mg ->
+            dirs.map { (x, sg) -> if (x) (sg * mg) to 0.0 else 0.0 to (sg * mg) }
+        }.distinct()
+    }
+
+    /**
+     * The first candidate of [m] that (a) keeps the fixture within [maxOffsetMm] of where the platform first had it
+     * ([prior] = what earlier moves already applied), (b) stays inside [boundary] when one is known, and (c) overlaps NO
+     * polygon of [others] (every other fixture of the space as it is NOW). Null = no candidate fits: skip the move.
+     * [origin] is the fixture's original ring.
+     */
+    fun choose(
+        m: Move,
+        origin: List<PolyGeom.P>,
+        prior: Pair<Double, Double>,
+        others: Collection<List<PolyGeom.P>>,
+        boundary: List<PolyGeom.P>?,
+        maxOffsetMm: Double = 600.0,
+    ): Pair<Double, Double>? = candidates(m).firstOrNull { (dx, dy) ->
+        val nx = prior.first + dx
+        val ny = prior.second + dy
+        if (abs(nx) > maxOffsetMm || abs(ny) > maxOffsetMm) return@firstOrNull false
+        val moved = PolyGeom.translate(origin, nx, ny)
+        (boundary == null || PolyGeom.within(moved, boundary)) && others.none { PolyGeom.overlaps(moved, it) }
+    }
 
     /** Translate every vertex of a GeoJSON polygon ring set by (dx, dy); z and extra members are kept. */
     fun translate(coordinates: List<List<List<Double>>>, dx: Double, dy: Double): List<List<List<Double>>> =
