@@ -457,3 +457,37 @@ tasks.register("offlineSelfTest") {
     description = "Run every offline self-test: scenarioSelfTest, peopleSelfTest, connectSelfTest, historySelfTest."
     dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
 }
+
+// ── Store operations for the demo sprint (2026-10-13): stock · fixmoves · tasks ─────────────────
+// All three act as the store's own staff (user JWT, the shared demo password out of band) because the count inbox, the
+// zone update and the task lifecycle are not on the Connect surface. SAFE BY DEFAULT — dry run; <PREFIX>_LIVE=true sends.
+fun opsTask(name: String, main: String, text: String) = tasks.register<JavaExec>(name) {
+    group = "verification"
+    description = text
+    mainClass.set(main)
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "4g"
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+opsTask(
+    "connectStockDrive",
+    "com.m8trx.twin.ops.StockDriveKt",
+    "Real cloud counts per store per day (count inbox). Dry-run unless M8TRX_STOCK_LIVE=true.",
+)
+opsTask(
+    "connectFixtureMoves",
+    "com.m8trx.twin.ops.FixtureMoveDriveKt",
+    "Fixture moves per store per week (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
+)
+opsTask("connectTaskDay", "com.m8trx.twin.ops.TaskDriveKt", "The day's task work per store (task REST). Dry-run unless M8TRX_TASKS_LIVE=true.")
+opsTask(
+    "demoStepsSelfTest",
+    "com.m8trx.twin.ops.DemoStepsSelfTestKt",
+    "Offline: the stock/fixmoves/tasks generators + the traffic9 file set, deterministic seeds.",
+)
+opsTask(
+    "demoStepsStubRun",
+    "com.m8trx.twin.ops.DemoStepsStubRunKt",
+    "Offline: drive the three steps' LIVE paths against a local stub HTTP server; prints the request shapes.",
+)
+tasks.named("offlineSelfTest") { dependsOn("demoStepsSelfTest") }

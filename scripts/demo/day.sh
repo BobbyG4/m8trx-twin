@@ -26,8 +26,19 @@
 #              (export it =false to switch off). Reads the step-1 sales plan + sent ledger for the date, so a date
 #              whose sales were not sent restocks nothing; idempotent per date (.twin-state/moves/). Summary line adds
 #              restock_moves= restock_units= shortfall_units= (stockroom had fewer units of the EAN than sold).
-#   5. stock   stocktakes (SF / Seoul / Denver)            — NOT BUILT this round, reported SKIPPED
+#   5. stock   connectStockDrive: 1-2 real cloud counts per store on 2-4 wall fixtures (Denver: the whole floor on
+#              M8TRX_STOCK_FULL_FLOOR, default dec-us-denver@2026-10-15), read sets from the store's stock so each count
+#              closes with a few missing and 1-2 over. Count inbox (POST /count, /count/pulls, /count/{id}/close) as the
+#              store manager (user JWT; M8TRX_OPS_PASSWORD). Ledger .twin-state/stock/ (a closed count is never re-sent).
+#   5b. fixmoves connectFixtureMoves: M8TRX_FIXMOVES_PER_WEEK (3) fixture moves per store per week, 250-500 mm, through
+#              PUT /zones/{id} (zone_history is written by the zone trigger). Ledger .twin-state/fixmoves/.
+#   5c. tasks  connectTaskDay: the pre-Oct-5 backlog cancelled with a reason (once), 3-5 drift tasks per store-day
+#              (today's rule-fired ones first, topped up from the walls that sold down), assigned to the manager or floor
+#              staff, 40-60 % completed the same day, 70 % of yesterday's leftovers the next. Ledger .twin-state/tasks/.
+#   5d. traffic9 historyGenerate with M8TRX_HISTORY_ONLY=people for the nine non-Denver stores, FROM=TO=--date (or
+#              M8TRX_TRAFFIC9_FROM..--date): OFFLINE files under out/traffic9/ for the Coordinator's loader. Sends nothing.
 #   6. tryon   try-on-zone sessions with unreturned items  — NOT BUILT this round, reported SKIPPED
+#   The live flags of 5-5c are NOT part of --all-live: they log in as store staff, so each is asked for by name.
 #   then, with --verify: connectAcceptance (the Connect ship gate, read-only) + impressionVerify for Denver.
 #
 # A run with any --live-* flag appends one line per step to status/SIM-RUN-LOG.md
@@ -40,8 +51,9 @@
 #     and a live re-run of the same date resumes from its ledger in .twin-state/ without re-selling a unit.
 #
 # Usage:
-#   scripts/demo/day.sh [--date YYYY-MM-DD] [--seed N] [--steps stream,receive,day,alarm,move,stock,tryon]
+#   scripts/demo/day.sh [--date YYYY-MM-DD] [--seed N] [--steps stream,receive,day,alarm,move,stock,fixmoves,tasks,traffic9,tryon]
 #                       [--live-stream] [--live-receive] [--live-day] [--live-alarm] [--live-move] [--all-live]
+#                       [--live-stock] [--live-fixmoves] [--live-tasks] [--allow-past]
 #                       [--slice FROM-TO] [--compress X] [--moves N] [--alarm-script slug@HH:mm,...]
 #                       [--allow-future] [--verify]
 # Cron (unattended): run from the repo root; .env is sourced here (gradle's JavaExec does not read it).
@@ -54,6 +66,7 @@ DATE="$(date +%F)"
 SEED=20261016
 STEPS="stream,receive,day,alarm,move,stock,tryon"
 LIVE_STREAM=false LIVE_RECEIVE=false LIVE_DAY=false LIVE_ALARM=false LIVE_MOVE=false
+LIVE_STOCK=false LIVE_FIXMOVES=false LIVE_TASKS=false ALLOW_PAST=false
 SLICE="" COMPRESS="18.0" MOVES=3 ALLOW_FUTURE=false VERIFY=false
 ALARM_SCRIPT=""
 
@@ -68,6 +81,10 @@ while [[ $# -gt 0 ]]; do
     --live-alarm) LIVE_ALARM=true; shift ;;
     --live-move) LIVE_MOVE=true; shift ;;
     --all-live) LIVE_STREAM=true; LIVE_RECEIVE=true; LIVE_DAY=true; LIVE_ALARM=true; LIVE_MOVE=true; shift ;;
+    --live-stock) LIVE_STOCK=true; shift ;;
+    --live-fixmoves) LIVE_FIXMOVES=true; shift ;;
+    --live-tasks) LIVE_TASKS=true; shift ;;
+    --allow-past) ALLOW_PAST=true; shift ;;
     --slice) SLICE="$2"; shift 2 ;;
     --compress) COMPRESS="$2"; shift 2 ;;
     --moves) MOVES="$2"; shift 2 ;;
@@ -91,7 +108,7 @@ export M8TRX_SITE_ID="${M8TRX_SITE_ID:-84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e}"
 export M8TRX_TENANT_ID="${M8TRX_TENANT_ID:-unset-dry-run}"
 
 ANY_LIVE=false
-for f in $LIVE_STREAM $LIVE_RECEIVE $LIVE_DAY $LIVE_ALARM $LIVE_MOVE; do [[ $f == true ]] && ANY_LIVE=true; done
+for f in $LIVE_STREAM $LIVE_RECEIVE $LIVE_DAY $LIVE_ALARM $LIVE_MOVE $LIVE_STOCK $LIVE_FIXMOVES $LIVE_TASKS; do [[ $f == true ]] && ANY_LIVE=true; done
 
 RUN_DIR="out/day-runs/$DATE-$(date +%H%M%S)"
 mkdir -p "$RUN_DIR"
@@ -178,7 +195,29 @@ if want move; then
     M8TRX_MOVEMENT_RESTOCK="${M8TRX_MOVEMENT_RESTOCK:-true}" M8TRX_MOVEMENT_ASSUME_RECEIVED="$ASSUME_RECEIVED"
 fi
 
-want stock && skip_step stock "stocktake sessions (connectScanSweep + sessions REST, deliberate shortfalls) not built this round"
+# 5-5c act as the store's own staff (user JWT): the count inbox, the zone update and the task lifecycle are not Connect
+# endpoints. M8TRX_OPS_PASSWORD comes from .env (the shared demo password, out of band). --allow-past lets a live run
+# write a date before the store's today; those rows are stamped now() by the platform, so it is off by default.
+OPS_ENV=(M8TRX_OPS_DATE="$DATE" M8TRX_OPS_SEED="$SEED" M8TRX_OPS_ALLOW_FUTURE="$ALLOW_FUTURE" M8TRX_OPS_ALLOW_PAST="$ALLOW_PAST")
+if want stock; then
+  run_step stock "$LIVE_STOCK" connectStockDrive "${OPS_ENV[@]}" M8TRX_STOCK_LIVE="$LIVE_STOCK" \
+    M8TRX_STOCK_FULL_FLOOR="${M8TRX_STOCK_FULL_FLOOR:-dec-us-denver@2026-10-15}"
+fi
+if want fixmoves; then
+  run_step fixmoves "$LIVE_FIXMOVES" connectFixtureMoves "${OPS_ENV[@]}" M8TRX_FIXMOVES_LIVE="$LIVE_FIXMOVES" \
+    M8TRX_FIXMOVES_PER_WEEK="${M8TRX_FIXMOVES_PER_WEEK:-3}"
+fi
+if want tasks; then
+  run_step tasks "$LIVE_TASKS" connectTaskDay "${OPS_ENV[@]}" M8TRX_TASKS_LIVE="$LIVE_TASKS" \
+    M8TRX_TASKS_BACKLOG_BEFORE="${M8TRX_TASKS_BACKLOG_BEFORE:-2026-10-05}"
+fi
+if want traffic9; then
+  # Offline: the nine non-Denver stores' people-plane rollups (visits, dwell, impressions) for the date, as files.
+  T9_FROM="${M8TRX_TRAFFIC9_FROM:-$DATE}"
+  run_step traffic9 false historyGenerate M8TRX_HISTORY_ONLY=people M8TRX_HISTORY_SEED="$SEED" \
+    M8TRX_HISTORY_FROM="$T9_FROM" M8TRX_HISTORY_TO="$DATE" M8TRX_HISTORY_OUT="out/traffic9/${T9_FROM}_${DATE}" \
+    M8TRX_HISTORY_STORES="dec-us-nyc,dec-us-sf,dec-fr-paris,dec-fr-lyon,dec-fr-marseille,dec-fr-bordeaux,dec-fr-lille,dec-kr-seoul,dec-kr-busan"
+fi
 want tryon && skip_step tryon "try-on-zone sessions (fittingRoom* atoms) not built this round; edge-side try-on config unproven"
 
 if [[ $VERIFY == true ]]; then

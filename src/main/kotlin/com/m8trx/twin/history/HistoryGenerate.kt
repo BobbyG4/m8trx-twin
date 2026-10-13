@@ -13,7 +13,8 @@ import java.util.concurrent.TimeUnit
  * Env: `M8TRX_HISTORY_SEED` (20261016) · `M8TRX_HISTORY_FROM` (2026-01-01) · `M8TRX_HISTORY_TO` (2026-10-04,
  * inclusive local date; US stores end a day earlier, see [HistoryGenerator.Params.cutoff]) ·
  * `M8TRX_HISTORY_OUT` (out/history-2026-10) · `M8TRX_HISTORY_STORES` (comma list, default all ten) ·
- * `M8TRX_HISTORY_THREADS` (cores) · `M8TRX_HISTORY_GENERATED_AT` (default: the generator commit's time).
+ * `M8TRX_HISTORY_THREADS` (cores) · `M8TRX_HISTORY_GENERATED_AT` (default: the generator commit's time) ·
+ * `M8TRX_HISTORY_ONLY=people` (the `traffic9` step: only the three people-plane files + MANIFEST, see [HistoryGenerator.Params.only]).
  *
  * TODO (brief § 4, a later round, after the core fixes): the recent window Oct 4 → Oct 16 rides the live
  * pipeline — `M8TRX_DAY_EPOCH_MODE`, `M8TRX_STREAM_DATE`, `M8TRX_ALARM_DATE`. Not implemented here.
@@ -26,8 +27,18 @@ fun main() {
     val out = gen.generate()
     log.info("")
     out.files.forEach { (f, n) -> log.info("  {} {}", f.padEnd(32), n) }
-    log.info("\n{}", HistoryReport.totalsTable(gen, params.out))
+    if (params.only == null) log.info("\n{}", HistoryReport.totalsTable(gen, params.out))
     log.info("history written to {} in {}", params.out.toAbsolutePath(), fmtMs(out.wallMs))
+    log.info(
+        "SIM-RUN history only={} from={} to={} stores={} {} out={} wall={}",
+        params.only ?: "all",
+        params.from,
+        params.to,
+        gen.stores.size,
+        out.files.entries.joinToString(" ") { (f, n) -> "${f.removeSuffix(".csv")}=$n" },
+        params.out,
+        fmtMs(out.wallMs),
+    )
 }
 
 internal fun fmtMs(ms: Long): String = "%dm%02ds".format(Locale.ROOT, ms / 60_000, (ms / 1000) % 60)
@@ -54,6 +65,7 @@ object HistoryEnv {
             gitSha = if (dirty) "$sha-dirty" else sha,
             // the commit's own time, not the wall clock — so the same commit + seed reproduces MANIFEST.csv too
             generatedAt = env("M8TRX_HISTORY_GENERATED_AT", git("log", "-1", "--format=%cd", "--date=iso-strict") ?: "unknown"),
+            only = System.getenv("M8TRX_HISTORY_ONLY")?.takeIf { it.isNotBlank() },
         )
     }
 

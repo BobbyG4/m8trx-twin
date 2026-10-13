@@ -47,13 +47,21 @@ class HistoryGenerator(
         val gitSha: String = "unknown",
         /** MANIFEST `generated_at` — the generator commit's time by default, so the manifest is reproducible too */
         val generatedAt: String = "unknown",
+        /**
+         * `people` = write ONLY the people-plane files (`traffic_store_hourly`, `traffic_department_daily`,
+         * `behavioral_fixture_daily`) + MANIFEST, and skip the derived files — the `traffic9` step: the nine non-Denver
+         * stores' visits for the recent window, whose sales already ride the live stream (2026-10-13). Null = all eleven.
+         */
+        val only: String? = null,
     ) {
         /**
          * Migration 259 refuses a commerce window ending after 2026-10-05T00:00Z (`TO + 1 day`, UTC). A US
          * store's local Oct 4 closes at 03:00–04:00Z on Oct 5, so its LAST day is Oct 3 — whole days are
          * dropped, never clipped (a half day would read as a sales dip on the dashboard).
+         * People-only runs (`traffic9`) have no commerce file and no such bound: every local day up to [to] is kept, so a
+         * one-day run for a US store is not empty. Run them only once that day has closed in every store.
          */
-        val cutoff: Instant get() = to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC)
+        val cutoff: Instant get() = to.plusDays(if (only == ONLY_PEOPLE) 2 else 1).atStartOfDay().toInstant(ZoneOffset.UTC)
     }
 
     val keys: ChainKeys = ChainKeys.load(keysPath)
@@ -279,13 +287,24 @@ class HistoryGenerator(
     fun generate(): Output {
         val t0 = System.currentTimeMillis()
         val days = generateDays()
-        val derived = DerivedHistory(this, chainDir, days)
         val out = params.out
         Files.createDirectories(out)
         val counts = LinkedHashMap<String, Int>()
         fun w(name: String, header: List<String>, rows: List<String>) {
             counts[name] = HistoryCsv.write(out.resolve(name), header, rows)
         }
+        if (params.only == ONLY_PEOPLE) {
+            w("traffic_store_hourly.csv", TRAFFIC_HOURLY_HEADER, days.flatMap { it.trafficHourly })
+            w("traffic_department_daily.csv", TRAFFIC_DEPT_HEADER, days.flatMap { it.trafficDept })
+            w("behavioral_fixture_daily.csv", BEHAVIORAL_HEADER, days.flatMap { it.behavioral })
+            val manifest = counts.map { (file, n) ->
+                row(file, n, HistoryCsv.sha256(out.resolve(file)), params.seed, params.generatedAt, params.gitSha)
+            }
+            HistoryCsv.write(out.resolve("MANIFEST.csv"), MANIFEST_HEADER, manifest)
+            return Output(days, counts, System.currentTimeMillis() - t0)
+        }
+        require(params.only == null) { "M8TRX_HISTORY_ONLY must be '$ONLY_PEOPLE' or unset (got ${params.only})" }
+        val derived = DerivedHistory(this, chainDir, days)
         w("commerce_store_hourly.csv", COMMERCE_HOURLY_HEADER, days.flatMap { it.commerceHourly })
         w("commerce_department_daily.csv", COMMERCE_DEPT_HEADER, days.flatMap { it.commerceDept })
         w("traffic_store_hourly.csv", TRAFFIC_HOURLY_HEADER, days.flatMap { it.trafficHourly })
@@ -314,6 +333,7 @@ class HistoryGenerator(
 
     companion object {
         const val REFERENCE_STORE = "dec-us-denver"
+        const val ONLY_PEOPLE = "people"
         const val WEATHER_SIGMA = 0.07
         const val STAFF_MOVES_PER_HOUR = 6
 
