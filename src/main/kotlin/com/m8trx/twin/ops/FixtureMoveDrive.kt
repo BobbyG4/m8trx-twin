@@ -53,7 +53,7 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
     }
 
     private fun readSpace(jwt: String, spaceId: String): SpaceGeo {
-        val d = ops.query(jwt, SPACE_GQL, mapOf("space" to spaceId))
+        val d = ops.query(jwt, SPACE_GQL, mapOf("space" to spaceId, "zt" to "fixture"))
         val fx = LinkedHashMap<String, List<PolyGeom.P>>()
         d.path("zone").forEach { z ->
             val ring = when (z.path("geometry_type").asText()) {
@@ -202,8 +202,9 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
         const val ZONE_GQL = "query GetZoneById(\$id: uuid!) " +
             "{ zone_by_pk(id: \$id) { id name geometry geometry_type properties zone_type space_id } }"
 
-        const val SPACE_GQL = "query TwinSpaceFixtures(\$space: uuid!) { space_by_pk(id: \$space) { id boundary } " +
-            "zone(where: {space_id: {_eq: \$space}, zone_type: {_eq: fixture}}, limit: 3000) { id geometry geometry_type properties } }"
+        // zone_type is a custom scalar in the v2 schema: the value goes in as a variable, never as a bare literal
+        const val SPACE_GQL = "query TwinSpaceFixtures(\$space: uuid!, \$zt: zone_type!) { space_by_pk(id: \$space) { id boundary } " +
+            "zone(where: {space_id: {_eq: \$space}, zone_type: {_eq: \$zt}}, limit: 3000) { id geometry geometry_type properties } }"
 
         fun putBody(coords: List<List<List<Double>>>): Map<String, Any?> =
             mapOf("geometryType" to "polygon", "geometry" to mapOf("type" to "Polygon", "coordinates" to coords))

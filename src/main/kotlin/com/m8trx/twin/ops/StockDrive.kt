@@ -218,7 +218,17 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
         val located = ArrayList<StoreStock.Located>()
         var offset = 0
         while (true) {
-            val page = ops.query(jwt, LOCATIONS_GQL, mapOf("site" to siteId, "limit" to LOCATION_PAGE, "offset" to offset)).path("thing_location")
+            val page = ops.query(
+                jwt,
+                LOCATIONS_GQL,
+                mapOf(
+                    "site" to siteId,
+                    "limit" to LOCATION_PAGE,
+                    "offset" to offset,
+                    "st" to "in_stock",
+                    "idt" to "epc",
+                ),
+            ).path("thing_location")
             if (page.size() == 0) break
             page.forEach { row ->
                 val zone = row.path("zone_id").asText("").ifBlank { null } ?: return@forEach
@@ -249,10 +259,12 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
     companion object {
         const val LOCATION_PAGE = 5000
 
-        const val LOCATIONS_GQL = "query TwinStockLocations(\$site: uuid!, \$limit: Int!, \$offset: Int!) { " +
-            "thing_location(where: {site_id: {_eq: \$site}, item: {state: {_eq: in_stock}}}, " +
-            "order_by: {item_id: asc}, limit: \$limit, offset: \$offset) " +
-            "{ zone_id item { item_identifiers(where: {identifier_type: {_eq: epc}}) { value } } } }"
+        // item_state / identifier_type are custom scalars in the v2 schema: the values go in as variables, never as bare literals
+        const val LOCATIONS_GQL =
+            "query TwinStockLocations(\$site: uuid!, \$limit: Int!, \$offset: Int!, \$st: item_state!, \$idt: identifier_type!) { " +
+                "thing_location(where: {site_id: {_eq: \$site}, item: {state: {_eq: \$st}}}, " +
+                "order_by: {item_id: asc}, limit: \$limit, offset: \$offset) " +
+                "{ zone_id item { item_identifiers(where: {identifier_type: {_eq: \$idt}}) { value } } } }"
 
         fun observationBody(o: StockCounts.Observation): Map<String, Any?> = mapOf(
             "zoneId" to o.zoneId,
