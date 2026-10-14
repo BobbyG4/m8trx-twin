@@ -22,7 +22,7 @@ import java.time.LocalDate
  * stamps `zone_history.recorded_at` now()). The geometry is read from the platform first (Hasura `zone_by_pk`, READ only)
  * and kept as the fixture's ORIGIN the first time the twin touches it (`.twin-state/fixmoves/origin.json`); the room is
  * read once per store (`space_by_pk` + every fixture zone) so the destination is checked against the floor as it stands.
- * The body carries `reason`. Circles go as `geometryType: circle` with a GeoJSON Point and the zone's own `properties` with
+ * The body carries `reason`. Circles go as `geometryType: circle` with `center`/`radii`/`rotation` and the zone's own `properties` with
  * `centerX/centerY` updated (every other key kept, so the fixture code is untouched); polygons as before.
  *
  * SAFE BY DEFAULT — dry run: lists the day's moves per store (movable types only) with the destination computed against the
@@ -281,9 +281,21 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
                 }
                 props["centerX"] = moved[0]
                 props["centerY"] = moved[1]
+                // The platform's circle update (SiteManagementService.circleToWkt + mergeEllipseParams) reads
+                // `center`/`radii`/`rotation` (or `cx`/`cy`) — a GeoJSON Point with `coordinates` is a silent 400
+                // (2026-10-14 16:04–18:05 KST: every promo-island move refused, hourly unit red on Slack). `radii` and
+                // `rotation` are restated from the zone's own properties, since the platform resets rotation to 0 when absent.
+                val rx = (props["radiusX"] as? Number)?.toDouble() ?: 0.0
+                val ry = (props["radiusY"] as? Number)?.toDouble() ?: rx
+                val rot = (props["rotation"] as? Number)?.toDouble() ?: 0.0
+                val geometry = LinkedHashMap<String, Any?>()
+                geometry["center"] = listOf(moved[0], moved[1])
+                if (c.size > 2) geometry["cz"] = c[2]
+                geometry["radii"] = listOf(rx, ry)
+                geometry["rotation"] = rot
                 mapOf(
                     "geometryType" to "circle",
-                    "geometry" to mapOf("type" to "Point", "coordinates" to moved),
+                    "geometry" to geometry,
                     "properties" to props,
                     "reason" to reason,
                 )
