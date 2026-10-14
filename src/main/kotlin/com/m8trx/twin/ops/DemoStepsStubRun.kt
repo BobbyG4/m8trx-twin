@@ -55,15 +55,44 @@ fun main() {
     }
     val pulled = HashMap<String, MutableSet<String>>() // countId -> every EPC pulled
     val puts = ArrayList<com.fasterxml.jackson.databind.JsonNode>()
+    val putIds = ArrayList<String>()
     val loginAs = ArrayList<String>()
-    val blocker =
-        listOf(
-            listOf(2300.0, 900.0, 0.0),
-            listOf(3500.0, 900.0, 0.0),
-            listOf(3500.0, 1700.0, 0.0),
-            listOf(2300.0, 1700.0, 0.0),
-            listOf(2300.0, 900.0, 0.0),
-        )
+    // the stub platform's fixture zones for the two proof stores, from their committed layouts (circles as GeoJSON Points with
+    // the platform's properties incl. `code`), updated by every PUT so a later read sees the floor as the moves left it
+    val zoneGeo = HashMap<String, MutableMap<String, Any?>>() // zone id -> {id, geometry_type, geometry, properties}
+    val spaceZones = HashMap<String, MutableList<String>>() // space id -> zone ids
+    for (slug in listOf("dec-us-denver", "dec-fr-lyon")) {
+        val store = keys.store(slug)
+        val floor = FixtureMoves.Floor.load(chain, slug)
+        store.fixtures.forEach { z ->
+            val f = floor.fixtures[z.code] ?: return@forEach
+            val fp = f.footprint
+            zoneGeo[z.zoneId] = if (fp is FixtureMoves.Footprint.Circle) {
+                linkedMapOf(
+                    "id" to z.zoneId,
+                    "geometry_type" to "circle",
+                    "geometry" to mapOf("type" to "Point", "coordinates" to listOf(fp.cx, fp.cy, 0.0)),
+                    "properties" to
+                        mapOf("code" to z.code, "centerX" to fp.cx, "centerY" to fp.cy, "radiusX" to fp.r, "radiusY" to fp.r, "rotation" to 0),
+                )
+            } else {
+                linkedMapOf(
+                    "id" to z.zoneId,
+                    "geometry_type" to "polygon",
+                    "geometry" to mapOf(
+                        "type" to "Polygon",
+                        "coordinates" to listOf(
+                            (fp.ring() + fp.ring().first()).map {
+                                listOf(it.x, it.y, 0.0)
+                            },
+                        ),
+                    ),
+                    "properties" to mapOf("code" to z.code),
+                )
+            }
+            spaceZones.getOrPut(store.salesFloorSpaceId) { ArrayList() } += z.zoneId
+        }
+    }
     val exp = Instant.now().plusSeconds(10 * 86_400L).epochSecond
 
     fun route(ex: HttpExchange): Pair<Int, Any> {
@@ -93,55 +122,32 @@ fun main() {
                 )
             }
 
-            path.endsWith("/graphql") && body.contains("TwinSpaceFixtures") -> 200 to mapOf(
-                "data" to mapOf(
-                    "space_by_pk" to mapOf(
-                        "id" to node!!.path("variables").path("space").asText(),
-                        "boundary" to mapOf(
-                            "type" to "Polygon",
-                            "coordinates" to listOf(
-                                listOf(
-                                    listOf(0.0, 0.0, 0.0),
-                                    listOf(28500.0, 0.0, 0.0),
-                                    listOf(28500.0, 23000.0, 0.0),
-                                    listOf(0.0, 23000.0, 0.0),
-                                    listOf(0.0, 0.0, 0.0),
+            path.endsWith("/graphql") && body.contains("TwinSpaceFixtures") -> {
+                val space = node!!.path("variables").path("space").asText()
+                200 to mapOf(
+                    "data" to mapOf(
+                        "space_by_pk" to mapOf(
+                            "id" to space,
+                            "boundary" to mapOf(
+                                "type" to "Polygon",
+                                "coordinates" to listOf(
+                                    listOf(
+                                        listOf(0.0, 0.0, 0.0),
+                                        listOf(28500.0, 0.0, 0.0),
+                                        listOf(28500.0, 23000.0, 0.0),
+                                        listOf(0.0, 23000.0, 0.0),
+                                        listOf(0.0, 0.0, 0.0),
+                                    ),
                                 ),
                             ),
                         ),
+                        "zone" to spaceZones[space].orEmpty().map { zoneGeo.getValue(it) },
                     ),
-                    "zone" to listOf(
-                        mapOf(
-                            "id" to "blocker-zone",
-                            "geometry_type" to "polygon",
-                            "geometry" to mapOf("type" to "Polygon", "coordinates" to listOf(blocker)),
-                        ),
-                    ),
-                ),
-            )
+                )
+            }
 
-            path.endsWith("/graphql") && body.contains("zone_by_pk") -> 200 to mapOf(
-                "data" to mapOf(
-                    "zone_by_pk" to mapOf(
-                        "id" to node!!.path("variables").path("id").asText(),
-                        "geometry_type" to "polygon",
-                        "geometry" to
-                            mapOf(
-                                "type" to "Polygon",
-                                "coordinates" to
-                                    listOf(
-                                        listOf(
-                                            listOf(1000.0, 1000.0, 0.0),
-                                            listOf(2200.0, 1000.0, 0.0),
-                                            listOf(2200.0, 1600.0, 0.0),
-                                            listOf(1000.0, 1600.0, 0.0),
-                                            listOf(1000.0, 1000.0, 0.0),
-                                        ),
-                                    ),
-                            ),
-                    ),
-                ),
-            )
+            path.endsWith("/graphql") && body.contains("zone_by_pk") ->
+                200 to mapOf("data" to mapOf("zone_by_pk" to zoneGeo[node!!.path("variables").path("id").asText()]))
 
             path.endsWith("/graphql") && body.contains("task(") -> 200 to mapOf(
                 "data" to mapOf(
@@ -185,7 +191,15 @@ fun main() {
                 200 to
                     mapOf("reconciled" to true, "totals" to mapOf("counted" to 0, "under" to 3, "over" to 1, "misplaced" to 1))
 
-            m == "PUT" && path.contains("/zones/") -> puts.add(node!!).let { 200 } to mapOf("id" to path.substringAfterLast('/'), "updated" to true)
+            m == "PUT" && path.contains("/zones/") -> {
+                val id = path.substringAfterLast('/')
+                puts.add(node!!)
+                putIds.add(id)
+                val z = zoneGeo.getValue(id)
+                z["geometry"] = mapper.convertValue(node.path("geometry"), Map::class.java)
+                if (node.has("properties")) z["properties"] = mapper.convertValue(node.path("properties"), Map::class.java)
+                200 to mapOf("id" to id, "updated" to true)
+            }
 
             path.endsWith("/tasks/assignees") -> 200 to mapOf(
                 "people" to listOf(
@@ -247,7 +261,11 @@ fun main() {
         )
         check(stock.err == 0 && stock.closed == stock.counts && stock.counts > 0) { "stock did not close every count" }
         check(again.closed == 0) { "a re-run re-sent a closed count" }
-        check(fix.sumOf { it.err } == 0 && fix.sumOf { it.sent } == 6) { "fixmoves: expected 3 per store for the week" }
+        check(
+            fix.sumOf {
+                it.err
+            } == 0 && fix.sumOf { it.sent } == 12,
+        ) { "fixmoves: expected 1 per store per day (2 stores x 6 days), got ${fix.map { it.sent }}" }
         println("tasks, second pass of the same day: $tasks2")
         check(tasks2.cancelled == 0 && tasks.assigned + tasks.created + tasks2.assigned + tasks2.created <= 5) {
             "a second pass exceeded the day's target"
@@ -276,24 +294,82 @@ fun main() {
                 v.count { it in backroom }
             }}",
         )
-        // H2 — every PUT stays off the stub neighbor and inside the stub boundary, and the ledger holds the shift actually applied
+        // v2 — every PUT moves a movable fixture (a circle here), inside its own region, clear of the floor, with a reason, and keeps
+        // the zone's properties (code, radius); the ledger holds the shift actually applied
         check(puts.size == fix.sumOf { it.sent }) { "PUT count ${puts.size} != sent" }
-        val neighbor = PolyGeom.ring(blocker)
-        val room = PolyGeom.ring(
-            listOf(listOf(0.0, 0.0, 0.0), listOf(28500.0, 0.0, 0.0), listOf(28500.0, 23000.0, 0.0), listOf(0.0, 23000.0, 0.0), listOf(0.0, 0.0, 0.0)),
-        )
-        puts.forEach { b ->
-            val ring = PolyGeom.outerRing(b.path("geometry")) ?: error("a PUT without a polygon")
-            check(!PolyGeom.overlaps(ring, neighbor)) { "a moved fixture overlaps its neighbor: ${b.path("geometry")}" }
-            check(PolyGeom.within(ring, room)) { "a moved fixture left the room" }
+        val codeOf = listOf("dec-us-denver", "dec-fr-lyon").flatMap { s -> keys.store(s).fixtures.map { it.zoneId to (s to it.code) } }.toMap()
+        puts.zip(putIds).forEach { (b, id) ->
+            val (slug, code) = codeOf.getValue(id)
+            val floor = FixtureMoves.Floor.load(chain, slug)
+            check(FixtureMoves.isMovable(floor, code)) { "$code (${floor.fixtures[code]?.category}) is not movable" }
+            check(b.path("reason").asText().startsWith("twin: ")) { "a PUT without a reason" }
+            check(b.path("geometryType").asText() == "circle" && b.path("geometry").path("type").asText() == "Point") { "circle body shape: $b" }
+            check(b.path("properties").path("code").asText() == code && b.path("properties").path("radiusX").asDouble() > 0) { "properties lost: $b" }
+            val c = b.path("geometry").path("coordinates")
+            check(b.path("properties").path("centerX").asDouble() == c[0].asDouble()) { "centerX not moved with the Point" }
+            val moved = FixtureMoves.Footprint.Circle(c[0].asDouble(), c[1].asDouble(), b.path("properties").path("radiusX").asDouble())
+            check(PolyGeom.within(moved.ring(), floor.regions.getValue(floor.fixtures.getValue(code).region!!).ring)) { "$code left its region" }
         }
         val ledgerLines = StoreStock.readLines(state.resolve("fixmoves").resolve("applied.csv")).filter { !it.startsWith("extId") }
         check(ledgerLines.size == puts.size) { "ledger lines ${ledgerLines.size} != PUTs ${puts.size}" }
         ledgerLines.forEach { l ->
             val c = l.split(",")
-            check(c[3].toDouble() != 0.0 || c[4].toDouble() != 0.0) { "a ledger line without a shift: $l" }
+            check(Math.hypot(c[3].toDouble(), c[4].toDouble()) >= FixtureMoves.MIN_SHIFT_MM) { "a ledger line without a real shift: $l" }
         }
-        println("fixmoves: ${puts.size} PUTs, none on the stub neighbor (+x of every fixture), none outside the room")
+        // the floor after every move: no two fixtures of a store overlap
+        spaceZones.values.forEach { ids ->
+            val rings = ids.mapNotNull { FixtureMoveDrive.footprintOf(mapper.valueToTree(zoneGeo.getValue(it)))?.ring() }
+            for (i in rings.indices) {
+                for (j in i + 1 until rings.size) {
+                    check(!PolyGeom.overlaps(rings[i], rings[j])) {
+                        "two fixtures overlap after the moves"
+                    }
+                }
+            }
+        }
+        println("fixmoves: ${puts.size} PUTs, all movable circles, each inside its region with a reason, properties kept, no overlap after")
+        // the revert (dry, platform read on): the two Denver gondolas, restored from the snapshot the moves would have taken
+        val gf = keys.store("dec-us-denver").byCode.getValue("GF-R2-U2").zoneId
+        val gb = keys.store("dec-us-denver").byCode.getValue("GB-R3-U5").zoneId
+        val snap = mapper.convertValue(zoneGeo.getValue(gf)["geometry"], Map::class.java)["coordinates"]
+        zoneGeo.getValue(gf)["geometry"] = mapOf(
+            "type" to "Polygon",
+            "coordinates" to FixtureMoves.translate(
+                mapper.convertValue(snap, object : com.fasterxml.jackson.core.type.TypeReference<List<List<List<Double>>>>() {}),
+                312.0,
+                0.0,
+            ),
+        )
+        val origins = mapper.readValue(state.resolve("fixmoves").resolve("origin.json").toFile(), Map::class.java).toMutableMap()
+        origins[gf] = snap
+        mapper.writeValue(state.resolve("fixmoves").resolve("origin.json").toFile(), origins)
+        val rv = FixtureRevert.run(cfg(today, listOf("dec-us-denver")).copy(live = true)) { k ->
+            if (k ==
+                "M8TRX_REVERT_TARGETS"
+            ) {
+                "dec-us-denver:GF-R2-U2"
+            } else {
+                null
+            }
+        }
+        check(rv.reverted == 1 && rv.err == 0 && rv.refused == 0) { "revert: $rv" }
+        val back = mapper.convertValue(zoneGeo.getValue(gf)["geometry"], Map::class.java)["coordinates"]
+        check(back == snap) { "GF-R2-U2 is not back at its snapshot" }
+        check(puts.last().path("reason").asText() == FixtureRevert.REASON) { "the revert PUT carries no reason" }
+        val rv2 = FixtureRevert.run(cfg(today, listOf("dec-us-denver")).copy(live = true)) { k ->
+            if (k ==
+                "M8TRX_REVERT_TARGETS"
+            ) {
+                "dec-us-denver:GF-R2-U2,dec-us-denver:GB-R3-U5"
+            } else {
+                null
+            }
+        }
+        check(rv2.inPlace == 1 && rv2.refused == 1 && rv2.reverted == 0) { "second revert: GF in place, GB has no source → refused, got $rv2" }
+        check(gb.isNotEmpty())
+        println(
+            "fixrevert: GF-R2-U2 put back from the snapshot (reason '${FixtureRevert.REASON}'); a re-run leaves it; GB-R3-U5 without a source is refused",
+        )
         // H3 — one login per person for the whole run (the JWTs are kept in state/ops/jwt, reused by every later driver)
         check(loginAs.size == loginAs.toSet().size) { "logins: ${loginAs.size} calls for ${loginAs.toSet().size} people — the cache did not hold" }
         val jwtDir = state.resolve("ops").resolve("jwt")
