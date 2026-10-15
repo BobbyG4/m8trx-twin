@@ -430,10 +430,10 @@ def build_path_nonconvex(rng):
              zone("Z-02", "L-Wing North", ring_rect(0, 9, 12, 18), "region")]
     fixtures = []
     for i in range(4):                                        # south wing racks
-        fixtures.append(fx(f"LS-{i + 1:02d}", f"South Wing Rack {i + 1}",
+        fixtures.append(fx(f"LS-{i + 1:02d}", f"South Wing Fixture {i + 1}",
                            3.0 + i * 5.5, 4.5, 1.2, 5.0, "gondola_run"))
     for i in range(3):                                        # north wing racks
-        fixtures.append(fx(f"LN-{i + 1:02d}", f"North Wing Rack {i + 1}",
+        fixtures.append(fx(f"LN-{i + 1:02d}", f"North Wing Fixture {i + 1}",
                            2.5 + i * 3.6, 13.5, 1.2, 5.0, "gondola_run"))
     # A column ON the reflex corner: the concave vertex is the interesting part of this space,
     # so give the solver a real obstacle sitting in it rather than an empty notch.

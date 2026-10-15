@@ -1,10 +1,10 @@
 {
   "format": "m8trx_standard",
   "version": "v1",
-  "directive_ref": "PLN-dec-us-denver-fe44dd290a92",
+  "directive_ref": "PLN-dec-us-denver-7c7ba0b046b4",
   "store_id": "dec-us-denver",
   "site_ref": "dec-us-denver",
-  "source_digest": "fe44dd290a92b622abfd212f96b1ce9f553ea740de56f4c249f6156a9497e850",
+  "source_digest": "7c7ba0b046b43f6ff41a2de6f3162954f6180108fa6cb01f9995d7e9564311b6",
   "units_per_facing": 4,
   "notes": "product_placement only; fixture_relocation lines added when SRF calibration data exists",
   "counts": {
@@ -55,7 +55,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4335158",

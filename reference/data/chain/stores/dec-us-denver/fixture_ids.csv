@@ -6,7 +6,7 @@ CO-01,Checkout Counter 1,fed6379d-ebe4-5c7b-b2b4-42f792ff144f,ok
 CO-02,Checkout Counter 2,76239634-ba46-5f04-8fec-d8a625dc5662,ok
 CO-03,Checkout Counter 3,d6e7f73a-96cf-5742-bc0d-3ccdabe1257a,ok
 CO-04,Checkout Counter 4,8d9d4d0a-d63c-5b1f-9c82-ea115a16e66a,ok
-CO-IR,Impulse Rack,388d2397-0f37-54e6-a8fe-7d62c400fe47,ok
+CO-IR,Impulse Fixture,388d2397-0f37-54e6-a8fe-7d62c400fe47,ok
 FB-01,Footwear Bench Seat,3fdbb630-9820-5998-b67a-ac569d63f6e8,ok
 GA-01,Treadmill 1,87e13a69-344c-5b58-a516-c75a679d5fe1,ok
 GB-R1-U1,Gondola R1 Back U1,2455b41f-5f1f-5e9f-85dc-f845ef4b07c6,ok
@@ -113,4 +113,4 @@ PW-03,West Wall Bay 3,27a4636d-ac1e-5280-a72d-589f4f6640c2,ok
 PW-04,West Wall Bay 4,82f9b31b-ac97-59eb-99c9-d865472a8c7f,ok
 PW-05,West Wall Bay 5,c5b509cd-80a6-5e3d-b201-5eda56e3c853,ok
 PW-06,West Wall Bay 6,a212a460-9704-5a4f-befe-7dbc44e3e106,ok
-RR-02,Apparel Round Rack 2,7ea82496-e868-52d8-a63b-2fa55cb9c718,ok
+RR-02,Apparel Round Fixture 2,7ea82496-e868-52d8-a63b-2fa55cb9c718,ok

@@ -173,7 +173,7 @@ SPECIALTY_FIXTURES = [
     # Checkout counters + impulse rack (Z-02)
     ("CO-01",  "Checkout Counter 1",  17500, 500,   20000, 2000),
     ("CO-02",  "Checkout Counter 2",  20500, 500,   23000, 2000),
-    ("CO-IR",  "Impulse Rack",        17000, 2500,  24000, 3200),
+    ("CO-IR",  "Impulse Fixture",      17000, 2500,  24000, 3200),
 ]
 
 # Combined fixture list: (code, name, x1, y1, x2, y2)
