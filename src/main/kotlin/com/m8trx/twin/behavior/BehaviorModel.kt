@@ -152,7 +152,7 @@ class BehaviorModel(
             if (lambda <= 0.0) return 0
             if (lambda > 60.0) {
                 // Normal approximation keeps big hours fast; the draw is still deterministic from the rng.
-                return (lambda + kotlin.math.sqrt(lambda) * ShopperAgent.gaussian(rng)).toInt().coerceAtLeast(0)
+                return kotlin.math.round(lambda + kotlin.math.sqrt(lambda) * ShopperAgent.gaussian(rng)).toInt().coerceAtLeast(0)
             }
             val l = exp(-lambda)
             var k = 0
@@ -174,7 +174,10 @@ class FixtureLedger(val rows: Map<String, Row>) {
     data class Row(
         var stops: Int = 0,
         var impressions: Int = 0,
+        /** Engaged (looking) time summed over impressions — the agent's `Visit.dwellMs`. */
         var dwellMs: Long = 0,
+        /** What the platform should store as impression duration: `lastLook − firstDwell` = look + approach. */
+        var platformDurationMs: Long = 0,
         var engagements: Int = 0,
         var tryOns: Int = 0,
         var units: Int = 0,
@@ -199,6 +202,7 @@ class FixtureLedger(val rows: Map<String, Row>) {
                     if (v.impression) {
                         row.impressions++
                         row.dwellMs += v.dwellMs
+                        row.platformDurationMs += v.dwellMs + ShopperAgent.APPROACH_MS
                         row.dwelled += r.id
                         if (v.fixture in boughtFrom) row.dwelledAndBoughtHere += r.id
                     }
