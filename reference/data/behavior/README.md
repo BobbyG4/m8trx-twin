@@ -42,7 +42,7 @@ Each truth multiplies exactly one measure. **Set it to 1.0 and the effect is gon
 ### How each one is decided
 
 - **Entrance table**: fixtures in the entrance zone (`Z-01` in Denver: `PI-01`, `RR-02`, `PI-03`).
-- **Back corner**: the farthest 20% of floor fixtures from the door, and more than 4 m sideways from the door's centre line (off the main path). In Denver that is 18 fixtures: the GPS cases, the far D-05/D-06 ends.
+- **Back corner**: the farthest 20% of browsable floor fixtures from the door, and more than 4 m sideways from the door's centre line (off the main path). In Denver that is 18 fixtures: the six GPS cases, the D-05/D-06 end panels and the outer ends of gondola row R1 (`behaviorSelfTest` prints the list).
 - **Shelf level**: the plan has no level field, so the twin derives one. A fixture's lines in `position_sequence` order fill levels 1 (top) to 4 (floor) by facings: each line takes the level its facing span's midpoint falls in. Level 2 is eye height and level 4 is the floor. A plan line carrying `display_level` keeps its own.
 - **Size run**: a style's sizes on a fixture against every size the catalog carries for it. The conversion multiplier is `max(0.5, 1 − 0.5 × missing share / 0.5)`.
 - **Color story**: catalog colors grouped into families (black, gray, white, blue, green, red, orange, yellow, pink, purple, brown). A face is coherent when one family holds at least 60% of all its facings (unnamed colors such as "Default Color" count in the total) with 3 or more cells of that family. It clashes when 5 or more families share it and none holds more than 35%.

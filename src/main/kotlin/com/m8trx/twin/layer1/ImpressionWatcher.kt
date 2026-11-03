@@ -88,8 +88,13 @@ fun main() {
     val dispatcher = conn.createDispatcher { msg ->
         val type = SUBJECTS.firstOrNull { msg.subject.endsWith(".$it") } ?: return@createDispatcher
         if (prefix != null) {
-            val obj = runCatching { ConnectMappers.camel.readTree(msg.data).path("body").path("objectId").asText("") }.getOrDefault("")
-            if (!obj.startsWith(prefix)) {
+            val obj = runCatching {
+                ConnectMappers.camel.readTree(msg.data).let { n -> n.path("body").path("objectId").asText(null) ?: n.path("objectId").asText("") }
+            }.getOrDefault("")
+            // Match the tag plus its separator, so `run-1` never also counts `run-10-…`. An event with no object id
+            // at all is counted separately rather than silently dropped.
+            if (obj.isEmpty()) otherPrefixes.computeIfAbsent("(no objectId) $type") { AtomicLong() }.incrementAndGet()
+            if (!obj.startsWith("$prefix-")) {
                 if (type ==
                     "fixtureImpression"
                 ) {

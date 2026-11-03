@@ -42,8 +42,13 @@ import kotlin.system.exitProcess
  *
  * ## Pacing
  * Same rule as `DayDrive`: shopper ARRIVALS are compressed by `M8TRX_BEHAVIOR_COMPRESS`; inside a shopper, sample
- * spacing (≤ 1 s) replays at real time and longer gaps are divided. Wire `ts` is anchored to the planned
- * timeline, so the oracle's prediction stays exact. A sale is sent when its shopper's last sample is due.
+ * spacing (≤ 1 s) replays at real time and longer gaps (walks, the fitting room) are divided, floored at 1.001 s
+ * so the clocks still reset between episodes. Wire `ts` is the re-based (compressed) timeline anchored to wall
+ * clock at start, never the publisher's send time, so episode clocks are exactly the oracle's. A sale is sent,
+ * and the shopper evicted, when their last sample is due.
+ *
+ * A live run requires an explicit `M8TRX_BEHAVIOR_TAG`: the default tag is deterministic, so a second live run of
+ * the same slice would reuse object ids and sale ids that the platform has already seen.
  *
  * Env: `M8TRX_BEHAVIOR_SITE` (dec-us-denver) · `M8TRX_BEHAVIOR_DATE` (today at the site) · `M8TRX_BEHAVIOR_FROM_HOUR`
  * / `M8TRX_BEHAVIOR_TO_HOUR` (inclusive store hours; default 14..14) · `M8TRX_BEHAVIOR_SEED` (the file's seed) ·
@@ -140,6 +145,9 @@ fun main() {
     }
 
     // ── live: interlocks first ─────────────────────────────────────────────────────────────────────────
+    require(!System.getenv("M8TRX_BEHAVIOR_TAG").isNullOrBlank()) {
+        "a LIVE run needs an explicit, unused M8TRX_BEHAVIOR_TAG (the default repeats per slice)"
+    }
     val natsUrl = req("M8TRX_NATS_URL")
     val spaceId = req("M8TRX_SPACE_ID")
     if (spaceId.startsWith(OFFICE_SPACE)) {
@@ -163,26 +171,36 @@ fun main() {
     // Every shopper leaves at their last sample: evict then (closing the visit), and send a buyer's sale then.
     val saleOf = sales.associateBy { it.record.id }
     val departures = ArrayDeque(exitAt.entries.sortedWith(compareBy({ it.value }, { it.key })).map { it.key })
-    val sent = mutableListOf<String>()
     var saleOk = 0
     var saleErr = 0
     val wireEpoch = System.currentTimeMillis()
     fun wallOf(planTs: Long) = wireEpoch + (planTs - planEpoch)
 
     fun departUpTo(planTs: Long) {
-        while (departures.isNotEmpty() && exitAt.getValue(departures.first()) <= planTs) {
+        // Strictly before: a shopper's exit IS the ts of their last sample, and another shopper's sample can share
+        // that millisecond and sort first — evicting on `<=` would send X's eviction ahead of X's last sample.
+        while (departures.isNotEmpty() && exitAt.getValue(departures.first()) < planTs) {
             val id = departures.removeFirst()
             nats.objEviction(ObjEviction(objectId = "$tag-$id", layoutId = spaceId), ts = wallOf(exitAt.getValue(id)), id = "$tag-$id-evict")
             val s = saleOf[id] ?: continue
             if (webhook == null) continue
             val at = Instant.ofEpochMilli(wallOf(exitAt.getValue(id))).toString()
             val epcList = s.epcs.filterNotNull()
+            if (epcList.size < s.epcs.size) {
+                log.warn(
+                    "sale {}: {} of {} lines have no unsold EPC and are NOT sent — the oracle files still count them",
+                    "$tag-$id",
+                    s.epcs.size - epcList.size,
+                    s.epcs.size,
+                )
+            }
             if (epcList.isEmpty()) continue
             val sale = if (epcList.size == 1) SaleEvent.byEpc("$tag-$id", at, epcList[0]) else SaleEvent.byEpcList("$tag-$id", at, epcList)
             when (val r = webhook.push(WebhookDataType.SALE_EVENT, sale, WebhookClient.AuthMode.API_KEY)) {
                 is ConnectResponse.Ok -> {
                     saleOk++
-                    sent += epcList
+                    // Recorded per sale, not at the end: a run killed mid-way must not forget what it sold.
+                    epcs.recordSold(epcList)
                 }
 
                 else -> {
@@ -218,7 +236,6 @@ fun main() {
     }
     departUpTo(Long.MAX_VALUE)
     nats.close()
-    if (sent.isNotEmpty()) epcs.recordSold(sent)
     log.info(
         "published {} samples for {} shoppers; sales sent ok={} err={}{}",
         wire.size,
