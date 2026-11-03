@@ -283,6 +283,7 @@
 
 | Brief | Status | Blocks |
 |---|---|---|
+| **TWIN-REQ-007 — shopper behavior simulation for draft scoring** — **inverse, core→twin** (`m8trx-shared/twin/requirements/TWIN-REQ-007-behavior-simulation-for-draft-scoring.md`, filed 2026-11-03) | **FILED, AWAITING ABSORPTION** → picked up 2026-11-04 on `claude/behavior-simulation-req-007-837f10`. Inventory (step 0, the gap list of record): `status/INVENTORY-TWIN-REQ-007-2026-11-04.md` — 1 of 10 met, 4 partly, 5 absent on `main`. | Core's planogram round 6 (draft scoring) |
 | TWIN-REQ-001 `fitting_room` → `try_on_zone` | ABSORBED 2026-05-09 | — |
 | TWIN-REQ-002 `commerce_projection` writer | **FILED, AWAITING ABSORPTION** (2026-06-11) | Scripts 1, 3, 5 |
 | **TWIN-REQ-006 — Connect spatial provisioning** | 📨 **FILED 2026-08-05** (`m8trx-shared/twin/requirements/TWIN-REQ-006-connect-spatial-provisioning.md`). Connect's spatial surface is **read-only** — an integrator can reference a `spaceId` but cannot bring one into existence; **no grant closes it** (endpoint annotation, not capability). Twin partially blocked: it can *generate* spatial data and did (14 spaces), but cannot make it *exist*. Third parties blocked absolutely — they have no equivalent of "ask Bob". | Any twin deliverable whose output is a space/zone/fixture; **all** third-party site onboarding |
