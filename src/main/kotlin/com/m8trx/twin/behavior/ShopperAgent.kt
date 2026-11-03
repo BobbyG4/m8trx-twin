@@ -12,8 +12,22 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** What a shopper did at one place. [impression] is the agent's claim that this stop forms one; the oracle checks it. */
-data class Visit(val fixture: String, val kind: Kind, val startMs: Long, val dwellMs: Long, val impression: Boolean, val pickups: List<Pickup>) {
+/**
+ * What a shopper did at one place. [impression] is the agent's claim that this stop forms one; the oracle checks
+ * it. [dwellMs] is the ENGAGED (looking) span. The episode adds [ShopperAgent.APPROACH_MS] before it and
+ * [ShopperAgent.DISENGAGE_MS] after, so the platform's impression duration (`lastLook - firstDwell`) is about
+ * `dwellMs + APPROACH_MS` and its dwell span about `dwellMs + APPROACH_MS + DISENGAGE_MS`. A TRY_ON visit names
+ * the cell tried in [triedCell]; the pickup itself is recorded once, at the fixture it came from.
+ */
+data class Visit(
+    val fixture: String,
+    val kind: Kind,
+    val startMs: Long,
+    val dwellMs: Long,
+    val impression: Boolean,
+    val pickups: List<Pickup>,
+    val triedCell: Cell? = null,
+) {
     enum class Kind { BROWSE, TRY_ON, CHECKOUT, GRAB }
 }
 
@@ -78,44 +92,59 @@ class ShopperAgent(
         val visits = mutableListOf<Visit>()
         val lines = mutableListOf<SoldLine>()
         var t = entryMs
-        val jitter = HashMap<String, Double>()
-        fun noise(code: String) = jitter.getOrPut(code) { if (params.noise.appealSd == 0.0) 1.0 else exp(params.noise.appealSd * gaussian(rng)) }
 
-        t = walk(id, t, inward = true, rng = rng, sink = sink)
+        // Common random numbers: every decision draws from its OWN stream, keyed by what it decides (this
+        // fixture's stop, this fixture's visit, the checkout ...). Changing one fixture (a truth, a plan move)
+        // changes only the decisions that read that fixture, and an untouched control fixture sees the same
+        // shoppers decide the same things. One shared stream would re-randomise everything after the first
+        // changed draw, and every before/after would compare two different samples.
+        val seed = rng.nextLong()
+        fun stream(key: String) = Random(BehaviorModel.mix(seed, key.hashCode().toLong(), key.length.toLong()))
+        val jitter = HashMap<String, Double>()
+        fun noise(code: String) = jitter.getOrPut(code) {
+            if (params.noise.appealSd == 0.0) 1.0 else exp(params.noise.appealSd * gaussian(stream("noise:$code")))
+        }
+
+        t = walk(id, t, inward = true, rng = stream("door-in"), sink = sink)
 
         // ── entrance table: everyone passes it; a minority stops ──────────────────────────────────────────
         for (f in world.fixturesIn(Placement.ENTRANCE_TABLE)) {
             val p = pres.getValue(f.code)
             val stop = params.browse.entranceStopRate * p.contentAppeal * p.impressionFactor * noise(f.code)
-            if (persona != "gift" && rng.nextDouble() < min(params.engagement.maxProbability, stop)) {
-                t = browseAt(id, persona, f, p, t, rng, sink, visits, lines)
+            if (persona != "gift" && stream("stop:${f.code}").nextDouble() < min(params.engagement.maxProbability, stop)) {
+                t = browseAt(id, persona, f, p, t, stream("visit:${f.code}"), sink, visits, lines)
             }
         }
 
         if (persona == "gift") {
-            t = giftGrab(id, pres, t, rng, sink, visits, lines)
+            t = giftGrab(id, pres, t, stream("gift"), sink, visits, lines)
         } else {
-            val target = if (persona == "mission") weightedPick(categoryMix, rng) else null
-            val stops = pickStops(persona, pres, target, rng, ::noise)
+            val target = if (persona == "mission" && categoryMix.isNotEmpty()) weightedPick(categoryMix, stream("target")) else null
+            val stops = pickStops(persona, pres, target, stream("stops"), ::stream, ::noise)
             for (f in stops) {
-                if (persona == "mission" && lines.isNotEmpty() && rng.nextDouble() >= params.purchase.missionContinueAfterBuy) break
-                t = browseAt(id, persona, f, pres.getValue(f.code), t, rng, sink, visits, lines)
+                if (persona == "mission" && lines.isNotEmpty() &&
+                    stream("continue:${f.code}").nextDouble() >= params.purchase.missionContinueAfterBuy
+                ) {
+                    break
+                }
+                t = browseAt(id, persona, f, pres.getValue(f.code), t, stream("visit:${f.code}"), sink, visits, lines)
             }
         }
 
         // ── checkout: buyers queue at a counter; a few add an impulse line ──────────────────────────────────
         if (lines.isNotEmpty() && world.counters.isNotEmpty()) {
-            val counter = world.counters[rng.nextInt(world.counters.size)]
-            val q = uniformMs(params.browse.checkoutQueueSeconds, rng)
+            val co = stream("checkout")
+            val counter = world.counters[co.nextInt(world.counters.size)]
+            val q = uniformMs(params.browse.checkoutQueueSeconds, co)
             visits += Visit(counter.code, Visit.Kind.CHECKOUT, t, q, impression = true, pickups = emptyList())
-            t = episode(id, counter, q, t, rng, sink)
+            t = episode(id, counter, q, t, co, sink)
             val impulseCells = world.impulse?.let { plan.cells(it.code) }.orEmpty()
-            if (impulseCells.isNotEmpty() && rng.nextDouble() < params.purchase.impulseAtCheckout) {
-                lines += SoldLine(impulseCells[rng.nextInt(impulseCells.size)], noLook = true)
+            if (impulseCells.isNotEmpty() && co.nextDouble() < params.purchase.impulseAtCheckout) {
+                lines += SoldLine(impulseCells[co.nextInt(impulseCells.size)], noLook = true)
             }
         }
 
-        t = walk(id, t, inward = false, rng = rng, sink = sink)
+        t = walk(id, t, inward = false, rng = stream("door-out"), sink = sink)
         sink?.evict(id)
         return ShopperRecord(id, persona, plan.id, entryMs, t, visits, lines)
     }
@@ -135,6 +164,7 @@ class ShopperAgent(
         pres: Map<String, FixturePresentation>,
         target: String?,
         rng: Random,
+        stream: (String) -> Random,
         noise: (String) -> Double,
     ): List<Fixture> {
         val range = params.browse.stops.getValue(persona)
@@ -142,7 +172,7 @@ class ShopperAgent(
         return world.visible
             .filter { world.placement[it.code] == Placement.FLOOR || world.placement[it.code] == Placement.BACK_CORNER }
             .filter { f ->
-                rng.nextDouble() <
+                stream("stop:${f.code}").nextDouble() <
                     min(params.engagement.maxProbability, n * stopWeight(f, pres.getValue(f.code), target) * noise(f.code) / stopNormalizer)
             }
             .sortedBy { world.distanceFromDoor(it) }
@@ -204,7 +234,7 @@ class ShopperAgent(
      * outside the six; it is what keeps basket value near the operating model's ATV.
      */
     private fun priceFactor(c: Cell): Double =
-        (params.content.priceReferenceUsd / c.priceUsd.coerceAtLeast(1.0)).pow(params.purchase.priceElasticity).coerceIn(0.15, 1.25)
+        (params.content.priceReferenceUsd / c.priceUsd.coerceAtLeast(1.0)).pow(params.purchase.priceElasticity).coerceIn(0.15, MAX_PRICE_FACTOR)
 
     /** Cells a shopper looks at closely: facings × price preference, without replacement. */
     private fun considered(cells: List<Cell>, rng: Random): List<Int> {
@@ -224,11 +254,11 @@ class ShopperAgent(
         val bench = world.footwearBench
         return if (c.category == "footwear" && bench != null) {
             val end = episode(id, bench, d, start, rng, sink)
-            visits += Visit(bench.code, Visit.Kind.TRY_ON, start, d, impression = true, pickups = listOf(Pickup(c, tried = true, bought = false)))
+            visits += Visit(bench.code, Visit.Kind.TRY_ON, start, d, impression = true, pickups = emptyList(), triedCell = c)
             end
         } else {
             // The fitting room is its own space with its own SRF; this floor's stream simply goes quiet.
-            visits += Visit(FITTING_ROOM, Visit.Kind.TRY_ON, start, d, impression = false, pickups = listOf(Pickup(c, tried = true, bought = false)))
+            visits += Visit(FITTING_ROOM, Visit.Kind.TRY_ON, start, d, impression = false, pickups = emptyList(), triedCell = c)
             start + d + WALK_GAP_MS
         }
     }
@@ -263,11 +293,11 @@ class ShopperAgent(
     /** A 5 Hz episode at [f]; returns the cursor after it plus the walk to the next place. */
     private fun episode(id: String, f: Fixture, dwellMs: Long, start: Long, rng: Random, sink: SampleSink?): Long {
         if (sink != null) {
-            sink.emit(id, browse.browse(f.code, dwellMs, start, Random(rng.nextLong())))
+            sink.emit(id, browse.browse(f.code, dwellMs, start, Random(rng.nextLong()), approachMs = APPROACH_MS, disengageMs = DISENGAGE_MS))
         } else {
             rng.nextLong() // keep the stream identical whether or not samples are recorded
         }
-        return start + dwellMs + EPISODE_PAD_MS + WALK_GAP_MS
+        return start + APPROACH_MS + dwellMs + DISENGAGE_MS + WALK_GAP_MS
     }
 
     /**
@@ -305,8 +335,10 @@ class ShopperAgent(
         const val GRAB_MS = 3_000L
         const val WALK_GAP_MS = 4_000L
 
-        // BrowseEpisode's default approach + disengage (1.2 s each) around the engaged span.
-        const val EPISODE_PAD_MS = 2_400L
+        // The three-phase episode around the engaged span, passed to BrowseEpisode explicitly so its env
+        // overrides (DayDrive's A/B switch) can never silently change this model's timing.
+        const val APPROACH_MS = 1_200L
+        const val DISENGAGE_MS = 1_200L
         const val DOOR_WALK_MS = 3_000L
         const val SAMPLE_MS = 200L
 

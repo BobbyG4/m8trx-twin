@@ -52,6 +52,11 @@ fun main() {
     val natsUrl = System.getenv("M8TRX_NATS_URL") ?: error("M8TRX_NATS_URL is not set")
     val outDir = Path.of(System.getenv("M8TRX_WATCH_OUT") ?: ".twin-state")
     val tag = System.getenv("M8TRX_WATCH_TAG") ?: "watch"
+
+    // Count only objects whose id starts with this prefix (a drive's run tag). The twin edge is shared — other
+    // twin lanes may be publishing at the same time — so an unfiltered count attributes their impressions to you.
+    val prefix = System.getenv("M8TRX_WATCH_PREFIX")?.takeIf { it.isNotBlank() }
+    val otherPrefixes = ConcurrentHashMap<String, AtomicLong>()
     val expectServer = System.getenv("M8TRX_NATS_EXPECT_SERVER") // e.g. edge-twin-denver
 
     // ── counters ──
@@ -82,6 +87,17 @@ fun main() {
 
     val dispatcher = conn.createDispatcher { msg ->
         val type = SUBJECTS.firstOrNull { msg.subject.endsWith(".$it") } ?: return@createDispatcher
+        if (prefix != null) {
+            val obj = runCatching { ConnectMappers.camel.readTree(msg.data).path("body").path("objectId").asText("") }.getOrDefault("")
+            if (!obj.startsWith(prefix)) {
+                if (type ==
+                    "fixtureImpression"
+                ) {
+                    otherPrefixes.computeIfAbsent(obj.substringBeforeLast("-").take(40)) { AtomicLong() }.incrementAndGet()
+                }
+                return@createDispatcher
+            }
+        }
         val now = System.currentTimeMillis()
         val id = runCatching {
             ConnectMappers.camel.readTree(msg.data).let { n ->
@@ -132,6 +148,10 @@ fun main() {
                 }
                 w.write("# per-fixture fixtureImpression counts\n")
                 perFixture.entries.sortedByDescending { it.value.get() }.forEach { w.write("# ${it.key},${it.value.get()}\n") }
+                if (prefix != null) {
+                    w.write("# filtered to objectId prefix '$prefix'; fixtureImpression from OTHER objects, by id stem:\n")
+                    otherPrefixes.entries.sortedByDescending { it.value.get() }.forEach { w.write("# other ${it.key},${it.value.get()}\n") }
+                }
             }
             log.info("")
             log.info("═══ WIRE COUNTS (deduped, in twin code — citable) ═══")

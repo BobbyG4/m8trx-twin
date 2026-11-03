@@ -427,3 +427,13 @@ behaviorTask(
     "com.m8trx.twin.behavior.BehaviorHistoryKt",
     "RECORD mode: 8–12 weeks of seeded history with the scripted reset ~6 weeks back, written to build/behavior/. Sends nothing.",
 )
+behaviorTask(
+    "behaviorDrive",
+    "com.m8trx.twin.behavior.BehaviorDriveKt",
+    "Drive a slice of a simulated day: positions → twin edge :4223 (interlocked), baskets → Connect sale_event. RECORD unless M8TRX_BEHAVIOR_LIVE=true.",
+)
+behaviorTask(
+    "behaviorBackdateProbe",
+    "com.m8trx.twin.behavior.BackdateProbeKt",
+    "Req 9 re-measure: one backdated episode to the twin edge (+ one backdated sale_event if keyed). Dry-run unless M8TRX_PROBE_LIVE=true.",
+)

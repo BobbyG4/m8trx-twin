@@ -34,7 +34,12 @@ class StoreWorld(val fixtures: FixtureSet, val zones: List<RoleZone>, gates: Lis
     val visible: List<Fixture> = fixtures.impressionVisible
 
     val placement: Map<String, Placement> = run {
-        val floor = visible.filter { roleOf(it) !in setOf(ZoneRole.ENTRANCE, ZoneRole.CHECKOUT, ZoneRole.FOOTWEAR_BENCH, ZoneRole.GAIT_ANALYSIS) }
+        // The quantile is over fixtures a shopper can actually browse (the same role weight the agent uses),
+        // so non-retail strips and service desks never set where "the back" begins.
+        val floor = visible.filter {
+            roleOf(it) !in setOf(ZoneRole.ENTRANCE, ZoneRole.CHECKOUT, ZoneRole.FOOTWEAR_BENCH, ZoneRole.GAIT_ANALYSIS) &&
+                ShopperAgent.roleWeight(this, it) > 0.0
+        }
         val dists = floor.map { distanceFromDoor(it) }.sorted()
         val cut = if (dists.isEmpty()) Double.MAX_VALUE else dists[min(dists.size - 1, (dists.size * truths.backCornerDistanceQuantile).toInt())]
         visible.associate { f ->
@@ -177,13 +182,17 @@ class FixturePresentation(
          */
         fun colorStory(cells: List<Cell>, t: BehaviorParams.Truths): ColorStory {
             if (cells.size < 3) return ColorStory.NONE
-            val byFamily = cells.groupBy { colorFamily(it.color) }.mapValues { (_, cs) -> cs.sumOf { it.facings } }.filterKeys { it != "unknown" }
-            val total = byFamily.values.sum().toDouble()
-            if (total == 0.0) return ColorStory.NONE
-            val top = byFamily.values.max() / total
+            // Denominator is EVERY facing on the face, unknown colors included: a face of two "Default Color"
+            // cells and one black one is not a black story. A story also needs 3+ cells of its family, so one
+            // fat-facing cell cannot make a face coherent on its own.
+            val groups = cells.groupBy { colorFamily(it.color) }.filterKeys { it != "unknown" }
+            val total = cells.sumOf { it.facings }.toDouble()
+            if (groups.isEmpty() || total == 0.0) return ColorStory.NONE
+            val topCells = groups.values.maxBy { cs -> cs.sumOf { it.facings } }
+            val top = topCells.sumOf { it.facings } / total
             return when {
-                top >= t.colorStoryMinShare -> ColorStory.COHERENT
-                byFamily.size >= t.colorStoryClashFamilies && top <= 0.35 -> ColorStory.CLASH
+                top >= t.colorStoryMinShare && topCells.size >= 3 -> ColorStory.COHERENT
+                groups.size >= t.colorStoryClashFamilies && top <= 0.35 -> ColorStory.CLASH
                 else -> ColorStory.NONE
             }
         }

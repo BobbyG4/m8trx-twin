@@ -124,13 +124,34 @@ data class BehaviorParams(
                 "$site: persona '$p' missing a stops/try_on_rate/base_buy entry"
             }
         }
-        require(browse.dwellSeconds.size == 2 && browse.dwellSeconds[0] >= 6) {
-            "$site: dwell_seconds must be [min, max] with min >= 6 (the impression floor)"
-        }
+        // Every span the agent claims forms an impression must clear the 5 s impression floor.
+        listOf(
+            "dwell_seconds" to browse.dwellSeconds,
+            "checkout_queue_seconds" to browse.checkoutQueueSeconds,
+            "try_on_seconds" to engagement.tryOnSeconds,
+        )
+            .forEach { (k, r) ->
+                require(r.size == 2 && r[0] >= 6 && r[1] >= r[0]) { "$site: $k must be [min, max] with min >= 6 s (the impression floor)" }
+            }
         require(truths.eyeLevel in 1..truths.levelsPerFixture) { "$site: eye_level must be within 1..levels_per_fixture" }
         require(truths.sizeRunFullBreakShare > 0.0) { "$site: size_run_full_break_share must be > 0" }
+        // Headroom under the probability cap. A buy chance already at the cap before a truth applies cannot move
+        // when the truth does, so "doubling doubles" would quietly fail for exactly the strongest shoppers. The
+        // largest pre-truth buy chance (persona base x max price factor x try-on uplift), times the strongest
+        // conversion truth at its default, must still fit under max_probability.
+        val headroom = PERSONAS.filter { it != "gift" }.maxOf { purchase.baseBuy.getValue(it) } * MAX_PRICE_FACTOR * purchase.tryOnBuyUplift *
+            maxOf(truths.adjacencyComplement, 1.0)
+        require(headroom <= engagement.maxProbability) {
+            "$site: largest pre-cap buy chance %.2f exceeds max_probability %.2f; lower base_buy or try_on_buy_uplift".format(
+                headroom,
+                engagement.maxProbability,
+            )
+        }
     }
 }
+
+/** Upper bound of the willingness-to-pay factor (`ShopperAgent.priceFactor`). */
+const val MAX_PRICE_FACTOR = 1.25
 
 /** Persona keys, in the order shares are sampled. */
 val PERSONAS = listOf("browser", "mission", "try_on", "gift")

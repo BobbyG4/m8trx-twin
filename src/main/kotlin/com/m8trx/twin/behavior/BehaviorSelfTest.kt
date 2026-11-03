@@ -316,7 +316,15 @@ private fun sizeRun(m: BehaviorModel, base: BehaviorParams, after: ShelfPlan) {
             val run = m.stock.catalogSizes[h].orEmpty()
             run.size >= 6 && after.cells(f).filter { it.handle == h }.map { it.size }.toSet() == run
         }
-        .groupingBy { it }.eachCount().maxBy { it.value }.key
+        .groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+        ?: run {
+            check(
+                "broken size run sinks conversion of that style (two stylings)",
+                false,
+                "no complete multi-size style was handled in the baseline week",
+            )
+            return
+        }
     val run = m.stock.catalogSizes.getValue(style).sorted()
     val mid = run.drop(run.size / 4).take(run.size / 2).toSet()
     val cells = after.cells(fixture)

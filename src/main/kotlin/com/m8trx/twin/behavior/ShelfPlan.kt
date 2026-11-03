@@ -51,8 +51,8 @@ class ShelfPlan(val name: String, val cellsByFixture: Map<String, List<Cell>>) {
          *
          * **Level is derived, by a stated convention, because the plan has no level field.** The published Denver
          * plan carries `position_sequence` but no `display_level`. Twin's convention: a fixture's lines in
-         * `position_sequence` order fill levels 1 (top) .. [levels] (floor) evenly, so position 1 is top-left and
-         * the last position is on the floor. A line that carries `display_level` keeps it. This is the twin's
+         * `position_sequence` order fill levels 1 (top) .. [levels] (floor) by FACINGS, each line taking the level
+         * its facing span's midpoint falls in, so position 1 is top-left and the last position is on the floor. A line that carries `display_level` keeps it. This is the twin's
          * call, documented in `reference/data/behavior/README.md`; the planogram lane can override it per line.
          */
         fun of(
@@ -65,7 +65,14 @@ class ShelfPlan(val name: String, val cellsByFixture: Map<String, List<Cell>>) {
         ): ShelfPlan {
             val byFixture = lines.filter { it.ean in catalog }.groupBy { it.fixtureCode }.mapValues { (_, ls) ->
                 val ordered = ls.sortedBy { it.positionSequence }
-                ordered.mapIndexed { i, l ->
+                val total = ordered.sumOf { it.facings.coerceAtLeast(1) }.toDouble()
+                var before = 0.0
+                ordered.map { l ->
+                    // Level from the MIDPOINT of this line's facing span within the fixture's facings: shelves
+                    // fill by facings, not by line count, and adding or removing one small line no longer
+                    // shifts every later line's level.
+                    val mid = (before + l.facings.coerceAtLeast(1) / 2.0) / total
+                    before += l.facings.coerceAtLeast(1)
                     val sku = catalog.getValue(l.ean)
                     Cell(
                         fixture = l.fixtureCode,
@@ -78,7 +85,7 @@ class ShelfPlan(val name: String, val cellsByFixture: Map<String, List<Cell>>) {
                         priceUsd = sku.priceUsd,
                         facings = l.facings.coerceAtLeast(1),
                         position = l.positionSequence,
-                        level = l.displayLevel ?: (1 + i * levels / ordered.size).coerceIn(1, levels),
+                        level = l.displayLevel ?: (1 + (mid * levels).toInt()).coerceIn(1, levels),
                     )
                 }
             }
