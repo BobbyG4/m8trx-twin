@@ -42,6 +42,8 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.behavior.BackdateProbe
 fun main() {
     val live = System.getenv("M8TRX_PROBE_LIVE")?.toBoolean() == true
     val daysBack = (System.getenv("M8TRX_PROBE_DAYS_BACK") ?: "30").toLong()
+    // Never future-dated, never past the compression window the history stays inside.
+    require(daysBack in 1..HistoryPlan.MAX_DAYS_BACK.toLong()) { "M8TRX_PROBE_DAYS_BACK must be 1..${HistoryPlan.MAX_DAYS_BACK}, got $daysBack" }
     val fixture = System.getenv("M8TRX_PROBE_FIXTURE") ?: "GB-R6-U3"
     val m = BehaviorModel.forSite(System.getenv("M8TRX_BEHAVIOR_SITE") ?: "dec-us-denver")
     val now = System.currentTimeMillis()
@@ -60,7 +62,8 @@ fun main() {
         expected.size,
     )
 
-    val epc = EpcPool.load(m, java.nio.file.Path.of(".twin-state/sold-epcs.txt")).take(m.stock.published.cells(fixture).first())
+    val pool = EpcPool.load(m, java.nio.file.Path.of(".twin-state/sold-epcs.txt"))
+    val epc = pool.take(m.stock.published.cells(fixture).first())
     val sale = SaleEvent.byEpc(
         "req007-backdate-sale-${Instant.ofEpochMilli(now).epochSecond}",
         Instant.ofEpochMilli(past).toString(),
@@ -151,5 +154,6 @@ fun main() {
         return
     }
     val r = WebhookClient(cfg).push(WebhookDataType.SALE_EVENT, sale, WebhookClient.AuthMode.API_KEY)
+    if (r is com.m8trx.twin.connect.http.ConnectResponse.Ok) pool.recordSold(listOf(epc))
     log.info("SALES PLANE: sent backdated sale {} → {} (a 200 is a receipt; the stored occurred_at needs a read-back)", sale.externalSaleId, r)
 }

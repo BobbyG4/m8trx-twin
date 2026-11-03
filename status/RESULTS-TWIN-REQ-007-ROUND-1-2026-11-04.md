@@ -62,7 +62,7 @@ The control's impressions are flat. Its units dip (6.6 → 4.8 a day). Two cause
 
 ## 4. Proof: `./gradlew behaviorSelfTest`
 
-**35 passed, 0 failed** at `98bbdd1`, in about 20 s. Offline; nothing is published. The existing suites are unchanged: `peopleSelfTest` 50/0, `scenarioSelfTest` 37/0, `connectSelfTest` all pass, and `./gradlew build` with ktlint is green.
+**35 passed, 0 failed** at `98bbdd1` and again after the round-2 fixes, in about 20 s. Offline; nothing is published. The existing suites are unchanged: `peopleSelfTest` 50/0, `scenarioSelfTest` 37/0, `connectSelfTest` all pass, and `./gradlew build` with ktlint is green.
 
 | Check (brief's "done when") | Result |
 |---|---|
@@ -89,6 +89,34 @@ The control's impressions are flat. Its units dip (6.6 → 4.8 a day). Two cause
 | complement beside hero | complement conversion | 1.231 (1.2) | 1.441 | 1.91 |
 
 OFF is the baseline each ratio is taken against, so an OFF truth has ratio 1.0 by construction.
+
+### Reviews (Sonnet, two rounds, read-only)
+
+- **Round 1** (on `081965b`): no critical findings. Fixed in `98bbdd1`:
+  - The probability cap was damping the doubled truths for the strongest shoppers. Headroom is now validated in `BehaviorParams.validate`.
+  - Decisions now use per-decision random streams (common random numbers). The control drift fell from about 7% to 3%.
+  - Color story was looser than its doc. It now needs 3+ cells of the family, with unnamed colors counted in the denominator.
+  - Shelf level was by line count; it is now by facing midpoint.
+  - The back-corner quantile included non-browsable fixtures.
+  - Duration validation was added for queue and try-on spans.
+  - The ledger now carries a `platform_duration_s` column beside the engaged look time.
+  - Episode phases are explicit, so they are immune to `DayDrive`'s env A/B switch.
+  - The compression-window doc was honest only for a fast run. It now states the wall-clock margin.
+- **Round 2** (on `98bbdd1`): **no live-safety finding.** The reviewer confirmed:
+  - the drive and probe publish nothing unless their `*_LIVE` flag is set;
+  - the `server_name` interlock and office refusal both run before the first connection that publishes;
+  - credentials come from env only;
+  - every object id and sale id carries the run tag.
+
+  Fixed afterwards:
+  - An eviction could precede the same shopper's last sample; the comparison is now strict.
+  - Sold EPCs are now recorded per sale, not at the end, and the probe records its EPC.
+  - Live runs require an explicit tag.
+  - The probe's days-back value is bounded to 1..84.
+  - The gift persona's fixture draw now uses per-fixture streams.
+  - The watcher's prefix match now requires the tag separator and counts events with no object id.
+  - A short-basket warning was added.
+  - Doc drift was corrected.
 
 ## 5. Live smoke (one simulated hour, twin tenant, twin edge only)
 

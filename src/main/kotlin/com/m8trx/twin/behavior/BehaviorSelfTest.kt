@@ -37,6 +37,15 @@ fun main() {
     val (before, after) = m.stock.resetPair(base)
     log.info("behaviorSelfTest — site={} seed={} plans: published={} before={} after={}", site, base.seed, m.stock.published.id, before.id, after.id)
 
+    log.info(
+        "back corner ({}): {}",
+        m.world.fixturesIn(Placement.BACK_CORNER).size,
+        m.world.fixturesIn(Placement.BACK_CORNER).map {
+            it.code
+        }.sorted(),
+    )
+    log.info("entrance table: {}", m.world.fixturesIn(Placement.ENTRANCE_TABLE).map { it.code }.sorted())
+
     // ── 1. reconciliation, traffic shape (requirement 1) ──────────────────────────────────────────────────
     log.info("[1] traffic and reconciliation — published plan, seeded week")
     val week = (0L until 7L).map { m.runDay(WEEK_START.plusDays(it), PlanTimeline.single(m.stock.published), base.seed) }

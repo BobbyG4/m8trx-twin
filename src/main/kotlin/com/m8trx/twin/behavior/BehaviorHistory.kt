@@ -74,7 +74,7 @@ fun main() {
     val (before, after) = m.stock.resetPair(m.params)
     val timeline = PlanTimeline(listOf(m.at(plan.start, 0) to before, m.at(plan.reset, 0) to after))
     log.info("history (RECORD) site={} {}..{} reset {} seed={} scale={}", site, plan.start, plan.end, plan.reset, m.params.seed, scale)
-    log.info("  plans {} → {}", before.id, after.id)
+    log.info("  plans {} → {}; a LIVE backfill of this window must finish within {} days of wall time", before.id, after.id, plan.wallMarginDays)
 
     // Reconciliation is the calibration gate for the BASELINE plan. After the reset the plan is meant to move
     // conversion and basket value — that lift is the effect being simulated, so post-reset days are reported,

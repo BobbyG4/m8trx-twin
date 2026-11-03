@@ -65,8 +65,9 @@ data class ShopperRecord(
  * therefore a cell this shopper handled at that fixture, and impressions, engagement and sales for a fixture all
  * come from the same people, so a correlation in the data is real.
  *
- * Determinism: the agent owns one [Random] seeded from (run seed, date, arrival index) and draws from nothing
- * else, so the same inputs replay to the sample.
+ * Determinism: the agent is handed one [Random] seeded from (run seed, date, arrival index), takes one seed from
+ * it, and derives a separate stream per decision from that seed (see `run`), so the same inputs replay to the
+ * sample and a change at one fixture re-randomises only that fixture's decisions.
  */
 class ShopperAgent(
     private val world: StoreWorld,
@@ -117,7 +118,7 @@ class ShopperAgent(
         }
 
         if (persona == "gift") {
-            t = giftGrab(id, pres, t, stream("gift"), sink, visits, lines)
+            t = giftGrab(id, pres, t, stream("gift"), ::stream, sink, visits, lines)
         } else {
             val target = if (persona == "mission" && categoryMix.isNotEmpty()) weightedPick(categoryMix, stream("target")) else null
             val stops = pickStops(persona, pres, target, stream("stops"), ::stream, ::noise)
@@ -269,6 +270,7 @@ class ShopperAgent(
         pres: Map<String, FixturePresentation>,
         start: Long,
         rng: Random,
+        stream: (String) -> Random,
         sink: SampleSink?,
         visits: MutableList<Visit>,
         lines: MutableList<SoldLine>,
@@ -278,7 +280,7 @@ class ShopperAgent(
                 !pres.getValue(it.code).isEmpty
         }
         if (stocked.isEmpty()) return start
-        val f = stocked.maxBy { rng.nextDouble().pow(1.0 / pres.getValue(it.code).contentAppeal) }
+        val f = stocked.maxBy { stream("gift:${it.code}").nextDouble().pow(1.0 / pres.getValue(it.code).contentAppeal) }
         val p = pres.getValue(f.code)
         val idx = considered(p.cells, rng).first()
         val end = episode(id, f, GRAB_MS, start, rng, sink)
