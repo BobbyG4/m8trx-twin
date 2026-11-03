@@ -318,7 +318,16 @@ private fun java.util.Random.asKotlinRandom(): KRandom = KRandom(this.nextLong()
  * between departments, it does not appear or vanish.
  */
 class StoreCatalog(private val skus: List<Sku>, private val departmentWeights: Map<String, Double> = emptyMap()) {
-    data class Sku(val itemCd: String, val ean: String, val priceUsd: Double, val department: String, val fixture: String, val category: String)
+    data class Sku(
+        val itemCd: String,
+        val ean: String,
+        val priceUsd: Double,
+        val department: String,
+        val fixture: String,
+        val category: String,
+        /** Style (`handle` in `assortment.csv`) — sizes of one style share it. Read by the behavior model's size runs. */
+        val handle: String = "",
+    )
 
     private val byCategory: Map<String, List<Sku>> = skus.groupBy { it.category }
 

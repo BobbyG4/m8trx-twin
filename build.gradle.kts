@@ -530,3 +530,25 @@ tasks.register<Sync>("liveDist") {
     from(configurations.named("runtimeClasspath"))
     into(System.getenv("M8TRX_LIVE_DIST") ?: layout.buildDirectory.dir("live-dist").get().asFile.path)
 }
+
+// ── TWIN-REQ-007 shopper behavior (behavior/) ─────────────────────────────────────────────────────────
+// Shopper agents whose impressions, dwell, engagement and sales all come from the same person and respond to
+// what is on each fixture (the six truths, reference/data/behavior/<site>.json). Offline unless a *_LIVE flag.
+fun behaviorTask(name: String, main: String, desc: String) = tasks.register<JavaExec>(name) {
+    group = "verification"
+    description = desc
+    mainClass.set(main)
+    classpath = sourceSets["main"].runtimeClasspath
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+
+behaviorTask(
+    "behaviorSelfTest",
+    "com.m8trx.twin.behavior.BehaviorSelfTestKt",
+    "Offline: determinism, the six truths (off/on/doubled), sales per cell, plan-reset before/after, oracle = trace, reconciliation.",
+)
+behaviorTask(
+    "behaviorHistory",
+    "com.m8trx.twin.behavior.BehaviorHistoryKt",
+    "RECORD mode: 8–12 weeks of seeded history with the scripted reset ~6 weeks back, written to build/behavior/. Sends nothing.",
+)
