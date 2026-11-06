@@ -278,6 +278,8 @@ object DatedStream {
         }
 
         val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
+        // CORE-REQ-007: every pricing_update that lands is remembered (PriceMemory), so the sales can be priced from it.
+        val memoryFile = PriceMemory.file(soldLog)
         val items: List<Item> = (sales.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
         val now = Instant.now()
@@ -327,6 +329,11 @@ object DatedStream {
                     streak = 0
                     append(sentFile, item.id)
                     if (item is SaleItem) item.s.epcs.forEach { appendSold(soldLog, it) }
+                    if (item is OpItem) {
+                        (item.body as? PricingUpdate)?.let {
+                            PriceMemory.entryOf(item.id, item.at, it)
+                        }?.let { PriceMemory.record(memoryFile, it) }
+                    }
                 }
 
                 is ConnectResponse.Err -> {

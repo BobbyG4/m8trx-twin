@@ -168,6 +168,12 @@ private fun fire(
             val sk = skus[rng.nextInt(skus.size)]
             val update = pricingUpdateFor(sk, rng)
             val resp = driver.pushPricing(update, WebhookClient.AuthMode.API_KEY)
+            // Remembered like the dated stream's, so a later dated sale of this unit carries the price set here (CORE-REQ-007).
+            if (resp is ConnectResponse.Ok) {
+                PriceMemory.entryOf(id, Instant.parse(now), update)?.let {
+                    PriceMemory.record(PriceMemory.file(soldLog), it)
+                }
+            }
             logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->${update.priceMinor}", resp)
         }
 
