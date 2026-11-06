@@ -254,9 +254,12 @@ private fun dtoCasingRoundTrip() {
     }
     val catByGtin = ConnectMappers.snake.writeValueAsString(ProductCatalogItem("5391035", "Quechua MH500", gtin = "3608392174988"))
     check(catByGtin.contains("\"gtin\":\"3608392174988\"")) { "product_catalog must carry gtin: $catByGtin" }
-    check(ConnectMappers.snake.writeValueAsString(PricingUpdate("SKU-1", 2999)).contains("\"price_minor\"")) {
-        "pricing_update must serialize price_minor"
-    }
+    val priced = ConnectMappers.snake.writeValueAsString(PricingUpdate("SKU-1", 2999))
+    check(priced.contains("\"price_minor\":2999")) { "pricing_update must serialize price_minor: $priced" }
+    // CORE-REQ-007: every pricing_update names its currency, and it is the catalog's — a price_minor sent bare is
+    // read as US cents whatever it was, which is how 81,000 won became 810.00 USD.
+    check(priced.contains("\"currency\":\"USD\"")) { "pricing_update must carry currency USD on every event: $priced" }
+    check(pricedByGtin.contains("\"currency\":\"USD\"")) { "pricing_update keyed by gtin must carry currency too: $pricedByGtin" }
 
     val ctrlReq = CreateIntegrationRequest(
         name = "posfeed",
@@ -444,8 +447,8 @@ private fun dryRunAndFormatterChecks() {
     check(keyJson.contains("scan:submit")) { "api-key dry-run must contain the requested scopes: $keyJson" }
 
     val csv = SftpDropDriver.pricingUpdatesCsv(listOf("SKU-1" to 1999L, "SKU-2" to 2999L))
-    check(csv.startsWith("sku,price_minor\r\n")) { "SFTP CSV must have a header row: $csv" }
-    check(csv.contains("SKU-1,1999\r\n")) { "SFTP CSV must contain the data row: $csv" }
+    check(csv.startsWith("sku,price_minor,currency\r\n")) { "SFTP CSV must have a header row with currency: $csv" }
+    check(csv.contains("SKU-1,1999,USD\r\n")) { "SFTP CSV must carry the currency on every data row: $csv" }
 
     val quoted = SftpDropDriver.toCsv(listOf("a", "b"), listOf(listOf("x,y", "he said \"hi\"")))
     check(quoted.contains("\"x,y\"")) { "SFTP CSV must quote comma fields: $quoted" }
