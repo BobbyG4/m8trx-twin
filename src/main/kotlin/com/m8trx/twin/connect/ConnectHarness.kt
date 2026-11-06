@@ -79,6 +79,7 @@ fun main() {
     multiStoreMoves()
     restockMovesPlan()
     receiveStockPlan()
+    pricingUnitsGuard()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 

@@ -21,11 +21,12 @@ import kotlin.random.Random
  * All four §8 inbound ingesters:
  *   - SALE     sale_event by EPC (NoScope -> item band -> the item's own site PROCESSES -> SOLD)
  *   - RESTOCK  shipment_manifest to the store's real site_id (partly closes the inventory loop)
- *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, store-currency minor units
+ *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, in USD cents (the platform
+ *              catalog's currency — never the store's local price; see [Sku.priceMinor])
  *   - CATALOG  product_catalog — idempotent re-assert of a real SKU's name (exercises the pipe, no pollution)
  *
  * Data (under M8TRX_CHAIN_DIR): site_ids.csv (store_code -> site_id), per-store assortment.csv
- * (item_cd / name_en / price_local / currency), per-store epcs.csv (floor EPCs). Sales draw EPCs
+ * (item_cd / name_en / price_usd), per-store epcs.csv (floor EPCs). Sales draw EPCs
  * without replacement + persist to the shared sold-log; restock/pricing/catalog reuse SKUs.
  *
  * Env: M8TRX_ACTIVITY_STORES (csv of codes; default all), M8TRX_ACTIVITY_COUNT (60),
@@ -47,8 +48,25 @@ private data class Store(val code: String, val siteId: String)
  * [itemCd] is Decathlon's supplier **style code** and is NOT unique: `5391035` is one shoe in two sizes at
  * two prices. This record used to be deduped on [itemCd], which silently dropped the second variant and
  * left twin emitting a style code the platform then applied to both product rows.
+ *
+ * [priceMinor] is the unit's **list price in USD cents** (`price_usd` × 100): the currency every product row on
+ * the platform carries, and the unit `pricing_update.price_minor` is read in. It is NOT the store's local price.
+ * Until 2026-11-07 it was `price_local` in the store currency's minor unit (whole won for the two Korean stores),
+ * sent with no currency field and read by the platform as cents: 81,000 KRW arrived as $810.00, 9.45×–16.10× list
+ * on 119 Decathlon SKUs (reset to list by core mig 310a; CORE-REQ-007).
  */
 internal data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
+
+/** The churn band of a `pricing_update`: a markdown or markup between 70 % and 120 % of list. */
+internal const val CHURN_MIN = 0.7
+internal const val CHURN_MAX = 1.2
+
+/** A churned price for [sk]: [CHURN_MIN]..[CHURN_MAX] × list, in USD cents, never below one cent. */
+internal fun churnedPriceMinor(sk: Sku, rng: Random): Long =
+    (sk.priceMinor * (CHURN_MIN + rng.nextDouble() * (CHURN_MAX - CHURN_MIN))).toLong().coerceAtLeast(1)
+
+/** The `pricing_update` the twin sends for [sk]: a churned USD-cents price, keyed on sku + gtin. */
+internal fun pricingUpdateFor(sk: Sku, rng: Random): PricingUpdate = PricingUpdate(sk.itemCd, churnedPriceMinor(sk, rng), gtin = sk.ean)
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
 
@@ -148,9 +166,9 @@ private fun fire(
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
             val sk = skus[rng.nextInt(skus.size)]
-            val churned = (sk.priceMinor * (0.7 + rng.nextDouble() * 0.5)).toLong().coerceAtLeast(1)
-            val resp = driver.pushPricing(PricingUpdate(sk.itemCd, churned, gtin = sk.ean), WebhookClient.AuthMode.API_KEY)
-            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->$churned", resp)
+            val update = pricingUpdateFor(sk, rng)
+            val resp = driver.pushPricing(update, WebhookClient.AuthMode.API_KEY)
+            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->${update.priceMinor}", resp)
         }
 
         Activity.CATALOG -> {
@@ -196,7 +214,7 @@ private fun loadStores(file: Path): List<Store> {
     }
 }
 
-/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, price as store-currency minor units). */
+/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, list price as USD cents from `price_usd`). */
 internal fun loadAssortment(file: Path): List<Sku> {
     if (!Files.exists(file)) return emptyList()
     val lines = Files.readAllLines(file)
@@ -205,8 +223,9 @@ internal fun loadAssortment(file: Path): List<Sku> {
     val iItem = h.indexOf("item_cd")
     val iEan = h.indexOf("ean")
     val iName = h.indexOf("name_en")
-    val iPrice = h.indexOf("price_local")
-    val iCcy = h.indexOf("currency")
+    // price_usd, NOT price_local: the platform's catalog is priced in USD and reads price_minor as cents. The
+    // store's local price (EUR, KRW) is for the shelf label, not the wire — CORE-REQ-007.
+    val iPrice = h.indexOf("price_usd")
     if (iItem < 0 || iEan < 0 || iName < 0 || iPrice < 0) return emptyList()
     // Dedupe on EAN, the sellable unit — NOT on item_cd. item_cd is a supplier STYLE code and deduping on
     // it dropped `5391035`'s second size entirely, so twin could not address the $109 variant at all while
@@ -229,8 +248,7 @@ internal fun loadAssortment(file: Path): List<Sku> {
             blankSku++
             continue
         }
-        val ccy = if (iCcy in c.indices) c[iCcy].trim() else "USD"
-        out.add(Sku(itemCd, ean, c[iName].trim(), priceToMinor(price, ccy)))
+        out.add(Sku(itemCd, ean, c[iName].trim(), usdCents(price)))
     }
     if (blankSku >
         0
@@ -240,11 +258,8 @@ internal fun loadAssortment(file: Path): List<Sku> {
     return out
 }
 
-/** Minor units: zero-decimal currencies (KRW/JPY) x1, everything else x100. */
-private fun priceToMinor(price: Double, currency: String): Long {
-    val factor = if (currency.uppercase() in setOf("KRW", "JPY")) 1.0 else 100.0
-    return (price * factor).toLong().coerceAtLeast(1)
-}
+/** A `price_usd` as USD cents (the platform's minor unit), rounded, never below one cent. */
+internal fun usdCents(priceUsd: Double): Long = Math.round(priceUsd * 100).coerceAtLeast(1)
 
 /** Minimal RFC-4180-ish splitter — handles double-quoted fields + escaped quotes (names with commas). */
 private fun splitCsv(line: String): List<String> {
