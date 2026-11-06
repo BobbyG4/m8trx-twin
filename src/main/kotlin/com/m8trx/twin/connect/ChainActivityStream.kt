@@ -169,8 +169,9 @@ private fun fire(
             val update = pricingUpdateFor(sk, rng)
             val resp = driver.pushPricing(update, WebhookClient.AuthMode.API_KEY)
             // Remembered like the dated stream's, so a later dated sale of this unit carries the price set here (CORE-REQ-007).
+            // The id carries the send time: a fixed M8TRX_RUN_ID (.env sets one) repeats `<runId>-pricing-<seq>` across runs.
             if (resp is ConnectResponse.Ok) {
-                PriceMemory.entryOf(id, Instant.parse(now), update)?.let {
+                PriceMemory.entryOf("$id@$now", Instant.parse(now), update)?.let {
                     PriceMemory.record(PriceMemory.file(soldLog), it)
                 }
             }

@@ -22,7 +22,7 @@ import java.time.Instant
  *
  * File: `id,at,ean,sku,price_minor,currency` — `at` is the update's planned moment (the dated stream's clock, the same
  * clock its sales' `occurred_at` is on). Lines are appended only after the platform answered 200. Duplicate ids keep
- * the first line. Nothing else is ever written.
+ * the first line. Only `USD` lines price a sale (the catalog's currency); nothing else is ever written.
  */
 internal object PriceMemory {
     data class Entry(val id: String, val at: Instant, val ean: String, val sku: String, val priceMinor: Long, val currency: String)
@@ -53,4 +53,22 @@ internal object PriceMemory {
 
     /** The memory line for an update sent at planned moment [at]; null when it carries no gtin (it cannot price a unit). */
     fun entryOf(id: String, at: Instant, p: PricingUpdate): Entry? = p.gtin?.let { Entry(id, at, it, p.sku, p.priceMinor, p.currency) }
+}
+
+/** The price of a unit at a moment: the last `pricing_update` in force, else its list price (`price_usd` cents). */
+internal class PriceBook(private val listCents: Map<String, Long>, entries: List<PriceMemory.Entry>) {
+    enum class Source { PRICING_UPDATE, LIST }
+
+    data class Price(val minor: Long, val source: Source)
+
+    private val changes: Map<String, List<PriceMemory.Entry>> = entries.asSequence()
+        .filter { it.currency == CATALOG_CURRENCY }
+        .distinctBy { it.id }
+        .groupBy { it.ean }
+        .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
+
+    fun at(ean: String, t: Instant): Price? = changes[ean]?.lastOrNull { !it.at.isAfter(t) }?.let { Price(it.priceMinor, Source.PRICING_UPDATE) }
+        ?: listCents[ean]?.let { Price(it, Source.LIST) }
+
+    fun list(ean: String): Long? = listCents[ean]
 }
