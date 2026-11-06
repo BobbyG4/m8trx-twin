@@ -71,6 +71,7 @@ fun main() {
     readPlaneCaps()
     fullLoopPlan()
     stressPlan()
+    pricingUnitsGuard()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
