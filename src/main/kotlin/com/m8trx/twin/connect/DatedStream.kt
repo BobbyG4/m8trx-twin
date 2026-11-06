@@ -407,8 +407,10 @@ object DatedStream {
             if (skus.isNotEmpty()) {
                 repeat(pricings) { k ->
                     val sk = skus[rng.nextInt(skus.size)]
-                    val churned = (sk.priceMinor * (0.7 + rng.nextDouble() * 0.5)).toLong().coerceAtLeast(1)
-                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", PricingUpdate(sk.itemCd, churned, gtin = sk.ean))
+                    // The one churn function (USD cents off price_usd, 70-120 % of list, currency USD). Drawn before
+                    // at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
+                    val update = pricingUpdateFor(sk, rng)
+                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", update)
                 }
                 repeat(catalogs) { k ->
                     val sk = byEan.values.elementAt(rng.nextInt(byEan.size))
