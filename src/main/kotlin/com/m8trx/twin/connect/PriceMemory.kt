@@ -7,7 +7,7 @@ import java.time.Instant
 
 /**
  * The twin's memory of the prices it has set (CORE-REQ-007): every `pricing_update` the platform accepts is one line of
- * `.twin-state/pricing-sent.csv`, for the sales to be priced from (the sale side lands separately, CORE-REQ-007 part B).
+ * `.twin-state/pricing-sent.csv`, and every sale is priced from the last one in force at the sale's moment.
  *
  * Without it the churn was memoryless: the platform recorded each `pricing_update` as the product's price from that
  * moment (core mig 310), while a sale priced from the CSV carried list, so the core's history and the twin's till disagreed
@@ -17,7 +17,7 @@ import java.time.Instant
  * has its own currency, and the platform carries it at the sale (`sale_line.unit_price` + `currency`, `price_source` `till`).
  * A line keeps both halves of one change: the catalog's update as sent (`price_minor` USD cents, `currency` USD, the
  * product's single base price) and the store's new local price (`local_minor` in the ISO 4217 minor unit of
- * `local_currency`), moved by the same factor. A sale will read only the local half, and only for its own store.
+ * `local_currency`), moved by the same factor. A sale reads only the local half, and only for its own store.
  *
  * File: `id,at,store,ean,sku,price_minor,currency,local_minor,local_currency`. `at` is the update's planned moment (the dated
  * stream's clock, the clock its sales' `occurred_at` is on). Lines are appended only after the platform answered 200.
@@ -70,5 +70,33 @@ internal object PriceMemory {
     /** The memory line for [churn] at [store], planned at [at]; null when the update carries no gtin (it cannot price a unit). */
     fun entryOf(id: String, at: Instant, store: String, churn: Churn): Entry? = churn.update.gtin?.let {
         Entry(id, at, store, it, churn.update.sku, churn.update.priceMinor, churn.update.currency, churn.localMinor, churn.localCurrency)
+    }
+}
+
+/**
+ * The price a store's till charges for a unit at a moment, in the store's own currency: the last change remembered for that
+ * store and EAN, else its list price there (`price_local`). Keyed on (store, EAN); one store's change never prices another's sale.
+ */
+internal class PriceBook(private val list: Map<Pair<String, String>, Price>, entries: List<PriceMemory.Entry>) {
+    enum class Source { PRICING_UPDATE, LIST }
+
+    /** One unit's price: [minor] in the ISO 4217 minor unit of [currency]. */
+    data class Price(val minor: Long, val currency: String, val source: Source = Source.LIST)
+
+    private val changes: Map<Pair<String, String>, List<PriceMemory.Entry>> = entries.asSequence()
+        .distinctBy { it.id }
+        // A line in another currency than the store's list never prices its till (a store sells in one currency).
+        .filter { e -> list[e.store to e.ean]?.currency == e.localCurrency }
+        .groupBy { it.store to it.ean }
+        .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
+
+    fun at(store: String, ean: String, t: Instant): Price? = changes[store to ean]?.lastOrNull { !it.at.isAfter(t) }
+        ?.let { Price(it.localMinor, it.localCurrency, Source.PRICING_UPDATE) }
+        ?: list[store to ean]
+
+    companion object {
+        /** The list side of a book from loaded assortments: (store, EAN) → the store's own list price. */
+        fun listOf(byStore: Map<String, List<Sku>>): Map<Pair<String, String>, Price> =
+            byStore.flatMap { (store, skus) -> skus.map { (store to it.ean) to Price(it.localMinor, it.localCurrency) } }.toMap()
     }
 }
