@@ -82,6 +82,7 @@ fun main() {
     pricingUnitsGuard()
     datedPricingGuard()
     saleTillPriceGuard()
+    saleCurrencyIsStoresGuard()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 

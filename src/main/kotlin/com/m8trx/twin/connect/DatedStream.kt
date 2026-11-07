@@ -187,34 +187,40 @@ object DatedStream {
     /**
      * One event's worth of a receipt: the units of [sale] that sold at one price (CORE-REQ-007). [id] is the ledger id —
      * the sale's own id when the receipt has one price, `<saleId>#<n>` per price otherwise; the wire id is always the
-     * receipt's ([PlannedSale.saleId]), so the platform numbers the lines across the parts. [priceMinor] null = a unit
-     * the twin has no price for (its EAN is not in the assortment): sent unpriced, the platform values it.
+     * receipt's ([PlannedSale.saleId]), so the platform numbers the lines across the parts. [priceMinor] is in the ISO
+     * 4217 minor unit of [currency], the **store's own** (KRW whole won in Seoul, EUR cents in Paris, USD cents in Denver:
+     * the platform keeps it on `sale_line`, `till`). Null = a unit the twin has no price for (its EAN is not in the store's
+     * assortment): sent unpriced, the platform values it.
      */
     internal data class PricedPart(
         val sale: PlannedSale,
         val id: String,
         val epcs: List<String>,
         val priceMinor: Long?,
+        val currency: String?,
         val source: PriceBook.Source?,
     )
 
-    /** The wire shape of one part: the receipt's id and time, the part's units, one unit's price in USD cents + `currency`. */
-    internal fun toSaleEvent(part: PricedPart): SaleEvent = toSaleEvent(part.sale.saleId, part.sale.at, part.epcs).priced(part.priceMinor)
+    /** The wire shape of one part: the receipt's id and time, the part's units, one unit's price + `currency`, the store's. */
+    internal fun toSaleEvent(part: PricedPart): SaleEvent =
+        toSaleEvent(part.sale.saleId, part.sale.at, part.epcs).let { e -> part.currency?.let { e.priced(part.priceMinor, it) } ?: e }
 
     /**
-     * Price every unit of [s] at its moment from [book] (the last `pricing_update` in force, else list) and split the
-     * receipt into one part per price, in first-appearance order. Pure: the same plan, memory and book give the same parts.
+     * Price every unit of [s] at its moment from [book], at the sale's own store (the last change remembered there, else
+     * the store's list price, in its currency) and split the receipt into one part per price, in first-appearance order.
+     * Pure: the same plan, memory and book give the same parts.
      */
     internal fun priceSale(s: PlannedSale, eanByEpc: Map<String, String>, book: PriceBook): List<PricedPart> {
-        val priced = s.epcs.map { epc -> epc to eanByEpc[epc]?.let { book.at(it, s.at) } }
-        val groups = LinkedHashMap<Long?, MutableList<Pair<String, PriceBook.Price?>>>()
-        priced.forEach { (epc, p) -> groups.getOrPut(p?.minor) { ArrayList() } += epc to p }
-        return groups.entries.mapIndexed { i, (minor, units) ->
+        val priced = s.epcs.map { epc -> epc to eanByEpc[epc]?.let { book.at(s.store, it, s.at) } }
+        val groups = LinkedHashMap<Pair<Long, String>?, MutableList<Pair<String, PriceBook.Price?>>>()
+        priced.forEach { (epc, p) -> groups.getOrPut(p?.let { it.minor to it.currency }) { ArrayList() } += epc to p }
+        return groups.entries.mapIndexed { i, (price, units) ->
             PricedPart(
                 sale = s,
                 id = if (groups.size == 1) s.saleId else "${s.saleId}#${i + 1}",
                 epcs = units.map { it.first },
-                priceMinor = minor,
+                priceMinor = price?.first,
+                currency = price?.second,
                 // A part mixes sources only when an update and the list agree to the cent; name the update then.
                 source = units.mapNotNull { it.second?.source }.minByOrNull { it.ordinal },
             )
@@ -245,7 +251,15 @@ object DatedStream {
         override val store get() = part.sale.store
     }
 
-    internal data class OpItem(override val at: Instant, override val id: String, override val store: String, val kind: String, val body: Any) : Item
+    /** A planned op; a pricing op also carries its [churn] (the catalog's update plus the store's new local price). */
+    internal data class OpItem(
+        override val at: Instant,
+        override val id: String,
+        override val store: String,
+        val kind: String,
+        val body: Any,
+        val churn: Churn? = null,
+    ) : Item
 
     fun run(defaultStores: List<String>, chainOps: Boolean) {
         val date = LocalDate.parse(System.getenv("M8TRX_STREAM_DATE"))
@@ -327,12 +341,16 @@ object DatedStream {
         }
 
         val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
-        // CORE-REQ-007: every unit sells at the price the twin last set for it — the memory of sent updates plus this
-        // run's planned ones, on the plan's clock — else at list (price_usd cents). One event per price per receipt.
+        // CORE-REQ-007: every unit sells at the price its store last set for it, in the store's currency — the memory of
+        // sent updates plus this run's planned ones, on the plan's clock — else at the store's list (price_local). One
+        // event per price per receipt. The pricing_update itself stays the catalog's USD base price.
         val memoryFile = PriceMemory.file(soldLog)
         val remembered = PriceMemory.read(memoryFile)
-        val plannedPrices = ops.mapNotNull { op -> (op.body as? PricingUpdate)?.let { PriceMemory.entryOf(op.id, op.at, it) } }
-        val book = PriceBook(stores.flatMap { listCentsOf(chainDir, it).entries }.associate { it.key to it.value }, remembered + plannedPrices)
+        val plannedPrices = ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } }
+        val book = PriceBook(
+            PriceBook.listOf(stores.associateWith { loadAssortment(chainDir.resolve("stores/$it/assortment.csv")) }),
+            remembered + plannedPrices,
+        )
         val eanByEpc = stores.flatMap { loadEpcRows(chainDir.resolve("stores/$it/epcs.csv")) }.associate { it.epc to it.ean }
         // A unit already in the sold-log never goes on the wire again, whatever ids the split gives a receipt this run
         // (a book that changed between passes can re-split a partly sent receipt; the platform refuses a sold EPC).
@@ -389,9 +407,7 @@ object DatedStream {
                     append(sentFile, item.id)
                     if (item is SaleItem) item.part.epcs.forEach { appendSold(soldLog, it) }
                     if (item is OpItem) {
-                        (item.body as? PricingUpdate)?.let {
-                            PriceMemory.entryOf(item.id, item.at, it)
-                        }?.let { PriceMemory.record(memoryFile, it) }
+                        item.churn?.let { PriceMemory.entryOf(item.id, item.at, item.store, it) }?.let { PriceMemory.record(memoryFile, it) }
                     }
                 }
 
@@ -473,10 +489,10 @@ object DatedStream {
             if (skus.isNotEmpty()) {
                 repeat(pricings) { k ->
                     val sk = skus[rng.nextInt(skus.size)]
-                    // The one churn function (USD cents off price_usd, 70-120 % of list, currency USD). Drawn before
-                    // at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
-                    val update = pricingUpdateFor(sk, rng)
-                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", update)
+                    // The one churn function: one factor moves the catalog's USD-cents update and the store's own price. Drawn
+                    // before at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
+                    val churn = churnFor(sk, rng)
+                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", churn.update, churn)
                 }
                 repeat(catalogs) { k ->
                     val sk = byEan.values.elementAt(rng.nextInt(byEan.size))
@@ -488,17 +504,15 @@ object DatedStream {
         return out
     }
 
-    /** A store's list prices by EAN, in USD cents (`price_usd` through the loader). */
-    internal fun listCentsOf(chainDir: Path, store: String): Map<String, Long> =
-        loadAssortment(chainDir.resolve("stores/$store/assortment.csv")).associate { it.ean to it.priceMinor }
-
     /** What the day's sales will carry: priced from an update · at list · unpriced, and how many receipts split by price. */
     private fun logPriceCoverage(receipts: Int, parts: List<PricedPart>, remembered: Int, planned: Int) {
         val units = parts.groupBy { it.source }.mapValues { (_, l) -> l.sumOf { it.epcs.size } }
+        val byCurrency = parts.groupingBy { it.currency ?: "none" }.eachCount().toSortedMap()
         log.info(
-            "PRICES: {} receipts → {} sale events ({} split by price) · units at the last pricing_update {} · at list {} · unpriced {} · memory {} sent + {} planned updates",
+            "PRICES: {} receipts → {} sale events {} ({} split by price) · units at the last pricing_update {} · at list {} · unpriced {} · memory {} sent + {} planned updates",
             receipts,
             parts.size,
+            byCurrency,
             parts.filter { it.id != it.sale.saleId }.map { it.sale.saleId }.distinct().size,
             units[PriceBook.Source.PRICING_UPDATE] ?: 0,
             units[PriceBook.Source.LIST] ?: 0,

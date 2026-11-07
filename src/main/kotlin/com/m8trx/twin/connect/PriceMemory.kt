@@ -1,33 +1,42 @@
 package com.m8trx.twin.connect
 
-import com.m8trx.twin.connect.model.webhook.CATALOG_CURRENCY
-import com.m8trx.twin.connect.model.webhook.PricingUpdate
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.time.Instant
 
 /**
- * The twin's memory of the prices it has set (CORE-REQ-007): every `pricing_update` it sends is one line of
+ * The twin's memory of the prices it has set (CORE-REQ-007): every `pricing_update` the platform accepts is one line of
  * `.twin-state/pricing-sent.csv`, and every sale is priced from the last one in force at the sale's moment.
  *
  * Without it the churn was memoryless: the platform recorded each `pricing_update` as the product's price from that
- * moment (core mig 310), while a sale priced from the CSV would carry the list price, so the core's price history and
- * the twin's till disagreed on every churned product.
+ * moment (core mig 310), while a sale priced from the CSV carried list, so the core's history and the twin's till disagreed
+ * on every churned product.
  *
- * **Chain-wide, keyed on the EAN (the `gtin` the update carries).** The platform's `pricing_update` sets the price of
- * every product row with that gtin, tenant-wide, not per store; and `price_usd` is the same for an EAN in every store
- * (0 of 2,586 EANs differ across the ten assortments, 2026-11-07). A per-store memory would price a Denver sale at list
- * after a Seoul update the platform applied to Denver too, which is the disagreement this exists to remove.
+ * **Per SKU and per store, in the store's own currency** (Bob's ruling, 2026-11-07, and CORE-REQ-007's text): each market
+ * has its own currency, and the platform carries it at the sale (`sale_line.unit_price` + `currency`, `price_source` `till`).
+ * A line keeps both halves of one change: the catalog's update as sent (`price_minor` USD cents, `currency` USD, the
+ * product's single base price) and the store's new local price (`local_minor` in the ISO 4217 minor unit of
+ * `local_currency`), moved by the same factor. A sale reads only the local half, and only for its own store.
  *
- * File: `id,at,ean,sku,price_minor,currency` — `at` is the update's planned moment (the dated stream's clock, the same
- * clock its sales' `occurred_at` is on). Lines are appended only after the platform answered 200. Duplicate ids keep
- * the first line. Only `USD` lines price a sale (the catalog's currency); nothing else is ever written.
+ * File: `id,at,store,ean,sku,price_minor,currency,local_minor,local_currency`. `at` is the update's planned moment (the dated
+ * stream's clock, the clock its sales' `occurred_at` is on). Lines are appended only after the platform answered 200.
+ * Duplicate ids keep the first line. Nothing else is ever written.
  */
 internal object PriceMemory {
-    data class Entry(val id: String, val at: Instant, val ean: String, val sku: String, val priceMinor: Long, val currency: String)
+    data class Entry(
+        val id: String,
+        val at: Instant,
+        val store: String,
+        val ean: String,
+        val sku: String,
+        val priceMinor: Long,
+        val currency: String,
+        val localMinor: Long,
+        val localCurrency: String,
+    )
 
-    private const val HEADER = "id,at,ean,sku,price_minor,currency"
+    private const val HEADER = "id,at,store,ean,sku,price_minor,currency,local_minor,local_currency"
 
     /** `M8TRX_PRICING_MEMORY`, else `pricing-sent.csv` beside the sold-log (`.twin-state/` by default). */
     fun file(soldLog: Path): Path = System.getenv("M8TRX_PRICING_MEMORY")?.takeIf { it.isNotBlank() }?.let { Path.of(it) }
@@ -35,40 +44,59 @@ internal object PriceMemory {
 
     fun read(file: Path): List<Entry> {
         if (!Files.exists(file)) return emptyList()
+        val lines = Files.readAllLines(file)
+        if (lines.firstOrNull()?.trim() != HEADER) return emptyList() // an older or foreign file never prices a sale
         val seen = HashSet<String>()
-        return Files.readAllLines(file).drop(1).mapNotNull { line ->
+        return lines.drop(1).mapNotNull { line ->
             val c = line.split(",")
-            if (c.size < 6 || !seen.add(c[0])) return@mapNotNull null
+            if (c.size < 9 || !seen.add(c[0])) return@mapNotNull null
             val at = runCatching { Instant.parse(c[1]) }.getOrNull() ?: return@mapNotNull null
-            val minor = c[4].toLongOrNull() ?: return@mapNotNull null
-            Entry(c[0], at, c[2], c[3], minor, c[5].trim())
+            val minor = c[5].toLongOrNull() ?: return@mapNotNull null
+            val local = c[7].toLongOrNull() ?: return@mapNotNull null
+            Entry(c[0], at, c[2], c[3], c[4], minor, c[6], local, c[8].trim())
         }
     }
 
     fun record(file: Path, e: Entry) {
         file.parent?.let { Files.createDirectories(it) }
         if (!Files.exists(file)) Files.writeString(file, "$HEADER\n", StandardOpenOption.CREATE)
-        Files.writeString(file, "${e.id},${e.at},${e.ean},${e.sku},${e.priceMinor},${e.currency}\n", StandardOpenOption.APPEND)
+        Files.writeString(
+            file,
+            "${e.id},${e.at},${e.store},${e.ean},${e.sku},${e.priceMinor},${e.currency},${e.localMinor},${e.localCurrency}\n",
+            StandardOpenOption.APPEND,
+        )
     }
 
-    /** The memory line for an update sent at planned moment [at]; null when it carries no gtin (it cannot price a unit). */
-    fun entryOf(id: String, at: Instant, p: PricingUpdate): Entry? = p.gtin?.let { Entry(id, at, it, p.sku, p.priceMinor, p.currency) }
+    /** The memory line for [churn] at [store], planned at [at]; null when the update carries no gtin (it cannot price a unit). */
+    fun entryOf(id: String, at: Instant, store: String, churn: Churn): Entry? = churn.update.gtin?.let {
+        Entry(id, at, store, it, churn.update.sku, churn.update.priceMinor, churn.update.currency, churn.localMinor, churn.localCurrency)
+    }
 }
 
-/** The price of a unit at a moment: the last `pricing_update` in force, else its list price (`price_usd` cents). */
-internal class PriceBook(private val listCents: Map<String, Long>, entries: List<PriceMemory.Entry>) {
+/**
+ * The price a store's till charges for a unit at a moment, in the store's own currency: the last change remembered for that
+ * store and EAN, else its list price there (`price_local`). Keyed on (store, EAN); one store's change never prices another's sale.
+ */
+internal class PriceBook(private val list: Map<Pair<String, String>, Price>, entries: List<PriceMemory.Entry>) {
     enum class Source { PRICING_UPDATE, LIST }
 
-    data class Price(val minor: Long, val source: Source)
+    /** One unit's price: [minor] in the ISO 4217 minor unit of [currency]. */
+    data class Price(val minor: Long, val currency: String, val source: Source = Source.LIST)
 
-    private val changes: Map<String, List<PriceMemory.Entry>> = entries.asSequence()
-        .filter { it.currency == CATALOG_CURRENCY }
+    private val changes: Map<Pair<String, String>, List<PriceMemory.Entry>> = entries.asSequence()
         .distinctBy { it.id }
-        .groupBy { it.ean }
+        // A line in another currency than the store's list never prices its till (a store sells in one currency).
+        .filter { e -> list[e.store to e.ean]?.currency == e.localCurrency }
+        .groupBy { it.store to it.ean }
         .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
 
-    fun at(ean: String, t: Instant): Price? = changes[ean]?.lastOrNull { !it.at.isAfter(t) }?.let { Price(it.priceMinor, Source.PRICING_UPDATE) }
-        ?: listCents[ean]?.let { Price(it, Source.LIST) }
+    fun at(store: String, ean: String, t: Instant): Price? = changes[store to ean]?.lastOrNull { !it.at.isAfter(t) }
+        ?.let { Price(it.localMinor, it.localCurrency, Source.PRICING_UPDATE) }
+        ?: list[store to ean]
 
-    fun list(ean: String): Long? = listCents[ean]
+    companion object {
+        /** The list side of a book from loaded assortments: (store, EAN) → the store's own list price. */
+        fun listOf(byStore: Map<String, List<Sku>>): Map<Pair<String, String>, Price> =
+            byStore.flatMap { (store, skus) -> skus.map { (store to it.ean) to Price(it.localMinor, it.localCurrency) } }.toMap()
+    }
 }
