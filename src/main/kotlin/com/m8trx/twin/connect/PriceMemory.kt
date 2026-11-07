@@ -15,8 +15,8 @@ import java.time.Instant
  *
  * **Per SKU and per store, in the store's own currency** (Bob's ruling, 2026-11-07, and CORE-REQ-007's text): each market
  * has its own currency, and the platform carries it at the sale (`sale_line.unit_price` + `currency`, `price_source` `till`).
- * A line keeps both halves of one change: the catalog's update as sent (`price_minor` USD cents, `currency` USD, the
- * product's single base price) and the store's new local price (`local_minor` in the ISO 4217 minor unit of
+ * A line keeps both halves of one change: the catalog's update as sent (`price_minor` in `currency`: EUR cents for the Decathlon
+ * tenant since CORE-REQ-008, USD before it, the product's single base price) and the store's new local price (`local_minor` in the ISO 4217 minor unit of
  * `local_currency`), moved by the same factor. A sale reads only the local half, and only for its own store.
  *
  * File: `id,at,store,ean,sku,price_minor,currency,local_minor,local_currency`. `at` is the update's planned moment (the dated
@@ -89,6 +89,19 @@ internal class PriceBook(private val list: Map<Pair<String, String>, Price>, ent
         .filter { e -> list[e.store to e.ean]?.currency == e.localCurrency }
         .groupBy { it.store to it.ean }
         .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
+
+    /** The catalog halves, keyed on the currency they were sent in: a USD memory line never answers an EUR question (CORE-REQ-008). */
+    private val sent: Map<Triple<String, String, String>, List<PriceMemory.Entry>> = entries.asSequence()
+        .distinctBy { it.id }
+        .groupBy { Triple(it.store, it.ean, it.currency) }
+        .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
+
+    /**
+     * Latent API (no production caller yet; today only the self-test reads it): the memory's catalog half is not what prices a
+     * sale, but anything that asks for it must ask per currency. The last base price (catalog half) sent for [store]/[ean] **in [currency]** at or before [t]; null when none was sent in that currency.
+     */
+    fun baseAt(store: String, ean: String, currency: String, t: Instant): Long? =
+        sent[Triple(store, ean, currency)]?.lastOrNull { !it.at.isAfter(t) }?.priceMinor
 
     fun at(store: String, ean: String, t: Instant): Price? = changes[store to ean]?.lastOrNull { !it.at.isAfter(t) }
         ?.let { Price(it.localMinor, it.localCurrency, Source.PRICING_UPDATE) }

@@ -22,8 +22,8 @@ import kotlin.random.Random
  * All four §8 inbound ingesters:
  *   - SALE     sale_event by EPC (NoScope -> item band -> the item's own site PROCESSES -> SOLD)
  *   - RESTOCK  shipment_manifest to the store's real site_id (partly closes the inventory loop)
- *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, in USD cents (the platform
- *              catalog's currency — never the store's local price; see [Sku.priceMinor])
+ *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, in the tenant's base currency (EUR for
+ *              Decathlon, CORE-REQ-008; the platform catalog's currency — never the store's local price; see [Sku.priceMinor])
  *   - CATALOG  product_catalog — idempotent re-assert of a real SKU's name (exercises the pipe, no pollution)
  *
  * Data (under M8TRX_CHAIN_DIR): site_ids.csv (store_code -> site_id), per-store assortment.csv
@@ -50,8 +50,9 @@ private data class Store(val code: String, val siteId: String)
  * two prices. This record used to be deduped on [itemCd], which silently dropped the second variant and
  * left twin emitting a style code the platform then applied to both product rows.
  *
- * [priceMinor] is the unit's **list price in USD cents** (`price_usd` × 100): the currency every product row on
- * the platform carries, and the unit `pricing_update.price_minor` is read in. It is NOT the store's local price.
+ * [priceMinor] is the unit's **base price in the tenant's currency** ([baseCurrency]): EUR cents from the French stores'
+ * `price_local` for the Decathlon tenant, `price_usd` × 100 for a USD tenant (see [BaseCatalog]); the unit
+ * `pricing_update.price_minor` is read in. It is NOT the store's local price. `price_usd` itself stays for the US tills only.
  * Until 2026-11-07 it was `price_local` in the store currency's minor unit (whole won for the two Korean stores),
  * sent with no currency field and read by the platform as cents: 81,000 KRW arrived as $810.00, 9.45×–16.10× list
  * on 119 Decathlon SKUs (reset to list by core mig 310a; CORE-REQ-007).
@@ -68,6 +69,8 @@ internal data class Sku(
     val priceMinor: Long,
     val localMinor: Long = priceMinor,
     val localCurrency: String = CATALOG_CURRENCY,
+    /** The currency [priceMinor] is in: the tenant's base currency ([BaseCatalog], CORE-REQ-008). */
+    val baseCurrency: String = CATALOG_CURRENCY,
 )
 
 /** The churn band of a `pricing_update`: a markdown or markup between 70 % and 120 % of list. */
@@ -83,11 +86,15 @@ internal data class Churn(val update: PricingUpdate, val localMinor: Long, val l
 /** A churn of [sk] by one [CHURN_MIN]..[CHURN_MAX] factor (ONE `nextDouble`, the draw the dated stream's ids rely on). */
 internal fun churnFor(sk: Sku, rng: Random): Churn {
     val f = CHURN_MIN + rng.nextDouble() * (CHURN_MAX - CHURN_MIN)
-    val usd = (sk.priceMinor * f).toLong().coerceAtLeast(1)
-    return Churn(PricingUpdate(sk.itemCd, usd, gtin = sk.ean), (sk.localMinor * f).toLong().coerceAtLeast(1), sk.localCurrency)
+    val base = (sk.priceMinor * f).toLong().coerceAtLeast(1)
+    return Churn(
+        PricingUpdate(sk.itemCd, base, gtin = sk.ean, currency = sk.baseCurrency),
+        (sk.localMinor * f).toLong().coerceAtLeast(1),
+        sk.localCurrency,
+    )
 }
 
-/** The `pricing_update` the twin sends for [sk]: a churned USD-cents price, keyed on sku + gtin. */
+/** The `pricing_update` the twin sends for [sk]: a churned base price in the tenant's currency, keyed on sku + gtin. */
 internal fun pricingUpdateFor(sk: Sku, rng: Random): PricingUpdate = churnFor(sk, rng).update
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
@@ -244,8 +251,8 @@ private fun loadStores(file: Path): List<Store> {
     }
 }
 
-/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, list price as USD cents from `price_usd`). */
-internal fun loadAssortment(file: Path): List<Sku> {
+/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, base price in [base]'s currency). */
+internal fun loadAssortment(file: Path, base: BaseCatalog = BaseCatalog.forFile(file)): List<Sku> {
     if (!Files.exists(file)) return emptyList()
     val lines = Files.readAllLines(file)
     if (lines.size < 2) return emptyList()
@@ -253,8 +260,8 @@ internal fun loadAssortment(file: Path): List<Sku> {
     val iItem = h.indexOf("item_cd")
     val iEan = h.indexOf("ean")
     val iName = h.indexOf("name_en")
-    // price_usd, NOT price_local: the platform's catalog is priced in USD and reads price_minor as cents. The
-    // store's local price (EUR, KRW) is for the shelf label, not the wire — CORE-REQ-007.
+    // price_usd is the column the rows are keyed on; the base price on the wire is the tenant's currency (EUR for
+    // Decathlon: the French stores' EUR figure, see BaseCatalog), never the store's local price in KRW — CORE-REQ-007/008.
     val iPrice = h.indexOf("price_usd")
     val iLocal = h.indexOf("price_local")
     val iCcy = h.indexOf("currency")
@@ -281,14 +288,15 @@ internal fun loadAssortment(file: Path): List<Sku> {
             continue
         }
         val usd = usdCents(price)
+        val basePrice = base.minorOf(ean, usd)
         // The store's own price for the till; a row without one sells at the USD list in USD.
         val ccy = c.getOrNull(iCcy)?.trim()?.uppercase()?.takeIf { it.length == 3 }
         val local = c.getOrNull(iLocal)?.trim()?.toDoubleOrNull()
         out.add(
             if (ccy != null && local != null) {
-                Sku(itemCd, ean, c[iName].trim(), usd, localMinor(local, ccy), ccy)
+                Sku(itemCd, ean, c[iName].trim(), basePrice, localMinor(local, ccy), ccy, base.currency)
             } else {
-                Sku(itemCd, ean, c[iName].trim(), usd)
+                Sku(itemCd, ean, c[iName].trim(), basePrice, usd, CATALOG_CURRENCY, base.currency)
             },
         )
     }
@@ -310,7 +318,10 @@ internal fun localMinor(price: Double, currency: String): Long {
 }
 
 /** Minimal RFC-4180-ish splitter — handles double-quoted fields + escaped quotes (names with commas). */
-private fun splitCsv(line: String): List<String> {
+private fun splitCsv(line: String): List<String> = csvCells(line)
+
+/** Minimal RFC-4180-ish splitter (shared with [BaseCatalog]). */
+internal fun csvCells(line: String): List<String> {
     val out = ArrayList<String>()
     val sb = StringBuilder()
     var inQuotes = false

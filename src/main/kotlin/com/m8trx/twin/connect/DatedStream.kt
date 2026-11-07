@@ -343,7 +343,7 @@ object DatedStream {
         val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
         // CORE-REQ-007: every unit sells at the price its store last set for it, in the store's currency — the memory of
         // sent updates plus this run's planned ones, on the plan's clock — else at the store's list (price_local). One
-        // event per price per receipt. The pricing_update itself stays the catalog's USD base price.
+        // event per price per receipt. The pricing_update itself is the catalog's base price in the tenant's currency (EUR for Decathlon, CORE-REQ-008).
         val memoryFile = PriceMemory.file(soldLog)
         val remembered = PriceMemory.read(memoryFile)
         val plannedPrices = ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } }
@@ -432,7 +432,8 @@ object DatedStream {
     /** One machine-readable line for `status/SIM-RUN-LOG.md` (day.sh greps for it). */
     private fun summaryLine(date: LocalDate, seed: Long, sales: Int, ops: Int, ok: Int, err: Int, held: Int, t0: Long) {
         log.info(
-            "SIM-RUN stream date={} seed={} sales={} ops={} sent_ok={} sent_err={} held_future={} wall={}", date, seed, sales, ops, ok, err, held,
+            "SIM-RUN stream date={} seed={} sales={} ops={} base={} sent_ok={} sent_err={} held_future={} wall={}", date, seed, sales, ops,
+            BaseCatalog.currencyFromEnv(), ok, err, held,
             fmt(
                 System.currentTimeMillis() - t0,
             ),
@@ -454,7 +455,15 @@ object DatedStream {
     /** `M8TRX_DAY_MANIFEST_LINES`: cap on manifest lines per store-day; unset or 0 = every sold line. */
     fun manifestMaxLines(): Int = System.getenv("M8TRX_DAY_MANIFEST_LINES")?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
 
-    internal fun plannedOps(plans: List<StorePlan>, sales: List<PlannedSale>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
+    internal fun plannedOps(
+        plans: List<StorePlan>,
+        sales: List<PlannedSale>,
+        chainDir: Path,
+        seed: Long,
+        runId: String,
+        baseCurrency: String = BaseCatalog.currencyFromEnv(),
+    ): List<OpItem> {
+        val base = BaseCatalog.of(chainDir, baseCurrency)
         val pricings = System.getenv("M8TRX_DAY_PRICINGS")?.toIntOrNull() ?: 2
         val catalogs = System.getenv("M8TRX_DAY_CATALOGS")?.toIntOrNull() ?: 1
         val siteIds = readSiteIds(chainDir.resolve("site_ids.csv"))
@@ -464,7 +473,7 @@ object DatedStream {
             val rng = Random(com.m8trx.twin.history.HistoryCsv.derive(seed, p.store, p.date, "ops"))
             val span = p.close.epochSecond - p.open.epochSecond
             fun at(): Instant = p.open.plusSeconds((span * rng.nextDouble()).toLong())
-            val skus = loadAssortment(chainDir.resolve("stores/${p.store}/assortment.csv"))
+            val skus = loadAssortment(chainDir.resolve("stores/${p.store}/assortment.csv"), base)
             val byEan = skus.associateBy { it.ean }
             // Restock what sold: the day's sold units by item code, rounded up to cases of 6 - 30 min after open.
             // Counted from the ALLOCATED plan (the EPCs that actually sell, substitutions included), the same count
@@ -489,7 +498,7 @@ object DatedStream {
             if (skus.isNotEmpty()) {
                 repeat(pricings) { k ->
                     val sk = skus[rng.nextInt(skus.size)]
-                    // The one churn function: one factor moves the catalog's USD-cents update and the store's own price. Drawn
+                    // The one churn function: one factor moves the catalog's base-price update and the store's own price. Drawn
                     // before at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
                     val churn = churnFor(sk, rng)
                     out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", churn.update, churn)
