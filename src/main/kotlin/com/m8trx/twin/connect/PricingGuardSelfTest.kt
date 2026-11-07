@@ -201,6 +201,173 @@ private fun readLocalIndependently(file: Path): Map<String, Pair<Long, String>> 
     return out
 }
 
+/** The one currency a store sells in, read from its assortment on its own. */
+private fun storeCurrency(store: String): String =
+    readLocalIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv")).values.map { it.second }.distinct().single()
+
+/**
+ * Every dated sale carries its price in its store's currency (CORE-REQ-007, Bob's ruling 2026-11-07): the book prices a
+ * store's till from that store's changes only, in its own currency; a receipt splits per price; the memory round-trips; a
+ * line in another currency than the store's never prices it; a sold unit is never re-sent.
+ */
+internal fun saleTillPriceGuard() {
+    if (!Files.isDirectory(GUARD_CHAIN.resolve("stores"))) {
+        log.warn("[SKIP] sale till-price guard — {} not found (run from repo root)", GUARD_CHAIN)
+        return
+    }
+    val t0 = Instant.parse("2026-11-07T01:00:00Z")
+    val list = mapOf(
+        ("seoul" to "EAN-A") to PriceBook.Price(13500, "KRW"),
+        ("seoul" to "EAN-B") to PriceBook.Price(27000, "KRW"),
+        ("paris" to "EAN-A") to PriceBook.Price(949, "EUR"),
+    )
+    val entries = listOf(
+        PriceMemory.Entry("u1", t0.plusSeconds(3600), "seoul", "EAN-A", "A", 800, "USD", 10800, "KRW"),
+        PriceMemory.Entry("u2", t0.plusSeconds(3600), "seoul", "EAN-B", "B", 1999, "USD", 1999, "USD"),
+    )
+    val book = PriceBook(list, entries)
+    val eans = mapOf("e1" to "EAN-A", "e2" to "EAN-B", "e3" to "EAN-A", "e4" to "EAN-X")
+    fun sale(id: String, store: String, at: Instant, vararg epcs: String) = DatedStream.PlannedSale(id, store, at, epcs.toList())
+    val before = DatedStream.priceSale(sale("r1", "seoul", t0, "e1", "e2", "e3"), eans, book)
+    check(before.map { Triple(it.id, it.priceMinor, it.currency) } == listOf(Triple("r1#1", 13500L, "KRW"), Triple("r1#2", 27000L, "KRW"))) {
+        "mixed prices split per price, at the store's list in its currency: $before"
+    }
+    check(before[0].epcs == listOf("e1", "e3")) { "one event carries both units of the one price: $before" }
+    val after = DatedStream.priceSale(sale("r2", "seoul", t0.plusSeconds(7200), "e1", "e3"), eans, book)
+    check(after.single().let { it.id == "r2" && it.priceMinor == 10800L && it.currency == "KRW" && it.source == PriceBook.Source.PRICING_UPDATE }) {
+        "after the store's change, its local price: $after"
+    }
+    val paris = DatedStream.priceSale(sale("r5", "paris", t0.plusSeconds(7200), "e1"), eans, book).single()
+    check(paris.priceMinor == 949L && paris.currency == "EUR") { "a Seoul change never prices a Paris sale: $paris" }
+    val bAfter = DatedStream.priceSale(sale("r3", "seoul", t0.plusSeconds(7200), "e2"), eans, book).single()
+    check(bAfter.priceMinor == 27000L && bAfter.currency == "KRW") { "a memory line in another currency than the store's never prices it: $bAfter" }
+    val unknown = DatedStream.priceSale(sale("r4", "seoul", t0, "e4"), eans, book).single()
+    check(unknown.priceMinor == null && !ConnectMappers.snake.writeValueAsString(DatedStream.toSaleEvent(unknown)).contains("price_minor")) {
+        "a unit the twin cannot price goes unpriced, never guessed: $unknown"
+    }
+    val wire = ConnectMappers.snake.writeValueAsString(DatedStream.toSaleEvent(before[1]))
+    check(wire.contains("\"external_sale_id\":\"r1\"") && wire.contains("\"price_minor\":27000") && wire.contains("\"currency\":\"KRW\"")) {
+        "a part goes under the receipt's id with price_minor + the store's currency: $wire"
+    }
+    check(DatedStream.alreadySent("r1#1", "r1", setOf("r1")) && !DatedStream.alreadySent("r1#1", "r1", setOf("r1#2"))) {
+        "a receipt sent whole before the split must never be re-sent as parts"
+    }
+    val resplit = DatedStream.unsoldParts(after + before, setOf("e1", "e2"))
+    check(resplit.map { it.id to it.epcs } == listOf("r2" to listOf("e3"), "r1#1" to listOf("e3"))) { "a sold EPC is never re-sent: $resplit" }
+
+    // ── the memory file ──
+    val dir = Files.createTempDirectory("twin-price-memory")
+    val mem = dir.resolve("pricing-sent.csv")
+    PriceMemory.record(mem, entries[0])
+    PriceMemory.record(mem, entries[0].copy(localMinor = 1))
+    PriceMemory.record(mem, PriceMemory.Entry("u3", t0.plusSeconds(9000), "seoul", "EAN-A", "A", 900, "USD", 12100, "KRW"))
+    val back = PriceMemory.read(mem)
+    check(back.map { it.id to it.localMinor } == listOf("u1" to 10800L, "u3" to 12100L)) { "memory round-trip, first line per id wins: $back" }
+    check(PriceBook(list, back).at("seoul", "EAN-A", t0.plusSeconds(9999))?.minor == 12100L) { "the last change in force prices the sale" }
+    val old = dir.resolve("old.csv")
+    Files.writeString(old, "id,at,ean,sku,price_minor,currency\nu1,$t0,EAN-A,A,800,USD\n")
+    check(PriceMemory.read(old).isEmpty()) { "a memory file of another shape never prices a sale" }
+    dir.toFile().deleteRecursively()
+
+    // ── one real day in Seoul, Paris and Denver: the store's currency, its minor unit, the price in force ──
+    val recent = RecentDay(chainDir = GUARD_CHAIN)
+    val samples = ArrayList<String>()
+    var events = 0
+    var units = 0
+    for (store in listOf("dec-kr-seoul", "dec-fr-paris", "dec-us-denver")) {
+        val (date, day) = (0L until 14L).map { LocalDate.of(2026, 10, 6).plusDays(it) }.firstNotNullOf { d -> recent.run(store, d)?.let { d to it } }
+        val rows = DatedStream.loadEpcRows(GUARD_CHAIN.resolve("stores/$store/epcs.csv"))
+        val plan = DatedStream.allocate(day, rows, emptySet(), "guard", DatedStream.loadCatalog(GUARD_CHAIN.resolve("stores/$store/assortment.csv")))
+        val ops = DatedStream.plannedOps(listOf(plan), plan.sales, GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard")
+        val planned = ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } }
+        val dayBook = PriceBook(PriceBook.listOf(mapOf(store to loadAssortment(GUARD_CHAIN.resolve("stores/$store/assortment.csv")))), planned)
+        val local = readLocalIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
+        val ccy = storeCurrency(store)
+        val eanByEpc = rows.associate { it.epc to it.ean }
+        for (s in plan.sales) {
+            val parts = DatedStream.priceSale(s, eanByEpc, dayBook)
+            check(parts.flatMap { it.epcs }.sorted() == s.epcs.sorted()) { "${s.saleId}: the parts must carry exactly the receipt's units: $parts" }
+            for (part in parts) {
+                val minor = checkNotNull(part.priceMinor) { "${part.id}: a $store unit went unpriced (its EAN is not in the assortment)" }
+                check(part.currency == ccy) { "${part.id}: sale currency ${part.currency}, $store sells in $ccy" }
+                for (epc in part.epcs) {
+                    val l = checkNotNull(local[eanByEpc.getValue(epc)]) { "${part.id}: no price_local" }
+                    check(minor <= 5 * l.first) { "${part.id}: price_minor $minor above 5× the store's list ${l.first} $ccy — a unit error" }
+                    check(minor == dayBook.at(store, eanByEpc.getValue(epc), s.at)?.minor) { "${part.id}: $minor is not the price in force" }
+                    units++
+                }
+                val json = ConnectMappers.snake.writeValueAsString(DatedStream.toSaleEvent(part))
+                check(json.contains("\"price_minor\":$minor") && json.contains("\"currency\":\"$ccy\"")) { "${part.id}: wire form $json" }
+                if (part === parts.first() && s === plan.sales.first()) {
+                    val major = java.math.BigDecimal.valueOf(minor).movePointLeft(java.util.Currency.getInstance(ccy).defaultFractionDigits)
+                    val ean = eanByEpc.getValue(part.epcs.first())
+                    val usd = readListCentsIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv")).getValue(ean)
+                    samples +=
+                        "$store $date ean $ean (catalog list $usd USD cents): {price_minor $minor, currency $ccy} → sale_line unit_price $major $ccy, price_source till"
+                }
+                events++
+            }
+        }
+        check(plan.sales.flatMap { it.epcs }.size == plan.units) { "$store: priced units off the plan" }
+    }
+    log.info(
+        "[PASS] sale till-price guard: {} priced sale events, {} units, each in its store's currency at the price in force; {}",
+        events,
+        units,
+        samples,
+    )
+}
+
+/**
+ * A sale's `currency` is always its store's (Bob's ruling, 2026-11-07): one open day in every store, every event priced
+ * in the currency that store's assortment sells in, never above 5× its list in that currency's minor unit.
+ */
+internal fun saleCurrencyIsStoresGuard() {
+    if (!Files.isDirectory(GUARD_CHAIN.resolve("stores"))) {
+        log.warn("[SKIP] sale currency guard — {} not found (run from repo root)", GUARD_CHAIN)
+        return
+    }
+    val recent = RecentDay(chainDir = GUARD_CHAIN)
+    val stores = Files.list(GUARD_CHAIN.resolve("stores")).use {
+        it.filter { d -> Files.isDirectory(d) }.map { d -> d.fileName.toString() }.sorted().toList()
+    }
+    val seen = sortedMapOf<String, String>()
+    var events = 0
+    for (store in stores) {
+        val day = (0L until 14L).map { LocalDate.of(2026, 10, 13).plusDays(it) }.firstNotNullOf { d -> recent.run(store, d) }
+        val rows = DatedStream.loadEpcRows(GUARD_CHAIN.resolve("stores/$store/epcs.csv"))
+        val plan = DatedStream.allocate(
+            day,
+            rows,
+            emptySet(),
+            "cur",
+            DatedStream.loadCatalog(GUARD_CHAIN.resolve("stores/$store/assortment.csv")),
+        )
+        val ops = DatedStream.plannedOps(listOf(plan), plan.sales, GUARD_CHAIN, RecentDay.HISTORY_SEED, "cur")
+        val book = PriceBook(
+            PriceBook.listOf(mapOf(store to loadAssortment(GUARD_CHAIN.resolve("stores/$store/assortment.csv")))),
+            ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } },
+        )
+        val ccy = storeCurrency(store)
+        val local = readLocalIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
+        val eanByEpc = rows.associate { it.epc to it.ean }
+        for (part in plan.sales.flatMap { DatedStream.priceSale(it, eanByEpc, book) }) {
+            check(part.currency == ccy) { "$store ${part.id}: sale currency ${part.currency}, the store sells in $ccy" }
+            val worst = part.epcs.maxOf { checkNotNull(local[eanByEpc.getValue(it)]).first }
+            check(checkNotNull(part.priceMinor) <= 5 * worst) { "$store ${part.id}: ${part.priceMinor} $ccy above 5× list" }
+            events++
+        }
+        seen[store] = ccy
+    }
+    check(seen.values.toSet() == setOf("KRW", "EUR", "USD")) { "the guard must cover all three markets: $seen" }
+    log.info(
+        "[PASS] sale currency guard: {} sale events over one day in each of {} stores, every one in its store's currency {}",
+        events,
+        stores.size,
+        seen,
+    )
+}
+
 /**
  * The memory of accepted updates (CORE-REQ-007): a planned churn's line carries the catalog's update as sent (USD cents,
  * USD) and the store's local price moved by the same factor, in the store's currency; it round-trips through the file,
