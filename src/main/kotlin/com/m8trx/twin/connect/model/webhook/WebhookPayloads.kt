@@ -75,10 +75,18 @@ data class ShipmentManifest(val externalShipmentId: String, val destinationSiteI
 data class ShipmentLine(val sku: String, val expectedQuantity: Int)
 
 /**
- * `pricing_update` — [sku] + [priceMinor] (integer minor units), plus [gtin].
+ * `pricing_update` — [sku] + [priceMinor] (integer minor units of [currency]), plus [gtin].
  *
  * The `gtin` matters more here than anywhere: `5391035`'s two sizes are priced **$80 and $109**, so a
  * pricing delivery keyed on the style code alone does not merely update two rows, it writes one variant's
  * price onto the other.
+ *
+ * [currency] goes on **every** update (Connect §8, 2026-11-06): with it the platform reads [priceMinor] by that
+ * currency's ISO 4217 exponent and refuses a mismatch with the product's currency; without it the number is read
+ * as US cents, which is how the won-as-cents prices of CORE-REQ-007 got in. It is not optional on the twin's side:
+ * the default is the platform catalog's currency, and nothing here sends another.
  */
-data class PricingUpdate(val sku: String, val priceMinor: Long, val gtin: String? = null)
+data class PricingUpdate(val sku: String, val priceMinor: Long, val gtin: String? = null, val currency: String = CATALOG_CURRENCY)
+
+/** The currency every product row on the platform carries, and the unit every `price_minor` the twin sends is in. */
+const val CATALOG_CURRENCY = "USD"
