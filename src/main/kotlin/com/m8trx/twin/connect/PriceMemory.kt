@@ -96,7 +96,10 @@ internal class PriceBook(private val list: Map<Pair<String, String>, Price>, ent
         .groupBy { Triple(it.store, it.ean, it.currency) }
         .mapValues { (_, l) -> l.sortedWith(compareBy({ it.at }, { it.id })) }
 
-    /** The last base price (catalog half) sent for [store]/[ean] **in [currency]** at or before [t]; null when none was sent in that currency. */
+    /**
+     * Latent API (no production caller yet; today only the self-test reads it): the memory's catalog half is not what prices a
+     * sale, but anything that asks for it must ask per currency. The last base price (catalog half) sent for [store]/[ean] **in [currency]** at or before [t]; null when none was sent in that currency.
+     */
     fun baseAt(store: String, ean: String, currency: String, t: Instant): Long? =
         sent[Triple(store, ean, currency)]?.lastOrNull { !it.at.isAfter(t) }?.priceMinor
 

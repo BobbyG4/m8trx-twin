@@ -18,19 +18,20 @@ internal const val CORE_EUR_USD_RATE = 1.1165
  * is one figure per EAN across the chain (2,586 of 2,586 EANs carry exactly one). It is NOT `price_usd` converted: the
  * core converted its catalog from USD at [CORE_EUR_USD_RATE] once, and the twin's feed must now put the EUR figure itself.
  * `price_usd` stays for the US tills (`sale_event`) and nothing else. An EAN no French store carries falls back to
- * `price_usd / [CORE_EUR_USD_RATE]` and is counted in the log (none today).
+ * `price_usd / [CORE_EUR_USD_RATE]` and is logged (the first, then every 500th); none today. The fallback is a stand-in, not a French shelf price.
  *
  * Zone prices (`pricing_update.price_zone`) wait for the core's zones round: nothing here sets one.
  */
 internal class BaseCatalog(val currency: String, private val eurMinor: Map<String, Long>) {
-    private var fallbacks = 0
+    private val fallbacks = java.util.concurrent.atomic.AtomicInteger()
 
     /** [ean]'s base price in [currency]'s minor unit, given its `price_usd` cents. */
     fun minorOf(ean: String, usdCents: Long): Long = when (currency) {
         "USD" -> usdCents
 
         "EUR" -> eurMinor[ean] ?: run {
-            if (fallbacks++ == 0) log.warn("EAN {} has no French EUR price: base = price_usd / {} (first of such)", ean, CORE_EUR_USD_RATE)
+            val n = fallbacks.incrementAndGet()
+            if (n == 1 || n % 500 == 0) log.warn("EAN {} has no French EUR price: base = price_usd / {} ({} such so far)", ean, CORE_EUR_USD_RATE, n)
             Math.round(usdCents / CORE_EUR_USD_RATE).coerceAtLeast(1)
         }
 
@@ -51,7 +52,10 @@ internal class BaseCatalog(val currency: String, private val eurMinor: Map<Strin
 
         private fun loadEur(chainDir: Path): Map<String, Long> {
             val stores = chainDir.resolve("stores")
-            if (!Files.isDirectory(stores)) return emptyMap()
+            // A wrong M8TRX_CHAIN_DIR (or a file outside `<chain>/stores/<store>/assortment.csv`) must fail, not send every SKU a converted price.
+            check(Files.isDirectory(stores)) {
+                "EUR base: no $stores (M8TRX_CHAIN_DIR wrong, or the assortment is not under <chain>/stores/<store>/)"
+            }
             val out = HashMap<String, Long>()
             Files.list(stores).use { s -> s.sorted().toList() }.forEach { d ->
                 val f = d.resolve("assortment.csv")
