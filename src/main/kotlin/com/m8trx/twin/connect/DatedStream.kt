@@ -184,7 +184,7 @@ object DatedStream {
 
     // ── the run ───────────────────────────────────────────────────────────────
 
-    private sealed interface Item {
+    internal sealed interface Item {
         val at: Instant
         val id: String
         val store: String
@@ -196,7 +196,15 @@ object DatedStream {
         override val store get() = s.store
     }
 
-    private data class OpItem(override val at: Instant, override val id: String, override val store: String, val kind: String, val body: Any) : Item
+    /** A planned op; a pricing op also carries its [churn] (the catalog's update plus the store's new local price). */
+    internal data class OpItem(
+        override val at: Instant,
+        override val id: String,
+        override val store: String,
+        val kind: String,
+        val body: Any,
+        val churn: Churn? = null,
+    ) : Item
 
     fun run(defaultStores: List<String>, chainOps: Boolean) {
         val date = LocalDate.parse(System.getenv("M8TRX_STREAM_DATE"))
@@ -278,6 +286,8 @@ object DatedStream {
         }
 
         val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
+        // CORE-REQ-007: every pricing_update that lands is remembered per SKU and store (PriceMemory), for the sales to price from.
+        val memoryFile = PriceMemory.file(soldLog)
         val items: List<Item> = (sales.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
         val now = Instant.now()
@@ -327,6 +337,9 @@ object DatedStream {
                     streak = 0
                     append(sentFile, item.id)
                     if (item is SaleItem) item.s.epcs.forEach { appendSold(soldLog, it) }
+                    if (item is OpItem) {
+                        item.churn?.let { PriceMemory.entryOf(item.id, item.at, item.store, it) }?.let { PriceMemory.record(memoryFile, it) }
+                    }
                 }
 
                 is ConnectResponse.Err -> {
@@ -372,7 +385,7 @@ object DatedStream {
     /** `M8TRX_DAY_MANIFEST_LINES`: cap on manifest lines per store-day; unset or 0 = every sold line. */
     fun manifestMaxLines(): Int = System.getenv("M8TRX_DAY_MANIFEST_LINES")?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
 
-    private fun plannedOps(plans: List<StorePlan>, sales: List<PlannedSale>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
+    internal fun plannedOps(plans: List<StorePlan>, sales: List<PlannedSale>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
         val pricings = System.getenv("M8TRX_DAY_PRICINGS")?.toIntOrNull() ?: 2
         val catalogs = System.getenv("M8TRX_DAY_CATALOGS")?.toIntOrNull() ?: 1
         val siteIds = readSiteIds(chainDir.resolve("site_ids.csv"))
@@ -407,10 +420,10 @@ object DatedStream {
             if (skus.isNotEmpty()) {
                 repeat(pricings) { k ->
                     val sk = skus[rng.nextInt(skus.size)]
-                    // The one churn function (USD cents off price_usd, 70-120 % of list, currency USD). Drawn before
-                    // at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
-                    val update = pricingUpdateFor(sk, rng)
-                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", update)
+                    // The one churn function: one factor moves the catalog's USD-cents update and the store's own price. Drawn
+                    // before at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
+                    val churn = churnFor(sk, rng)
+                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", churn.update, churn)
                 }
                 repeat(catalogs) { k ->
                     val sk = byEan.values.elementAt(rng.nextInt(byEan.size))

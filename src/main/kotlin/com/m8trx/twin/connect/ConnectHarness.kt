@@ -80,6 +80,8 @@ fun main() {
     restockMovesPlan()
     receiveStockPlan()
     pricingUnitsGuard()
+    datedPricingGuard()
+    priceMemoryGuard()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 

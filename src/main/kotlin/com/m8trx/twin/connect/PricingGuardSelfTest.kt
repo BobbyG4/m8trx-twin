@@ -1,8 +1,15 @@
 package com.m8trx.twin.connect
 
+import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.webhook.CATALOG_CURRENCY
+import com.m8trx.twin.connect.model.webhook.PricingUpdate
+import com.m8trx.twin.history.RecentDay
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.random.Random
 
 /**
@@ -116,4 +123,117 @@ private fun cells(line: String): List<String> {
     }
     out.add(sb.toString())
     return out
+}
+
+private val GUARD_CHAIN: Path = Path.of("reference/data/chain")
+
+/**
+ * The live path's own output (the hourly pass runs the dated stream, not the undated churn): every `pricing_update`
+ * [DatedStream.plannedOps] plans for every store over five weeks is in USD cents inside the churn band, never above 5×
+ * the CSV's `price_usd`, and its wire form carries `"currency":"USD"`.
+ */
+internal fun datedPricingGuard() {
+    if (!Files.isDirectory(GUARD_CHAIN.resolve("stores"))) {
+        log.warn("[SKIP] dated pricing guard — {} not found (run from repo root)", GUARD_CHAIN)
+        return
+    }
+    val stores = Files.list(GUARD_CHAIN.resolve("stores")).use {
+        it.filter { d -> Files.isDirectory(d) }.map { d -> d.fileName.toString() }.sorted().toList()
+    }
+    var updates = 0
+    var korean = 0
+    for (store in stores) {
+        val list = readListCentsIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
+        val locals = readLocalIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
+        val days = (0L until 38L).map { LocalDate.of(2026, 10, 1).plusDays(it) }
+        val plans = days.map { d ->
+            val open = d.atTime(1, 0).toInstant(ZoneOffset.UTC)
+            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
+        }
+        for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard")) {
+            val p = op.body as? PricingUpdate ?: continue
+            val l = checkNotNull(p.gtin?.let { list[it] }) { "$store ${op.id}: pricing_update gtin ${p.gtin} has no price_usd" }
+            check(p.priceMinor <= 5 * l) { "$store ${op.id}: price_minor ${p.priceMinor} above 5× list $l — the won-as-cents shape (CORE-REQ-007)" }
+            check(p.priceMinor >= (l * CHURN_MIN).toLong() && p.priceMinor <= (l * CHURN_MAX).toLong()) {
+                "$store ${op.id}: price_minor ${p.priceMinor} outside ${CHURN_MIN}–${CHURN_MAX} × list $l"
+            }
+            check(p.currency == CATALOG_CURRENCY) { "$store ${op.id}: currency ${p.currency}" }
+            val churn = checkNotNull(op.churn) { "$store ${op.id}: a pricing op must carry its store's local price" }
+            val local = checkNotNull(locals[p.gtin]) { "$store ${op.id}: ${p.gtin} has no price_local" }
+            check(churn.localCurrency == local.second) {
+                "$store ${op.id}: local currency ${churn.localCurrency}, the store sells in ${local.second}"
+            }
+            check(churn.localMinor >= (local.first * CHURN_MIN).toLong() - 1 && churn.localMinor <= (local.first * CHURN_MAX).toLong()) {
+                "$store ${op.id}: local ${churn.localMinor} ${churn.localCurrency} outside the band of its list ${local.first}"
+            }
+            val json = ConnectMappers.snake.writeValueAsString(p)
+            check(json.contains("\"price_minor\":${p.priceMinor}") && json.contains("\"currency\":\"USD\"")) { "$store ${op.id}: wire form $json" }
+            updates++
+            if (store.startsWith("dec-kr-")) korean++
+        }
+    }
+    check(korean > 0) { "the guard planned no Korean pricing_update — it would not have caught the won" }
+    log.info(
+        "[PASS] dated pricing guard: {} planned pricing_updates over 38 days × {} stores ({} Korean), all USD cents ≤ 5× list, currency USD on the wire",
+        updates,
+        stores.size,
+        korean,
+    )
+}
+
+/** `ean -> (round(price_local × 10^digits), currency)`, parsed here on purpose, apart from the loader. */
+private fun readLocalIndependently(file: Path): Map<String, Pair<Long, String>> {
+    val lines = Files.readAllLines(file)
+    val h = cells(lines.first())
+    val iEan = h.indexOf("ean")
+    val iLocal = h.indexOf("price_local")
+    val iCcy = h.indexOf("currency")
+    check(iEan >= 0 && iLocal >= 0 && iCcy >= 0) { "$file lacks ean / price_local / currency" }
+    val out = HashMap<String, Pair<Long, String>>()
+    for (line in lines.drop(1)) {
+        val c = cells(line)
+        if (c.size <= maxOf(iEan, iLocal, iCcy)) continue
+        val v = c[iLocal].trim().toDoubleOrNull() ?: continue
+        val ccy = c[iCcy].trim().uppercase()
+        val digits = java.util.Currency.getInstance(ccy).defaultFractionDigits
+        out.putIfAbsent(c[iEan].trim(), Math.round(v * Math.pow(10.0, digits.toDouble())).coerceAtLeast(1) to ccy)
+    }
+    return out
+}
+
+/**
+ * The memory of accepted updates (CORE-REQ-007): a planned churn's line carries the catalog's update as sent (USD cents,
+ * USD) and the store's local price moved by the same factor, in the store's currency; it round-trips through the file,
+ * the first line per id wins, and a file of another shape is not read.
+ */
+internal fun priceMemoryGuard() {
+    if (!Files.isDirectory(GUARD_CHAIN.resolve("stores"))) {
+        log.warn("[SKIP] price memory guard — {} not found (run from repo root)", GUARD_CHAIN)
+        return
+    }
+    val store = "dec-kr-seoul"
+    val file = GUARD_CHAIN.resolve("stores/$store/assortment.csv")
+    val sk = loadAssortment(file).first()
+    val churn = churnFor(sk, Random(7))
+    val local = checkNotNull(readLocalIndependently(file)[sk.ean])
+    check(churn.update.currency == CATALOG_CURRENCY && churn.localCurrency == local.second && local.second == "KRW") {
+        "a Seoul churn: the update in USD, the local half in KRW: $churn"
+    }
+    val f = churn.update.priceMinor.toDouble() / sk.priceMinor
+    check(kotlin.math.abs(churn.localMinor.toDouble() / local.first - f) < 0.01) { "one factor moves both halves: $churn vs $sk" }
+    val at = Instant.parse("2026-11-07T01:00:00Z")
+    val e = checkNotNull(PriceMemory.entryOf("p1", at, store, churn))
+    check(e.store == store && e.ean == sk.ean && e.priceMinor == churn.update.priceMinor && e.localMinor == churn.localMinor) { "entry: $e" }
+    val dir = Files.createTempDirectory("twin-price-memory")
+    val mem = dir.resolve("pricing-sent.csv")
+    PriceMemory.record(mem, e)
+    PriceMemory.record(mem, e.copy(localMinor = 1))
+    PriceMemory.record(mem, e.copy(id = "p2", at = at.plusSeconds(60)))
+    val back = PriceMemory.read(mem)
+    check(back == listOf(e, e.copy(id = "p2", at = at.plusSeconds(60)))) { "memory round-trip, first line per id wins: $back" }
+    val old = dir.resolve("old.csv")
+    Files.writeString(old, "id,at,ean,sku,price_minor,currency\np1,$at,${sk.ean},${sk.itemCd},800,USD\n")
+    check(PriceMemory.read(old).isEmpty()) { "a memory file of another shape is not read" }
+    dir.toFile().deleteRecursively()
+    log.info("[PASS] price memory guard: a Seoul churn remembered as {} USD cents + {} KRW, one factor, round-trips", e.priceMinor, e.localMinor)
 }

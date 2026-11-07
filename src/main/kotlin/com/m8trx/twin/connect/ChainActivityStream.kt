@@ -1,6 +1,7 @@
 package com.m8trx.twin.connect
 
 import com.m8trx.twin.connect.http.ConnectResponse
+import com.m8trx.twin.connect.model.webhook.CATALOG_CURRENCY
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
 import com.m8trx.twin.connect.model.webhook.ProductCatalogItem
 import com.m8trx.twin.connect.model.webhook.SaleEvent
@@ -54,19 +55,40 @@ private data class Store(val code: String, val siteId: String)
  * Until 2026-11-07 it was `price_local` in the store currency's minor unit (whole won for the two Korean stores),
  * sent with no currency field and read by the platform as cents: 81,000 KRW arrived as $810.00, 9.45×–16.10× list
  * on 119 Decathlon SKUs (reset to list by core mig 310a; CORE-REQ-007).
+ *
+ * [localMinor] + [localCurrency] are the **store's own price** (`price_local` in the ISO 4217 minor unit of the
+ * assortment's `currency`: whole won in Seoul, euro cents in Paris, cents in Denver). That is what a sale carries: each
+ * market has its own currency, and the platform keeps it at the sale (`sale_line.unit_price` + `currency`, `till`), while
+ * the product's single price is the catalog base in USD (Bob's ruling, 2026-11-07).
  */
-internal data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
+internal data class Sku(
+    val itemCd: String,
+    val ean: String,
+    val name: String,
+    val priceMinor: Long,
+    val localMinor: Long = priceMinor,
+    val localCurrency: String = CATALOG_CURRENCY,
+)
 
 /** The churn band of a `pricing_update`: a markdown or markup between 70 % and 120 % of list. */
 internal const val CHURN_MIN = 0.7
 internal const val CHURN_MAX = 1.2
 
-/** A churned price for [sk]: [CHURN_MIN]..[CHURN_MAX] × list, in USD cents, never below one cent. */
-internal fun churnedPriceMinor(sk: Sku, rng: Random): Long =
-    (sk.priceMinor * (CHURN_MIN + rng.nextDouble() * (CHURN_MAX - CHURN_MIN))).toLong().coerceAtLeast(1)
+/**
+ * One price change at a store: the catalog's `pricing_update` (USD cents) and the store's own new price, both moved by
+ * the same markdown/markup factor, so the till and the catalog tell one story.
+ */
+internal data class Churn(val update: PricingUpdate, val localMinor: Long, val localCurrency: String)
+
+/** A churn of [sk] by one [CHURN_MIN]..[CHURN_MAX] factor (ONE `nextDouble`, the draw the dated stream's ids rely on). */
+internal fun churnFor(sk: Sku, rng: Random): Churn {
+    val f = CHURN_MIN + rng.nextDouble() * (CHURN_MAX - CHURN_MIN)
+    val usd = (sk.priceMinor * f).toLong().coerceAtLeast(1)
+    return Churn(PricingUpdate(sk.itemCd, usd, gtin = sk.ean), (sk.localMinor * f).toLong().coerceAtLeast(1), sk.localCurrency)
+}
 
 /** The `pricing_update` the twin sends for [sk]: a churned USD-cents price, keyed on sku + gtin. */
-internal fun pricingUpdateFor(sk: Sku, rng: Random): PricingUpdate = PricingUpdate(sk.itemCd, churnedPriceMinor(sk, rng), gtin = sk.ean)
+internal fun pricingUpdateFor(sk: Sku, rng: Random): PricingUpdate = churnFor(sk, rng).update
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
 
@@ -166,8 +188,16 @@ private fun fire(
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
             val sk = skus[rng.nextInt(skus.size)]
-            val update = pricingUpdateFor(sk, rng)
+            val churn = churnFor(sk, rng)
+            val update = churn.update
             val resp = driver.pushPricing(update, WebhookClient.AuthMode.API_KEY)
+            // Remembered like the dated stream's, so a later dated sale of this unit carries the price set here (CORE-REQ-007).
+            // The id carries the send time: a fixed M8TRX_RUN_ID (.env sets one) repeats `<runId>-pricing-<seq>` across runs.
+            if (resp is ConnectResponse.Ok) {
+                PriceMemory.entryOf("$id@$now", Instant.parse(now), store.code, churn)?.let {
+                    PriceMemory.record(PriceMemory.file(soldLog), it)
+                }
+            }
             logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->${update.priceMinor}", resp)
         }
 
@@ -226,6 +256,8 @@ internal fun loadAssortment(file: Path): List<Sku> {
     // price_usd, NOT price_local: the platform's catalog is priced in USD and reads price_minor as cents. The
     // store's local price (EUR, KRW) is for the shelf label, not the wire — CORE-REQ-007.
     val iPrice = h.indexOf("price_usd")
+    val iLocal = h.indexOf("price_local")
+    val iCcy = h.indexOf("currency")
     if (iItem < 0 || iEan < 0 || iName < 0 || iPrice < 0) return emptyList()
     // Dedupe on EAN, the sellable unit — NOT on item_cd. item_cd is a supplier STYLE code and deduping on
     // it dropped `5391035`'s second size entirely, so twin could not address the $109 variant at all while
@@ -248,7 +280,17 @@ internal fun loadAssortment(file: Path): List<Sku> {
             blankSku++
             continue
         }
-        out.add(Sku(itemCd, ean, c[iName].trim(), usdCents(price)))
+        val usd = usdCents(price)
+        // The store's own price for the till; a row without one sells at the USD list in USD.
+        val ccy = c.getOrNull(iCcy)?.trim()?.uppercase()?.takeIf { it.length == 3 }
+        val local = c.getOrNull(iLocal)?.trim()?.toDoubleOrNull()
+        out.add(
+            if (ccy != null && local != null) {
+                Sku(itemCd, ean, c[iName].trim(), usd, localMinor(local, ccy), ccy)
+            } else {
+                Sku(itemCd, ean, c[iName].trim(), usd)
+            },
+        )
     }
     if (blankSku >
         0
@@ -260,6 +302,12 @@ internal fun loadAssortment(file: Path): List<Sku> {
 
 /** A `price_usd` as USD cents (the platform's minor unit), rounded, never below one cent. */
 internal fun usdCents(priceUsd: Double): Long = Math.round(priceUsd * 100).coerceAtLeast(1)
+
+/** A major-unit [price] in [currency]'s ISO 4217 minor unit (its fraction digits: KRW 0, EUR/USD 2), rounded, never below 1. */
+internal fun localMinor(price: Double, currency: String): Long {
+    val places = runCatching { java.util.Currency.getInstance(currency).defaultFractionDigits }.getOrDefault(2).coerceAtLeast(0)
+    return Math.round(price * Math.pow(10.0, places.toDouble())).coerceAtLeast(1)
+}
 
 /** Minimal RFC-4180-ish splitter — handles double-quoted fields + escaped quotes (names with commas). */
 private fun splitCsv(line: String): List<String> {
