@@ -81,6 +81,7 @@ fun main() {
     receiveStockPlan()
     pricingUnitsGuard()
     datedPricingGuard()
+    eurBaseGuard()
     priceMemoryGuard()
     saleTillPriceGuard()
     saleCurrencyIsStoresGuard()

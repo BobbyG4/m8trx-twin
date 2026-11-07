@@ -94,7 +94,8 @@ data class ShipmentLine(val sku: String, val expectedQuantity: Int)
  * [currency] goes on **every** update (Connect §8, 2026-11-06): with it the platform reads [priceMinor] by that
  * currency's ISO 4217 exponent and refuses a mismatch with the product's currency; without it the number is read
  * as US cents, which is how the won-as-cents prices of CORE-REQ-007 got in. It is not optional on the twin's side:
- * the default is the platform catalog's currency, and nothing here sends another.
+ * the default is USD, but the churn always sets the tenant's base currency itself (`BaseCatalog`, EUR for Decathlon,
+ * CORE-REQ-008). No `price_zone` is sent until the core's zones round ships.
  */
 data class PricingUpdate(val sku: String, val priceMinor: Long, val gtin: String? = null, val currency: String = CATALOG_CURRENCY)
 

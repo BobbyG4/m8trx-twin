@@ -26,7 +26,7 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.PricingGuardSe
 /** The three SKUs mother saw re-sent at won-as-cents after the 310a reset, with their USD list in cents. */
 private val RESENT_AFTER_310A = mapOf("4193725" to 5999L, "2094206" to 3500L, "4228776" to 1999L)
 
-/** The loader prices every unit at `price_usd` cents; the churn never leaves 70–120 % of list; never 5× list. */
+/** The USD tenant's loader prices every unit at `price_usd` cents; the churn never leaves 70–120 % of list; never 5× list. */
 internal fun pricingUnitsGuard() {
     val storesDir = Path.of("reference/data/chain/stores")
     if (!Files.isDirectory(storesDir)) {
@@ -43,7 +43,7 @@ internal fun pricingUnitsGuard() {
         val store = dir.fileName.toString()
         val file = dir.resolve("assortment.csv")
         if (!Files.exists(file)) continue
-        val loaded = loadAssortment(file)
+        val loaded = loadAssortment(file, USD_TENANT)
         check(loaded.isNotEmpty()) { "$store: loadAssortment returned no units" }
         val listByEan = readListCentsIndependently(file)
         for (sk in loaded) {
@@ -127,6 +127,9 @@ private fun cells(line: String): List<String> {
 
 private val GUARD_CHAIN: Path = Path.of("reference/data/chain")
 
+/** The USD tenant (M8trxIsUs): the base price is `price_usd`, as before CORE-REQ-008. */
+private val USD_TENANT: BaseCatalog get() = BaseCatalog.of(GUARD_CHAIN, "USD")
+
 /**
  * The live path's own output (the hourly pass runs the dated stream, not the undated churn): every `pricing_update`
  * [DatedStream.plannedOps] plans for every store over five weeks is in USD cents inside the churn band, never above 5×
@@ -150,7 +153,7 @@ internal fun datedPricingGuard() {
             val open = d.atTime(1, 0).toInstant(ZoneOffset.UTC)
             DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
         }
-        for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard")) {
+        for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard", "USD")) {
             val p = op.body as? PricingUpdate ?: continue
             val l = checkNotNull(p.gtin?.let { list[it] }) { "$store ${op.id}: pricing_update gtin ${p.gtin} has no price_usd" }
             check(p.priceMinor <= 5 * l) { "$store ${op.id}: price_minor ${p.priceMinor} above 5× list $l — the won-as-cents shape (CORE-REQ-007)" }
@@ -278,7 +281,7 @@ internal fun saleTillPriceGuard() {
         val (date, day) = (0L until 14L).map { LocalDate.of(2026, 10, 6).plusDays(it) }.firstNotNullOf { d -> recent.run(store, d)?.let { d to it } }
         val rows = DatedStream.loadEpcRows(GUARD_CHAIN.resolve("stores/$store/epcs.csv"))
         val plan = DatedStream.allocate(day, rows, emptySet(), "guard", DatedStream.loadCatalog(GUARD_CHAIN.resolve("stores/$store/assortment.csv")))
-        val ops = DatedStream.plannedOps(listOf(plan), plan.sales, GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard")
+        val ops = DatedStream.plannedOps(listOf(plan), plan.sales, GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard", "USD")
         val planned = ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } }
         val dayBook = PriceBook(PriceBook.listOf(mapOf(store to loadAssortment(GUARD_CHAIN.resolve("stores/$store/assortment.csv")))), planned)
         val local = readLocalIndependently(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
@@ -380,7 +383,7 @@ internal fun priceMemoryGuard() {
     }
     val store = "dec-kr-seoul"
     val file = GUARD_CHAIN.resolve("stores/$store/assortment.csv")
-    val sk = loadAssortment(file).first()
+    val sk = loadAssortment(file, USD_TENANT).first()
     val churn = churnFor(sk, Random(7))
     val local = checkNotNull(readLocalIndependently(file)[sk.ean])
     check(churn.update.currency == CATALOG_CURRENCY && churn.localCurrency == local.second && local.second == "KRW") {
@@ -403,4 +406,96 @@ internal fun priceMemoryGuard() {
     check(PriceMemory.read(old).isEmpty()) { "a memory file of another shape is not read" }
     dir.toFile().deleteRecursively()
     log.info("[PASS] price memory guard: a Seoul churn remembered as {} USD cents + {} KRW, one factor, round-trips", e.priceMinor, e.localMinor)
+}
+
+/**
+ * CORE-REQ-008 part 1: the Decathlon tenant's base price is the assortment's **EUR** figure, in EUR cents, with
+ * `"currency":"EUR"` on every `pricing_update`; a USD one for the same SKU is never produced; no `price_zone` is set; the USD
+ * tenant is untouched (the guards above run on it). The EUR figure is read here independently from the French stores' CSVs.
+ */
+internal fun eurBaseGuard() {
+    if (!Files.isDirectory(GUARD_CHAIN.resolve("stores"))) {
+        log.warn("[SKIP] EUR base guard — {} not found (run from repo root)", GUARD_CHAIN)
+        return
+    }
+    val stores = Files.list(GUARD_CHAIN.resolve("stores")).use {
+        it.filter { d -> Files.isDirectory(d) }.map { d -> d.fileName.toString() }.sorted().toList()
+    }
+    // ean -> round(price_eur × 100), from the French rows only.
+    val eur = HashMap<String, Long>()
+    for (store in stores.filter { it.startsWith("dec-fr-") }) {
+        val lines = Files.readAllLines(GUARD_CHAIN.resolve("stores/$store/assortment.csv"))
+        val h = cells(lines.first())
+        val iEan = h.indexOf("ean")
+        val iLocal = h.indexOf("price_local")
+        for (l in lines.drop(1)) {
+            val c = cells(l)
+            val v = c.getOrNull(iLocal)?.trim()?.toDoubleOrNull() ?: continue
+            eur.putIfAbsent(c[iEan].trim(), Math.round(v * 100))
+        }
+    }
+    check(eur.isNotEmpty()) { "no French EUR prices found" }
+    val base = BaseCatalog.of(GUARD_CHAIN, "EUR")
+    var units = 0
+    var updates = 0
+    for (store in stores) {
+        val file = GUARD_CHAIN.resolve("stores/$store/assortment.csv")
+        val usd = readListCentsIndependently(file)
+        for (sk in loadAssortment(file, base)) {
+            val want = checkNotNull(eur[sk.ean]) { "$store ${sk.itemCd}/${sk.ean}: no French EUR price" }
+            check(sk.baseCurrency == "EUR" && sk.priceMinor == want) {
+                "$store ${sk.itemCd}: base ${sk.priceMinor} ${sk.baseCurrency}, want $want EUR cents (price_usd ${usd[sk.ean]} is not the base)"
+            }
+            units++
+        }
+        val days = (0L until 38L).map { LocalDate.of(2026, 10, 1).plusDays(it) }
+        val plans = days.map { d ->
+            val open = d.atTime(1, 0).toInstant(ZoneOffset.UTC)
+            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
+        }
+        for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard", "EUR")) {
+            val p = op.body as? PricingUpdate ?: continue
+            val l = checkNotNull(p.gtin?.let { eur[it] })
+            check(p.currency == "EUR") { "$store ${op.id}: a Decathlon pricing_update in ${p.currency}, never USD" }
+            check(p.priceMinor >= (l * CHURN_MIN).toLong() && p.priceMinor <= (l * CHURN_MAX).toLong()) {
+                "$store ${op.id}: ${p.priceMinor} EUR cents outside ${CHURN_MIN}–${CHURN_MAX} × the EUR base $l"
+            }
+            check(p.priceMinor <= 5 * l) { "$store ${op.id}: above 5× the EUR base (won-as-cents shape)" }
+            val json = ConnectMappers.snake.writeValueAsString(p)
+            check(json.contains("\"price_minor\":${p.priceMinor}") && json.contains("\"currency\":\"EUR\"") && !json.contains("price_zone")) {
+                "$store ${op.id}: wire form $json (EUR, no price_zone until the core's zones round)"
+            }
+            updates++
+        }
+    }
+    // The memory is keyed on the currency it was sent in: an old USD line never answers an EUR question.
+    val t0 = Instant.parse("2026-11-07T00:00:00Z")
+    val book = PriceBook(
+        emptyMap(),
+        listOf(
+            PriceMemory.Entry("m1", t0, "dec-fr-paris", "EAN-A", "A", 1299, "USD", 1234, "EUR"),
+            PriceMemory.Entry("m2", t0.plusSeconds(60), "dec-fr-paris", "EAN-A", "A", 1163, "EUR", 1100, "EUR"),
+        ),
+    )
+    val at = t0.plusSeconds(3600)
+    check(book.baseAt("dec-fr-paris", "EAN-A", "EUR", at) == 1163L && book.baseAt("dec-fr-paris", "EAN-A", "USD", at) == 1299L) {
+        "memory answers per currency"
+    }
+    check(book.baseAt("dec-fr-paris", "EAN-A", "EUR", t0.plusSeconds(30)) == null) { "an old USD memory never answers an EUR question" }
+    // The USD tenant is unchanged: its base is price_usd.
+    for (store in stores) {
+        val file = GUARD_CHAIN.resolve("stores/$store/assortment.csv")
+        val usd = readListCentsIndependently(file)
+        for (sk in loadAssortment(file, USD_TENANT)) {
+            check(sk.baseCurrency == "USD" && sk.priceMinor == usd[sk.ean]) {
+                "$store ${sk.itemCd}: USD tenant base moved"
+            }
+        }
+    }
+    log.info(
+        "[PASS] EUR base guard: {} units across {} stores carry the French EUR figure; {} planned pricing_updates all EUR, no price_zone; USD tenant unchanged",
+        units,
+        stores.size,
+        updates,
+    )
 }
