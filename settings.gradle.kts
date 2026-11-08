@@ -5,7 +5,7 @@ dependencyResolutionManagement {
         create("deps") {
             version("kotlin", "2.4.21")
             version("ktlint", "12.2.0")
-            version("jnats", "2.26.2")
+            version("jnats", "2.26.4")
             version("jackson", "2.22.4")
             version("coroutines", "1.11.0")
             version("logback", "1.6.3")
