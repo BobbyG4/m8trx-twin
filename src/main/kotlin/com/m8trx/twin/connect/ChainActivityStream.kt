@@ -1,6 +1,7 @@
 package com.m8trx.twin.connect
 
 import com.m8trx.twin.connect.http.ConnectResponse
+import com.m8trx.twin.connect.model.webhook.CATALOG_CURRENCY
 import com.m8trx.twin.connect.model.webhook.PricingUpdate
 import com.m8trx.twin.connect.model.webhook.ProductCatalogItem
 import com.m8trx.twin.connect.model.webhook.SaleEvent
@@ -21,11 +22,12 @@ import kotlin.random.Random
  * All four §8 inbound ingesters:
  *   - SALE     sale_event by EPC (NoScope -> item band -> the item's own site PROCESSES -> SOLD)
  *   - RESTOCK  shipment_manifest to the store's real site_id (partly closes the inventory loop)
- *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, store-currency minor units
+ *   - PRICING  pricing_update — a churned price (markdown/markup) on a real SKU, in the tenant's base currency (EUR for
+ *              Decathlon, CORE-REQ-008; the platform catalog's currency — never the store's local price; see [Sku.priceMinor])
  *   - CATALOG  product_catalog — idempotent re-assert of a real SKU's name (exercises the pipe, no pollution)
  *
  * Data (under M8TRX_CHAIN_DIR): site_ids.csv (store_code -> site_id), per-store assortment.csv
- * (item_cd / name_en / price_local / currency), per-store epcs.csv (floor EPCs). Sales draw EPCs
+ * (item_cd / name_en / price_usd), per-store epcs.csv (floor EPCs). Sales draw EPCs
  * without replacement + persist to the shared sold-log; restock/pricing/catalog reuse SKUs.
  *
  * Env: M8TRX_ACTIVITY_STORES (csv of codes; default all), M8TRX_ACTIVITY_COUNT (60),
@@ -47,8 +49,53 @@ private data class Store(val code: String, val siteId: String)
  * [itemCd] is Decathlon's supplier **style code** and is NOT unique: `5391035` is one shoe in two sizes at
  * two prices. This record used to be deduped on [itemCd], which silently dropped the second variant and
  * left twin emitting a style code the platform then applied to both product rows.
+ *
+ * [priceMinor] is the unit's **base price in the tenant's currency** ([baseCurrency]): EUR cents from the French stores'
+ * `price_local` for the Decathlon tenant, `price_usd` × 100 for a USD tenant (see [BaseCatalog]); the unit
+ * `pricing_update.price_minor` is read in. It is NOT the store's local price. `price_usd` itself stays for the US tills only.
+ * Until 2026-11-07 it was `price_local` in the store currency's minor unit (whole won for the two Korean stores),
+ * sent with no currency field and read by the platform as cents: 81,000 KRW arrived as $810.00, 9.45×–16.10× list
+ * on 119 Decathlon SKUs (reset to list by core mig 310a; CORE-REQ-007).
+ *
+ * [localMinor] + [localCurrency] are the **store's own price** (`price_local` in the ISO 4217 minor unit of the
+ * assortment's `currency`: whole won in Seoul, euro cents in Paris, cents in Denver). That is what a sale carries: each
+ * market has its own currency, and the platform keeps it at the sale (`sale_line.unit_price` + `currency`, `till`), while
+ * the product's single price is the catalog base in USD (Bob's ruling, 2026-11-07).
  */
-internal data class Sku(val itemCd: String, val ean: String, val name: String, val priceMinor: Long)
+internal data class Sku(
+    val itemCd: String,
+    val ean: String,
+    val name: String,
+    val priceMinor: Long,
+    val localMinor: Long = priceMinor,
+    val localCurrency: String = CATALOG_CURRENCY,
+    /** The currency [priceMinor] is in: the tenant's base currency ([BaseCatalog], CORE-REQ-008). */
+    val baseCurrency: String = CATALOG_CURRENCY,
+)
+
+/** The churn band of a `pricing_update`: a markdown or markup between 70 % and 120 % of list. */
+internal const val CHURN_MIN = 0.7
+internal const val CHURN_MAX = 1.2
+
+/**
+ * One price change at a store: the catalog's `pricing_update` (USD cents) and the store's own new price, both moved by
+ * the same markdown/markup factor, so the till and the catalog tell one story.
+ */
+internal data class Churn(val update: PricingUpdate, val localMinor: Long, val localCurrency: String)
+
+/** A churn of [sk] by one [CHURN_MIN]..[CHURN_MAX] factor (ONE `nextDouble`, the draw the dated stream's ids rely on). */
+internal fun churnFor(sk: Sku, rng: Random): Churn {
+    val f = CHURN_MIN + rng.nextDouble() * (CHURN_MAX - CHURN_MIN)
+    val base = (sk.priceMinor * f).toLong().coerceAtLeast(1)
+    return Churn(
+        PricingUpdate(sk.itemCd, base, gtin = sk.ean, currency = sk.baseCurrency),
+        (sk.localMinor * f).toLong().coerceAtLeast(1),
+        sk.localCurrency,
+    )
+}
+
+/** The `pricing_update` the twin sends for [sk]: a churned base price in the tenant's currency, keyed on sku + gtin. */
+internal fun pricingUpdateFor(sk: Sku, rng: Random): PricingUpdate = churnFor(sk, rng).update
 
 private enum class Activity { SALE, RESTOCK, PRICING, CATALOG }
 
@@ -148,9 +195,17 @@ private fun fire(
             val skus = skuLists[store.code].orEmpty()
             if (skus.isEmpty()) return skip(seq, type, store, "no SKUs")
             val sk = skus[rng.nextInt(skus.size)]
-            val churned = (sk.priceMinor * (0.7 + rng.nextDouble() * 0.5)).toLong().coerceAtLeast(1)
-            val resp = driver.pushPricing(PricingUpdate(sk.itemCd, churned, gtin = sk.ean), WebhookClient.AuthMode.API_KEY)
-            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->$churned", resp)
+            val churn = churnFor(sk, rng)
+            val update = churn.update
+            val resp = driver.pushPricing(update, WebhookClient.AuthMode.API_KEY)
+            // Remembered like the dated stream's, so a later dated sale of this unit carries the price set here (CORE-REQ-007).
+            // The id carries the send time: a fixed M8TRX_RUN_ID (.env sets one) repeats `<runId>-pricing-<seq>` across runs.
+            if (resp is ConnectResponse.Ok) {
+                PriceMemory.entryOf("$id@$now", Instant.parse(now), store.code, churn)?.let {
+                    PriceMemory.record(PriceMemory.file(soldLog), it)
+                }
+            }
+            logFire(seq, type, store, "sku=${sk.itemCd} gtin=${sk.ean} ${sk.priceMinor}->${update.priceMinor}", resp)
         }
 
         Activity.CATALOG -> {
@@ -196,8 +251,8 @@ private fun loadStores(file: Path): List<Store> {
     }
 }
 
-/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, price as store-currency minor units). */
-internal fun loadAssortment(file: Path): List<Sku> {
+/** Per-store assortment.csv -> distinct SKUs (item_cd, name_en, base price in [base]'s currency). */
+internal fun loadAssortment(file: Path, base: BaseCatalog = BaseCatalog.forFile(file)): List<Sku> {
     if (!Files.exists(file)) return emptyList()
     val lines = Files.readAllLines(file)
     if (lines.size < 2) return emptyList()
@@ -205,7 +260,10 @@ internal fun loadAssortment(file: Path): List<Sku> {
     val iItem = h.indexOf("item_cd")
     val iEan = h.indexOf("ean")
     val iName = h.indexOf("name_en")
-    val iPrice = h.indexOf("price_local")
+    // price_usd is the column the rows are keyed on; the base price on the wire is the tenant's currency (EUR for
+    // Decathlon: the French stores' EUR figure, see BaseCatalog), never the store's local price in KRW — CORE-REQ-007/008.
+    val iPrice = h.indexOf("price_usd")
+    val iLocal = h.indexOf("price_local")
     val iCcy = h.indexOf("currency")
     if (iItem < 0 || iEan < 0 || iName < 0 || iPrice < 0) return emptyList()
     // Dedupe on EAN, the sellable unit — NOT on item_cd. item_cd is a supplier STYLE code and deduping on
@@ -229,8 +287,18 @@ internal fun loadAssortment(file: Path): List<Sku> {
             blankSku++
             continue
         }
-        val ccy = if (iCcy in c.indices) c[iCcy].trim() else "USD"
-        out.add(Sku(itemCd, ean, c[iName].trim(), priceToMinor(price, ccy)))
+        val usd = usdCents(price)
+        val basePrice = base.minorOf(ean, usd)
+        // The store's own price for the till; a row without one sells at the USD list in USD.
+        val ccy = c.getOrNull(iCcy)?.trim()?.uppercase()?.takeIf { it.length == 3 }
+        val local = c.getOrNull(iLocal)?.trim()?.toDoubleOrNull()
+        out.add(
+            if (ccy != null && local != null) {
+                Sku(itemCd, ean, c[iName].trim(), basePrice, localMinor(local, ccy), ccy, base.currency)
+            } else {
+                Sku(itemCd, ean, c[iName].trim(), basePrice, usd, CATALOG_CURRENCY, base.currency)
+            },
+        )
     }
     if (blankSku >
         0
@@ -240,14 +308,20 @@ internal fun loadAssortment(file: Path): List<Sku> {
     return out
 }
 
-/** Minor units: zero-decimal currencies (KRW/JPY) x1, everything else x100. */
-private fun priceToMinor(price: Double, currency: String): Long {
-    val factor = if (currency.uppercase() in setOf("KRW", "JPY")) 1.0 else 100.0
-    return (price * factor).toLong().coerceAtLeast(1)
+/** A `price_usd` as USD cents (the platform's minor unit), rounded, never below one cent. */
+internal fun usdCents(priceUsd: Double): Long = Math.round(priceUsd * 100).coerceAtLeast(1)
+
+/** A major-unit [price] in [currency]'s ISO 4217 minor unit (its fraction digits: KRW 0, EUR/USD 2), rounded, never below 1. */
+internal fun localMinor(price: Double, currency: String): Long {
+    val places = runCatching { java.util.Currency.getInstance(currency).defaultFractionDigits }.getOrDefault(2).coerceAtLeast(0)
+    return Math.round(price * Math.pow(10.0, places.toDouble())).coerceAtLeast(1)
 }
 
 /** Minimal RFC-4180-ish splitter — handles double-quoted fields + escaped quotes (names with commas). */
-private fun splitCsv(line: String): List<String> {
+private fun splitCsv(line: String): List<String> = csvCells(line)
+
+/** Minimal RFC-4180-ish splitter (shared with [BaseCatalog]). */
+internal fun csvCells(line: String): List<String> {
     val out = ArrayList<String>()
     val sb = StringBuilder()
     var inQuotes = false

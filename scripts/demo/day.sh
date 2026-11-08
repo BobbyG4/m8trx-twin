@@ -30,8 +30,10 @@
 #              M8TRX_STOCK_FULL_FLOOR, default dec-us-denver@2026-10-15), read sets from the store's stock so each count
 #              closes with a few missing and 1-2 over. Count inbox (POST /count, /count/pulls, /count/{id}/close) as the
 #              store manager (user JWT; M8TRX_OPS_PASSWORD). Ledger .twin-state/stock/ (a closed count is never re-sent).
-#   5b. fixmoves connectFixtureMoves: M8TRX_FIXMOVES_PER_WEEK (3) fixture moves per store per week, 250-500 mm, through
-#              PUT /zones/{id} (zone_history is written by the zone trigger). Ledger .twin-state/fixmoves/.
+#   5b. fixmoves connectFixtureMoves: every store, its own local day: M8TRX_FIXMOVES_PER_DAY (1, max 2) MOVABLE fixtures
+#              (promo tables, round racks — never gondolas or walls) moved to a free slot of their own region, from 07:30
+#              store-local, with a reason, through PUT /zones/{id} (zone_history is written by the zone trigger).
+#              Ledger .twin-state/fixmoves/. The one-shot revert of the old step's moves is connectFixtureRevert (not a step).
 #   5c. tasks  connectTaskDay: the pre-Oct-5 backlog cancelled with a reason (once), 3-5 drift tasks per store-day
 #              (today's rule-fired ones first, topped up from the walls that sold down), assigned to the manager or floor
 #              staff, 40-60 % completed the same day, 70 % of yesterday's leftovers the next. Ledger .twin-state/tasks/.
@@ -205,7 +207,7 @@ if want stock; then
 fi
 if want fixmoves; then
   run_step fixmoves "$LIVE_FIXMOVES" connectFixtureMoves "${OPS_ENV[@]}" M8TRX_FIXMOVES_LIVE="$LIVE_FIXMOVES" \
-    M8TRX_FIXMOVES_PER_WEEK="${M8TRX_FIXMOVES_PER_WEEK:-3}"
+    M8TRX_FIXMOVES_PER_DAY="${M8TRX_FIXMOVES_PER_DAY:-1}"
 fi
 if want tasks; then
   run_step tasks "$LIVE_TASKS" connectTaskDay "${OPS_ENV[@]}" M8TRX_TASKS_LIVE="$LIVE_TASKS" \

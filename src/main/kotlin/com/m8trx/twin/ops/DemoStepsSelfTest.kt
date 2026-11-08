@@ -3,15 +3,12 @@ package com.m8trx.twin.ops
 import com.m8trx.twin.history.ChainKeys
 import com.m8trx.twin.history.HistoryCsv
 import com.m8trx.twin.history.HistoryGenerator
-import com.m8trx.twin.layer1.FixtureSet
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Base64
-import kotlin.math.abs
 
 /**
  * `./gradlew demoStepsSelfTest` — offline tests of the four demo-sprint steps' generators (part of `offlineSelfTest`).
@@ -27,8 +24,11 @@ fun main() {
         "stock: deterministic, ids stable, a new date or seed changes the plan" to { stockDeterminism(chain, keys) },
         "stock: platform truth - read sets from the platform's locations (drifted units never read at a wall)" to { stockPlatformTruth(chain, keys) },
         "stock: Denver full floor covers every stocked wall fixture (6-10 missing, over from the stockroom)" to { stockFullFloor(chain, keys) },
-        "fixmoves: N per store-week, Mon-Sat, distinct walls, bounded offsets, stable through the week" to { fixMoves(keys) },
-        "fixmoves: geometry - overlap, boundary, the Lyon GB-R1-U1 / GF-R1-U1 case, every chosen move clean" to { fixMovesGeometry(chain, keys) },
+        "fixmoves: movable types only, every store every day, <= 2, deterministic, the Denver gondolas never" to { fixMoves(chain, keys) },
+        "fixmoves: geometry - own region, free slot, aisle + gate clearance, inside the room, >= 0.75 m, no slot = null" to
+            { fixMovesGeometry(chain, keys) },
+        "fixmoves: the hold - only the store's own local date, from 07:30 local" to { fixMovesHold(chain) },
+        "fixrevert: sources, agreement, the default targets are the two Denver gondolas" to { fixRevert(keys) },
         "ops: login pacing (<= 6/min), JWT exp decode" to { loginPacing() },
         "tasks: backlog, target, top-up, assignees, completion shares, carried" to { taskDay() },
         "traffic9: HISTORY_ONLY=people writes exactly the three people files + MANIFEST" to { traffic9() },
@@ -138,30 +138,83 @@ private fun stockFullFloor(chain: Path, keys: ChainKeys) {
     )
 }
 
-private fun fixMoves(keys: ChainKeys) {
-    val monday = LocalDate.parse("2026-10-12")
+private fun fixMoves(chain: Path, keys: ChainKeys) {
+    val categories = keys.stores.flatMap { s -> FixtureMoves.Floor.load(chain, s.slug).fixtures.values.map { it.category } }.toSet()
+    check(categories.containsAll(FixtureMoves.MOVABLE_CATEGORIES)) {
+        "a movable category the layouts do not have: ${FixtureMoves.MOVABLE_CATEGORIES - categories}"
+    }
+    listOf("gondola_front", "gondola_back", "perimeter_east", "perimeter_west", "accessories_wall", "checkout", "impulse_rack", "gps_case").forEach {
+        check(it in categories && it !in FixtureMoves.MOVABLE_CATEGORIES) { "$it must be a fixed type" }
+    }
+    val denver = FixtureMoves.Floor.load(chain, "dec-us-denver")
+    check(!FixtureMoves.isMovable(denver, "GF-R2-U2") && !FixtureMoves.isMovable(denver, "GB-R3-U5")) { "the two Denver gondolas are movable?" }
+    val start = LocalDate.parse("2026-10-12")
+    val perStore = LinkedHashMap<String, Int>()
     for (s in keys.stores) {
-        val week = FixtureMoves.week(s, monday.plusDays(3), SEED, 3, emptyMap())
-        check(week.size == 3) { "${s.slug}: ${week.size} moves" }
-        check(week.all { it.date >= monday && it.date <= monday.plusDays(5) && it.date.dayOfWeek != DayOfWeek.SUNDAY }) { "a move outside Mon-Sat" }
-        check(week.map { it.code }.toSet().size == 3) { "a wall moved twice in a week" }
-        check(week.all { (abs(it.dxMm) + abs(it.dyMm)) in 250.0..500.0 && (it.dxMm == 0.0 || it.dyMm == 0.0) }) { "one axis, 250-500 mm" }
-        // the same plan whichever day of the week it is read on
-        val daily = (0..6).flatMap { FixtureMoves.forDate(s, monday.plusDays(it.toLong()), SEED, 3, emptyMap()) }
-        check(daily == week) { "${s.slug}: the daily reads do not add up to the week" }
+        val floor = FixtureMoves.Floor.load(chain, s.slug)
+        val movable = FixtureMoves.movable(s, floor)
+        check(movable.isNotEmpty()) { "${s.slug} has no movable fixture — it would sit out every day" }
+        perStore[s.slug] = movable.size
+        for (d in 0 until 14) {
+            val date = start.plusDays(d.toLong())
+            val one = FixtureMoves.forDate(s, floor, date, SEED, 1)
+            check(one.size == 1) { "${s.slug} $date: ${one.size} moves at perDay=1 — every store moves every day" }
+            val many = FixtureMoves.forDate(s, floor, date, SEED, 9)
+            check(many.size == minOf(FixtureMoves.MAX_PER_DAY, movable.size)) {
+                "${s.slug} $date: ${many.size} moves — the cap is ${FixtureMoves.MAX_PER_DAY}"
+            }
+            check(many.map { it.code }.toSet().size == many.size) { "a fixture moved twice in a day" }
+            (one + many).forEach { m ->
+                check(floor.fixtures.getValue(m.code).category in FixtureMoves.MOVABLE_CATEGORIES) {
+                    "${m.code} is a ${floor.fixtures.getValue(m.code).category}"
+                }
+                check(m.reason.startsWith("twin: ") && m.region == floor.fixtures.getValue(m.code).region) { "reason / region: $m" }
+            }
+            check(one == FixtureMoves.forDate(s, floor, date, SEED, 1)) { "not deterministic" }
+        }
     }
-    // the bound: a fixture already at +600 mm moves back
-    val s = keys.store("dec-us-denver")
-    val first = FixtureMoves.week(s, monday, SEED, 3, emptyMap())
-    val pinned: Map<String, Pair<Double, Double>> = first.associate { m ->
-        m.zoneId to Pair(600.0 * Math.signum(m.dxMm), 600.0 * Math.signum(m.dyMm))
-    }
-    FixtureMoves.week(s, monday, SEED, 3, pinned).forEach { m ->
-        val (cx, cy) = pinned.getValue(m.zoneId)
-        check(abs(cx + m.dxMm) <= 600.0 && abs(cy + m.dyMm) <= 600.0) { "offset bound crossed: $m from ($cx,$cy)" }
-    }
+    println("      movable fixtures per store: $perStore")
     val ring = listOf(listOf(listOf(0.0, 0.0, 0.0), listOf(1000.0, 0.0, 0.0), listOf(1000.0, 500.0, 0.0), listOf(0.0, 0.0, 0.0)))
     check(FixtureMoves.translate(ring, 300.0, -50.0)[0][1] == listOf(1300.0, -50.0, 0.0)) { "translate keeps z, moves x/y" }
+}
+
+private fun fixMovesHold(chain: Path) {
+    fun cfg(date: String, now: String, past: Boolean = false, future: Boolean = false) = OpsConfig(
+        apiBase = "http://127.0.0.1:1", hasuraUrl = "http://127.0.0.1:1", chainDir = chain, stateDir = Path.of("/nonexistent-twin-state"),
+        date = LocalDate.parse(date), seed = SEED, live = true, allowFuture = future, allowPast = past, stores = listOf("dec-us-denver"),
+        password = null, now = Instant.parse(now),
+    )
+    // Denver is UTC-6 in October: 13:00Z = 07:00 local, 14:00Z = 08:00 local
+    check(FixtureMoveDrive(cfg("2026-10-14", "2026-10-14T13:00:00Z")).holdReason("dec-us-denver")?.contains("before 07:30") == true) {
+        "07:00 local holds"
+    }
+    check(FixtureMoveDrive(cfg("2026-10-14", "2026-10-14T14:00:00Z")).holdReason("dec-us-denver") == null) { "08:00 local goes" }
+    check(FixtureMoveDrive(cfg("2026-10-15", "2026-10-14T14:00:00Z")).holdReason("dec-us-denver")?.contains("not yet") == true) { "tomorrow holds" }
+    check(FixtureMoveDrive(cfg("2026-10-13", "2026-10-14T14:00:00Z")).holdReason("dec-us-denver")?.contains("before") == true) {
+        "a past date is refused"
+    }
+    check(FixtureMoveDrive(cfg("2026-10-13", "2026-10-14T14:00:00Z", past = true)).holdReason("dec-us-denver") == null) { "allowPast lifts it" }
+    check(FixtureMoveDrive(cfg("2026-10-15", "2026-10-14T05:00:00Z", future = true)).holdReason("dec-us-denver") == null) { "allowFuture lifts it" }
+    // KST 22:57 on Oct 13 (the gondola move Bob saw) was 07:57 Denver on Oct 13: a v2 move for Denver's Oct 14 would wait a day
+    check(FixtureMoveDrive(cfg("2026-10-14", "2026-10-13T13:57:00Z")).holdReason("dec-us-denver")?.contains("not yet") == true) {
+        "KST-ahead dates wait"
+    }
+}
+
+private fun fixRevert(keys: ChainKeys) {
+    val targets = FixtureRevert.DEFAULT_TARGETS.split(",").map { it.split(":") }
+    check(targets.map { it[1] } == listOf("GF-R2-U2", "GB-R3-U5") && targets.all { it[0] == "dec-us-denver" }) { "default targets $targets" }
+    targets.forEach { (slug, code) ->
+        val z = keys.store(slug).byCode[code] ?: error("$code missing from the key export")
+        check(z.name == if (code == "GF-R2-U2") "Gondola R2 Front U2" else "Gondola R3 Back U5") { "$code is '${z.name}'" }
+    }
+    check(FixtureRevert.envKey("dec-us-denver", "GF-R2-U2") == "M8TRX_REVERT_GEOMETRY_DEC_US_DENVER_GF_R2_U2") { "env key" }
+    val a = FixtureRevert.parseCoords("""{"type":"Polygon","coordinates":[[[0,0,0],[100,0,0],[100,50,0],[0,50,0],[0,0,0]]]}""")
+    val b = FixtureRevert.parseCoords("[[[0.4,0,0],[100,0,0],[100,50,0],[0,50,0],[0.4,0,0]]]")
+    check(FixtureRevert.ringsAgree(a, b) && !FixtureRevert.ringsAgree(a, FixtureMoves.translate(b, 312.0, 0.0))) { "agreement within 1 mm" }
+    check(Instant.parse(FixtureRevert.DEFAULT_BEFORE).atZone(java.time.ZoneId.of("Asia/Seoul")).toLocalTime().toString() == "22:57") {
+        "cutoff = 22:57 KST"
+    }
 }
 
 private fun taskDay() {
@@ -327,22 +380,6 @@ private fun pt(x: Double, y: Double) = PolyGeom.P(x, y)
 
 private fun rect(x0: Double, y0: Double, x1: Double, y1: Double) = listOf(pt(x0, y0), pt(x1, y0), pt(x1, y1), pt(x0, y1))
 
-/** Polygon fixtures (and circles as 32-gons) by code and the sales floor's boundary, from a store's committed layout.json. */
-private fun layoutOf(chain: Path, slug: String): Pair<Map<String, List<PolyGeom.P>>, List<PolyGeom.P>> {
-    val file = chain.resolve("stores/$slug/layout.json")
-    val fixtures = FixtureSet.load(file).fixtures.associate { f ->
-        f.code to
-            if (f.kind == com.m8trx.twin.layer1.Fixture.Kind.POLYGON) {
-                f.ring.dropLast(1).map { pt(it.x, it.y) }
-            } else {
-                PolyGeom.circle(f.centre.x, f.centre.y, f.radiusMm ?: 1.0, f.radiusMm ?: 1.0)
-            }
-    }
-    val sf = com.m8trx.twin.connect.model.ConnectMappers.camel.readTree(Files.readAllBytes(file)).path("spaces")
-        .first { it.path("space_type").asText() == "sales_floor" }.path("footprint_mm")
-    return fixtures to rect(0.0, 0.0, sf.path("width").asDouble(), sf.path("depth").asDouble())
-}
-
 private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
     // the primitives
     val a = rect(0.0, 0.0, 1000.0, 500.0)
@@ -355,87 +392,58 @@ private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
         "within"
     }
 
-    // the Lyon case from the review (2026-10-13): GB-R1-U1's planned Oct 17 shift lands on GF-R1-U1
-    val (lyonFx, lyonRoom) = layoutOf(chain, "dec-fr-lyon")
-    val lyon = keys.store("dec-fr-lyon")
-    val week = FixtureMoves.week(lyon, LocalDate.parse("2026-10-12"), SEED, 3, emptyMap())
-    val gb = week.firstOrNull { it.code == "GB-R1-U1" } ?: error("the Lyon week no longer holds the GB-R1-U1 move: ${week.map { it.code }}")
-    val origin = lyonFx.getValue("GB-R1-U1")
-    val planned = PolyGeom.translate(origin, gb.dxMm, gb.dyMm)
-    val others = lyonFx.filterKeys { it != "GB-R1-U1" }
-    check(PolyGeom.overlapArea(planned, lyonFx.getValue("GF-R1-U1")) > 100_000.0) {
-        "expected the planned GB-R1-U1 shift (${gb.dxMm}, ${gb.dyMm}) to land on GF-R1-U1, overlap ${PolyGeom.overlapArea(
-            planned,
-            lyonFx.getValue("GF-R1-U1"),
-        )}"
-    }
-    val pick = FixtureMoves.choose(gb, origin, 0.0 to 0.0, others.values, lyonRoom)
-    check(pick != (gb.dxMm to gb.dyMm)) { "the overlapping planned shift was kept" }
-    if (pick != null) {
-        val moved = PolyGeom.translate(origin, pick.first, pick.second)
-        check(
-            others.values.none {
-                PolyGeom.overlaps(moved, it)
-            } && PolyGeom.within(moved, lyonRoom),
-        ) { "the alternative still overlaps or leaves the room" }
-    }
-    println(
-        "      lyon GB-R1-U1: planned (${gb.dxMm}, ${gb.dyMm}) overlaps GF-R1-U1 by ${Math.round(
-            PolyGeom.overlapArea(planned, lyonFx.getValue("GF-R1-U1")) / 1e6 * 100,
-        ) / 100.0} m2 -> chosen $pick",
-    )
-
-    // the demo week's moves at the two proof stores, planned vs chosen against the committed layout
-    for (slug in listOf("dec-us-denver", "dec-fr-lyon")) {
-        val (fx, room) = layoutOf(chain, slug)
-        FixtureMoves.week(keys.store(slug), LocalDate.parse("2026-10-12"), SEED, 3, emptyMap()).forEach { m ->
-            val rest = fx.filterKeys { it != m.code }.values
-            val pick = FixtureMoves.choose(m, fx.getValue(m.code), 0.0 to 0.0, rest, room)
-            println("      $slug ${m.date} ${m.code}: planned (${m.dxMm}, ${m.dyMm}) -> chosen $pick")
-        }
-    }
-
-    // every store, four weeks of three moves: whatever choose() returns is clean; count how many first choices were not
+    // every store, two weeks, at 1/day and at the cap of 2/day: every store gets its move(s) every day, and every destination is
+    // in the fixture's own region, inside the room, >= 0.75 m away, clear of every other fixture by the aisle and of the gate line
+    val shifts = ArrayList<Double>()
+    val short = ArrayList<String>()
     var total = 0
-    var firstClean = 0
-    var rerouted = 0
-    var skipped = 0
-    for (s in keys.stores) {
-        val (fx, room) = layoutOf(chain, s.slug)
-        for (w in 0 until 4) {
-            for (m in FixtureMoves.week(s, LocalDate.parse("2026-10-12").plusWeeks(w.toLong()), SEED, 3, emptyMap())) {
-                val o = fx[m.code] ?: continue
-                if (o.size < 3) continue
-                total++
-                val rest = fx.filterKeys { it != m.code }.values
-                val p0 = PolyGeom.translate(o, m.dxMm, m.dyMm)
-                if (rest.none { PolyGeom.overlaps(p0, it) } && PolyGeom.within(p0, room)) firstClean++
-                val c = FixtureMoves.choose(m, o, 0.0 to 0.0, rest, room)
-                if (c == null) {
-                    skipped++
-                } else {
-                    if (c != (m.dxMm to m.dyMm)) rerouted++
-                    val moved = PolyGeom.translate(o, c.first, c.second)
+    for (perDay in listOf(1, 2)) {
+        for (s in keys.stores) {
+            val floor = FixtureMoves.Floor.load(chain, s.slug)
+            for (d in 0 until 14) {
+                val date = LocalDate.parse("2026-10-12").plusDays(d.toLong())
+                val cands = FixtureMoves.candidates(s, floor, date, SEED)
+                val others = floor.fixtures.mapValues { it.value.footprint.ring() }.toMutableMap()
+                val day = FixtureMoves.planDay(cands, perDay, { floor.fixtures.getValue(it.code).footprint }, others, { it.code }, floor, null, SEED)
+                if (day.size < minOf(perDay, cands.size)) short += "${s.slug} $date ${day.size}/$perDay"
+                for ((m, dx, dy) in day) {
+                    total++
+                    val moved = floor.fixtures.getValue(m.code).footprint.moved(dx, dy)
+                    val rest = others.filterKeys { it != m.code }.values
+                    check(PolyGeom.within(moved.ring(), floor.regions.getValue(m.region).ring)) { "${s.slug} ${m.code} left its region ${m.region}" }
+                    check(PolyGeom.within(moved.ring(), floor.room)) { "${s.slug} ${m.code} left the room" }
                     check(
                         rest.none {
-                            PolyGeom.overlaps(moved, it)
-                        } && PolyGeom.within(moved, room),
-                    ) { "${s.slug} ${m.code}: chosen shift $c is not clean" }
-                    check(Math.abs(c.first) + Math.abs(c.second) in 250.0..500.0 && (c.first == 0.0 || c.second == 0.0)) {
-                        "$c: one axis, 250-500 mm"
-                    }
+                            PolyGeom.overlaps(moved.inflated(FixtureMoves.CLEARANCE_MM), it)
+                        },
+                    ) { "${s.slug} ${m.code} lands in the aisle of a fixture" }
+                    check(
+                        floor.gates.all { g ->
+                            Math.abs(moved.cy - g.y) >= moved.reach + FixtureMoves.GATE_CLEARANCE_MM
+                        },
+                    ) { "${s.slug} ${m.code} blocks the gate" }
+                    val sh = Math.hypot(dx, dy)
+                    check(sh >= FixtureMoves.MIN_SHIFT_MM) { "a $sh mm shuffle is not a move" }
+                    shifts += sh
                 }
             }
         }
     }
+    check(short.none { it.endsWith("/1") }) { "a store went without its daily move: ${short.filter { it.endsWith("/1") }}" }
     println(
-        "      ${keys.stores.size} stores x 4 weeks: $total moves - $firstClean first choices clean, $rerouted rerouted, $skipped skipped, every chosen move clean",
+        "      ${keys.stores.size} stores x 14 days at 1/day and 2/day: $total moves; short of the target: ${short.size} store-days ${short.take(
+            6,
+        )}; " +
+            "shifts ${shifts.minOrNull()?.toLong()}-${shifts.maxOrNull()?.toLong()} mm (median ${shifts.sorted().getOrNull(
+                shifts.size / 2,
+            )?.toLong()})",
     )
-    // the bound still holds for a rerouted move: a fixture already 600 mm out never goes further
-    val m0 = week.first()
-    val c0 = FixtureMoves.choose(m0, lyonFx.getValue(m0.code), 600.0 to 600.0, emptyList(), null)
-    check(c0 == null || (Math.abs(600.0 + c0.first) <= 600.0 && Math.abs(600.0 + c0.second) <= 600.0)) {
-        "offset bound crossed by a rerouted move: $c0"
+    // a region with no room left gives no destination
+    val denver = FixtureMoves.Floor.load(chain, "dec-us-denver")
+    val m = FixtureMoves.forDate(keys.store("dec-us-denver"), denver, LocalDate.parse("2026-10-14"), SEED, 1).single()
+    val full = listOf(denver.regions.getValue(m.region).ring)
+    check(FixtureMoves.destination(m, denver.fixtures.getValue(m.code).footprint, denver, full, null, SEED) == null) {
+        "a full region still gave a slot"
     }
 }
 

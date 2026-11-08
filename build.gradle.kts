@@ -477,7 +477,12 @@ opsTask(
 opsTask(
     "connectFixtureMoves",
     "com.m8trx.twin.ops.FixtureMoveDriveKt",
-    "Fixture moves per store per week (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
+    "Movable fixtures only, 1-2 per store per local day, to a free slot of their region (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
+)
+opsTask(
+    "connectFixtureRevert",
+    "com.m8trx.twin.ops.FixtureRevertKt",
+    "One-shot: put back the fixtures the old step should not have moved (Denver GF-R2-U2, GB-R3-U5). Dry-run unless M8TRX_REVERT_LIVE=true.",
 )
 opsTask("connectTaskDay", "com.m8trx.twin.ops.TaskDriveKt", "The day's task work per store (task REST). Dry-run unless M8TRX_TASKS_LIVE=true.")
 opsTask(
@@ -491,3 +496,37 @@ opsTask(
     "Offline: drive the three steps' LIVE paths against a local stub HTTP server; prints the request shapes.",
 )
 tasks.named("offlineSelfTest") { dependsOn("demoStepsSelfTest") }
+
+// ── The people plane LIVE (2026-10-14): wall-clock pace × speed, each store on its own local day ─────────────────────
+// SAFE BY DEFAULT — dry run (plans every requested store, prints the rates, the cap and the first 60 s of events for
+// Denver and Paris); M8TRX_PEOPLE_LIVE=true publishes through the twin edge. On the box it runs as m8trx-twin-live.service
+// from a copy of the runtime classpath (liveDist), never under gradle, so it holds no gradle lock while it runs.
+tasks.register<JavaExec>("connectLivePeople") {
+    group = "verification"
+    description = "Live people plane (M8TRX_PEOPLE_MODE=live): every store on its own local day at wall pace x M8TRX_LIVE_SPEED. Dry-run by default."
+    mainClass.set("com.m8trx.twin.layer1.PeopleDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "6g"
+    environment("M8TRX_PEOPLE_MODE", System.getenv("M8TRX_PEOPLE_MODE") ?: "live")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+
+tasks.register<JavaExec>("liveSelfTest") {
+    group = "verification"
+    description = "Offline: the live people mode — clock, scale cap, shift, 5 Hz cadence at any speed, thinning, edge binding, Denver's plan."
+    mainClass.set("com.m8trx.twin.layer3.LiveSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "4g"
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+tasks.named("offlineSelfTest") { dependsOn("liveSelfTest") }
+
+// The live service's classpath: the main jar + every runtime jar, copied to M8TRX_LIVE_DIST (on the box
+// /opt/m8trx/twin-ops/live-dist) so a later `./gradlew build` by the hourly pass never rewrites a jar under a running JVM.
+tasks.register<Sync>("liveDist") {
+    group = "distribution"
+    description = "Copy the live service's runtime classpath (main jar + dependencies) to M8TRX_LIVE_DIST (default build/live-dist)."
+    from(tasks.named("jar"))
+    from(configurations.named("runtimeClasspath"))
+    into(System.getenv("M8TRX_LIVE_DIST") ?: layout.buildDirectory.dir("live-dist").get().asFile.path)
+}

@@ -1,0 +1,31 @@
+# m8trx-twin-live.service — the twin's live people plane (LiveDrive). Started and stopped by hand: /opt/m8trx/twin-ops/live.
+# Not a timer: it runs until `live stop`, `hold`, or a refusal. Install: ops/INSTALL.md in the m8trx-twin repo.
+[Unit]
+Description=m8trx-twin live people plane (wall-clock pace x speed, every store on its own local day)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=m8trx
+WorkingDirectory=/opt/m8trx/twin
+EnvironmentFile=/opt/m8trx/twin/.env
+EnvironmentFile=-/opt/m8trx/twin-ops/live.env
+Environment=JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+Environment=M8TRX_OPS_DIR=/opt/m8trx/twin-ops
+Environment=M8TRX_LIVE_STATE=/opt/m8trx/twin-ops/live-state.properties
+ExecStart=/opt/m8trx/twin-ops/twin-live.sh
+# SIGTERM to the script only; it hands the TERM to the JVM, whose hook evicts every shopper on the floor
+KillMode=mixed
+TimeoutStopSec=45
+# a crash restarts on the saved plan clock (M8TRX_LIVE_CONTINUE is set by `live speed`); refusals (3 = HOLD / day replay /
+# interlock, 5 = no store has an edge, 6 = HOLD seen by the JVM) never restart
+Restart=on-failure
+RestartSec=30
+RestartPreventExitStatus=3 5 6
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

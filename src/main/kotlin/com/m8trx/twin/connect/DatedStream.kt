@@ -176,27 +176,90 @@ object DatedStream {
     }
 
     /** The wire shape of one planned sale — `epc` for a single unit, `epc_list` otherwise; `occurred_at` is the transaction's time. */
-    fun toSaleEvent(s: PlannedSale): SaleEvent = if (s.epcs.size == 1) {
-        SaleEvent.byEpc(s.saleId, s.at.toString(), s.epcs.single())
+    fun toSaleEvent(s: PlannedSale): SaleEvent = toSaleEvent(s.saleId, s.at, s.epcs)
+
+    private fun toSaleEvent(saleId: String, at: Instant, epcs: List<String>): SaleEvent = if (epcs.size == 1) {
+        SaleEvent.byEpc(saleId, at.toString(), epcs.single())
     } else {
-        SaleEvent.byEpcList(s.saleId, s.at.toString(), s.epcs)
+        SaleEvent.byEpcList(saleId, at.toString(), epcs)
     }
+
+    /**
+     * One event's worth of a receipt: the units of [sale] that sold at one price (CORE-REQ-007). [id] is the ledger id —
+     * the sale's own id when the receipt has one price, `<saleId>#<n>` per price otherwise; the wire id is always the
+     * receipt's ([PlannedSale.saleId]), so the platform numbers the lines across the parts. [priceMinor] is in the ISO
+     * 4217 minor unit of [currency], the **store's own** (KRW whole won in Seoul, EUR cents in Paris, USD cents in Denver:
+     * the platform keeps it on `sale_line`, `till`). Null = a unit the twin has no price for (its EAN is not in the store's
+     * assortment): sent unpriced, the platform values it.
+     */
+    internal data class PricedPart(
+        val sale: PlannedSale,
+        val id: String,
+        val epcs: List<String>,
+        val priceMinor: Long?,
+        val currency: String?,
+        val source: PriceBook.Source?,
+    )
+
+    /** The wire shape of one part: the receipt's id and time, the part's units, one unit's price + `currency`, the store's. */
+    internal fun toSaleEvent(part: PricedPart): SaleEvent =
+        toSaleEvent(part.sale.saleId, part.sale.at, part.epcs).let { e -> part.currency?.let { e.priced(part.priceMinor, it) } ?: e }
+
+    /**
+     * Price every unit of [s] at its moment from [book], at the sale's own store (the last change remembered there, else
+     * the store's list price, in its currency) and split the receipt into one part per price, in first-appearance order.
+     * Pure: the same plan, memory and book give the same parts.
+     */
+    internal fun priceSale(s: PlannedSale, eanByEpc: Map<String, String>, book: PriceBook): List<PricedPart> {
+        val priced = s.epcs.map { epc -> epc to eanByEpc[epc]?.let { book.at(s.store, it, s.at) } }
+        val groups = LinkedHashMap<Pair<Long, String>?, MutableList<Pair<String, PriceBook.Price?>>>()
+        priced.forEach { (epc, p) -> groups.getOrPut(p?.let { it.minor to it.currency }) { ArrayList() } += epc to p }
+        return groups.entries.mapIndexed { i, (price, units) ->
+            PricedPart(
+                sale = s,
+                id = if (groups.size == 1) s.saleId else "${s.saleId}#${i + 1}",
+                epcs = units.map { it.first },
+                priceMinor = price?.first,
+                currency = price?.second,
+                // A part mixes sources only when an update and the list agree to the cent; name the update then.
+                source = units.mapNotNull { it.second?.source }.minByOrNull { it.ordinal },
+            )
+        }
+    }
+
+    /** [parts] without the units already sold (the sold-log); a part left with no unit is dropped. */
+    internal fun unsoldParts(parts: List<PricedPart>, sold: Set<String>): List<PricedPart> =
+        parts.mapNotNull { p -> p.epcs.filter { it !in sold }.takeIf { it.isNotEmpty() }?.let { p.copy(epcs = it) } }
+
+    /**
+     * Whether a ledger already holds [id], or the whole receipt under its own id: receipts sent before the split (one
+     * event, id = sale id) must never be re-sent as parts, since their units are sold and the platform would refuse them.
+     */
+    internal fun alreadySent(id: String, saleId: String?, sent: Set<String>): Boolean = id in sent || (saleId != null && saleId in sent)
 
     // ── the run ───────────────────────────────────────────────────────────────
 
-    private sealed interface Item {
+    internal sealed interface Item {
         val at: Instant
         val id: String
         val store: String
     }
 
-    private data class SaleItem(val s: PlannedSale) : Item {
-        override val at get() = s.at
-        override val id get() = s.saleId
-        override val store get() = s.store
+    private data class SaleItem(val part: PricedPart) : Item {
+        override val at get() = part.sale.at
+        override val id get() = part.id
+        override val store get() = part.sale.store
     }
 
-    private data class OpItem(override val at: Instant, override val id: String, override val store: String, val kind: String, val body: Any) : Item
+    /** A planned op; a pricing op also carries its [churn] (the catalog's update plus the store's new local price). */
+    internal data class OpItem(
+        override val at: Instant,
+        override val id: String,
+        override val store: String,
+        val kind: String,
+        val body: Any,
+        val churn: Churn? = null,
+    ) : Item
 
     fun run(defaultStores: List<String>, chainOps: Boolean) {
         val date = LocalDate.parse(System.getenv("M8TRX_STREAM_DATE"))
@@ -278,24 +341,40 @@ object DatedStream {
         }
 
         val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
-        val items: List<Item> = (sales.map { SaleItem(it) } + ops).sortedBy { it.at }
+        // CORE-REQ-007: every unit sells at the price its store last set for it, in the store's currency — the memory of
+        // sent updates plus this run's planned ones, on the plan's clock — else at the store's list (price_local). One
+        // event per price per receipt. The pricing_update itself is the catalog's base price in the tenant's currency (EUR for Decathlon, CORE-REQ-008).
+        val memoryFile = PriceMemory.file(soldLog)
+        val remembered = PriceMemory.read(memoryFile)
+        val plannedPrices = ops.mapNotNull { op -> op.churn?.let { PriceMemory.entryOf(op.id, op.at, op.store, it) } }
+        val book = PriceBook(
+            PriceBook.listOf(stores.associateWith { loadAssortment(chainDir.resolve("stores/$it/assortment.csv")) }),
+            remembered + plannedPrices,
+        )
+        val eanByEpc = stores.flatMap { loadEpcRows(chainDir.resolve("stores/$it/epcs.csv")) }.associate { it.epc to it.ean }
+        // A unit already in the sold-log never goes on the wire again, whatever ids the split gives a receipt this run
+        // (a book that changed between passes can re-split a partly sent receipt; the platform refuses a sold EPC).
+        val parts = sales.flatMap { priceSale(it, eanByEpc, book) }.let { all -> unsoldParts(all, priorSold) }
+        logPriceCoverage(sales.size, parts, remembered.size, plannedPrices.size)
+        val items: List<Item> = (parts.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
+        fun isSent(it: Item) = alreadySent(it.id, (it as? SaleItem)?.part?.sale?.saleId, sent)
         val now = Instant.now()
-        val due = items.filter { it.id !in sent && (allowFuture || !it.at.isAfter(now)) }
-        val future = items.count { it.id !in sent && !allowFuture && it.at.isAfter(now) }
+        val due = items.filter { !isSent(it) && (allowFuture || !it.at.isAfter(now)) }
+        val future = items.count { !isSent(it) && !allowFuture && it.at.isAfter(now) }
         val toSend = if (limit != null) due.take(limit) else due
         log.info(
             "PLAN: {} sales + {} ops · already sent {} · due now {} · held (future-dated) {} · this run sends {} · gap {}ms ≈ {}",
             sales.size,
             ops.size,
-            items.count { it.id in sent },
+            items.count { isSent(it) },
             due.size,
             future,
             toSend.size,
             gapMs,
             fmt(toSend.size * gapMs),
         )
-        sales.firstOrNull()?.let { log.info("  first sale: {}", ConnectMappersJson.snake(toSaleEvent(it))) }
+        parts.firstOrNull()?.let { log.info("  first sale: {}", ConnectMappersJson.snake(toSaleEvent(it))) }
 
         if (!live) {
             log.info("DRY-RUN (M8TRX_STREAM_LIVE!=true) — nothing sent, no state written.")
@@ -312,7 +391,7 @@ object DatedStream {
         var streak = 0
         for ((i, item) in toSend.withIndex()) {
             val resp = when (item) {
-                is SaleItem -> driver.pushSale(toSaleEvent(item.s), WebhookClient.AuthMode.API_KEY)
+                is SaleItem -> driver.pushSale(toSaleEvent(item.part), WebhookClient.AuthMode.API_KEY)
 
                 is OpItem -> when (val b = item.body) {
                     is ShipmentManifest -> driver.pushShipment(b, WebhookClient.AuthMode.API_KEY)
@@ -326,7 +405,10 @@ object DatedStream {
                     ok++
                     streak = 0
                     append(sentFile, item.id)
-                    if (item is SaleItem) item.s.epcs.forEach { appendSold(soldLog, it) }
+                    if (item is SaleItem) item.part.epcs.forEach { appendSold(soldLog, it) }
+                    if (item is OpItem) {
+                        item.churn?.let { PriceMemory.entryOf(item.id, item.at, item.store, it) }?.let { PriceMemory.record(memoryFile, it) }
+                    }
                 }
 
                 is ConnectResponse.Err -> {
@@ -350,7 +432,8 @@ object DatedStream {
     /** One machine-readable line for `status/SIM-RUN-LOG.md` (day.sh greps for it). */
     private fun summaryLine(date: LocalDate, seed: Long, sales: Int, ops: Int, ok: Int, err: Int, held: Int, t0: Long) {
         log.info(
-            "SIM-RUN stream date={} seed={} sales={} ops={} sent_ok={} sent_err={} held_future={} wall={}", date, seed, sales, ops, ok, err, held,
+            "SIM-RUN stream date={} seed={} sales={} ops={} base={} sent_ok={} sent_err={} held_future={} wall={}", date, seed, sales, ops,
+            BaseCatalog.currencyFromEnv(), ok, err, held,
             fmt(
                 System.currentTimeMillis() - t0,
             ),
@@ -372,7 +455,15 @@ object DatedStream {
     /** `M8TRX_DAY_MANIFEST_LINES`: cap on manifest lines per store-day; unset or 0 = every sold line. */
     fun manifestMaxLines(): Int = System.getenv("M8TRX_DAY_MANIFEST_LINES")?.toIntOrNull()?.takeIf { it > 0 } ?: Int.MAX_VALUE
 
-    private fun plannedOps(plans: List<StorePlan>, sales: List<PlannedSale>, chainDir: Path, seed: Long, runId: String): List<OpItem> {
+    internal fun plannedOps(
+        plans: List<StorePlan>,
+        sales: List<PlannedSale>,
+        chainDir: Path,
+        seed: Long,
+        runId: String,
+        baseCurrency: String = BaseCatalog.currencyFromEnv(),
+    ): List<OpItem> {
+        val base = BaseCatalog.of(chainDir, baseCurrency)
         val pricings = System.getenv("M8TRX_DAY_PRICINGS")?.toIntOrNull() ?: 2
         val catalogs = System.getenv("M8TRX_DAY_CATALOGS")?.toIntOrNull() ?: 1
         val siteIds = readSiteIds(chainDir.resolve("site_ids.csv"))
@@ -382,7 +473,7 @@ object DatedStream {
             val rng = Random(com.m8trx.twin.history.HistoryCsv.derive(seed, p.store, p.date, "ops"))
             val span = p.close.epochSecond - p.open.epochSecond
             fun at(): Instant = p.open.plusSeconds((span * rng.nextDouble()).toLong())
-            val skus = loadAssortment(chainDir.resolve("stores/${p.store}/assortment.csv"))
+            val skus = loadAssortment(chainDir.resolve("stores/${p.store}/assortment.csv"), base)
             val byEan = skus.associateBy { it.ean }
             // Restock what sold: the day's sold units by item code, rounded up to cases of 6 - 30 min after open.
             // Counted from the ALLOCATED plan (the EPCs that actually sell, substitutions included), the same count
@@ -407,8 +498,10 @@ object DatedStream {
             if (skus.isNotEmpty()) {
                 repeat(pricings) { k ->
                     val sk = skus[rng.nextInt(skus.size)]
-                    val churned = (sk.priceMinor * (0.7 + rng.nextDouble() * 0.5)).toLong().coerceAtLeast(1)
-                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", PricingUpdate(sk.itemCd, churned, gtin = sk.ean))
+                    // The one churn function: one factor moves the catalog's base-price update and the store's own price. Drawn
+                    // before at(), the order the inline formula used, so a re-run of a date keeps its SKUs, times and ids.
+                    val churn = churnFor(sk, rng)
+                    out += OpItem(at(), "$runId-${p.store}-pricing-${k + 1}", p.store, "pricing", churn.update, churn)
                 }
                 repeat(catalogs) { k ->
                     val sk = byEan.values.elementAt(rng.nextInt(byEan.size))
@@ -418,6 +511,24 @@ object DatedStream {
             }
         }
         return out
+    }
+
+    /** What the day's sales will carry: priced from an update · at list · unpriced, and how many receipts split by price. */
+    private fun logPriceCoverage(receipts: Int, parts: List<PricedPart>, remembered: Int, planned: Int) {
+        val units = parts.groupBy { it.source }.mapValues { (_, l) -> l.sumOf { it.epcs.size } }
+        val byCurrency = parts.groupingBy { it.currency ?: "none" }.eachCount().toSortedMap()
+        log.info(
+            "PRICES: {} receipts → {} sale events {} ({} split by price) · units at the last pricing_update {} · at list {} · unpriced {} · memory {} sent + {} planned updates",
+            receipts,
+            parts.size,
+            byCurrency,
+            parts.filter { it.id != it.sale.saleId }.map { it.sale.saleId }.distinct().size,
+            units[PriceBook.Source.PRICING_UPDATE] ?: 0,
+            units[PriceBook.Source.LIST] ?: 0,
+            units[null] ?: 0,
+            remembered,
+            planned,
+        )
     }
 
     /** EPCs held by OTHER dates' persisted plans — reserved even before they are sent, so two dates never share a unit. */

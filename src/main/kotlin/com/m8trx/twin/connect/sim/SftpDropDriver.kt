@@ -1,5 +1,6 @@
 package com.m8trx.twin.connect.sim
 
+import com.m8trx.twin.connect.model.webhook.CATALOG_CURRENCY
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -35,10 +36,10 @@ object SftpDropDriver {
         rows.map { listOf(it.externalSaleId, it.siteId, it.occurredAt, it.sku, it.quantity.toString()) },
     )
 
-    /** `pricing_update` rows: header `sku,price_minor`. */
-    fun pricingUpdatesCsv(rows: List<Pair<String, Long>>): String = toCsv(
-        listOf("sku", "price_minor"),
-        rows.map { listOf(it.first, it.second.toString()) },
+    /** `pricing_update` rows: header `sku,price_minor,currency` — the currency rides every row (CORE-REQ-007). */
+    fun pricingUpdatesCsv(rows: List<Pair<String, Long>>, currency: String = CATALOG_CURRENCY): String = toCsv(
+        listOf("sku", "price_minor", "currency"),
+        rows.map { listOf(it.first, it.second.toString(), currency) },
     )
 
     /** `product_catalog` rows: header `sku,name`. */

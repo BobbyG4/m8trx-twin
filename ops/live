@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# live — the twin's live people plane on the box (m8trx-twin-live.service). Run as m8trx on the box.
+#
+#   live start [--sites csv|all] [--speed 1|2|5|10] [--shift open|at:HH:mm|<hours>] [--scale <=0.6] [--dwell scaled|real]
+#              fresh plan clocks (each store's 10:00 local at now by default); builds the classpath, then starts the unit
+#   live stop  stop it (every shopper on the floor is evicted; Slack posts the stop)
+#   live speed N
+#              restart at speed N on the SAME plan time (the clocks are saved on stop and resumed)
+#   live status
+#
+# `hold` stops it as well: the JVM polls the HOLD file every 5 s and stops (no restart). Settings persist in $OPS/live.env
+# (read by the unit), so a reboot or a restart keeps them. The day replay and the live plane never run together: start
+# refuses while m8trx-twin-day runs.
+#
+# The shared gradle lock ($OPS/lock): only `live start` takes it, for one `./gradlew liveDist` (~30-40 s on the box), with
+# `flock -w 60`. The service itself runs a plain JVM and holds no lock, so the hourly pass waits at most that one build —
+# provided twin-hourly.sh takes the lock with `flock -w 60` (today it uses `-n`, which SKIPS a pass that collides; see INSTALL).
+set -euo pipefail
+
+OPS="${M8TRX_OPS_DIR:-/opt/m8trx/twin-ops}"
+TWIN="${M8TRX_TWIN_DIR:-/opt/m8trx/twin}"
+UNIT=m8trx-twin-live.service
+ENVF="$OPS/live.env"
+HOLD="${M8TRX_LIVE_HOLD_FILE:-$OPS/HOLD}"
+export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}"
+
+set_key() { # set_key KEY VALUE — one line per key in live.env (no secrets live there)
+    touch "$ENVF"
+    grep -v "^$1=" "$ENVF" >"$ENVF.tmp" || true
+    echo "$1=$2" >>"$ENVF.tmp"
+    mv "$ENVF.tmp" "$ENVF"
+}
+
+day_running() {
+    systemctl is-active --quiet m8trx-twin-day.service 2>/dev/null && return 0
+    pgrep -f '[D]ayDriveKt' >/dev/null && return 0
+    pgrep -f '[c]onnectDayDrive' >/dev/null && return 0
+    return 1
+}
+
+check_speed() { [[ "$1" =~ ^(1|2|5|10)$ ]] || { echo "live: speed must be 1, 2, 5 or 10" >&2; exit 2; }; }
+
+cmd="${1:-status}"
+[[ $# -gt 0 ]] && shift
+case "$cmd" in
+start)
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --sites) set_key M8TRX_LIVE_SITES "$2"; shift 2 ;;
+        --speed) check_speed "$2"; set_key M8TRX_LIVE_SPEED "$2"; shift 2 ;;
+        --shift) set_key M8TRX_LIVE_SHIFT "$2"; shift 2 ;;
+        --scale) awk -v s="$2" 'BEGIN { exit !(s > 0 && s <= 0.6) }' || { echo "live: scale must be in (0, 0.6] — the hard cap" >&2; exit 2; }
+                 set_key M8TRX_LIVE_SCALE "$2"; shift 2 ;;
+        --dwell) [[ "$2" =~ ^(scaled|real)$ ]] || { echo "live: dwell must be scaled or real" >&2; exit 2; }
+                 set_key M8TRX_LIVE_DWELL "$2"; shift 2 ;;
+        *) echo "live: unknown option $1" >&2; exit 2 ;;
+        esac
+    done
+    [[ -e "$HOLD" ]] && { echo "live: HOLD is set ($HOLD) — run resume first" >&2; exit 3; }
+    day_running && { echo "live: the day replay is running — wait for it to finish" >&2; exit 3; }
+    systemctl is-active --quiet "$UNIT" && { echo "live: already running — 'live stop' first, or 'live speed N'" >&2; exit 3; }
+    set_key M8TRX_LIVE_CONTINUE false
+    echo "live: building the classpath under the shared lock (waits <= 60 s for an hourly gradle run)"
+    (cd "$TWIN" && flock -w 60 "$OPS/lock" env M8TRX_LIVE_DIST="$OPS/live-dist" ./gradlew liveDist -q --no-daemon) ||
+        { echo "live: the lock was busy for 60 s or the build failed — try again after the hourly pass" >&2; exit 4; }
+    sudo systemctl start "$UNIT"
+    echo "live: started — $(grep -E '^M8TRX_LIVE_' "$ENVF" | tr '\n' ' ')"
+    echo "      log: tail -f $OPS/log/live.log"
+    ;;
+stop)
+    sudo systemctl stop "$UNIT"
+    echo "live: stopped"
+    ;;
+speed)
+    check_speed "${1:-}"
+    set_key M8TRX_LIVE_SPEED "$1"
+    set_key M8TRX_LIVE_CONTINUE true
+    if systemctl is-active --quiet "$UNIT"; then
+        sudo systemctl restart "$UNIT"
+        echo "live: restarted at ${1}x on the same plan time"
+    else
+        echo "live: speed set to ${1}x for the next start (not running)"
+    fi
+    ;;
+status)
+    systemctl status --no-pager "$UNIT" 2>/dev/null | head -5 || true
+    echo "── $ENVF"; cat "$ENVF" 2>/dev/null || echo "(none)"
+    echo "── last lines of $OPS/log/live.log"; tail -n 8 "$OPS/log/live.log" 2>/dev/null || true
+    ;;
+*)
+    sed -n '2,20p' "$0"
+    exit 2
+    ;;
+esac
