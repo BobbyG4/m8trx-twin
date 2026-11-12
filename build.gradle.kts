@@ -405,3 +405,40 @@ tasks.register<JavaExec>("connectAcceptance") {
         },
     )
 }
+
+// History generator (BRIEF-TWIN-HISTORY-GENERATOR-2026-10-11) — the chain's simulated year as the CSV contract
+// mig 259 loads core-side. OFFLINE: no network, no credentials, nothing published. Same seed → byte-identical
+// files. Env: M8TRX_HISTORY_SEED (20261016) · M8TRX_HISTORY_FROM (2026-01-01) · M8TRX_HISTORY_TO (2026-10-04) ·
+// M8TRX_HISTORY_OUT (out/history-2026-10) · M8TRX_HISTORY_STORES · M8TRX_HISTORY_THREADS.
+tasks.register<JavaExec>("historyGenerate") {
+    group = "verification"
+    description = "Generate the chain's history (Jan 1 → Oct 4) offline as mig 259's eleven-file CSV contract."
+    mainClass.set("com.m8trx.twin.history.HistoryGenerateKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+tasks.register<JavaExec>("historySelfTest") {
+    group = "verification"
+    description = "Offline self-tests for the history generator: hours, keys, conversion <= 1, sums, totals vs model, determinism, MANIFEST."
+    mainClass.set("com.m8trx.twin.history.HistorySelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// The offline suite in one go — every self-test that needs no network, no credentials and no edge.
+tasks.register("offlineSelfTest") {
+    group = "verification"
+    description = "Run every offline self-test: scenarioSelfTest, peopleSelfTest, connectSelfTest, historySelfTest."
+    dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
+}
