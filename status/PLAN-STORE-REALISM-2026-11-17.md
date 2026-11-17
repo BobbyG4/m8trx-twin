@@ -310,6 +310,22 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    `effective_date` supersede the previous directive on the same fixtures, or must the twin cancel or expire it? Is there a
    documented payload (the Connect doc lists the data type but no payload)? *(Blocks: § 5 step 5.)*
 
+   > **[B/W] A3, CORRECTED the same day on Bob's word. Read this block first; it replaces the two workarounds below.**
+   > Bob, 2026-11-17: a planogram is for a period. "We have a start and stop date, which we have in the planogram now… a planogram
+   > is for this period, and then you create a new one… We could just schedule it for weekly for now… that's really how that should
+   > work." Checked in the code: he is right about the engine. A plan has a start (`effective_date`) and a stop (`expiry_date`), and
+   > the count's engine treats a plan as in force only until the earliest of its stop date, its end, or its supersede
+   > (`count/CountPlanogramTargets`); the scheduler flips the status when the stop date passes. So **the model is: one plan per
+   > period, each with its own start and stop; no supersede and no cancel are needed.** The period is whatever the sender sets
+   > (weekly for now).
+   > **The one gap, and it is the core's:** a plan pushed through Connect cannot carry its stop date today. The push reads only
+   > `effective_date`; an `expiry_date` in the payload falls into `metadata` and is ignored. The core is adding it (a small server
+   > change, being built as a draft on 2026-11-17; nothing deployed yet). **For the twin:** design § 5 step 5 as "each week, push a
+   > new directive with a new `external_directive_id`, `effective_date` = the period's first day and `expiry_date` = the next
+   > period's first day". Until the server half is deployed, the old plan stays in force beside the new one, so do not issue a
+   > second week live before then. No TWIN-REQ for supersede is needed; I withdraw that suggestion. The original answer is kept
+   > below for the record of what the code does today.
+   >
    > **[B/W] A3.** From `IntegrationIngesters.ingestPlanogramDirective` and `compliance/DirectiveWriter`:
    > - **No automatic supersede for an `api_push` directive.** A directive is matched only on `external_directive_id`: the same id
    >   is a re-send (updates that directive in place and replaces its targets); a new id makes a second directive. Status comes only
@@ -420,8 +436,9 @@ and what the core owes.
 **What the answers change in the plan**
 - **Ask B needs no new field and no core change to start.** The fixture on a sale is right when the wire order is right (§ 5 step
   2 note). The "6.8%" that made B look broken at the server was the core's error.
-- **Weekly planogram issue (§ 5 step 5) has no clean path yet** (A3). Start with one standing directive per store, re-sent weekly,
-  and file the supersede TWIN-REQ; do not build compliance history on stacked directives.
+- **Planogram issue (§ 5 step 5) is by period, with a start and a stop date on each plan** (A3, corrected on Bob's word). The
+  engine already works this way; the push through Connect cannot yet carry the stop date, and the core is adding that. Do not
+  issue a second period live until it is deployed.
 - **People for nine stores: the REST route, not nine edges** (A5), and its load must be proven before it is widened (A7).
 - **Engagement, queue and staff are the platform's gaps** (A8): mark them, do not synthesize them into product tables.
 - **Backfill through Connect cannot give true fixtures and true times together** (§ 7 note). Decide early whether Phase 4 is a
@@ -441,8 +458,10 @@ and what the core owes.
 2. Document the `planogram_directive` payload in the Connect doc.
 3. On Bob's word: the key grants (`inventory:create` if A4's test shows it missing; `vision_ai:ingest` for nine sites; a rate
    limit) and, later, the batch routes' switch with a measured load test.
-4. Answer the TWIN-REQs this plan produces (directive supersede; the fixture on a late sale; engagement, queue and staff; new
-   layouts and templates).
+4. Answer the TWIN-REQs this plan produces (the fixture on a late sale; engagement, queue and staff; new layouts and
+   templates).
+5. The stop date on a pushed planogram (`expiry_date` in the `planogram_directive` payload): being built as a draft
+   2026-11-17; the twin is told here when it is deployed.
 
 **Small edits made in place:** "racks" to "fixtures" / "rounders" in § 1.6 and § 4.2 (Bob's standing word for anything a person
 reads is "fixture"), and two US spellings. § 3 (your repo's landing recipe) and § 9's decisions are yours and Bob's; no comment
