@@ -5,6 +5,7 @@ author: m8trx-twin lane, Session 20 (gmail seat)
 answers: m8trx-shared/twin/requirements/CORE-REQ-009-data-fit-to-evaluate-m8-on.md (asks A–D)
 status: PLAN — for Bob's review; nothing built, nothing on the box / .29 / dev changed
 reads-with: status/STATUS.md § WHAT ACTUALLY RUNS (2026-11-17) — the step-0 survey this plan stands on
+reviewed: 2026-11-17 by the Backend/Web lane (m8trx-shared session S393, intellithinx seat), at Bob's request — § 8 answered, § 11 added, inline edits marked [B/W]
 ---
 
 # Plan — a twin store the M8 assistant can be graded on
@@ -16,6 +17,12 @@ RUNS) and a long conversation with Bob on 2026-11-17. Bob relays it; questions b
 reply brief in `m8trx-shared/twin/requirements/`. **§ 8 lists what the twin needs from the Backend/Web lane — please answer those
 before the twin builds the parts that depend on them.**
 
+> **[B/W] 2026-11-17 — reviewed and marked up by the Backend/Web lane, at Bob's word ("make so directly and push").** All eight
+> questions in § 8 are answered in place, from the server code as deployed on dev (services master `fee5b9b5`) and read-only
+> queries. **One of them changes this plan: ask B's "6.8%" was a measuring error on the core's side** (§ 8 A1). The review notes
+> and what the core still owes are in § 11. Every edit of mine outside § 8 and § 11 carries a `[B/W]` mark; nothing of yours was
+> deleted.
+
 CORE-REQ-009 asked for four things (people in every store, a fixture on every sale, sales that do not decay, planted scenarios).
 Working through them with Bob showed they are symptoms of one problem: **the twin's store is not a store.** The floor is a
 parametric grid, the planogram is derived from wherever stock happened to land, stock is a one-shot pool that drains, people and
@@ -26,7 +33,7 @@ one simulation per store-day producing people, sales, stock and compliance toget
 
 ## 1. What Bob ruled or described today (2026-11-17) — design inputs, not proposals
 
-1. **Purpose.** The M8 assistant must answer real questions about store activity, so the store is modelled as accurately as
+1. **Purpose.** The M8 assistant must answer real questions about store activity, so the store is modeled as accurately as
    possible in layout and planogram. Planograms are the new core feature since the twin lane last worked.
 2. **People on all stores** is the plan. People and sales must line up in time, per store.
 3. **Store hours and day shape.** Sales and traffic follow each store's hours, peak at the usual times, and keep the
@@ -34,7 +41,7 @@ one simulation per store-day producing people, sales, stock and compliance toget
 4. **Volume by store, not only by size.** "New York's going to be busier than … Seoul or whatever."
 5. **Stock is EPC-level.** New EPCs are issued for new stock; nothing is recycled. Seasonal assortment flow is **later**.
 6. **Deliveries come in before opening** — about an hour before at big stores, half an hour at smaller ones (Bob's observation of
-   Korean stores). Staff stock the racks in that window. Cross-store transfers are occasional and item-specific (later).
+   Korean stores). Staff stock the fixtures in that window. Cross-store transfers are occasional and item-specific (later).
 7. **Back-room → floor restock happens through the day, in the quiet hours**, to keep the fixture matching its planogram.
 8. **Denver's floor is unrealistic**: many fixtures with no stock, fixtures all alike, stock "a few items, really uneven".
 9. **Planograms are issued weekly, for compliance**, and compliance is measured against them — simulate that live.
@@ -122,7 +129,7 @@ Extend `store-operating-model.json` from one chain-wide block to a chain default
 
 ### 4.2 Floor plan (per store)
 Replace the parametric gondola grid (`build_layout.py:186-403`; reuse its geometry helpers and asserts) with a plan built
-department by department from realistic Decathlon fixture kinds: footwear walls, apparel rails and round racks, gondola bays
+department by department from realistic Decathlon fixture kinds: footwear walls, apparel rails and rounders, gondola bays
 with levels, an entrance/promo table zone, a bike and large-item area, checkout impulse, back room by receiving dock. Fixtures
 carry **bays, levels and a capacity per level**, matching core's fixture model (`zone_template` with a `form` per level — rail,
 shelf, pegboard, table_top, bin; faces; mig 292/303). Stores differ in shape, not only in size.
@@ -153,7 +160,7 @@ per product; **no empty floor fixture except on purpose**. Reuse the SGTIN-96 en
 
 Base it on the behavior package from PR #21 (`ShopperAgent`, `Presentation`, `ShelfPlan`, `FixtureLedger` — the only code that
 already links dwell at a fixture to a sale from that fixture) merged with the history runner (`HistoryDayRunner` / `RecentDay`,
-which already produces a store-day's volume, calendar and story). Generalise it from Denver to all ten stores.
+which already produces a store-day's volume, calendar and story). Generalize it from Denver to all ten stores.
 
 A store-day, in order:
 1. **Pre-open (T−60 / T−30 min):** the day's delivery is received into the back room (new EPCs, sized from what sold since the last
@@ -162,6 +169,11 @@ A store-day, in order:
    sees fixtures (impressions), dwells, picks up **a unit actually on that fixture**, may try on, buys or puts back. A sale is
    the specific EPC taken from that fixture — so the platform's custody location at the sale is the fixture the shopper stood at.
    Selling from the back room becomes the rare case it is in a real store.
+   **[B/W] The wire order that makes this true (§ 8 A1):** the server stamps the sale's fixture from the item's current
+   `thing_location` at the moment the sale is ingested; the sender cannot name it. So for every unit: the Connect
+   `inventory_movement` that puts it on the floor fixture must be **ingested before** its sale, and no later movement of that unit
+   may be sent before the sale is. A put-back to another fixture is a movement too. Send per store in event order; do not batch
+   a day's sales after the day's moves.
 3. **Quiet hours:** staff top up fixtures that fell below plan from the back room, placed in the troughs of the hourly curve.
 4. **Close:** the day's ledger (per fixture: impressions, dwell, pickups, units sold, on hand vs plan) is the truth the checks
    and the answer key read.
@@ -180,11 +192,11 @@ Every store-day, the simulation writes its own **truth ledger** (a file, never s
 
 | Signal | Twin truth grain | Where the platform should hold it | Known state today |
 |---|---|---|---|
-| Units and value sold per fixture | fixture × hour | `sale_line.zone_id` → `commerce_projection` zone rows | 6.8% of lines on the right fixture (§ 8 Q1) |
+| Units and value sold per fixture | fixture × hour | `sale_line.zone_id` → `commerce_projection` zone rows | **[B/W] corrected:** live lines are consistent with custody in 100% of cases; the "6.8%" was the share of lines that are live at all (§ 8 A1). What is still wrong is *which* fixture the twin's stream leaves the item on before it sells |
 | Units sold per item **on** a fixture | fixture × product × day | `sale_line` (`zone_id`, `product_id`) | same dependency |
 | Impressions per fixture | fixture × hour | `impression_event` → `behavioral_projection` (impression) | Denver only; day-part windows, no hour grain |
 | Dwell per fixture | fixture × hour, per shopper | `person_session` / `behavioral_projection` (dwell) | Denver only |
-| Interactions: pickup, put-back, try-on | fixture × product × hour | engagement metric; `try_on_zone_session`; mirror sessions | engagement never written by the rollup; try-on API stamps now(); mirror table empty — **candidate gaps** |
+| Interactions: pickup, put-back, try-on | fixture × product × hour | engagement metric; `try_on_zone_session`; mirror sessions | engagement never written by the rollup; try-on API stamps now(); mirror table empty — **candidate gaps** **[B/W] confirmed for engagement: no live producer exists in the server (§ 8 A8)** |
 | Flow between zones | zone → zone per hour | `path_analysis` | empty — **candidate gap** |
 | On hand vs plan per fixture | fixture × product, at open and close | `inventory_zone_product_count`, `compliance_target_state` | quantity-only compliance |
 
@@ -224,6 +236,10 @@ map onto planogram and parameter edits:
 5. **Load**: Denver alone peaks ≈ 4,400 events/min; ten stores is several times that. The live plane's caps (500 ev/s, 40
    arrivals/min) are checked per store vs total before widening; the main-server's ingest ceiling is a core question (§ 8 Q7).
    Precedent: a Saturday-scale Denver replay starved the main-server for two hours on 2026-10-12.
+   **[B/W] The numbers are in § 8 A7. And one rule from this side:** dev's main server and mother are the same ones Bob's office
+   stock-count walks run on (daily until his move at the end of November, and the Korea lab after). Any widening step, load test
+   or replay is scheduled with him and announced to the Backend/Web and Android lanes first; none runs while a walk is on. The
+   GPU box also hosts the ARLS serve the phones use during a walk, so generator load on the box counts too.
 
 ## 7. Phase 4 — backfill, only after Phase 3 is measured green
 
@@ -242,25 +258,142 @@ PR #17 → mig 259); (3) a TWIN-REQ asking core for the load — a migration if 
 around: Timescale compression after 90 days, `delete_guard` on custody and compliance events, mig 259's `materialized` tag
 (the rollup skips loaded days).
 
+**[B/W] Three facts that shape the backfill (from the code, § 8 A1, A2, A4):**
+- **A backdated sale takes its fixture from where the item is *when the request is processed*, not from where it was at
+  `occurred_at`.** `occurred_at` sets the line's time and the price lookup only. So a history sent through Connect lands on the
+  right fixtures only if it is replayed in event order (movement, then sale, per unit), and then every movement and receipt
+  carries today's time. For fixture-level history with true times, the path is a core load (your step 3), not Connect.
+- **Rows already there are not fixture truth.** 81,792 of the Decathlon sale lines dated 2026-10-06 to 2026-11-06 are the core's own
+  backfill (mig 311, `price_source = 'backfill_list'`): their fixture is where the item stood on the day of the backfill, and their
+  custody `from_zone_id` is NULL. Any new backfill should replace or supersede these, and the eval will exclude them from fixture
+  questions until then (core's item, § 11).
+- **A receipt has no event time** (stamped at ingest), as your table says; confirmed.
+
 ## 8. Questions for the Backend/Web lane (answer before the twin builds the dependent part)
 
 1. **`sale_line.zone_id`** — what is it for (planogram compliance, fixture conversion, spatial), who stamps it (resolved from
    `thing_location` at ingest per B-9, or a fixture the sale event can carry), and should the twin send the fixture on the sale,
    in which field? Bob asked that nothing be assumed here. *(Blocks: ask B's design.)*
+
+   > **[B/W] A1.** From the code (`IntegrationIngesters.ingestSaleEvent`, `SaleLineWriter`, `InventoryItemService`) and one query:
+   > - **Who stamps it:** the server, always. A sale line has no field for a fixture; the sender cannot name one. The server reads
+   >   the item's row in `thing_location` (one current row per item) at the moment it ingests the sale and writes that zone to both
+   >   `sale_line.zone_id` and the sale's custody event `from_zone_id`. It is "where the item stands now", not where it stood at
+   >   `occurred_at`. No `thing_location` row gives a NULL zone; a back-room zone is stamped like any other.
+   > - **What moves `thing_location`:** a Connect `inventory_movement` (it updates the location, its history and writes a `moved`
+   >   custody row, with no physical read needed), a count / stocktake, and a task completion that books items. A sale, a receive
+   >   and a plain status change do not move it.
+   > - **What reads the sale's fixture:** the `commerce_projection` rollup (line's zone, else the custody zone, else
+   >   `thing_location`) and the fixture funnel (`analytics/FixtureFunnel`). Planogram and compliance do not read it (none found).
+   > - **The 6.8% in CORE-REQ-009 was the core's measuring error, corrected here.** Since 2026-10-06 the Decathlon tenant has 87,728
+   >   sale lines: 5,936 live (`price_source` till or history) and 81,792 that are the core's own backfill of sales from before the
+   >   `sale_line` table existed (mig 311). On the live lines the line's zone equals the custody `from_zone_id` in **100%**; on the
+   >   backfill lines the custody zone is NULL, so they can never match. 6.8% is just the live share. The "17% on Backroom" figure
+   >   was not re-measured.
+   > - **So what the twin should do for ask B:** send nothing new on the sale. Make the item's last movement before its sale be the
+   >   floor fixture it is taken from, and get the order right on the wire (the note in § 5 step 2). Your store-day simulation does
+   >   this by construction. The done-when in CORE-REQ-009 B stands (≥ 95% of lines on a floor fixture that matches the trail,
+   >   under 2% back room), measured on live lines only.
+   > - **A real gap on the core's side, recorded, not scheduled:** resolving the fixture at ingest time instead of at `occurred_at`
+   >   is also wrong for a real till integration that posts its sales late (a nightly batch after the evening restock). Whether a
+   >   sale may carry its fixture, or the server should resolve it as of `occurred_at` from `thing_location_history`, is Bob's call;
+   >   if you want it, file it as a TWIN-REQ with the case from your truth ledger.
 2. **Is the timestamp fix (services PR #299: custody `occurredAt`, edge envelope `ts`) deployed — on the main server and on the
    twin edge image (`m8trx-edge-server:dev` built 2026-10-18)?** *(Blocks: Phase 4.)*
+
+   > **[B/W] A2.** #299 is merged (`1a01f08a`, 2026-10-11 UTC) and is in services master `fee5b9b5`, which is what dev's main server
+   > runs: **deployed on the main server, yes.** The twin edge container on `.29` runs an image created 2026-10-18 04:47 UTC, a week
+   > after the merge, so it very probably has it; the image carries no revision label, so that is **not proven**. Your step (1) in
+   > § 7 (send one backdated sale and one backdated people session, read the stored times back) is the right proof. Note the twin
+   > edge is on an older image than today's `:dev` (which the office edge runs, built 2026-11-17).
 3. **Weekly planogram issue through Connect** — for an `api_push` directive (`planogram_directive` webhook), does a newer
    `effective_date` supersede the previous directive on the same fixtures, or must the twin cancel or expire it? Is there a
    documented payload (the Connect doc lists the data type but no payload)? *(Blocks: § 5 step 5.)*
+
+   > **[B/W] A3.** From `IntegrationIngesters.ingestPlanogramDirective` and `compliance/DirectiveWriter`:
+   > - **No automatic supersede for an `api_push` directive.** A directive is matched only on `external_directive_id`: the same id
+   >   is a re-send (updates that directive in place and replaces its targets); a new id makes a second directive. Status comes only
+   >   from the date: `scheduled` if `effective_date` is in the future, else `active`. The older directive stays `active`.
+   > - **What the count's engine does with two:** for the same (fixture, product), the later `effective_date` wins, then the later
+   >   created (`count/CountPlanogramTargets`). That is a tie-break at read time. A (fixture, product) that the new plan **drops**
+   >   is still required by the old one, because the old one is still active.
+   > - **No cancel or expire for an `api_push` directive through Connect.** `POST /api/v2/planograms/{id}/end` refuses any
+   >   non-native source; superseding exists only for plans published natively in M8TRX.
+   > - **What works today for a weekly issue:** either (i) one standing `external_directive_id` per store, re-sent each week with the
+   >   full new target set (a true replacement, but no history of past weeks' plans), or (ii) a new id each week whose target set
+   >   covers every (fixture, product) of the previous week, sending `required_quantity` 0 where a line leaves a fixture (whether a
+   >   0 target is accepted and read as "not planned here" is **not determined**: test it on one fixture first). Neither is what a
+   >   customer's merchandising system should have to do. **File a TWIN-REQ: a newer `api_push` directive for the same site
+   >   supersedes the older one from its effective date.** The core agrees it is a gap.
+   > - **Payload:** not documented in the Connect doc (only the data type name appears). The server reads an untyped map: top level
+   >   `name` (required), `targets` (required, non-empty), `external_directive_id`, `effective_date`, anything else into `metadata`;
+   >   per target `site_id` (required), `raw_fixture_code`, `raw_item_identifier`, `required_quantity`, `position_sequence`,
+   >   `facing_count`, `display_level`. The core owes the doc (§ 11).
 4. **Receiving** — `POST /inventory/items/receive` needs `inventory:create`; the twin's data-plane key is read-only. What is the
    sanctioned grant route (TWIN-REQ-005)? *(Blocks: replenishment — the core of ask C.)*
+
+   > **[B/W] A4.** `POST /api/v2/inventory/items/receive` requires `inventory:create` at site scope, and its controller is marked
+   > as a Connect data-plane surface today (`InventoryActionController`, `@ConnectExposed(dataPlane = true)`), so the
+   > `CONNECT_NOT_EXPOSED` refusal recorded in TWIN-REQ-005 (August) should no longer apply: **test it**. A key cannot grant itself
+   > a capability; a grant is `PATCH /api/v2/connect/service-keys/{keyId}/scopes` by an admin who holds the capability, **on Bob's
+   > word** (a grant to a machine key is his decision, per the core's permission rules). Which capabilities the twin's keys hold
+   > today is **not determined**: the Connect doc's dev note and TWIN-REQ-005's 2026-08-01 update disagree. First step is yours and
+   > read-only: call receive with one test EPC on Denver with each credential the twin holds and report the status code. Payload:
+   > `siteId`, `spaceId`, `items[].epc`; no event time (stamped at ingest), so deliveries are sent at their real local time, as § 6
+   > step 1 already says.
 5. **People for nine more stores** — one twin edge per store, one edge serving several sites, or the cloud REST route with
    site-scoped `vision_ai:ingest` keys? The twin does not touch `.29`. *(Blocks: ask A beyond Denver.)*
+
+   > **[B/W] A5.** Three options, from the code:
+   > 1. **One twin edge per store.** Works with no code change, but an edge is bound to exactly one site (`M8TRX_SITE_ID`), so it
+   >    is nine more stacks on `.29` (an edge, a database and a NATS each; ports, a site key and a refresh script per stack) on the
+   >    host that runs the office edge during Bob's walks. Not recommended.
+   > 2. **Direct REST from the twin, no edge.** `POST /api/v2/visionai/person-sessions`, `PATCH …/{id}` and
+   >    `POST /api/v2/visionai/impressions` are Connect data-plane routes that need `vision_ai:ingest` at site scope; a key may be
+   >    bound to several sites; they accept event times (`entryTime`, `exitTime`, `firstLook`), so they also serve the backfill.
+   >    This is the same route the edge itself posts to. The twin sends finished sessions and impressions from its store-day
+   >    truth instead of raw positions. **Recommended for the nine stores; keep Denver on its edge** so the edge's own person
+   >    state machine stays exercised. Needs, on Bob's word: a key with `vision_ai:ingest` for the nine sites, and a raised
+   >    per-key rate limit (default 600 requests a minute).
+   > 3. **The batch routes** (`person-sessions:batch`, `impressions:batch`, 100 items a request) exist in the code and are switched
+   >    off (`m8trx.ingest.batch.enabled=false`). Turning them on is a config change and a restart of the main server: core work,
+   >    Bob's word, and it must be measured before ten stores lean on it. At ten stores' volume this is probably the real answer
+   >    (A7).
 6. **Floor plans** — will core load new twin layouts (TWIN-REQ-006, or a one-off load like the original 929 zones)? Which fixture
    templates (`zone_template`) exist or should exist for Decathlon? *(Decides § 4.2 path (b).)*
+
+   > **[B/W] A6.** Confirmed: zones cannot be created, retyped or resized through Connect (only tags on a zone, and the read
+   > `/spatial/identity`). The original 30 spaces and 929 zones were loaded by direct SQL on mother; no migration file for that load
+   > was found in the vault. `zone_template` is per tenant (no global rows): the Decathlon tenant has **one** template (`gondola`);
+   > the office tenant has six (double and single hanging, a shoe wall, steel shelving, a wall unit). Platform fixture kinds come
+   > from the server's built-in set (`fixtures/platform-fixture-set.json`). A load of new layouts is a data change on mother: tier
+   > B of the core's backup rule (full backup first) and Bob's explicit word; nothing is scheduled. **Path (a) now is the right
+   > call.** For (b), TWIN-REQ-006 should say which fixture kinds Decathlon needs as templates, with levels and forms, so the load
+   > is one job.
 7. **Ingest capacity** — what people-event rate can the main server take, so ten stores can be paced safely?
+
+   > **[B/W] A7.** There is no measured ceiling for ten stores; what exists:
+   > - **The 2026-10-12 incident:** a replay of 1,795 shoppers (2.85 M samples) starved the main server's HTTP threads within 8
+   >   minutes, at about 370 writes a minute; the safe envelope measured that day was about 950 shoppers a day replayed.
+   > - **The fix (services #308, 2026-10-13, deployed):** people ingest runs in its own lane: 8 threads, a queue of 256, then a
+   >   `429` with `Retry-After: 5`. A count has its own lane (4 threads, queue 64). Request bodies are capped at 1 MB. Measured after
+   >   the fix: 660 writes a minute with the health check's p95 at 65 ms. That is a measured point, not a limit.
+   > - **Per-key limit:** 600 requests a minute by default; whether the twin's key has a raised limit was never checked.
+   > - **For the twin:** honor `429` and `Retry-After` (back off, never retry hot), pace per store, and treat anything above the
+   >   measured 660 a minute as unproven until a load test says otherwise. That test is a scheduled step with Bob (§ 6 step 5 note).
 8. **Engagement, queue length, staff movement** — the rollup never writes them. A core producer, or loaded series? *(Ask A's
    "also asked".)*
+
+   > **[B/W] A8.** Confirmed from the rollup (`ProjectionRollupMath`): it writes traffic (`visit_count`, `transit_count`,
+   > `dwell_time_seconds`), commerce (units, value, transactions, conversion, basket, units per transaction) and behavioral
+   > (`impression`, `dwell`). Nothing in the server produces the other three live; every row that exists is the January to
+   > October 4 backfill.
+   > - **Engagement:** no producer and no input event for "a person interacted with an item at a fixture".
+   > - **Queue length:** no producer; it would be a count of people in a checkout zone over time (the zone type exists).
+   > - **Staff movement:** no producer; staff sessions are flagged and then left out of the rollup.
+   > These are product gaps, not twin gaps: they belong in your gap ledger as **no surface to send it**, and in one TWIN-REQ that
+   > names the three with the truth grain you can supply. I withdraw CORE-REQ-009 A's "also asked" as something the twin can
+   > deliver on its own. For the eval, the core treats the three as not available after 2026-10-04.
 
 ## 9. Decisions for Bob
 
@@ -276,3 +409,41 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
 Phase 0: a day (conflict resolution + tests) plus Bob's reviews. Phase 1: 3–5 days. Phase 2: about a week (the behavior package
 does the hardest part). Phase 3: Denver live in days after Phase 2, widening paced by measurements and § 8 answers. Phase 4:
 after Phase 3 is green; mostly generation (reuse) plus core's load.
+
+## 11. Review by the Backend/Web lane (2026-11-17, S393) [B/W]
+
+**Verdict: the plan is right, and it is the right size.** Rebuilding the store in a store's own order (floor, plan, stock to plan,
+people and staff acting on it, weekly issue) with one simulation per store-day is what makes advice gradable; patching A to D
+separately would not. Nothing in § 8's answers blocks Phases 0 to 2 or Denver live. What follows is what changed, what to watch,
+and what the core owes.
+
+**What the answers change in the plan**
+- **Ask B needs no new field and no core change to start.** The fixture on a sale is right when the wire order is right (§ 5 step
+  2 note). The "6.8%" that made B look broken at the server was the core's error.
+- **Weekly planogram issue (§ 5 step 5) has no clean path yet** (A3). Start with one standing directive per store, re-sent weekly,
+  and file the supersede TWIN-REQ; do not build compliance history on stacked directives.
+- **People for nine stores: the REST route, not nine edges** (A5), and its load must be proven before it is widened (A7).
+- **Engagement, queue and staff are the platform's gaps** (A8): mark them, do not synthesize them into product tables.
+- **Backfill through Connect cannot give true fixtures and true times together** (§ 7 note). Decide early whether Phase 4 is a
+  core load, so the simulation's file output is shaped for it.
+
+**What to watch**
+- **The shared dev system.** One main server and one database carry the twin, the office tenant and Bob's walks (§ 6 step 5 note).
+- **Order of value.** The eval's advice half is blocked on Denver only until Phase 3 step 1 and 2 are measured. If Phase 1 runs
+  long, a Denver-only cut of the new model (path (a), one store profile) is worth more than ten half-built stores.
+- **Done-when checks.** Keep CORE-REQ-009's as the acceptance for A, B and C, measured with `grid.py`, on live lines only for B.
+- **The gap ledger is the most valuable output of this plan for the product.** Every "not captured" row is a finding about M8TRX,
+  not about the twin. Send the first edition to the core as soon as it exists, even if rough.
+
+**What the core owes (this lane's items, none scheduled without Bob's word)**
+1. Correct CORE-REQ-009 ask B's "today" (the 6.8% and its reading) and tell the eval to exclude `backfill_list` lines from
+   fixture-level questions.
+2. Document the `planogram_directive` payload in the Connect doc.
+3. On Bob's word: the key grants (`inventory:create` if A4's test shows it missing; `vision_ai:ingest` for nine sites; a rate
+   limit) and, later, the batch routes' switch with a measured load test.
+4. Answer the TWIN-REQs this plan produces (directive supersede; the fixture on a late sale; engagement, queue and staff; new
+   layouts and templates).
+
+**Small edits made in place:** "racks" to "fixtures" / "rounders" in § 1.6 and § 4.2 (Bob's standing word for anything a person
+reads is "fixture"), and two US spellings. § 3 (your repo's landing recipe) and § 9's decisions are yours and Bob's; no comment
+beyond this: land what the box runs first, exactly as you propose.
