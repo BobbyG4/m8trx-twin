@@ -89,7 +89,7 @@ dependency bumps (#26) in it. Proposed landing, each step on Bob's word.
 
 ### 3.2 Landing recipe — ✅ DONE 2026-11-17
 
-> **Landed:** #27 (`51c27bb`) = the box stack merged with `main`, keys export fixed and verified against `/spatial/identity` in all ten stores (only drift: Denver "Entrance" vs "Entrance Area", § 8 Q12); #17 auto-merged, #18/#19 closed. #28 (`092a2b1`) = #21's six commits on current `main`, bump dropped; #21 closed. All branches kept. **Box rebuilt from `main` 2026-11-17 13:47 KST (Bob's go)**: checkout switched to `main`, live plane restarted on a fresh `liveDist` with `--shift 0`, ops scripts committed under `ops/box/`. **Still open in Phase 0:** the digest fix.
+> **Landed:** #27 (`51c27bb`) = the box stack merged with `main`, keys export fixed and verified against `/spatial/identity` in all ten stores (only drift: Denver "Entrance" vs "Entrance Area", § 8 Q12); #17 auto-merged, #18/#19 closed. #28 (`092a2b1`) = #21's six commits on current `main`, bump dropped; #21 closed. All branches kept. **Box rebuilt from `main` 2026-11-17 13:47 KST (Bob's go)**: checkout switched to `main`, live plane restarted on a fresh `liveDist` with `--shift 0`, ops scripts committed under `ops/box/`. **Phase 0 complete 2026-11-17:** the digest's people-plane check now reads the live plane; its source of record moved to `ops/box/` (the copy in `m8trx-shared/scripts/twin-ops/` is superseded — see § 8 Q13).
 
 1. **One consolidated PR, "land what the box runs":** branch from `80f810b`, merge `main` (resolution above), fix the keys export,
    `offlineSelfTest` green. Use a merge commit, not a squash, so the per-bump and pricing history survives.
@@ -549,6 +549,10 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    > "Entrance" with type `entry_exit`. Take the platform's name. Two cautions: (1) Denver now has no zone of type `entry_exit`
    > by that edit; whether Denver's visit counting depended on that type was not checked, so compare Denver's visits before and
    > after 11-11 in your truth ledger; (2) whether the type change was intended is Bob's to say.
+
+13. **Housekeeping, no answer needed unless you object:** the twin digest (`twin-digest.sh` + its units) now lives in
+    `m8trx-twin/ops/box/` with the other box ops files. Its copy in `m8trx-shared/scripts/twin-ops/` is superseded (the twin
+    lane does not write to the shared vault). Whoever next touches that folder can delete it or leave a pointer.
 
 ## 9. Decisions for Bob
 

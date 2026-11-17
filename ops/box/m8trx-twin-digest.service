@@ -1,0 +1,10 @@
+[Unit]
+Description=m8trx-twin daily digest (one Slack line, 08:00 Asia/Seoul, the last 24 h of twin passes)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+User=m8trx
+WorkingDirectory=/opt/m8trx/twin-ops
+ExecStart=/opt/m8trx/twin-ops/twin-digest.sh
+Nice=10

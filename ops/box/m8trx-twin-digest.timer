@@ -1,0 +1,7 @@
+[Unit]
+Description=m8trx-twin daily digest, 08:00 Asia/Seoul
+[Timer]
+OnCalendar=*-*-* 08:00:00 Asia/Seoul
+Persistent=true
+[Install]
+WantedBy=timers.target
