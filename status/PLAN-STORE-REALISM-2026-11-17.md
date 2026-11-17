@@ -700,6 +700,35 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
 - **D1** Phase 0 landing (§ 3) — approve the recipe, then each merge and the box rebuild.
 - **D2** Floor plan path — (a) realistic inside today's zones now, (b) core-loaded new layouts later; recommended both, (a) first.
 - **D3** Store profile numbers — location factors (NYC vs Denver vs Busan…), real hours per city, the 60/30-minute cut-off.
+  **✅ DECIDED 2026-11-17 (Bob: "estimate by store size … normal retail time"; then "that looks fine"):** twin estimates.
+  - **Hours (store-local).** Seoul and Busan are open daily.
+
+    | Store | Mon–Sat | Sunday |
+    |---|---|---|
+    | NYC | 10:00–21:00 | 11:00–20:00 |
+    | Denver | 10:00–21:00 | 11:00–18:00 |
+    | SF | 10:00–20:00 | 11:00–19:00 |
+    | Paris | 09:30–20:30 | 10:00–19:00 (tourist zone) |
+    | Lyon, Lille, Bordeaux, Marseille | 09:30–20:00 | closed (Saturday +10%) |
+    | Seoul | 10:30–22:00 | 10:30–22:00 |
+    | Busan | 10:30–21:30 | 10:30–21:30 |
+
+  - **Location factors** (volume vs Denver, after floor area):
+
+    | Store | Factor | ≈ Denver |
+    |---|---|---|
+    | NYC | 1.8 | 1.75× |
+    | Paris | 1.6 | 1.44× |
+    | Seoul | 1.5 | 1.13× |
+    | SF | 1.1 | 1.11× |
+    | Lyon | 1.1 | 0.74× |
+    | Lille | 1.0 | 0.74× |
+    | Busan | 1.1 | 0.45× |
+    | Bordeaux | 0.9 | 0.43× |
+    | Marseille | 0.85 | 0.41× |
+
+  - **Delivery lead:** 60 min at stores of 450 m² or more, 30 min below.
+  - **Being applied** in `feat/store-profiles-d3`, documented in `reference/data/STORE-PROFILES-ESTIMATES.md`.
 - **D4** Planogram issue day/time (e.g. Monday before open) and how much deliberate non-compliance the floor should carry.
 - **D5** Order of stores after Denver.
 - **D6** Where the twin's records live — this repo (current) or the shared vault; this plan stays here until you say otherwise.
