@@ -593,6 +593,22 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
     and about 6,400 movement batches (≤ 2/s), on a night with no walk. Is that pace safe for the audit triggers that starved
     the pool in Session 8, or should it be slower? The twin will announce the night to the lanes before it starts.
 
+17. **Is Denver's people count broken by the 2026-11-11 entrance edit?** Bob, 2026-11-17: he may have made that edit "trying to
+    fix something else", and Denver's people count "is not working". What `/spatial/identity` shows today for Denver:
+    - `Z-01` "Entrance Area" is now `region`.
+    - Two new zones, **"Door 1"** (`357cb4a1-…`) and **"Door 2"** (`d5234988-…`), both `entry_exit`, with no code (made in the
+      app).
+    - Every other store still has one "Entrance", `entry_exit`.
+    The twin's shoppers enter through `Z-01`'s band (x 6.8–18.2 m, y 0–3 m in the layout frame) and cross gate line `CS-01`
+    (y = 0.6 m). The identity read returns no geometry, so the twin cannot see where the doors are drawn. Please check
+    (read-only):
+    (a) Denver's daily `visit_count` before and after 2026-11-11;
+    (b) what visit counting keys on: `entry_exit` zones, the crossing slice, or sessions in the space;
+    (c) the Door 1/Door 2 polygons against `Z-01`'s footprint.
+    If the doors miss the twin's entry path, there are two fixes in the app, Bob's to choose:
+    - revert (`Z-01` back to `entry_exit`, disable the doors);
+    - redraw the doors across the entry band.
+
 ## 9. Decisions for Bob
 
 - **D1** Phase 0 landing (§ 3) — approve the recipe, then each merge and the box rebuild.
