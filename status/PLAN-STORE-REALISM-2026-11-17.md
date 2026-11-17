@@ -348,6 +348,26 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
 4. **Receiving** — `POST /inventory/items/receive` needs `inventory:create`; the twin's data-plane key is read-only. What is the
    sanctioned grant route (TWIN-REQ-005)? *(Blocks: replenishment — the core of ask C.)*
 
+   > **[B/W] A4, UPDATED 2026-11-17 13:30 KST: the keys were read on dev (names and capabilities only, read-only).** What the
+   > Decathlon tenant holds today, enabled and not revoked:
+   >
+   > | Key | Kind | Bound to | Capabilities | Limit | Last used |
+   > |---|---|---|---|---|---|
+   > | `twin-data-plane-bearer` | service | no site binding on the row (reads as tenant-wide; your probe confirms) | `integration:manage`, `scan:submit`, **`inventory:create`**, `inventory:read`, `vision_ai:view`, `task:read` | 300/min | 2026-10-12 |
+   > | `m8demo-service-principal-s173` | service | no site binding | the same plus `product:import` | none set | 2026-07-30 |
+   > | `twin-s280-lockdown` | service | 1 site (Denver) | `inventory:read`, `vision_ai:view`, `task:read` | 600/min | 2026-11-17 |
+   > | `twin-edge-denver` | service | 1 site (Denver) | `vision_ai:ingest` | 600/min | 2026-11-17 |
+   > | `twin-po-sim-2` (and three older webhook keys) | integration `twin-pos` | the integration | `webhook:write` | 600/min | 2026-11-17 |
+   >
+   > **So your key table's row 1 needs no grant:** `inventory:create` already exists on `twin-data-plane-bearer`, for every store.
+   > The key the twin's `.env` uses for reads (`twin-s280-lockdown`) is the Denver-only read key; receiving must use the bearer.
+   > Its limit is 300 requests a minute, lower than the others: pace receipts under it or ask for it to be raised. Rows 2 and 3
+   > (a nine-site `vision_ai:ingest` key and its limit) are right as you wrote them: Phase 3, on Bob's word, after the load test.
+   > **One integration is enough:** `twin-pos` (default type `sale_event`) already carries sales, movements and planograms, because
+   > the request's `X-Data-Type` header picks the ingester and the integration's own type is only the default. No new integration
+   > is needed for any phase. (The web's New Integration dialog lists only four of the seven inbound types; that is a web gap the
+   > core is fixing, and it does not limit what `twin-pos` accepts.)
+   >
    > **[B/W] A4.** `POST /api/v2/inventory/items/receive` requires `inventory:create` at site scope, and its controller is marked
    > as a Connect data-plane surface today (`InventoryActionController`, `@ConnectExposed(dataPlane = true)`), so the
    > `CONNECT_NOT_EXPOSED` refusal recorded in TWIN-REQ-005 (August) should no longer apply: **test it**. A key cannot grant itself
