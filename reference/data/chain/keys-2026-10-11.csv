@@ -33,7 +33,7 @@ dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,79a5f96
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,4d9d3859-55be-54e4-aee3-a0e79e07ac2a,fixture,Gondola R3 Back U2,GB-R3-U2,hike_camp
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,194fbd53-6cad-5da8-ae7e-48ef04c06ce1,fixture,Gondola R3 Front U1,GF-R3-U1,hike_camp
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,53a3494f-2926-5fc3-98d3-705c1a5a54f7,fixture,Gondola R3 Front U2,GF-R3-U2,hike_camp
-dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,c44af75e-df8a-5350-b4b9-dba07470d5bd,fixture,Impulse Rack,CO-IR,
+dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,c44af75e-df8a-5350-b4b9-dba07470d5bd,fixture,Impulse Fixture,CO-IR,
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,78549c30-76cc-555f-990f-3758347e4c4d,fixture,Promo Island 1,PI-01,
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,afd8c734-8cc6-58d1-97ba-2f4c214ac01a,fixture,Treadmill 1,GA-01,
 dec-fr-bordeaux,Europe/Paris,2995a387-9f72-5f13-b003-6151d82058c3,315.00,93514bcb-fe66-5faf-8e06-34d69b17dcb8,fixture,Treadmill 2,GA-02,
@@ -55,7 +55,7 @@ dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,4e1b3fb9-f
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,144face6-d5e5-59b5-b53f-ce723dab88fc,fixture,Accessories Bay 1,ACC-01,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,f35be02a-e79e-539b-98b9-141ef082ac7b,fixture,Accessories Bay 2,ACC-02,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,88267960-655e-5864-9702-52cd7d4f4c5b,fixture,Accessories Bay 3,ACC-03,
-dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,0cdd4669-e11b-57b0-930e-23ee180f4943,fixture,Apparel Round Rack 2,RR-02,
+dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,0cdd4669-e11b-57b0-930e-23ee180f4943,fixture,Apparel Round Fixture 2,RR-02,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,90dcd3e4-d1b3-5a88-8392-06460d9f86c3,fixture,Checkout Counter 1,CO-01,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,93fa96e3-d336-5e00-a12c-4ce17c478bc9,fixture,Checkout Counter 2,CO-02,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,5946019a-3f4f-5a8c-800c-4b0021bff4c9,fixture,Checkout Counter 3,CO-03,
@@ -100,7 +100,7 @@ dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,5a747285-d
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,078d73c3-2509-5b75-808a-5f626190567d,fixture,Gondola R4 Front U2,GF-R4-U2,hike_camp
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,7a12d45a-24ff-56ce-8bc6-6096dba76a99,fixture,Gondola R4 Front U3,GF-R4-U3,hike_camp
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,a4abb4cb-1f43-59da-b3a0-6c86db5f3f63,fixture,Gondola R4 Front U4,GF-R4-U4,hike_camp
-dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,2262721f-0e10-5271-abd5-1702583bbf07,fixture,Impulse Rack,CO-IR,
+dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,2262721f-0e10-5271-abd5-1702583bbf07,fixture,Impulse Fixture,CO-IR,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,e7f659a4-872b-58a3-bc91-1e516e1d83cb,fixture,Promo Island 1,PI-01,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,d02a2c17-2d0c-5cb7-853f-215173ff8185,fixture,Treadmill 1,GA-01,
 dec-fr-lille,Europe/Paris,27439ee7-ee5e-5337-9cd9-ec030b255816,483.00,3e3ae9c9-91b0-5210-8662-b802ac4ec610,fixture,Treadmill 2,GA-02,
@@ -125,7 +125,7 @@ dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,292d329f-01
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,1442500b-d9d8-5d73-bca7-2fe36070cc84,fixture,Accessories Bay 2,ACC-02,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,323ab3ff-46ab-53f9-b302-c4c1ae1347cc,fixture,Accessories Bay 3,ACC-03,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,5ff388d7-0b28-5102-b42c-a8103ed3efcd,fixture,Accessories Bay 4,ACC-04,
-dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,6fbbf909-2168-5d58-8429-5b7779938d2a,fixture,Apparel Round Rack 2,RR-02,
+dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,6fbbf909-2168-5d58-8429-5b7779938d2a,fixture,Apparel Round Fixture 2,RR-02,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,efa0ec12-e021-5ae0-bb6a-05eb87b674c9,fixture,Checkout Counter 1,CO-01,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,3c57ad54-bc5e-520b-935d-ad6a3ed0e450,fixture,Checkout Counter 2,CO-02,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,3a937b61-c962-59fa-9f26-cbe9af59a2bd,fixture,Checkout Counter 3,CO-03,
@@ -171,7 +171,7 @@ dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,bb1cec48-7f
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,e5b81879-af0b-53e5-afd1-b95b914a438e,fixture,Gondola R5 Front U1,GF-R5-U1,hike_camp
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,3ccff2bc-2059-5bb8-9770-abf20f255c0c,fixture,Gondola R5 Front U2,GF-R5-U2,hike_camp
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,05d11c78-5576-5ac8-b478-143bce3b344b,fixture,Gondola R5 Front U3,GF-R5-U3,hike_camp
-dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,0dafd685-c1cf-55a0-a488-a014bc06879d,fixture,Impulse Rack,CO-IR,
+dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,0dafd685-c1cf-55a0-a488-a014bc06879d,fixture,Impulse Fixture,CO-IR,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,13d3444c-23a2-5b75-8d51-17a1232837f2,fixture,Promo Island 1,PI-01,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,c5f8579f-e263-53a8-812e-2035989b4d28,fixture,Treadmill 1,GA-01,
 dec-fr-lyon,Europe/Paris,4d2f8006-2594-5660-a9ed-1459822a13f8,441.00,c86d9cea-82e3-550c-9fa0-b5aa9ccc7e26,fixture,West Wall Bay 1,PW-01,hike_camp
@@ -215,7 +215,7 @@ dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,dd64f2
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,7606f41d-49a6-55c1-bc60-967dbffa0771,fixture,Gondola R3 Back U2,GB-R3-U2,hike_camp
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,9c41c5cb-6323-5053-a0f4-052fa8630eda,fixture,Gondola R3 Front U1,GF-R3-U1,hike_camp
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,1df963f9-1fde-570b-842e-f323b6043fff,fixture,Gondola R3 Front U2,GF-R3-U2,hike_camp
-dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,bce97fc2-ba21-5f08-ad4e-6caea6a91c7b,fixture,Impulse Rack,CO-IR,
+dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,bce97fc2-ba21-5f08-ad4e-6caea6a91c7b,fixture,Impulse Fixture,CO-IR,
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,089233c8-613c-5602-8fe2-3ccc31353299,fixture,Promo Island 1,PI-01,
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,2ae06e63-dfb5-54f0-bbff-97f57f7e8082,fixture,Treadmill 1,GA-01,
 dec-fr-marseille,Europe/Paris,c325644e-7a6d-5482-918c-0e7e684f1bf2,313.50,12f626f3-7e2e-5198-a4ae-4d63314c7747,fixture,West Wall Bay 1,PW-01,hike_camp
@@ -239,7 +239,7 @@ dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,48e27087-5
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,c1a80e4c-1fe9-533a-b828-879680142c88,fixture,Accessories Bay 1,ACC-01,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,876d0428-d3e9-5506-b636-36807af22487,fixture,Accessories Bay 2,ACC-02,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,17caacc2-7f48-5063-ab1c-afbcc5749f91,fixture,Accessories Bay 3,ACC-03,
-dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,be90ace4-dbd2-5a32-a586-d10de5a5f911,fixture,Apparel Round Rack 2,RR-02,
+dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,be90ace4-dbd2-5a32-a586-d10de5a5f911,fixture,Apparel Round Fixture 2,RR-02,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,a047f3e0-61cf-564a-9d24-54d6e209a269,fixture,Checkout Counter 1,CO-01,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,5d246279-88f9-5a51-b5ca-0a06127bb0fa,fixture,Checkout Counter 2,CO-02,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,98985625-eaa5-5d64-acaf-6741ccec89f8,fixture,Checkout Counter 3,CO-03,
@@ -326,7 +326,7 @@ dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,1b7fcd40-c
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,2f0efddd-715d-55cd-becb-4ef8dc12b68e,fixture,Gondola R7 Front U3,GF-R7-U3,hike_camp
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,30ea3283-008a-5bdf-8540-c98f7fed2fb4,fixture,Gondola R7 Front U4,GF-R7-U4,hike_camp
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,4f47b71d-6d27-5e74-ab8c-440e88f65a71,fixture,Gondola R7 Front U5,GF-R7-U5,hike_camp
-dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,208b9994-969a-52e9-bc68-5d20f58587b6,fixture,Impulse Rack,CO-IR,
+dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,208b9994-969a-52e9-bc68-5d20f58587b6,fixture,Impulse Fixture,CO-IR,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,817e4d13-2ed2-5803-9651-b4b27aac4521,fixture,Promo Island 1,PI-01,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,f98dd585-a509-561b-b503-a36baa85fcec,fixture,Promo Island 3,PI-03,
 dec-fr-paris,Europe/Paris,5e0a3e3a-cb7c-57d6-9249-4afe0aee09ed,588.00,29f67d60-e39c-5d64-8538-e958100151f9,fixture,Treadmill 1,GA-01,
@@ -371,7 +371,7 @@ dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,adfed78e-ef3
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,af67e356-5ab1-59f2-905f-13d9128d9980,fixture,Gondola R2 Back U2,GB-R2-U2,hike_camp
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,69380fd7-9740-5ec2-b003-308f1e9fa28e,fixture,Gondola R2 Front U1,GF-R2-U1,hike_camp
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,483af9cd-1170-5f55-be5b-532335c362bc,fixture,Gondola R2 Front U2,GF-R2-U2,hike_camp
-dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,7d08aa32-c8b8-5da8-8c52-7cbf147afd74,fixture,Impulse Rack,CO-IR,
+dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,7d08aa32-c8b8-5da8-8c52-7cbf147afd74,fixture,Impulse Fixture,CO-IR,
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,db427729-705d-590a-b2c9-2438a36c34ad,fixture,Promo Island 1,PI-01,
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,449dd1ed-9cc2-56b9-9ff3-61d06625ff43,fixture,Treadmill 1,GA-01,
 dec-kr-busan,Asia/Seoul,62734f19-8920-5f48-9f16-81d6188d7208,270.00,fa079066-4b45-56b3-b7d9-785f1352a13a,fixture,West Wall Bay 1,PW-01,hike_camp
@@ -394,7 +394,7 @@ dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,6cfc6c86-2a8
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,898358e0-46f7-547b-89d7-2e78acc21bfd,fixture,Accessories Bay 2,ACC-02,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,55369a0f-b144-58a0-b2b1-18c500019f0e,fixture,Accessories Bay 3,ACC-03,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,5c97857c-ac12-5d4c-8f75-ebeb1f9d3d84,fixture,Accessories Bay 4,ACC-04,
-dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,d27b5a27-6b57-5cb1-b3aa-3f12c3e2c951,fixture,Apparel Round Rack 2,RR-02,
+dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,d27b5a27-6b57-5cb1-b3aa-3f12c3e2c951,fixture,Apparel Round Fixture 2,RR-02,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,075e245b-cb3b-5e4f-a44e-1bd721f6c381,fixture,Checkout Counter 1,CO-01,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,f180c575-a831-500d-adf4-8a1daabaa56e,fixture,Checkout Counter 2,CO-02,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,3ffb5f7d-ff6b-5341-a4a1-1e385b6dce14,fixture,Checkout Counter 3,CO-03,
@@ -458,7 +458,7 @@ dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,a465bb27-9cb
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,74bfaf59-0d74-5a71-89fb-30d4d15ec1e7,fixture,Gondola R5 Front U3,GF-R5-U3,hike_camp
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,72c33f7c-207a-5a14-a889-d3694d86aa27,fixture,Gondola R5 Front U4,GF-R5-U4,hike_camp
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,57043474-f448-53a2-b0a2-ccd98976f8eb,fixture,Gondola R5 Front U5,GF-R5-U5,hike_camp
-dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,feba8e37-ec2d-57d3-b9a6-2d457a4c78a0,fixture,Impulse Rack,CO-IR,
+dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,feba8e37-ec2d-57d3-b9a6-2d457a4c78a0,fixture,Impulse Fixture,CO-IR,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,0ebaf82d-8e7f-5fb5-aa45-faf97b8c2fb7,fixture,Promo Island 1,PI-01,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,1b5976b6-263d-5ebd-85fd-03ca59d57297,fixture,Treadmill 1,GA-01,
 dec-kr-seoul,Asia/Seoul,77137f20-a0c9-5bc9-a8b3-6ff43dede6d5,493.50,86ab03f3-9e50-54e0-b0c8-cc42ff39e576,fixture,West Wall Bay 1,PW-01,hike_camp
@@ -483,7 +483,7 @@ dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,b7f4d57
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,14d36fe7-d505-561f-ac22-effdd9fb3282,fixture,Accessories Bay 1,ACC-01,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,2fa4b940-fab1-5025-9937-ec2fce1ba2d3,fixture,Accessories Bay 2,ACC-02,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,d02aeec3-9cb5-5c8e-8f88-8c046f1869d6,fixture,Accessories Bay 3,ACC-03,
-dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,7ea82496-e868-52d8-a63b-2fa55cb9c718,fixture,Apparel Round Rack 2,RR-02,
+dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,7ea82496-e868-52d8-a63b-2fa55cb9c718,fixture,Apparel Round Fixture 2,RR-02,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,fed6379d-ebe4-5c7b-b2b4-42f792ff144f,fixture,Checkout Counter 1,CO-01,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,76239634-ba46-5f04-8fec-d8a625dc5662,fixture,Checkout Counter 2,CO-02,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,d6e7f73a-96cf-5742-bc0d-3ccdabe1257a,fixture,Checkout Counter 3,CO-03,
@@ -585,7 +585,7 @@ dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,7e6238f
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,d93ed6f8-91f3-5642-8f34-03da0dfc79eb,fixture,Gondola R6 Front U5,GF-R6-U5,hike_camp
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,6586526b-4c7e-51d3-8e8c-65bcdcd453b4,fixture,Gondola R6 Front U6,GF-R6-U6,hike_camp
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,25725f8c-3d66-5b06-9e5c-131ef0fe22d4,fixture,Gondola R6 Front U7,GF-R6-U7,hike_camp
-dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,388d2397-0f37-54e6-a8fe-7d62c400fe47,fixture,Impulse Rack,CO-IR,
+dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,388d2397-0f37-54e6-a8fe-7d62c400fe47,fixture,Impulse Fixture,CO-IR,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,7dc6fb79-6128-5a06-bab2-7848db41d32d,fixture,Promo Island 1,PI-01,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,7cba765e-1b6f-5249-8044-5d4a07d4c8ca,fixture,Promo Island 3,PI-03,
 dec-us-denver,America/Denver,e3c9a424-3ced-5288-9756-19935d39f88f,655.50,87e13a69-344c-5b58-a516-c75a679d5fe1,fixture,Treadmill 1,GA-01,
@@ -613,7 +613,7 @@ dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,271452ce
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,db03ce0c-293b-5b94-b898-002c8ec1b451,fixture,Accessories Bay 1,ACC-01,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,dd70aa64-34b9-5a8f-9586-756336e7fda3,fixture,Accessories Bay 2,ACC-02,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,ce96b780-f317-5925-af52-cc9960f8a131,fixture,Accessories Bay 3,ACC-03,
-dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,e6be5af4-1bec-55e5-aae4-00cfb8cd1953,fixture,Apparel Round Rack 2,RR-02,
+dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,e6be5af4-1bec-55e5-aae4-00cfb8cd1953,fixture,Apparel Round Fixture 2,RR-02,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,c2c853cd-31dc-56b4-a04f-3daf00013247,fixture,Checkout Counter 1,CO-01,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,4fde6a19-8bc6-5c28-89ac-8c7822387837,fixture,Checkout Counter 2,CO-02,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,521a1fbb-7bf0-511d-8cb1-c33ca8563855,fixture,Checkout Counter 3,CO-03,
@@ -702,7 +702,7 @@ dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,55170760
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,dbc21eb8-be3a-5fbb-a8eb-3ee7ac76187c,fixture,Gondola R7 Front U3,GF-R7-U3,hike_camp
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,7013a057-7c1c-54fa-b4e6-fa75cdce086d,fixture,Gondola R7 Front U4,GF-R7-U4,hike_camp
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,7478a9ff-6420-5e62-952d-020e4fb911e1,fixture,Gondola R7 Front U5,GF-R7-U5,hike_camp
-dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,4dd0afba-6014-5f89-95d9-b08ef015c6d7,fixture,Impulse Rack,CO-IR,
+dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,4dd0afba-6014-5f89-95d9-b08ef015c6d7,fixture,Impulse Fixture,CO-IR,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,d7cd4889-d08c-5b82-8457-4dd4f5f388a9,fixture,Promo Island 1,PI-01,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,f189026e-b6a8-5df7-86dc-6028ac998f0f,fixture,Promo Island 3,PI-03,
 dec-us-nyc,America/New_York,db0f072c-fc4e-59ab-b791-2c354c3cd46d,636.00,bbdc9508-dfa7-503f-ad20-596e82d212a8,fixture,Treadmill 1,GA-01,
@@ -731,7 +731,7 @@ dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,542807
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,a9b950a7-0ef9-5d73-85a4-2e1438af184f,fixture,Accessories Bay 2,ACC-02,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,60b5b719-3e45-52c5-8cee-1c37a8fa8c4a,fixture,Accessories Bay 3,ACC-03,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,5ee55f3d-bcdd-5361-b45a-3f7934e99791,fixture,Accessories Bay 4,ACC-04,
-dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,95af1b48-3940-5282-b183-cdd26a3ff765,fixture,Apparel Round Rack 2,RR-02,
+dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,95af1b48-3940-5282-b183-cdd26a3ff765,fixture,Apparel Round Fixture 2,RR-02,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,65ddd31a-a037-5aae-b34f-bca04d1673e5,fixture,Checkout Counter 1,CO-01,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,024cec40-2ecd-5d33-9c1a-65cd285710eb,fixture,Checkout Counter 2,CO-02,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,abd646b8-da22-5b95-bea8-76d832cf1248,fixture,Checkout Counter 3,CO-03,
@@ -809,7 +809,7 @@ dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,b6e6ff
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,cce1cf3a-9e19-51c5-be19-9ee63104605e,fixture,Gondola R6 Front U3,GF-R6-U3,hike_camp
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,edbf0227-70bb-5c0d-85e9-1d1daae5948d,fixture,Gondola R6 Front U4,GF-R6-U4,hike_camp
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,cfe311d7-7873-5bed-9f9c-574732d062f0,fixture,Gondola R6 Front U5,GF-R6-U5,hike_camp
-dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,669f9e4c-203f-54af-95ab-ff482e36c705,fixture,Impulse Rack,CO-IR,
+dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,669f9e4c-203f-54af-95ab-ff482e36c705,fixture,Impulse Fixture,CO-IR,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,7a81e608-7e32-586e-a1bc-491b7ff3ab75,fixture,Promo Island 1,PI-01,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,52c6536b-6f0a-540d-9127-f030999548e0,fixture,Promo Island 3,PI-03,
 dec-us-sf,America/Los_Angeles,69f82788-3ec0-5b8f-99fa-8d1cdcb49608,662.50,3b029a6a-5cb9-5832-b0cd-59246216dfe5,fixture,Treadmill 1,GA-01,
