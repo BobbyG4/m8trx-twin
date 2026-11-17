@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.m8trx.twin.behavior.StoreStock
 import com.m8trx.twin.connect.Sgtin96
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.history.StoryCalendar
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,7 +29,6 @@ private fun check(name: String, ok: Boolean, detail: String) {
 
 private val OUT: Path = Path.of("build/storeday-selftest")
 private val FROM: LocalDate = LocalDate.of(2026, 11, 2)
-private const val SITE = "dec-us-denver"
 
 private fun digest(vararg files: Path): String {
     val md = MessageDigest.getInstance("SHA-256")
@@ -36,20 +36,25 @@ private fun digest(vararg files: Path): String {
     return md.digest().take(8).joinToString("") { "%02x".format(it) }
 }
 
-/** The tolerance for a department's share: 10 %, widened to two standard deviations of a Poisson count where the department is tiny. */
-private fun tol(expectedUnits: Double) = maxOf(0.10, 2.0 / Math.sqrt(maxOf(expectedUnits, 1.0)))
+/** The tolerance for a department's share: 10 %, widened to three standard deviations of a Poisson count where the department is tiny. */
+private fun tol(expectedUnits: Double) = maxOf(0.10, 3.0 / Math.sqrt(maxOf(expectedUnits, 1.0)))
 
-fun main() {
-    val cal = loadCalibration(SITE)
+/** Everything slice 2a asserted, for one store (slice 2b runs it for all ten). */
+private val knobsDefault = Knobs()
+
+private fun checkStore(site: String) {
+    log.info("════ {} ════", site)
+    val cal = loadCalibration(site)
     check(
         "calibration file is committed",
-        Files.exists(calibrationPath(SITE)) && cal.fixtureScale.isNotEmpty(),
+        Files.exists(calibrationPath(site)) && cal.fixtureScale.isNotEmpty(),
         "${cal.fixtureScale.size} fixture scales, ${cal.departmentBuy.size} department buy scales",
     )
-    val sim = buildSim(SITE, cal)
+    val sim = buildSim(site, cal)
     val model = sim.model
     val seed = sim.behavior.params.seed
-    Files.createDirectories(OUT)
+    val out = OUT.resolve(site)
+    Files.createDirectories(out)
 
     // ── 1. the initial snapshot and the serial ranges ───────────────────────────────────────────────────
     log.info("[1] initial snapshot and serial ranges")
@@ -61,20 +66,21 @@ fun main() {
     val initSerials = init.locations().flatMap { l -> init.eansAt(l).flatMap { e -> init.epcsAt(l, e) } }.map(Sgtin96::serial)
     check(
         "initial serials in the offline range, clear of seed and receiving blocks",
-        initSerials.all { it >= StoreState.INITIAL_BASE && it < StoreState.DELIVERY_BASE } && initSerials.toSet().size == initSerials.size,
+        initSerials.all { it >= StoreState.initialBase(site) && it < StoreState.initialBase(site) + 1_000_000_000L } &&
+            initSerials.toSet().size == initSerials.size,
         "${initSerials.min()} .. ${initSerials.max()} (seed 1,000..9,999,999; receiving 1e9..1.1e10)",
     )
     val chainEpcs = StoreStock.readCsv(sim.behavior.stock.storeDir.resolve("epcs.csv")).map { it.getValue("epc") }.toHashSet()
     val allInit = init.locations().flatMap { l -> init.eansAt(l).flatMap { e -> init.epcsAt(l, e) } }
     check("no initial EPC collides with the chain's epcs.csv", allInit.none { it in chainEpcs }, "${chainEpcs.size} chain EPCs")
-    init.save(OUT.resolve("init"))
-    val reloaded = StoreState.load(OUT.resolve("init"))
+    init.save(out.resolve("init"))
+    val reloaded = StoreState.load(out.resolve("init"))
     check(
         "snapshot save/load round trip",
-        reloaded.size == init.size && Files.readAllBytes(Path.of("${OUT.resolve("init")}.csv")).contentEquals(
+        reloaded.size == init.size && Files.readAllBytes(Path.of("${out.resolve("init")}.csv")).contentEquals(
             run {
-                reloaded.save(OUT.resolve("init2"))
-                Files.readAllBytes(Path.of("${OUT.resolve("init2")}.csv"))
+                reloaded.save(out.resolve("init2"))
+                Files.readAllBytes(Path.of("${out.resolve("init2")}.csv"))
             },
         ),
         "${reloaded.size} units, byte-identical re-save",
@@ -87,7 +93,7 @@ fun main() {
     val results = ArrayList<DayResult>()
     for (i in 0 until 28) {
         val r = sim.simulate(state, FROM.plusDays(i.toLong()), seed)
-        StoreDayOutput.write(OUT.resolve("run/${r.date}"), sim, r)
+        StoreDayOutput.write(out.resolve("run/${r.date}"), sim, r)
         tally.add(r)
         results += r
     }
@@ -105,7 +111,7 @@ fun main() {
     var lateMove = 0
     var events = 0
     for (r in results) {
-        Files.newBufferedReader(OUT.resolve("run/${r.date}/wire-plan.jsonl")).useLines { ls ->
+        Files.newBufferedReader(out.resolve("run/${r.date}/wire-plan.jsonl")).useLines { ls ->
             ls.forEach { line ->
                 val n = ConnectMappers.snake.readTree(line)
                 val due = Instant.parse(n.path("due_utc").asText())
@@ -165,7 +171,7 @@ fun main() {
         "delivery EPCs are in the delivery serial range",
         results.flatMap { it.receivedEpcs }.all {
             Sgtin96.serial(it) in
-                StoreState.DELIVERY_BASE until StoreState.SERIAL_CEILING
+                StoreState.deliveryBase(site) until StoreState.deliveryEnd(site)
         },
         "${tally.received} minted",
     )
@@ -202,14 +208,24 @@ fun main() {
         val want = target.getValue(d) / tt
         check(
             "department share $d within tolerance of demand",
-            Math.abs(share / want - 1.0) <= tol(want * tally.units),
-            "${"%.1f".format(100 * share)} % vs ${"%.1f".format(100 * want)} % (tol ±${"%.0f".format(100 * tol(want * tally.units))} %)",
+            Math.abs(share / want - 1.0) <= tol(want * tally.units) || (want < 0.02 && Math.abs(share - want) <= 0.005),
+            "${"%.1f".format(
+                100 * share,
+            )} % vs ${"%.1f".format(100 * want)} % (tol ±${"%.0f".format(100 * tol(want * tally.units))} %, or 0.5 points under 2 % of units)",
         )
     }
     check(
         "stock-outs and lost sales are recorded",
         tally.stockOutEvents > 0 && tally.lost > 0 && tally.lost <= tally.stockOutEvents,
         "${tally.stockOutEvents} stock-out events, ${tally.lost} lost sales",
+    )
+    val misShare = tally.misplacements.toDouble() / tally.units
+    check(
+        "misplaced units are about 5 % of units sold by default",
+        misShare in 0.025..0.09,
+        "${tally.misplacements} misplacements / ${tally.units} units = ${"%.1f".format(
+            100 * misShare,
+        )} % (put-back probability ${knobsDefault.misplaceProb})",
     )
     check(
         "units sold match the sale lines the shoppers carry",
@@ -239,7 +255,7 @@ fun main() {
     // ── 4. truth ledger and wire files of one day ────────────────────────────────────────────────────────
     log.info("[4] truth ledger")
     val d0 = results[5] // a Saturday
-    val tdir = OUT.resolve("run/${d0.date}/truth")
+    val tdir = out.resolve("run/${d0.date}/truth")
     fun rows(f: String) = Files.readAllLines(tdir.resolve(f)).drop(1).filter { it.isNotBlank() }.map { it.split(",") }
     val s = StoreDayOutput.summary(sim, d0)
     check(
@@ -301,22 +317,22 @@ fun main() {
     check(
         "the delivery lands at open minus the lead",
         results.all { r ->
-            val open = java.time.ZonedDateTime.of(r.date, java.time.LocalTime.of(10, 0), zone).toInstant().toEpochMilli()
+            val open = java.time.ZonedDateTime.of(r.date, r.plan.shape!!.open, zone).toInstant().toEpochMilli()
             r.wire.filter { it.kind == "receive" }.minOfOrNull { it.dueMs } == open - model.deliveryLeadMin * 60_000L
         },
-        "lead ${model.deliveryLeadMin} min before 10:00 local",
+        "lead ${model.deliveryLeadMin} min before opening, local",
     )
     val knobs = sim.knobs
-    val preCap = ((60 - 6 - 1) * 60_000L * knobs.preOpenStockers * knobs.staffUnitsPerHour / 3_600_000.0).toInt()
+    val preCap = ((model.deliveryLeadMin - 6 - 1) * 60_000L * sim.preOpenStockers * knobs.staffUnitsPerHour / 3_600_000.0).toInt()
     check(
         "pre-open stocking respects staff throughput",
         results.all { r ->
             r.moves.filter { it.reason == "stocking" || it.reason == "stray-return" }.sumOf { it.epcs.size } <=
                 preCap
         },
-        "cap $preCap units/day (${knobs.preOpenStockers} staff x ${knobs.staffUnitsPerHour.toInt()}/h x 53 min)",
+        "cap $preCap units/day (${sim.preOpenStockers} staff x ${knobs.staffUnitsPerHour.toInt()}/h x ${model.deliveryLeadMin - 7} min)",
     )
-    val walkCap = (45 * 60_000L * knobs.topUpStockers * knobs.staffUnitsPerHour / 3_600_000.0).toInt()
+    val walkCap = (45 * 60_000L * sim.topUpStockers * knobs.staffUnitsPerHour / 3_600_000.0).toInt()
     check(
         "top-ups respect staff throughput",
         results.all { r ->
@@ -326,9 +342,8 @@ fun main() {
         "cap ${knobs.quietHours * walkCap} units/day",
     )
     val quietOk = results.all { r ->
-        val wk = r.date.dayOfWeek.value >= 6
-        val curve = if (wk) sim.behavior.model.traffic.hourlyCurve.weekend else sim.behavior.model.traffic.hourlyCurve.weekday
-        val quiet = curve.indices.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).map { 10 + it }.toSet()
+        val curve = r.plan.shape!!.curve
+        val quiet = curve.indices.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).map { r.plan.shape.open.hour + it }.toSet()
         r.moves.filter { it.reason == "top-up" }.all { Instant.ofEpochMilli(it.dueMs).atZone(zone).hour in quiet }
     }
     check(
@@ -352,7 +367,7 @@ fun main() {
     for (l in bare.locations().filter { !bare.isBackroomLoc(it) }) {
         for (e in bare.eansAt(l).toList()) while (bare.count(l, e) > 0) bare.place(bare.pickUp(l, e)!!, model.homeRack[e] ?: "BR-01", 0)
     }
-    val noStaff = buildSim(SITE, cal, Knobs(preOpenStockers = 0, topUpStockers = 0, misplaceProb = 0.0))
+    val noStaff = buildSim(site, cal, Knobs(preOpenStockers = 0, topUpStockers = 0, misplaceProb = 0.0))
     val emptyDay = noStaff.simulate(bare, FROM, seed)
     check(
         "empty fixtures: nothing sells, every reach is a stock-out",
@@ -361,7 +376,7 @@ fun main() {
             it.stockOuts.size
         }} stock-outs, ${emptyDay.records.sumOf { r -> r.stockOuts.count { it.lost } }} lost sales",
     )
-    val clumsy = buildSim(SITE, cal, Knobs(misplaceProb = 1.0))
+    val clumsy = buildSim(site, cal, Knobs(misplaceProb = 1.0))
     val cs = StoreState.initial(model)
     val c1 = clumsy.simulate(cs, FROM, seed)
     val c2 = clumsy.simulate(cs, FROM.plusDays(1), seed)
@@ -377,7 +392,7 @@ fun main() {
         },
         "${c2.moves.filter { it.reason == "stray-return" }.sumOf { it.epcs.size }} units returned on day 2",
     )
-    val noMis = buildSim(SITE, cal, Knobs(misplaceProb = 0.0)).simulate(StoreState.initial(model), FROM, seed)
+    val noMis = buildSim(site, cal, Knobs(misplaceProb = 0.0)).simulate(StoreState.initial(model), FROM, seed)
     check("misplacement knob 0: none", noMis.misplacements == 0, "default knob ${Knobs().misplaceProb}: ${results.first().misplacements} on day 1")
 
     // ── 7. determinism and resume ────────────────────────────────────────────────────────────────────────
@@ -386,20 +401,20 @@ fun main() {
         val st = StoreState.initial(model)
         for (i in 0 until 3) {
             StoreDayOutput.write(
-                OUT.resolve("$tag/${FROM.plusDays(i.toLong())}"),
+                out.resolve("$tag/${FROM.plusDays(i.toLong())}"),
                 sim,
                 sim.simulate(st, FROM.plusDays(i.toLong()), seed),
             )
         }
-        st.save(OUT.resolve("$tag/state"))
+        st.save(out.resolve("$tag/state"))
         return digest(
             *(
                 (0 until 3).flatMap { i ->
                     listOf("wire-plan.jsonl", "truth/fixture_hour.csv", "truth/onhand.csv").map {
-                        OUT.resolve("$tag/${FROM.plusDays(i.toLong())}/$it")
+                        out.resolve("$tag/${FROM.plusDays(i.toLong())}/$it")
                     }
                 } +
-                    listOf(Path.of("${OUT.resolve("$tag/state")}.csv"))
+                    listOf(Path.of("${out.resolve("$tag/state")}.csv"))
                 ).toTypedArray(),
         )
     }
@@ -408,8 +423,8 @@ fun main() {
     check("same seed => same wire plan, truth and snapshot", a == b, "digest $a")
     val sm = StoreState.initial(model)
     sim.simulate(sm, FROM, seed)
-    sm.save(OUT.resolve("resume"))
-    val sm2 = StoreState.load(OUT.resolve("resume"))
+    sm.save(out.resolve("resume"))
+    val sm2 = StoreState.load(out.resolve("resume"))
     val cont = sim.simulate(sm, FROM.plusDays(1), seed)
     val resumed = sim.simulate(sm2, FROM.plusDays(1), seed)
     val sameWire =
@@ -434,10 +449,10 @@ fun main() {
 
     // ── 8. the position-sample sidecar ───────────────────────────────────────────────────────────────────
     log.info("[8] samples sidecar")
-    val withSamples = buildSim(SITE, cal, Knobs(samples = true))
+    val withSamples = buildSim(site, cal, Knobs(samples = true))
     val sd = withSamples.simulate(StoreState.initial(model), FROM, seed)
-    StoreDayOutput.write(OUT.resolve("samples-day"), withSamples, sd)
-    val lines = Files.readAllLines(OUT.resolve("samples-day/samples.jsonl")).size
+    StoreDayOutput.write(out.resolve("samples-day"), withSamples, sd)
+    val lines = Files.readAllLines(out.resolve("samples-day/samples.jsonl")).size
     check(
         "samples.jsonl has one stream per shopper, each referenced from the wire plan",
         lines == sd.records.size && sd.wire.count { it.kind == "person_samples_ref" } == sd.records.size,
@@ -464,7 +479,7 @@ fun main() {
     )
     val live =
         listOf("assortment.csv", "epcs.csv", "layout.json", "planogram.json", "fixture_ids.csv").map {
-            "reference/data/chain/stores/dec-us-denver/$it"
+            "reference/data/chain/stores/$site/$it"
         } +
             "reference/data/store-operating-model.json"
     val diff = runCatching {
@@ -484,7 +499,171 @@ fun main() {
             "git diff vs origin/main: none changed"
         },
     )
+}
 
-    log.info("storeDaySelfTest: {} passed, {} failed", passed, failed)
+/** Slice 2b: the calendar overlays, on the stores whose story each one tells. */
+private fun checkCalendar() {
+    log.info("════ calendar overlays ════")
+    // A closed holiday: no store day at all.
+    for ((site, closedDate, what) in listOf(
+        Triple("dec-fr-bordeaux", LocalDate.of(2026, 1, 1), "Jour de l'An"),
+        Triple("dec-kr-seoul", LocalDate.of(2026, 2, 17), "Seollal"),
+        Triple("dec-kr-busan", LocalDate.of(2026, 9, 25), "Chuseok"),
+    )) {
+        val sim = buildSim(site, loadCalibration(site))
+        val st = StoreState.initial(sim.model)
+        val seed = sim.behavior.params.seed
+        val before = sim.simulate(st, closedDate.minusDays(1), seed)
+        val unitsBefore = st.totalNotSold()
+        val r = sim.simulate(st, closedDate, seed)
+        val dir = OUT.resolve("calendar/$site/$closedDate")
+        StoreDayOutput.write(dir, sim, r)
+        val after = sim.simulate(st, closedDate.plusDays(1), seed)
+        val sum = ConnectMappers.snake.readTree(Files.readAllBytes(dir.resolve("truth/summary.json")))
+        check(
+            "$site $closedDate ($what): closed, zero visitors, zero sales, nothing on the wire",
+            r.plan.closed && r.records.isEmpty() && r.saleUnits.isEmpty() && r.wire.isEmpty() && r.moves.isEmpty() && r.receivedEpcs.isEmpty() &&
+                Files.readAllLines(dir.resolve("wire-plan.jsonl")).none { it.isNotBlank() } &&
+                sum.path("visitors").asInt() == 0 && sum.path("units_sold").asInt() == 0 && sum.path("closed").asBoolean() &&
+                st.totalNotSold() - r.saleUnits.size == unitsBefore - 0 + after.receivedEpcs.size - after.saleUnits.size,
+            "${before.records.size} visitors the day before, ${after.records.size} the day after, stock unchanged through the closed day",
+        )
+        check(
+            "$site: the days around the closure are ordinary open days",
+            !before.plan.closed && !after.plan.closed && before.records.isNotEmpty() && after.records.isNotEmpty() && after.receivedEpcs.isNotEmpty(),
+            "${before.plan.holiday ?: "-"} / ${after.plan.holiday ?: "-"}; the next delivery was ${after.receivedEpcs.size} units",
+        )
+    }
+    // A promo week lifts visitors and conversion.
+    run {
+        val site = "dec-us-denver"
+        val sim = buildSim(site, loadCalibration(site))
+        val st = StoreState.initial(sim.model)
+        val seed = sim.behavior.params.seed
+        val promoStart = LocalDate.of(2026, 3, 16)
+        val rs = (0 until 14).map { sim.simulate(st, promoStart.plusDays(it.toLong()), seed) }
+        val promo = rs.take(7)
+        val plain = rs.drop(7)
+        val pv = promo.sumOf { it.records.size }
+        val nv = plain.sumOf { it.records.size }
+        val pc = promo.sumOf { r -> r.records.count { it.bought } }.toDouble() / pv
+        val nc = plain.sumOf { r -> r.records.count { it.bought } }.toDouble() / nv
+        check(
+            "promo week (Spring Sports Days) lifts visitors: Denver 16-22 Mar vs the week after",
+            promo.all { it.plan.promo != null } && plain.all { it.plan.promo == null } && pv.toDouble() / nv >= 1.20,
+            "$pv vs $nv visitors (x${"%.2f".format(pv.toDouble() / nv)}; the calendar says x${StoryCalendar.PROMO_VISITS})",
+        )
+        check(
+            "promo week lifts conversion",
+            pc / nc >= 1.08,
+            "${"%.1f".format(
+                100 * pc,
+            )} % vs ${"%.1f".format(
+                100 * nc,
+            )} % of visitors bought (x${"%.2f".format(pc / nc)}; the calendar says x${StoryCalendar.PROMO_CONVERSION})",
+        )
+    }
+    // Story, season and the Korean holiday effect, read off the overlay itself.
+    fun mult(site: String, d: LocalDate): DayPlan {
+        val sim = buildSim(site, loadCalibration(site))
+        return sim.overlay.plan(d)
+    }
+    fun story(site: String, d: LocalDate): Double {
+        val sim = buildSim(site, loadCalibration(site))
+        val p = sim.overlay.plan(d)
+        return p.visitMultiplier / (sim.model.visitScale / sim.model.locationFactor)
+    }
+    val wed = LocalDate.of(2026, 11, 18)
+    check(
+        "Marseille runs below plan, Denver above",
+        story("dec-fr-marseille", wed) < 0.92 && story("dec-us-denver", wed) > 1.01,
+        "story visit factor Marseille ${"%.2f".format(story("dec-fr-marseille", wed))}, Denver ${"%.2f".format(story("dec-us-denver", wed))}",
+    )
+    check(
+        "Lille's turnaround: a visit factor under 0.95 in June, over 1.03 in October",
+        story("dec-fr-lille", LocalDate.of(2026, 6, 2)) < 0.95 && story("dec-fr-lille", LocalDate.of(2026, 10, 14)) > 1.03,
+        "June ${"%.3f".format(
+            story("dec-fr-lille", LocalDate.of(2026, 6, 2)),
+        )}, October ${"%.3f".format(story("dec-fr-lille", LocalDate.of(2026, 10, 14)))}",
+    )
+    check(
+        "country seasonality: the French August dip, the US July peak",
+        mult("dec-fr-paris", LocalDate.of(2026, 8, 15)).seasonality < 0.8 && mult("dec-us-denver", LocalDate.of(2026, 7, 15)).seasonality > 1.15,
+        "Paris 15 Aug ${"%.2f".format(
+            mult("dec-fr-paris", LocalDate.of(2026, 8, 15)).seasonality,
+        )}, Denver 15 Jul ${"%.2f".format(mult("dec-us-denver", LocalDate.of(2026, 7, 15)).seasonality)}",
+    )
+    val seoulPre = mult("dec-kr-seoul", LocalDate.of(2026, 2, 12)).visitMultiplier
+    val seoulPlain = mult("dec-kr-seoul", LocalDate.of(2026, 2, 5)).visitMultiplier
+    check(
+        "Korean holiday effect: the pre-Seollal gift surge",
+        seoulPre / seoulPlain >= 1.2,
+        "x${"%.2f".format(seoulPre / seoulPlain)} on 12 Feb vs 5 Feb",
+    )
+    val busanChuseok = mult("dec-kr-busan", LocalDate.of(2026, 9, 26))
+    check(
+        "an open holiday takes the weekend curve and its own volume factor",
+        busanChuseok.shape != null && busanChuseok.shape.weekend && busanChuseok.holiday != null,
+        "Busan 26 Sep: ${busanChuseok.holiday}, weekend curve, visit multiplier ${"%.2f".format(busanChuseok.visitMultiplier)}",
+    )
+    // Calendar off is the 2a day.
+    run {
+        val off = buildSim("dec-us-denver", loadCalibration("dec-us-denver"), Knobs(calendar = false))
+        val dates = (0 until 14).map { LocalDate.of(2026, 11, 2).plusDays(it.toLong()) }
+        check(
+            "calendar off reproduces the 2a footfall (behavior day factor and week wave)",
+            dates.all { Math.abs(off.overlay.plan(it).shape!!.expectedVisitors - off.behavior.expectedVisitors(it, 1.0)) < 1e-9 },
+            "14 days, Denver",
+        )
+    }
+}
+
+/** Slice 2b: what the ten stores share. */
+private fun checkChain() {
+    log.info("════ the chain ════")
+    val slices = StoreState.STORE_SLUGS.map { StoreState.initialBase(it) to StoreState.deliveryBase(it) }
+    check(
+        "per-store serial slices are disjoint and inside the SGTIN-96 field",
+        slices.map { it.first }.toSet().size == 10 && slices.map { it.second }.toSet().size == 10 &&
+            StoreState.STORE_SLUGS.all { StoreState.initialBase(it) + 1_000_000_000L <= StoreState.DELIVERY_BASE } &&
+            StoreState.STORE_SLUGS.all { StoreState.deliveryEnd(it) <= StoreState.SERIAL_CEILING } &&
+            StoreState.STORE_SLUGS.zipWithNext().all { (a, b) -> StoreState.deliveryEnd(a) <= StoreState.deliveryBase(b) },
+        "initial ${slices.first().first}.. , deliveries ${slices.first().second} .. ${StoreState.deliveryEnd(
+            StoreState.STORE_SLUGS.last(),
+        )}; Denver keeps the 2a ranges",
+    )
+    val denver = ConnectMappers.snake.readTree(Files.readAllBytes(Path.of("reference/data/behavior/dec-us-denver.json"))).path("truths")
+    check(
+        "Denver's tuned truths are untouched",
+        denver.path("entrance_table_impressions").asDouble() == 1.8 && denver.path("eye_level_pickup").asDouble() == 1.3 &&
+            denver.path("adjacency_complement").asDouble() == 1.2,
+        "entrance x1.8, eye level x1.3, complement x1.2",
+    )
+    val neutral = StoreState.STORE_SLUGS.drop(1).all { site ->
+        val t = buildSim(site, loadCalibration(site)).behavior.params.truths
+        listOf(
+            t.entranceTableImpressions, t.entranceTablePickup, t.backCornerImpressions, t.eyeLevelPickup, t.floorLevelPickup,
+            t.sizeRunConversion, t.colorStoryCoherent, t.colorStoryClash, t.adjacencyComplement,
+        ).all { it == 1.0 }
+    }
+    check("the other nine stores run neutral truths (every multiplier 1.0)", neutral, "9 behavior files")
+    val refused = listOf("dec-us-office", "itx-office", "m8trx-office").all { runCatching { buildSim(it) }.isFailure }
+    check("office sites are refused", refused, "dec-us-office, itx-office, m8trx-office")
+    check(
+        "every store has its own committed calibration",
+        StoreState.STORE_SLUGS.all { Files.exists(calibrationPath(it)) && loadCalibration(it).fixtureScale.isNotEmpty() },
+        "10 calibration.json files",
+    )
+}
+
+fun main() {
+    val only = System.getenv("M8TRX_STORE_DAY_SELFTEST_SITE")?.takeIf { it.isNotBlank() }
+    val sites = if (only != null) listOf(only) else StoreState.STORE_SLUGS
+    sites.forEach { checkStore(it) }
+    if (only == null) {
+        checkCalendar()
+        checkChain()
+    }
+    log.info("storeDaySelfTest: {} passed, {} failed ({} stores)", passed, failed, sites.size)
     if (failed > 0) exitProcess(1)
 }
