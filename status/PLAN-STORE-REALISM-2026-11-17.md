@@ -586,12 +586,75 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
       date? A3 says a re-send *without* one keeps the stored stop.
     - Or must it be left, so that its 28 lines stay required alongside the new plan?
     - Same question for the other nine stores when they go live.
+
+    > **[B/W] A14 (2026-11-17 evening, from the code at services `57163063` and Denver's rows; read-only).** Denver's old
+    > directive is `a3b2bbde…`: active, effective 2026-06-30, no stop, 28 targets all resolved to a product, 1 open deviation.
+    > - **Yes: a re-send with the same `external_directive_id` and an `expiry_date` sets its stop.** The update keeps the stored
+    >   start when you send none (**send no `effective_date`**: sending one rewrites it). The stop only has to be after the stored
+    >   start, and a stop that is already in the past is accepted.
+    > - **From the stop on, no count uses that plan** (the count reads the earliest of its stop, end or supersede). Its status
+    >   flips to expired at the scheduler's next quarter-hour tick, which also expires its site rows, closes its open deviations
+    >   ("plan ended <date>") and writes one `directive_expired` compliance event per target. No task is raised by it.
+    > - **⚠ Send the re-send AFTER the stop instant, not before.** A re-send replaces the targets: the 28 old rows are marked
+    >   excluded and 28 new rows are inserted WITHOUT a product (the ingest does not resolve the product; only the directive's
+    >   evaluation does, and the ingest does not call it). A plan without resolved products has no countable targets. With the
+    >   stop already past that is harmless (the plan is over). Sent before the stop, the old plan would silently stop being
+    >   countable early. So: on the reset day, after that store's midnight, re-send each old id with the same targets, no
+    >   `effective_date`, and `expiry_date` = the reset day; then push the new weekly plan.
+    > - **Leaving the old directive alone is the wrong choice:** a (fixture, product) only in the old plan stays required for ever.
+    > - **A question this raised for YOUR new weekly plans, not yet answered:** if a pushed target has no product until the
+    >   directive is evaluated, when is a NEW pushed plan evaluated (at activation? at the first count?). Denver's old targets are
+    >   all resolved, so something did it. **Prove it on one fixture before the first live issue** (push a one-target plan, read
+    >   the target's product back through the planogram read, run a count): this is the same test A3 asked for. If a fresh
+    >   pushed plan stays unresolved, that is a core defect and I fix it; tell me what you see.
 15. **A relocation to the back room.** Phase 2c's resets send displaced units "to the back room". Is an `inventory_movement`
     whose `to_zone_id` is a back-room rack zone (the stockroom space's rack zones) accepted? Or should it target the stockroom
     space itself?
+
+    > **[B/W] A15.** A movement to a back-room fixture zone IS accepted: Denver's "Back Room" space (`e19e1502…`, type stockroom)
+    > has 9 live fixture zones (Backroom Fixture 1 to 8 and Receiving Dock) holding about 5,900 items. Target a ZONE, by
+    > `to_zone_id` (preferred) or `to_fixture_code`. There is no space-level target: a space id in `to_zone_id` answers "zone not
+    > found" and the unit is counted as refused. A moved item stays in stock; nothing special-cases a stockroom (so a sale of an
+    > item located there stamps the back-room fixture on the sale line, as A1 said).
+    > - **Use `to_zone_id`, not the fixture code:** the code is matched by exact name across ALL spaces of the site with no
+    >   tie-break, so two fixtures with one name in a store give an arbitrary result. I am making that refuse as ambiguous.
+    > - **A defect found here, mine:** the server checks the item's tenant but not that the target zone belongs to the item's
+    >   site, or is live. Being fixed with the own-site change (§ 12). After it lands, a movement to a zone of another store is
+    >   refused per unit; your generator never does that, but your tests should expect the refusal's reason.
+    > - Each unit of a movement is written one at a time (about 9 statements a unit); the batch size is not capped. Keep batches
+    >   small (see A16).
 16. **The reset night's write volume** for Denver: about 30,000 units received (≤ 200 a request, paced to ~1 request every 10 s)
     and about 6,400 movement batches (≤ 2/s), on a night with no walk. Is that pace safe for the audit triggers that starved
     the pool in Session 8, or should it be slower? The twin will announce the night to the lanes before it starts.
+
+    > **[B/W] A16. No: not at that pace, and one thing blocks the reset as designed. Nothing was ever measured at this volume.**
+    > - **The audit triggers are not the risk any more.** Session 8 (2026-06-26) was a direct database reseed that fired a
+    >   per-row audit trigger; receive and movement through the API touch `item`, `thing`, `item_identifier`,
+    >   `item_custody_event`, `thing_location` and its history, none of which has an event trigger (the 13 live triggers are on
+    >   site, space, zone, tag, tenant and a few admin tables). The database pool was raised from 10 to 30 since.
+    > - **The risk is the receive itself.** It is written one EPC at a time, about ten statements each: measured on 2026-10-12 at
+    >   about 0.75 s an EPC. A 200-item request takes about 150 s; the front door answers 504 while the server keeps creating the
+    >   items. One such request every 10 s means about fifteen running at once, on a server whose inventory routes have no lane
+    >   and no 429 (the lanes of 2026-10-13 cover people data and counts only). That is the shape of the 10-12 starvation.
+    > - **⚠ BLOCKER for the reset as designed (known gap F-9 in the core's backend cleanup ledger): a received item gets NO
+    >   location and NO product.** `spaceId` in the receive is ignored; the item exists, in stock, on no fixture, tied to no
+    >   product. Today's Denver items have products because they were seeded directly. So 30,000 received units would be
+    >   30,000 items the Stock page cannot name and a sale cannot price by product. **Before any night: receive ONE unit on
+    >   Denver, read it back (its product, its location), move it to a fixture, sell it, and report what each read shows.** If
+    >   the product does not resolve from the EPC, the reset cannot run through receive until the core fixes F-9; tell me and it
+    >   moves to the top of my list.
+    > - **If that test passes, the first hour is the measurement:** receives strictly ONE AT A TIME, 50 EPCs a request (about 40 s
+    >   each), waiting for each answer; movements one batch every 2 s with small batches (the size your A15 test shows is quick);
+    >   stop at once on anything below. At that pace 30,000 units are about six hours of receives: plan two nights, or a smaller
+    >   Denver.
+    > - **Watch while it runs:** `https://dev.m8trx.com/server/api/health` (ok, under a second); the main server's log for
+    >   "Connection is not available" (the pool), "relocate refused" and a rate-limit line; mother's connection count against 200.
+    >   On a 429 honor `Retry-After`; on a 5xx or a 504 wait, back off and retry: both calls are safe to repeat (an EPC already in
+    >   stock counts as received; a move to where the item already is, is skipped). Your data-plane bearer is limited to 300
+    >   requests a minute; the planned pace is far under it.
+    > - **And the night itself:** not before § 12's link is limited and the own-site fix is deployed, and announced to the
+    >   Backend/Web and Android lanes with a start time from the clock. I will read the server during the first hour if you tell
+    >   me when it starts.
 
 17. **Is Denver's people count broken by the 2026-11-11 entrance edit?** Bob, 2026-11-17: he may have made that edit "trying to
     fix something else", and Denver's people count "is not working". What `/spatial/identity` shows today for Denver:
