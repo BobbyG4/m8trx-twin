@@ -1,10 +1,10 @@
 {
   "format": "m8trx_standard",
   "version": "v1",
-  "directive_ref": "PLN-dec-fr-bordeaux-07de0eb8c193",
+  "directive_ref": "PLN-dec-fr-bordeaux-9274a4b7a46d",
   "store_id": "dec-fr-bordeaux",
   "site_ref": "dec-fr-bordeaux",
-  "source_digest": "07de0eb8c19397c5c65d884106634737613f9712d0e056b3b19622660db662e6",
+  "source_digest": "9274a4b7a46dbe5be93da10177173057d562947f0426b318e42ec7569459b770",
   "units_per_facing": 4,
   "notes": "product_placement only; fixture_relocation lines added when SRF calibration data exists",
   "counts": {
@@ -224,7 +224,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2706524",
@@ -237,7 +237,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2706525",
@@ -250,7 +250,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2706526",
@@ -263,7 +263,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2706527",
@@ -276,7 +276,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2706528",
@@ -289,7 +289,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909020",
@@ -302,7 +302,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909021",
@@ -315,7 +315,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909022",
@@ -328,7 +328,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909023",
@@ -341,7 +341,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909024",
@@ -354,7 +354,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909025",
@@ -367,7 +367,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2909026",
@@ -380,7 +380,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2989144",
@@ -393,7 +393,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4062636",
@@ -406,7 +406,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4335163",

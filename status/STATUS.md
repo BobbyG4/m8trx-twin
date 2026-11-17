@@ -2,6 +2,60 @@
 
 ---
 
+## ⚠⚠ WHAT ACTUALLY RUNS (step 0 of CORE-REQ-009 — read-only survey, Session 20, **2026-11-17**, gmail seat)
+
+> **This section supersedes every "deploy state" / "branch state" line below it.** The twin lane went quiet after S19
+> (2026-08-05). From 2026-10-11 the generator was built and deployed for the October demo by **Coordinator sessions run from
+> `m8trx-shared`**, not from this repo, and it runs on the **GPU box**. Nothing in this repo's STATUS recorded that until now.
+> Sources: the box itself (read-only ssh, 2026-11-17 ~11:55 KST) and the Coordinator's records in `m8trx-shared` origin/main
+> (`status/active/coordinator/demo-sprint-2026-10/` checkpoints + RESULTS, `RESULTS-TWIN-BUMPS-AND-PR-TRAIN-2026-11-08.md`,
+> `AUDIT-GPU-BOX-READONLY-2026-11-08.md`, `HANDOFF-BACKEND-WEB-S388-CLOSE-2026-11-11.md`). The brief that triggered this:
+> `m8trx-shared/twin/requirements/CORE-REQ-009-data-fit-to-evaluate-m8-on.md`. The plan that answers it: `status/PLAN-STORE-REALISM-2026-11-17.md`.
+
+**Where.** GPU box `m8trx-gpu` (192.168.55.31), user `m8trx`. Driver clone **`/opt/m8trx/twin`**, on branch
+**`feat/live-pacing-and-plausible-moves-1014` @ `80f810b`** (PR #19's head) — **not `main`** (39 ahead, 9 behind) — with an
+uncommitted `status/SIM-RUN-LOG.md` (+10k lines, the box appends SIM-RUN lines itself). Ops scripts **deploy-local** in
+`/opt/m8trx/twin-ops/` and in **no repo** except `twin-digest.sh` + `twin-hourly.patch.sh` (source of record
+`m8trx-shared/scripts/twin-ops/`, byte-identical to the box). `ops/{twin-live.sh,live,m8trx-twin-live.service,INSTALL.md}` are in
+PR #19's branch. Env: `/opt/m8trx/twin/.env` (gitignored; Connect webhook key, bearers, ops password, `M8TRX_MOVEMENT_TARGET=zone`).
+
+| Unit | Trigger | What it does (2026-11-17) |
+|---|---|---|
+| `m8trx-twin-hourly` | timer `hourly`, **enabled** | `twin-hourly.sh` → `scripts/demo/day.sh` (gradle, in the clone) for **yesterday + today, KST dates**, 3 passes: `stream,alarm` · `move --moves 0` · `stock,tasks,fixmoves`. All Connect webhook/REST. ~6–7 min/pass, 0 errors in the last 24 h. |
+| `m8trx-twin-live` | **started by hand** (`twin-ops/live`), unit **disabled** → does not survive a reboot | `LiveDrive` people plane: `M8TRX_LIVE_SITES=dec-us-denver`, speed 1, `shift=at:12:00`. Runs a **jar copied 2026-10-14 from `6439647`** (`twin-ops/live-dist`; restarts never rebuilt it — live-plane code is identical to `80f810b`). Last start 2026-11-13 15:15 KST. |
+| `m8trx-twin-day` | timer **disabled** since 2026-10-12 (a Saturday-scale replay starved the main-server) | the nightly people plane — last run 2026-10-12 |
+| `m8trx-twin-digest` | 08:00 KST, enabled | one Slack line/day. ⚠ its "people plane" check reads the dead nightly's logs — stale |
+
+**HOLD** not set. Fixmoves: paused 2026-11-12 05:00 KST, restored 05:19 (script = its pre-pause backup).
+**Twin edge** (`.29`, `/opt/m8trx/edge-twin`): `m8trx-twin-nats` (`:4223`, `server_name edge-twin-denver`), `m8trx-twin-edge-server`
+(`:33081`, image built 2026-10-18 — the office edge was rebuilt 2026-11-16), `m8trx-twin-edge-db` (`:5434`). **Bound to Denver's site
+only.** The other three containers there (`:4222`, `:33080`, `:5433`) are the production office edge.
+
+**Measured gaps (what CORE-REQ-009 sees, and why):**
+- **People live in Denver only** — `LiveDrive` plans all ten stores but refuses a store with no twin edge bound to its space;
+  only Denver has one. Other stores' people series end 2026-10-04 (the mig-259 history load); nothing produced them since.
+- **Denver's people run 11h16m late** — the plan clock (`shift=at:12:00`) plays the Denver day late while events carry wall
+  time, so its people peaks land at the wrong hours against its sales (which carry correct `occurred_at`).
+- **Sales decay is the generator running out of stock**, not demand: planned sales/day chain-wide ≈1,400 (Oct 12) → 954 (Nov 5)
+  → 226 (Nov 12) → 53 (Nov 16). `DatedStream` sells each EPC once from the fixed `epcs.csv` pool (sold log: **91,636 of 102,675**)
+  and drops a line whose EAN is exhausted. Receiving (`ReceiveStock`, mints new SGTIN-96 in serial block 1e9+) is built but
+  **never run** (not in the hourly pass; `.twin-state/receive/` empty), and the stream does not read received stock anyway.
+  Restock moves: 0 every pass, with shortfalls.
+- **17% back-room sales** is the twin's own doing — `DatedStream` sells back-of-house first "so the floor still looks stocked".
+- **Denver floor**: 115 fixture zones; 23 never stocked; 77 of the 92 stocked now empty in the twin's ledger (12% of floor units
+  left); seed stock per fixture 8–713 (median 104). Layout is the parametric `build_layout.py` grid (6 gondola rows × 7 units).
+
+**Open PRs (none reviewed by Bob):** a stack `main ← #17 ← feat/recent-window-1012 (no PR) ← #18 ← #19` (PRs #23–#25, the
+CORE-REQ-007/008 pricing work, merged into #19's branch, not main); #17 merges clean, #18/#19 conflict with main in 4 files (the
+duplicated pricing), #21 (behavior sim, TWIN-REQ-007) is independent but collides with the stack and repeats main's #26 bumps.
+**Merging to main changes nothing on the box** — no CI; the box tracks #19's branch.
+
+**Open for Bob:** where the twin's records live (this repo vs the shared vault — nothing moved); commit the box-only ops scripts
+somewhere; merge plan for the stack; enable `m8trx-twin-live` or not; the people path for the other nine stores (edges are
+infra/core — the twin does not touch `.29`).
+
+---
+
 ## ⚠ NEXT SESSION PRIORITIES (updated **2026-08-05** — **Session 19 CLOSED** · ★ **SOLVER TEST-SPACE MATRIX DELIVERED AS A FILE** · the spatial write path proven absent → **TWIN-REQ-006 FILED** · zero rows touched on mother)
 
 > **PICK UP HERE (Session 20).** Read first: `status/session-notes/2026-08-05-session-19-solver-matrix-and-the-spatial-write-wall.md` — its *don't-repeat* record is **§6 FAILED APPROACHES** (`build_layout.py` assumed reusable and is not · `qlmanage` hung · a coarse ASCII raster's own false alarm · nearly under-filing the finding).

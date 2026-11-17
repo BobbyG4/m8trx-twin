@@ -17384,7 +17384,7 @@
       "fixtures": [
         {
           "code": "LS-01",
-          "name": "South Wing Rack 1",
+          "name": "South Wing Fixture 1",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17425,7 +17425,7 @@
         },
         {
           "code": "LS-02",
-          "name": "South Wing Rack 2",
+          "name": "South Wing Fixture 2",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17466,7 +17466,7 @@
         },
         {
           "code": "LS-03",
-          "name": "South Wing Rack 3",
+          "name": "South Wing Fixture 3",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17507,7 +17507,7 @@
         },
         {
           "code": "LS-04",
-          "name": "South Wing Rack 4",
+          "name": "South Wing Fixture 4",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17548,7 +17548,7 @@
         },
         {
           "code": "LN-01",
-          "name": "North Wing Rack 1",
+          "name": "North Wing Fixture 1",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17589,7 +17589,7 @@
         },
         {
           "code": "LN-02",
-          "name": "North Wing Rack 2",
+          "name": "North Wing Fixture 2",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",
@@ -17630,7 +17630,7 @@
         },
         {
           "code": "LN-03",
-          "name": "North Wing Rack 3",
+          "name": "North Wing Fixture 3",
           "zone_type": "fixture",
           "fixture_category": "gondola_run",
           "geometry_type": "polygon",

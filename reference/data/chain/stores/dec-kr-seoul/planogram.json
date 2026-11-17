@@ -1,10 +1,10 @@
 {
   "format": "m8trx_standard",
   "version": "v1",
-  "directive_ref": "PLN-dec-kr-seoul-25c7c8865c75",
+  "directive_ref": "PLN-dec-kr-seoul-c23452f8d364",
   "store_id": "dec-kr-seoul",
   "site_ref": "dec-kr-seoul",
-  "source_digest": "25c7c8865c750043a2e9f40ddecfe1b9e339ca8e7cd2b530815864710ad79774",
+  "source_digest": "c23452f8d364d53de7e91561161618bad07ddc67476b1c45db06ff1c8854f44d",
   "units_per_facing": 4,
   "notes": "product_placement only; fixture_relocation lines added when SRF calibration data exists",
   "counts": {
@@ -94,7 +94,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4335158",
@@ -29448,7 +29448,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4472692",
@@ -29461,7 +29461,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4472694",
@@ -29474,7 +29474,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4472695",
@@ -29487,7 +29487,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4472696",
@@ -29500,7 +29500,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4472697",
@@ -29513,7 +29513,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4718095",
@@ -29526,7 +29526,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4718096",
@@ -29539,7 +29539,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4718097",
@@ -29552,7 +29552,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4718098",
@@ -29565,7 +29565,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "4794604",
@@ -29578,7 +29578,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5203801",
@@ -29591,7 +29591,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5203802",
@@ -29604,7 +29604,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5203804",
@@ -29617,7 +29617,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5203805",
@@ -29630,7 +29630,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5678791",
@@ -29643,7 +29643,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5678792",
@@ -29656,7 +29656,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5678793",
@@ -29669,7 +29669,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5688876",
@@ -29682,7 +29682,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5690093",
@@ -29695,7 +29695,7 @@
     },
     {
       "fixture_code": "RR-02",
-      "fixture_name": "Apparel Round Rack 2",
+      "fixture_name": "Apparel Round Fixture 2",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "5691762",

@@ -139,7 +139,7 @@ Confined to the gondola hall (y 3000–14500), 2300mm per bay, outside the gondo
 | FR-SC | Fitting Room Service Counter | 17200 | 20500 | 22000 | 22000 |
 | CO-01 | Checkout Counter 1 | 17500 | 500 | 20000 | 2000 |
 | CO-02 | Checkout Counter 2 | 20500 | 500 | 23000 | 2000 |
-| CO-IR | Impulse Rack | 17000 | 2500 | 24000 | 3200 |
+| CO-IR | Impulse Fixture | 17000 | 2500 | 24000 | 3200 |
 
 ---
 

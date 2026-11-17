@@ -749,7 +749,7 @@
         },
         {
           "code": "CO-IR",
-          "name": "Impulse Rack",
+          "name": "Impulse Fixture",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-02",
@@ -854,7 +854,7 @@
         },
         {
           "code": "BR-01",
-          "name": "Backroom Rack 1",
+          "name": "Backroom Fixture 1",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -873,7 +873,7 @@
         },
         {
           "code": "BR-02",
-          "name": "Backroom Rack 2",
+          "name": "Backroom Fixture 2",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -892,7 +892,7 @@
         },
         {
           "code": "BR-03",
-          "name": "Backroom Rack 3",
+          "name": "Backroom Fixture 3",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -911,7 +911,7 @@
         },
         {
           "code": "BR-04",
-          "name": "Backroom Rack 4",
+          "name": "Backroom Fixture 4",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",

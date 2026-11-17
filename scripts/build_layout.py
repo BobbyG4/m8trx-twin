@@ -329,7 +329,7 @@ def generate(store):
     cz = z["Z-02"]
     for x1, y1, x2, y2, r, c in fill(cz["x1"], cz["y1"] + 800, cz["x2"], cz["y2"], n_co, 1):
         fx.append(fixture(f"CO-{c+1:02d}", f"Checkout Counter {c+1}", x1, y1, x2, y2, "Z-02", "checkout"))
-    fx.append(fixture("CO-IR", "Impulse Rack", cz["x1"] + 150, cz["y1"] + 150, cz["x2"] - 150, cz["y1"] + 650, "Z-02", "impulse_rack"))
+    fx.append(fixture("CO-IR", "Impulse Fixture", cz["x1"] + 150, cz["y1"] + 150, cz["x2"] - 150, cz["y1"] + 650, "Z-02", "impulse_rack"))
 
     # front-of-store FEATURE displays in the entrance (Z-01) — circular promo islands + apparel
     # rounders (the "circular fixture" type, used sparingly as Decathlon does). shape=circle.
@@ -338,7 +338,7 @@ def generate(store):
     for x1, y1, x2, y2, r, c in fill(ez["x1"] + 300, 900, ez["x2"] - 300, 2700, n_feat, 1):
         rack = c % 2 == 1
         fx.append(fixture(f"{'RR' if rack else 'PI'}-{c+1:02d}",
-                          f"Apparel Round Rack {c+1}" if rack else f"Promo Island {c+1}",
+                          f"Apparel Round Fixture {c+1}" if rack else f"Promo Island {c+1}",
                           x1, y1, x2, y2, "Z-01",
                           "round_rack" if rack else "promo_island", shape="circle"))
 
@@ -353,7 +353,7 @@ def generate(store):
     for x1, y1, x2, y2, r, c in fill(bz["x1"] + 200 + dock_w + 300, bz["y1"] + 200, bz["x2"] - 200, bz["y2"] - 200, rcols, 2):
         idx = r * rcols + c + 1
         if idx <= n_rack:
-            br = fixture(f"BR-{idx:02d}", f"Backroom Rack {idx}", x1, y1, x2, y2, "Z-05", "backroom_rack")
+            br = fixture(f"BR-{idx:02d}", f"Backroom Fixture {idx}", x1, y1, x2, y2, "Z-05", "backroom_rack")
             br["department"] = "boh"
             fx.append(br)
 

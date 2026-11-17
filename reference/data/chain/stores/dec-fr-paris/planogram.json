@@ -1,10 +1,10 @@
 {
   "format": "m8trx_standard",
   "version": "v1",
-  "directive_ref": "PLN-dec-fr-paris-029417e55d1e",
+  "directive_ref": "PLN-dec-fr-paris-2041dc4f838b",
   "store_id": "dec-fr-paris",
   "site_ref": "dec-fr-paris",
-  "source_digest": "029417e55d1eee50202267b583a65c70ee58853a3f6b03f313d1a2a6777f3d4f",
+  "source_digest": "2041dc4f838bbdbeff9ce7b56b67139b0676c727908a52e890c07b58e9bfcc23",
   "units_per_facing": 4,
   "notes": "product_placement only; fixture_relocation lines added when SRF calibration data exists",
   "counts": {
@@ -55,7 +55,7 @@
     },
     {
       "fixture_code": "CO-IR",
-      "fixture_name": "Impulse Rack",
+      "fixture_name": "Impulse Fixture",
       "space_type": "sales_floor",
       "department": "general",
       "sku": "2934377",

@@ -1979,7 +1979,7 @@
         },
         {
           "code": "CO-IR",
-          "name": "Impulse Rack",
+          "name": "Impulse Fixture",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-02",
@@ -2021,7 +2021,7 @@
         },
         {
           "code": "RR-02",
-          "name": "Apparel Round Rack 2",
+          "name": "Apparel Round Fixture 2",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-01",
@@ -2132,7 +2132,7 @@
         },
         {
           "code": "BR-01",
-          "name": "Backroom Rack 1",
+          "name": "Backroom Fixture 1",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2151,7 +2151,7 @@
         },
         {
           "code": "BR-02",
-          "name": "Backroom Rack 2",
+          "name": "Backroom Fixture 2",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2170,7 +2170,7 @@
         },
         {
           "code": "BR-03",
-          "name": "Backroom Rack 3",
+          "name": "Backroom Fixture 3",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2189,7 +2189,7 @@
         },
         {
           "code": "BR-04",
-          "name": "Backroom Rack 4",
+          "name": "Backroom Fixture 4",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2208,7 +2208,7 @@
         },
         {
           "code": "BR-05",
-          "name": "Backroom Rack 5",
+          "name": "Backroom Fixture 5",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2227,7 +2227,7 @@
         },
         {
           "code": "BR-06",
-          "name": "Backroom Rack 6",
+          "name": "Backroom Fixture 6",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2246,7 +2246,7 @@
         },
         {
           "code": "BR-07",
-          "name": "Backroom Rack 7",
+          "name": "Backroom Fixture 7",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
@@ -2265,7 +2265,7 @@
         },
         {
           "code": "BR-08",
-          "name": "Backroom Rack 8",
+          "name": "Backroom Fixture 8",
           "zone_type": "fixture",
           "parent": "space",
           "in_area_zone": "Z-05",
