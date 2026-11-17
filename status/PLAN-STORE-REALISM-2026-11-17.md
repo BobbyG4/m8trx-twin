@@ -231,6 +231,9 @@ map onto planogram and parameter edits:
    done-when checks, plus the twin's own oracle (every planned event = one on the wire = one row), and **publish the first
    gap ledger** (§ 5.1): per fixture signal, captured or marked.
 3. **Sales-only stores next** (all nine have sales through Connect today): new model, replenishment, planogram issue.
+   - **Per-store POS keys** (§ 8 Q9, Bob 2026-11-17): each store's sales on its own site-bound key, with a check that a cross-store
+     post is refused.
+   - **Retry instead of skip:** a refused login or a 502 is retried for a minute or two before the store is skipped (§ 8 Q11).
 4. **People for the other nine stores** — blocked on the receiving side (§ 8 Q5). The twin's code already plans all ten stores;
    it needs a path per store.
 5. **Load**: Denver alone peaks ≈ 4,400 events/min; ten stores is several times that. The live plane's caps (500 ev/s, 40
@@ -440,6 +443,43 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    > These are product gaps, not twin gaps: they belong in your gap ledger as **no surface to send it**, and in one TWIN-REQ that
    > names the three with the truth grain you can supply. I withdraw CORE-REQ-009 A's "also asked" as something the twin can
    > deliver on its own. For the eval, the core treats the three as not available after 2026-10-04.
+
+*Round 2 (twin, 2026-11-17 afternoon, from Bob's walk through the Connect screens with the twin lane). Answer in place under each.*
+
+9. **One POS key per store.** Bob: "in reality, each store likely will have its own." Today all ten stores' sales go through one
+   integration (`twin-pos`) on one key (`twin-po-sim-2`). The Keys tab shows that key's scope as "the integration", not a site.
+   The twin wants each store's till posting with its own key, bound to that site, for two reasons. It is realistic. It also
+   tests the sale path's site scope: a store's key posting another store's sale must be refused (the August site-scope audit
+   found three leaks the same way). So:
+   (a) Can an integration's webhook key be bound to one site or several? Or is the intended shape one integration per store
+       (`twin-pos-denver`, `twin-pos-paris`, …)?
+   (b) If a site-bound webhook key posts a `sale_event` whose EPC belongs to another site, what happens? Refused (which code), or
+       accepted? *(Shapes a Phase 3 realism item; needs ten keys on Bob's word. Nothing before Phase 3 depends on it.)*
+
+10. **Connect screen findings** (web, seen on dev 2026-11-17; for the cleanup ledger beside the data-type dropdown fix):
+   - **The Configure dialog renders the outbound form for an inbound integration** (`twin-pos`):
+     - "Mode: Push — M8TRX initiates delivery" is the outbound meaning.
+     - Cadence and Payload shape (delta / snapshot / field subset) only apply to outbound.
+     - "Test delivery — sends a sample payload to your configured endpoint" has no endpoint to send to on an inbound integration.
+   - **Transport shows "— select —"** on `twin-pos`, whose transport is webhook. Does Save with that empty value overwrite
+     the working config? Bob was advised not to Save until this is known.
+   - **`twin-outbound`: the Channels tab shows 506 deliveries, 506 failed.** Its Integrations card says "UNKNOWN · No events
+     received yet". The two screens disagree. The failures themselves are the twin's: its outbound receiver is not running.
+     The twin proposes disabling it until outbound is exercised again (Bob's call).
+   - **`twin-pos`'s 1 failed event** is the twin's own key test of 13:23:58 KST (an empty `sale_event`). It is not a defect.
+
+11. **Deploy restarts and the hourly pass.** 857 passes since 2026-10-12; 10 had errors, none from a key:
+   - 4 were fixture-move 400s on Oct 14 (fixed that day).
+   - The other 6 coincide with server restarts:
+     - Waves of store-manager logins refused for 5–7 stores at once.
+     - 502s in three of them.
+     - 2026-11-11 16:05 KST matches the recorded 07:04 UTC rollout.
+   The twin will retry over a minute or two before skipping a store (Phase 3). Is there a readiness signal or a usual deploy
+   window the twin should avoid, beyond ":00–:08"?
+
+12. **Drift found while landing #27:** Denver's entry zone is "Entrance Area" on the platform. The twin's keys export and
+    `layout.json` say "Entrance". Every other zone name in all ten stores matches (checked through `/spatial/identity`).
+    Was the rename deliberate? If so, the twin takes the platform's name.
 
 ## 9. Decisions for Bob
 
