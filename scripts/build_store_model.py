@@ -38,10 +38,9 @@ KIT_VERSION = "kit-v1"
 FORMAT, VERSION = "m8trx_standard", "v2"
 
 # ============================== KNOBS (every number the brief left to the builder) ==============================
-# --- profile (provisional pending Bob's D3) ---
-DEFAULT_HOURS = "10:00-21:00"           # today's hours everywhere
-DEFAULT_LOCATION_FACTOR = 1.0           # footfall per m2 relative to Denver; 1.0 everywhere keeps today's volumes
-LARGE_STORE_SQM = 500.0                 # delivery lead: 60 min at/above, 30 below (brief 2.1)
+# --- profile (D3 estimates, Bob 2026-11-17; per-store hours and location factors are in HOURS / LOCATION_FACTORS) ---
+DEFAULT_LOCATION_FACTOR = 1.0           # the chain default (Denver) footfall per m2
+LARGE_STORE_SQM = 450.0                 # delivery lead: 60 min at/above, 30 below (D3, Bob 2026-11-17; was 500)
 LEAD_LARGE_MIN, LEAD_SMALL_MIN = 60, 30
 # --- demand ---
 DEMAND_DATE = (2026, 11, 17)            # the day the seasonal department weights are read for (StoryCalendar anchors)
@@ -227,27 +226,58 @@ def load_keys():
     return keys, meta
 
 
+DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+PROFILE_SOURCE = "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
+CLOSED_SUNDAY_SATURDAY_LIFT = 1.10      # Saturday visitors x this where the store is closed on Sunday
+
+
+def _week(mon_sat, sun):
+    return {d: (mon_sat if d != "sun" else sun) for d in DAYS}
+
+
+# D3 estimates (Bob 2026-11-17), store-local hours per weekday ("closed" = shut that weekday) and footfall per m2 against Denver
+HOURS = {
+    "dec-us-nyc": _week("10:00-21:00", "11:00-20:00"),
+    "dec-us-denver": _week("10:00-21:00", "11:00-18:00"),
+    "dec-us-sf": _week("10:00-20:00", "11:00-19:00"),
+    "dec-fr-paris": _week("09:30-20:30", "10:00-19:00"),
+    "dec-fr-lyon": _week("09:30-20:00", "closed"),
+    "dec-fr-lille": _week("09:30-20:00", "closed"),
+    "dec-fr-bordeaux": _week("09:30-20:00", "closed"),
+    "dec-fr-marseille": _week("09:30-20:00", "closed"),
+    "dec-kr-seoul": _week("10:30-22:00", "10:30-22:00"),
+    "dec-kr-busan": _week("10:30-21:30", "10:30-21:30"),
+}
+LOCATION_FACTORS = {
+    "dec-us-nyc": 1.8, "dec-fr-paris": 1.6, "dec-kr-seoul": 1.5, "dec-us-sf": 1.1, "dec-us-denver": 1.0, "dec-fr-lyon": 1.1,
+    "dec-fr-lille": 1.0, "dec-kr-busan": 1.1, "dec-fr-bordeaux": 0.9, "dec-fr-marseille": 0.85,
+}
+
+
 def build_profiles(meta):
     default = {
-        "hours": {d: DEFAULT_HOURS for d in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]},
+        "hours": dict(HOURS["dec-us-denver"]),
         "location_factor": DEFAULT_LOCATION_FACTOR,
         "delivery_lead_rule": {"area_sqm_at_least": LARGE_STORE_SQM, "lead_min": LEAD_LARGE_MIN, "else_lead_min": LEAD_SMALL_MIN},
-        "provisional": True,
-        "source": "today's 10:00-21:00 and location_factor 1.0 everywhere; provisional pending Bob's D3",
+        "closed_sunday_saturday_lift": CLOSED_SUNDAY_SATURDAY_LIFT,
+        "provisional": False,
+        "source": PROFILE_SOURCE,
     }
     stores = {}
     for slug in sorted(meta):
         m = meta[slug]
+        hours = dict(HOURS[slug])
         stores[slug] = {
             "timezone": m["timezone"],
             "area_sqm": m["area_sqm"],
-            "hours": dict(default["hours"]),
-            "location_factor": DEFAULT_LOCATION_FACTOR,
+            "hours": hours,
+            "location_factor": LOCATION_FACTORS[slug],
             "delivery_lead_min": LEAD_LARGE_MIN if m["area_sqm"] >= LARGE_STORE_SQM else LEAD_SMALL_MIN,
-            "provisional": True,
-            "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3",
+            "saturday_lift": CLOSED_SUNDAY_SATURDAY_LIFT if hours["sun"] == "closed" else 1.0,
+            "provisional": False,
+            "source": PROFILE_SOURCE,
         }
-    return {"schema": "store-profiles-v1", "provisional": True, "chain_default": default, "stores": stores}
+    return {"schema": "store-profiles-v1", "provisional": False, "chain_default": default, "stores": stores}
 
 
 # ===================================================== demand ======================================================
@@ -324,10 +354,15 @@ def build_demand(slug, rows, profile, opm):
     area_scale = profile["area_sqm"] / profile["_denver_area"]
     mult = profile["location_factor"] * area_scale
     tot_wk = vis["weekday"] * mult * conv * upt
-    tot_we = vis["weekend"] * mult * conv * upt
+    tot_we = vis["weekend"] * mult * conv * upt             # per weekend day, before the Saturday lift
+    sat_lift = profile.get("saturday_lift", 1.0)
+    # the week's units by the store's own hours: a closed weekday sells nothing; Saturday carries the lift where Sunday is closed
+    day_units = {d: (0.0 if profile["hours"][d] == "closed" else (tot_wk if i < 5 else tot_we * (sat_lift if d == "sat" else 1.0)))
+                 for i, d in enumerate(DAYS)}
+    weekly = sum(day_units.values())
     arithmetic = {"visitors_weekday": vis["weekday"], "visitors_weekend": vis["weekend"], "location_factor": profile["location_factor"],
                   "area_scale": area_scale, "conversion": conv, "units_per_txn": upt,
-                  "units_weekday": tot_wk, "units_weekend": tot_we}
+                  "units_weekday": tot_wk, "units_weekend": tot_we, "saturday_lift": sat_lift, "units_week": weekly}
     ean_share = {}
     dsum = defaultdict(float)
     for s in styles:
@@ -901,7 +936,7 @@ def build(slug, out_dir):
     for s in sorted(styles, key=lambda s: s.id):
         off = s.id in off_ids
         for e in s.eans:
-            d = share[e["ean"]] * (arith["units_weekday"] * 5 + arith["units_weekend"] * 2) / 7.0
+            d = share[e["ean"]] * arith["units_week"] / 7.0
             n = math.ceil(d * (COVER_DAYS + (OFFFLOOR_EXTRA_DAYS if off else 0)))
             p = pack_of(s)
             q = max(1, math.ceil(n / p)) * p

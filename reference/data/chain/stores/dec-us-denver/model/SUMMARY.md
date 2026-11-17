@@ -202,5 +202,5 @@ Level classes (form, facings/m, units/facing, height units): shoe=('shelf', 6.0,
 - demand.csv `554d36b7ada145ee`
 - fixtures.json `0ba0c5d00d1da738`
 - planogram.json `f2ce6b9d01bfc777`
-- profile.json `78940faf8da4a8f7`
+- profile.json `a26998f89545881b`
 - stock-plan.csv `a7ba54f9ccb42126`

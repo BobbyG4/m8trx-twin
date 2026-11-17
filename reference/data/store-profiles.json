@@ -1,6 +1,6 @@
 {
   "schema": "store-profiles-v1",
-  "provisional": true,
+  "provisional": false,
   "chain_default": {
     "hours": {
       "mon": "10:00-21:00",
@@ -9,136 +9,144 @@
       "thu": "10:00-21:00",
       "fri": "10:00-21:00",
       "sat": "10:00-21:00",
-      "sun": "10:00-21:00"
+      "sun": "11:00-18:00"
     },
     "location_factor": 1.0,
     "delivery_lead_rule": {
-      "area_sqm_at_least": 500.0,
+      "area_sqm_at_least": 450.0,
       "lead_min": 60,
       "else_lead_min": 30
     },
-    "provisional": true,
-    "source": "today's 10:00-21:00 and location_factor 1.0 everywhere; provisional pending Bob's D3"
+    "closed_sunday_saturday_lift": 1.1,
+    "provisional": false,
+    "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
   },
   "stores": {
     "dec-fr-bordeaux": {
       "timezone": "Europe/Paris",
       "area_sqm": 315.0,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "09:30-20:00",
+        "tue": "09:30-20:00",
+        "wed": "09:30-20:00",
+        "thu": "09:30-20:00",
+        "fri": "09:30-20:00",
+        "sat": "09:30-20:00",
+        "sun": "closed"
       },
-      "location_factor": 1.0,
+      "location_factor": 0.9,
       "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.1,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-fr-lille": {
       "timezone": "Europe/Paris",
       "area_sqm": 483.0,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "09:30-20:00",
+        "tue": "09:30-20:00",
+        "wed": "09:30-20:00",
+        "thu": "09:30-20:00",
+        "fri": "09:30-20:00",
+        "sat": "09:30-20:00",
+        "sun": "closed"
       },
       "location_factor": 1.0,
-      "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "delivery_lead_min": 60,
+      "saturday_lift": 1.1,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-fr-lyon": {
       "timezone": "Europe/Paris",
       "area_sqm": 441.0,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "09:30-20:00",
+        "tue": "09:30-20:00",
+        "wed": "09:30-20:00",
+        "thu": "09:30-20:00",
+        "fri": "09:30-20:00",
+        "sat": "09:30-20:00",
+        "sun": "closed"
       },
-      "location_factor": 1.0,
+      "location_factor": 1.1,
       "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.1,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-fr-marseille": {
       "timezone": "Europe/Paris",
       "area_sqm": 313.5,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "09:30-20:00",
+        "tue": "09:30-20:00",
+        "wed": "09:30-20:00",
+        "thu": "09:30-20:00",
+        "fri": "09:30-20:00",
+        "sat": "09:30-20:00",
+        "sun": "closed"
       },
-      "location_factor": 1.0,
+      "location_factor": 0.85,
       "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.1,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-fr-paris": {
       "timezone": "Europe/Paris",
       "area_sqm": 588.0,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "09:30-20:30",
+        "tue": "09:30-20:30",
+        "wed": "09:30-20:30",
+        "thu": "09:30-20:30",
+        "fri": "09:30-20:30",
+        "sat": "09:30-20:30",
+        "sun": "10:00-19:00"
       },
-      "location_factor": 1.0,
+      "location_factor": 1.6,
       "delivery_lead_min": 60,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-kr-busan": {
       "timezone": "Asia/Seoul",
       "area_sqm": 270.0,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "10:30-21:30",
+        "tue": "10:30-21:30",
+        "wed": "10:30-21:30",
+        "thu": "10:30-21:30",
+        "fri": "10:30-21:30",
+        "sat": "10:30-21:30",
+        "sun": "10:30-21:30"
       },
-      "location_factor": 1.0,
+      "location_factor": 1.1,
       "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-kr-seoul": {
       "timezone": "Asia/Seoul",
       "area_sqm": 493.5,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "10:30-22:00",
+        "tue": "10:30-22:00",
+        "wed": "10:30-22:00",
+        "thu": "10:30-22:00",
+        "fri": "10:30-22:00",
+        "sat": "10:30-22:00",
+        "sun": "10:30-22:00"
       },
-      "location_factor": 1.0,
-      "delivery_lead_min": 30,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "location_factor": 1.5,
+      "delivery_lead_min": 60,
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-us-denver": {
       "timezone": "America/Denver",
@@ -150,12 +158,13 @@
         "thu": "10:00-21:00",
         "fri": "10:00-21:00",
         "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "sun": "11:00-18:00"
       },
       "location_factor": 1.0,
       "delivery_lead_min": 60,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-us-nyc": {
       "timezone": "America/New_York",
@@ -167,29 +176,31 @@
         "thu": "10:00-21:00",
         "fri": "10:00-21:00",
         "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "sun": "11:00-20:00"
       },
-      "location_factor": 1.0,
+      "location_factor": 1.8,
       "delivery_lead_min": 60,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     },
     "dec-us-sf": {
       "timezone": "America/Los_Angeles",
       "area_sqm": 662.5,
       "hours": {
-        "mon": "10:00-21:00",
-        "tue": "10:00-21:00",
-        "wed": "10:00-21:00",
-        "thu": "10:00-21:00",
-        "fri": "10:00-21:00",
-        "sat": "10:00-21:00",
-        "sun": "10:00-21:00"
+        "mon": "10:00-20:00",
+        "tue": "10:00-20:00",
+        "wed": "10:00-20:00",
+        "thu": "10:00-20:00",
+        "fri": "10:00-20:00",
+        "sat": "10:00-20:00",
+        "sun": "11:00-19:00"
       },
-      "location_factor": 1.0,
+      "location_factor": 1.1,
       "delivery_lead_min": 60,
-      "provisional": true,
-      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+      "saturday_lift": 1.0,
+      "provisional": false,
+      "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
     }
   }
 }
