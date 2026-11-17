@@ -39,6 +39,9 @@ class DayOverlay(private val model: StoreDayModel, private val behavior: Behavio
     private val story = StoryCalendar(behavior.model, keys.store(StoreState.STORE_SLUGS.first()).areaSqm)
     private val modelOpen = LocalTime.parse(behavior.model.store.operatingHours.open)
 
+    /** The story calendar's relative weight per department on [date] (the season): slice 2c's plan changes follow it. */
+    fun departmentWeights(date: LocalDate): Map<String, Double> = story.departmentWeights(date)
+
     fun plan(date: LocalDate): DayPlan {
         val hours = model.hoursOn(date.dayOfWeek)
         if (hours == null || (enabled && !story.isOpen(store, date))) {
