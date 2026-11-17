@@ -21,6 +21,11 @@ package com.m8trx.twin.connect.model.webhook
  *    it to an M8TRX site via `integration_site_xref`. An UNMAPPED store_id quarantines
  *    (severity=error) and creates an unmapped xref row for the cockpit's Site Map → Unmapped queue.
  * Use the factory helpers to build a well-formed one-of.
+ *
+ * [priceMinor] + [currency] (Connect §8, mig 311, CORE-REQ-007): what **one unit** sold for, net of discount, in the
+ * ISO 4217 minor unit of [currency]. The price applies to every item the event resolves, so a receipt with several
+ * prices goes as one event per price under the same [externalSaleId]. Absent, the platform prices the sale from its
+ * history or catalog (`price_source` `history` / `catalog_now`), never `till`. Set both through [priced].
  */
 data class SaleEvent(
     val externalSaleId: String,
@@ -32,7 +37,12 @@ data class SaleEvent(
     val epc: String? = null,
     val sku: String? = null,
     val quantity: Int? = null,
+    val priceMinor: Long? = null,
+    val currency: String? = null,
 ) {
+    /** This sale at one unit's [minor] price in [ccy] (the catalog's, USD cents, unless said); null leaves it unpriced. */
+    fun priced(minor: Long?, ccy: String = CATALOG_CURRENCY): SaleEvent = if (minor == null) this else copy(priceMinor = minor, currency = ccy)
+
     companion object {
         // EPC paths attribute a SPECIFIC item — no site_id needed.
         fun byEpcList(externalSaleId: String, occurredAt: String, epcs: List<String>) =
@@ -84,7 +94,8 @@ data class ShipmentLine(val sku: String, val expectedQuantity: Int)
  * [currency] goes on **every** update (Connect §8, 2026-11-06): with it the platform reads [priceMinor] by that
  * currency's ISO 4217 exponent and refuses a mismatch with the product's currency; without it the number is read
  * as US cents, which is how the won-as-cents prices of CORE-REQ-007 got in. It is not optional on the twin's side:
- * the default is the platform catalog's currency, and nothing here sends another.
+ * the default is USD, but the churn always sets the tenant's base currency itself (`BaseCatalog`, EUR for Decathlon,
+ * CORE-REQ-008). No `price_zone` is sent until the core's zones round ships.
  */
 data class PricingUpdate(val sku: String, val priceMinor: Long, val gtin: String? = null, val currency: String = CATALOG_CURRENCY)
 

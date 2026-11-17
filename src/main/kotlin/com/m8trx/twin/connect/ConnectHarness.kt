@@ -37,6 +37,8 @@ import com.m8trx.twin.connect.sim.RemediateMode
 import com.m8trx.twin.connect.sim.SaleArm
 import com.m8trx.twin.connect.sim.SftpDropDriver
 import com.m8trx.twin.connect.sim.StressHarness
+import com.m8trx.twin.history.ChainKeys
+import com.m8trx.twin.history.RecentDay
 import org.slf4j.LoggerFactory
 import java.net.URI
 import java.net.http.HttpClient
@@ -71,7 +73,18 @@ fun main() {
     readPlaneCaps()
     fullLoopPlan()
     stressPlan()
+    tenStorePlanRefs()
+    datedSaleOccurredAt()
+    alarmDayEnvelope()
+    multiStoreMoves()
+    restockMovesPlan()
+    receiveStockPlan()
     pricingUnitsGuard()
+    datedPricingGuard()
+    eurBaseGuard()
+    priceMemoryGuard()
+    saleTillPriceGuard()
+    saleCurrencyIsStoresGuard()
     log.info("=== ALL OFFLINE SELF-TESTS PASSED ===")
 }
 
@@ -636,4 +649,330 @@ private fun post(http: HttpClient, url: String, body: ByteArray, signature: Stri
     if (signature != null) builder.header("X-M8TRX-Signature", signature)
     builder.POST(HttpRequest.BodyPublishers.ofByteArray(body))
     return http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
+}
+
+// ── recent window (2026-10-12) ────────────────────────────────────────────────────────────────────────────
+
+private val CHAIN: Path = Path.of("reference/data/chain")
+
+/**
+ * The ten-store plans: one external ref per store (a shared ref would make each send rebuild the last store's
+ * targets), and the curated 28-line grain spread over every department wall a store has.
+ */
+private fun tenStorePlanRefs() {
+    val keys = ChainKeys.load()
+    val date = java.time.LocalDate.of(2026, 10, 12)
+    val refs = keys.stores.map { PlanogramDirectiveDriver.externalRef(it.slug, date) }
+    check(refs.size == 10) { "ten stores in the key export, got ${refs.size}" }
+    check(refs.toSet().size == refs.size) { "per-store external refs must be distinct: $refs" }
+    check(refs.all { Regex("PLN-dec-[a-z]{2}-[a-z]+-20261012").matches(it) }) { "ref shape PLN-<slug>-<yyyymmdd>: $refs" }
+    check(PlanogramDirectiveDriver.externalRef("dec-us-nyc", date.plusDays(1)) != PlanogramDirectiveDriver.externalRef("dec-us-nyc", date)) {
+        "a new plan version must get a new ref"
+    }
+    val driver = PlanogramDirectiveDriver(WebhookClient(ConnectConfig.fromEnv()))
+    for (st in keys.stores) {
+        val walls = st.fixtures.filter { !it.department.isNullOrBlank() }.associate { it.code to it.department!! }
+        val doc = driver.loadDocument(CHAIN.resolve("stores/${st.slug}/planogram.json"))
+        val lines = PlanogramDirectiveDriver.curate(doc, walls)
+        check(lines.size == PlanogramDirectiveDriver.CURATED_LINES) { "${st.slug}: curated plan must be 28 lines, got ${lines.size}" }
+        check(lines.all { it.fixtureCode in walls }) { "${st.slug}: every curated line sits on a department wall" }
+        val wallsInPlan = doc.lines.map { it.fixtureCode }.filter { it in walls }.toSet()
+        val distinctWalls = lines.map { it.fixtureCode }.toSet().size
+        check(distinctWalls == minOf(28, wallsInPlan.size)) {
+            "${st.slug}: one line per wall while walls last — $distinctWalls of ${wallsInPlan.size}"
+        }
+        check(
+            lines.map {
+                walls.getValue(it.fixtureCode)
+            }.toSet() == wallsInPlan.map { walls.getValue(it) }.toSet(),
+        ) { "${st.slug}: every department is covered" }
+        check(lines.map { it.fixtureCode to it.ean }.toSet().size == lines.size) { "${st.slug}: no duplicate (wall, sku) target" }
+        check(PlanogramDirectiveDriver.curate(doc, walls) == lines) { "${st.slug}: curation must be deterministic" }
+    }
+    log.info("[recent] ten-store plans: 10 distinct refs, 28 curated lines each, every department wall covered ✓")
+}
+
+/** A backdated sale carries its own `occurred_at`, inside the store's hours, spread across the day; each EPC sells once. */
+private fun datedSaleOccurredAt() {
+    val recent = RecentDay(chainDir = CHAIN)
+    val date = java.time.LocalDate.of(2026, 10, 6) // a Tuesday in the recent window, already in the past
+    val day = checkNotNull(recent.run("dec-us-denver", date)) { "Denver is open on $date" }
+    val plan = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        emptySet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(plan.sales.size in 150..450) { "Denver weekday volume from the model, got ${plan.sales.size} transactions" }
+    val first = plan.sales.first()
+    val json = ConnectMappers.snake.writeValueAsString(DatedStream.toSaleEvent(first))
+    check(json.contains("\"occurred_at\":\"${first.at}\"")) { "a backdated sale must carry its own occurred_at (${first.at}): $json" }
+    check(first.at.isBefore(java.time.Instant.now())) { "the self-test day is in the past" }
+    val zone = recent.store("dec-us-denver").zone
+    val local = plan.sales.map { it.at.atZone(zone) }
+    check(local.all { it.toLocalDate() == date && it.hour in 10..20 }) { "every sale on $date inside 10:00–21:00 local" }
+    check(local.map { it.hour }.toSet().size >= 10) { "sales spread across the operating hours, not a burst: hours ${local.map { it.hour }.toSet()}" }
+    val epcs = plan.sales.flatMap { it.epcs }
+    check(epcs.toSet().size == epcs.size) { "each EPC sells once" }
+    check(plan.droppedLines == 0) { "no basket line dropped on a stocked store: ${plan.droppedLines}" }
+    check(plan.fromBackOfHouse > 0) { "back-of-house stock goes first" }
+    check(plan.sales.map { it.saleId }.toSet().size == plan.sales.size) { "external_sale_id unique per sale" }
+    check(json.contains("\"external_sale_id\"") && !json.contains("externalSaleId")) { "webhook plane stays snake_case: $json" }
+    val again = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        emptySet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(again.sales == plan.sales) { "allocation must be deterministic" }
+    val excluded = DatedStream.allocate(
+        day,
+        DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")),
+        epcs.take(50).toSet(),
+        "selftest",
+        DatedStream.loadCatalog(CHAIN.resolve("stores/dec-us-denver/assortment.csv")),
+    )
+    check(excluded.sales.flatMap { it.epcs }.none { it in epcs.take(50).toSet() }) { "a sold/reserved EPC never sells again" }
+    log.info(
+        "[recent] dated sale: {} txn / {} units on {} (BOH {}, substituted {}), first occurred_at {} ✓",
+        plan.sales.size,
+        plan.units,
+        date,
+        plan.fromBackOfHouse,
+        plan.substitutedLines,
+        first.at,
+    )
+}
+
+/** A day alarm's envelope carries the crossing's own time as `occurred_at` and the store's gate as `zone_ref`. */
+private fun alarmDayEnvelope() {
+    val at = java.time.Instant.parse("2026-10-13T20:07:00Z")
+    val a = AlarmDay.PlannedAlarm("dec-us-denver-s0", "dec-us-denver", at, "CS-01", "3039606303C19FC000000001", "3608439438110", scripted = true)
+    val json = ConnectMappers.snake.writeValueAsString(
+        AlarmDay.envelope(AlarmDriver(WebhookClient(ConnectConfig.fromEnv()), ConnectClient(ConnectConfig.fromEnv())), "twin-eas", a),
+    )
+    check(json.contains("\"occurred_at\":\"2026-10-13T20:07:00Z\"")) { "alarm occurred_at = the event time: $json" }
+    check(json.contains("\"zone_ref\":\"CS-01\"") && json.contains("\"site_ref\":\"dec-us-denver\"")) { "gate code + site slug: $json" }
+    check(json.contains("\"dedupe_key\":\"CS-01:3039606303C19FC000000001:${at.toEpochMilli()}\"")) { "dedupe key gate:epc:millis: $json" }
+    val script = AlarmDay.parseScript("dec-us-denver@14:07, dec-kr-seoul@11:30")
+    check(script == listOf("dec-us-denver" to java.time.LocalTime.of(14, 7), "dec-kr-seoul" to java.time.LocalTime.of(11, 30))) {
+        "script parse: $script"
+    }
+    log.info("[recent] alarm day envelope: occurred_at = event time, zone_ref = gate ✓")
+}
+
+/** N moves per store: distinct ids and walls, back-of-house units only, never a unit twice. */
+private fun multiStoreMoves() {
+    val date = java.time.LocalDate.of(2026, 10, 12)
+    val moves = ChainKeys.load().stores.flatMap { planMoves(CHAIN, it.slug, date, 3, RecentDay.HISTORY_SEED, emptySet()) }
+    check(moves.size == 30) { "3 moves × 10 stores, got ${moves.size}" }
+    check(moves.map { it.extId }.toSet().size == moves.size) { "movement ids distinct" }
+    check(moves.groupBy { it.store }.values.all { ms -> ms.map { it.toFixture }.toSet().size == ms.size }) { "distinct walls per store-day" }
+    val epcs = moves.flatMap { it.epcs }
+    check(epcs.toSet().size == epcs.size) { "no unit moved twice" }
+    check(moves.all { it.epcs.size in 2..6 }) { "2–6 units per move" }
+    check(moves.all { it.toZoneId != null }) { "every destination wall has a zone in the key export" }
+    check(
+        planMoves(CHAIN, "dec-us-denver", date, 3, RecentDay.HISTORY_SEED, emptySet()) == moves.filter {
+            it.store == "dec-us-denver"
+        },
+    ) { "deterministic" }
+    log.info("[recent] multi-store moves: 30 moves, distinct ids/walls/units ✓")
+}
+
+/**
+ * Restock moves on a synthetic store-day: picks exactly the sold wall units' EANs from the stockroom, skips
+ * stockroom sales and unsent sales, honors the ledger on a re-run, resolves placements first, and reports shortfall.
+ */
+private fun restockMovesPlan() {
+    val date = java.time.LocalDate.of(2026, 10, 6)
+    fun row(n: Int, ean: String, fixture: String) = DatedStream.EpcRow("E%03d".format(n), ean, fixture)
+    val rows = listOf(
+        row(1, "A", "W1"), row(2, "A", "W1"), row(3, "A", "W1"), // wall W1 holds A x3
+        row(4, "B", "W2"), // wall W2 holds B x1
+        row(5, "D", "W3"), row(6, "D", "W3"), // wall W3 holds D x2 — the stockroom has none
+        row(10, "A", "BR-01"), row(11, "A", "BR-01"), row(12, "A", "BR-02"), row(13, "A", "BR-02"), // stockroom A x6 with 16 and 17
+        row(16, "A", "BR-02"), row(17, "A", "BR-01"),
+        row(14, "B", "BR-01"), // stockroom B x1
+        row(15, "A", "W1"), // a placed unit (see below)
+    )
+    val placements = mapOf("E015" to "W9") // E015 was moved onto W9 on an earlier day; the CSV still says W1
+    val sales = listOf(
+        DatedStream.PlannedSale("s-1", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E001", "E002", "E004", "E010")),
+        DatedStream.PlannedSale("s-2", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E003")), // planned, never sent
+        DatedStream.PlannedSale("s-3", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E005", "E006", "E015")),
+        DatedStream.PlannedSale("o-1", "other", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E001")), // another store's row
+    )
+    val sent = setOf("s-1", "s-3", "o-1")
+    // E010 sold from the stockroom (taken); E011 reserved by another date's plan
+    val taken = setOf("E010", "E011") + placements.keys + setOf("E001", "E002", "E004", "E005", "E006")
+    fun plan(ledger: Set<String>, pl: Map<String, String>, sentIds: Set<String> = sent, sl: List<DatedStream.PlannedSale> = sales) =
+        RestockMoves.plan("s1", date, rows, sl, sentIds, taken, ledger, pl, mapOf("W1" to "zone-w1"))
+
+    val p = plan(emptySet(), placements)
+    val byKey = p.moves.associateBy { it.toFixture to it.ean }
+    check(p.soldWallUnits == 6 && p.soldBohUnits == 1) { "sold: wall 6 (A x2 on W1, B on W2, D x2 on W3, A on W9), stockroom 1: $p" }
+    check(byKey.keys == setOf("W1" to "A", "W2" to "B", "W9" to "A")) { "one move per sold (fixture, ean), placements resolved first: ${byKey.keys}" }
+    check(byKey.getValue("W1" to "A").epcs == listOf("E012", "E013")) { "W1/A: the 2 sold, from the stockroom A (E010 sold, E011 reserved): $p" }
+    check(byKey.getValue("W2" to "B").epcs == listOf("E014")) { "W2/B: the one stockroom B" }
+    check(byKey.getValue("W9" to "A").epcs == listOf("E016")) { "W9/A: the placed unit that sold, next stockroom A: $p" }
+    check(
+        p.moves.all { m ->
+            m.epcs.all { e -> rows.first { it.epc == e }.let { it.backOfHouse && it.ean == m.ean } }
+        },
+    ) { "only stockroom units of the sold EAN" }
+    check(p.moves.flatMap { it.epcs }.toSet().size == p.units && p.units == 4) { "no unit moved twice, 4 units: $p" }
+    check(p.shortfallUnits == 2) { "W3/D: 2 owed, the stockroom holds none → shortfall 2: $p" }
+    check(byKey.getValue("W1" to "A").toZoneId == "zone-w1" && byKey.getValue("W2" to "B").toZoneId == null) { "zone ids from the key export" }
+    check(p.moves.map { it.extId }.toSet().size == p.moves.size && p.moves.all { it.extId.startsWith("RS-s1-20261006-") }) { "ids distinct" }
+
+    // a re-run after the sends is a no-op for the moves; the shortfall is still owed
+    val sentEpcs = p.moves.flatMap { it.epcs }.toSet()
+    val pl2 = placements + p.moves.flatMap { m -> m.epcs.map { it to m.toFixture } }
+    val again = plan(sentEpcs, pl2)
+    check(again.moves.isEmpty() && again.units == 0) { "idempotent re-run: ${again.moves}" }
+    check(again.shortfallUnits == 2 && again.alreadyRestocked == 4) { "the shortfall persists, 4 already restocked: $again" }
+
+    // more sales sent later the same date → only the new ones, with a fresh id suffix
+    val later = sales + DatedStream.PlannedSale("s-4", "s1", date.atStartOfDay().toInstant(java.time.ZoneOffset.UTC), listOf("E003"))
+    val laterPlan = plan(sentEpcs, pl2, sent + "s-4", later)
+    check(laterPlan.moves.size == 1 && laterPlan.moves.single().let { it.toFixture == "W1" && it.epcs == listOf("E017") }) {
+        "one new wall unit sold → one move of the next stockroom unit: ${laterPlan.moves}"
+    }
+    check(laterPlan.moves.single().extId.endsWith("-W1-A-2")) { "id suffix = units already moved: ${laterPlan.moves.single().extId}" }
+
+    // nothing sent → nothing to restock
+    check(plan(emptySet(), placements, emptySet()).let { it.moves.isEmpty() && it.shortfallUnits == 0 }) { "an unsent plan is not restocked" }
+
+    // state files round-trip
+    val dir = java.nio.file.Files.createTempDirectory("restock-selftest")
+    val ledger = RestockMoves.ledgerFile(dir, date, 1L)
+    RestockMoves.appendLedger(ledger, listOf("E012", "E013"))
+    RestockMoves.appendLedger(ledger, listOf("E014"))
+    check(RestockMoves.readLedger(ledger) == setOf("E012", "E013", "E014")) { "ledger round-trip" }
+    val pf = dir.resolve("placements.csv")
+    RestockMoves.appendPlacements(pf, listOf("E012"), "W1", date)
+    RestockMoves.appendPlacements(pf, listOf("E014"), "W2", date)
+    check(RestockMoves.readPlacements(pf) == mapOf("E012" to "W1", "E014" to "W2")) { "placements round-trip" }
+    check(RestockMoves.readLedger(dir.resolve("absent")).isEmpty() && RestockMoves.readPlacements(dir.resolve("absent")).isEmpty()) {
+        "absent = empty"
+    }
+    log.info("[restock] picks the sold EANs from the stockroom, skips unsent/stockroom sales, idempotent on re-run, shortfall counted ✓")
+}
+
+/**
+ * Receiving (the unit-creating step before the restock): SGTIN-96 round-trip against the chain's own EPCs, the manifest
+ * rule shared with the stream, minted EPCs unique / in the reserved block / EAN-decodable, ledger re-run sends nothing,
+ * and the end-to-end dry chain sell -> receive -> restock plan refills 100 %.
+ */
+private fun receiveStockPlan() {
+    // 1. the encoder is the chain's own: every sampled epcs.csv row re-encodes to itself and decodes to its EAN
+    val denver = Path.of("reference/data/chain/stores/dec-us-denver/epcs.csv")
+    if (Files.exists(denver)) {
+        val sample = DatedStream.loadEpcRows(denver).filterIndexed { i, _ -> i % 50 == 0 }
+        check(sample.isNotEmpty()) { "no sample rows" }
+        sample.forEach { r ->
+            check(Sgtin96.decodeEan(r.epc) == r.ean) { "decode ${r.epc} != ${r.ean}" }
+            check(Sgtin96.encode(r.ean, Sgtin96.serial(r.epc)) == r.epc) { "re-encode ${r.epc}" }
+            check(Sgtin96.serial(r.epc) < ReceiveStock.SERIAL_BASE) { "chain serial inside the receiving block: ${r.epc}" }
+        }
+    }
+
+    // 2. the manifest rule: most sold first (ties by key), rounded up to cases of 6, optional cap
+    val rule = DatedStream.manifestLines(mapOf("a" to 1, "b" to 6, "c" to 7, "d" to 7, "e" to 0), 99)
+    check(rule.map { it.sku to it.expectedQuantity } == listOf("c" to 12, "d" to 12, "b" to 6, "a" to 6)) { "manifest rule: $rule" }
+    check(DatedStream.manifestLines(mapOf("a" to 1, "b" to 6, "c" to 7), 2).map { it.sku } == listOf("c", "b")) { "manifest cap" }
+
+    // 3. a synthetic store-day: three item codes, one of them with two sizes (EANs)
+    fun ean(prefix12: String): String {
+        val d = prefix12.map { it - '0' }
+        return prefix12 + ((10 - d.withIndex().sumOf { (i, x) -> if (i % 2 == 0) x else 3 * x } % 10) % 10)
+    }
+    val eA = ean("360844984703")
+    val eB = ean("360844984704")
+    val eC1 = ean("360844984705")
+    val eC2 = ean("360844984706")
+    var n = 0
+    fun unit(ean: String, itemCd: String, fixture: String) = DatedStream.EpcRow(Sgtin96.encode(ean, 1000L + n++), ean, fixture, itemCd)
+    val wallA = List(8) { unit(eA, "I1", "W1") }
+    val wallB = List(3) { unit(eB, "I2", "W2") }
+    val wallC1 = List(2) { unit(eC1, "I3", "W3") }
+    val wallC2 = List(1) { unit(eC2, "I3", "W3") }
+    val bohA = listOf(unit(eA, "I1", "BR-02"))
+    val rows = wallA + wallB + wallC1 + wallC2 + bohA
+    val at = java.time.Instant.parse("2026-10-06T12:00:00Z")
+    val date = java.time.LocalDate.of(2026, 10, 6)
+    fun sale(id: String, store: String, units: List<DatedStream.EpcRow>) = DatedStream.PlannedSale(id, store, at, units.map { it.epc })
+    val sales = listOf(
+        sale("s-1", "s1", wallA.take(7)), // I1: 7 sold -> a case-rounded 12
+        sale("s-2", "s1", wallB.take(1) + wallC1 + wallC2), // I2: 1 -> 6; I3: 3 over two EANs -> 6
+        sale("s-3", "s1", listOf(wallA[7])), // planned, never sent
+        sale("o-1", "other", listOf(wallA[0])), // another store's row
+    )
+    val sent = setOf("s-1", "s-2", "o-1")
+    val soldWall = sales.filter { it.saleId in sent && it.store == "s1" }.flatMap { it.epcs }.toSet()
+    fun plan(
+        ledger: Set<String> = emptySet(),
+        taken: Set<String> = emptySet(),
+        sl: List<DatedStream.PlannedSale> = sales,
+        sentIds: Set<String> = sent,
+    ) = ReceiveStock.plan("s1", date, 20261016L, rows, sl, sentIds, ledger, taken)
+
+    val p = plan()
+    check(p.lines.map { it.sku to it.expectedQuantity } == listOf("I1" to 12, "I3" to 6, "I2" to 6)) { "manifest lines: ${p.lines}" }
+    check(p.lines == DatedStream.manifestLines(mapOf("I1" to 7, "I2" to 1, "I3" to 3))) { "receipt lines = the stream's manifest lines" }
+    check(p.units == 24 && p.targetUnits == 24 && p.soldUnits == 11) { "24 units = the manifest's cases: $p" }
+    val byEan = p.toReceive.groupingBy { it.ean }.eachCount()
+    check(byEan == mapOf(eA to 12, eB to 6, eC1 to 5, eC2 to 1)) { "per-EAN split (sold, surplus on the best seller): $byEan" }
+    check(p.toReceive.map { it.epc }.toSet().size == 24) { "minted EPCs unique" }
+    check(p.toReceive.none { r -> rows.any { it.epc == r.epc } }) { "no collision with the store's epcs" }
+    check(p.toReceive.all { Sgtin96.decodeEan(it.epc) == it.ean }) { "every minted EPC decodes to its EAN" }
+    check(p.toReceive.all { Sgtin96.serial(it.epc) in ReceiveStock.SERIAL_BASE until ReceiveStock.SERIAL_BASE + ReceiveStock.SERIAL_SPAN }) {
+        "serials inside the receiving block"
+    }
+    check(p.toReceive.all { it.fixture == "BR-02" }) { "booked to a BR fixture of the store: ${p.toReceive.map { it.fixture }.toSet()}" }
+    check(plan().toReceive == p.toReceive) { "deterministic from (seed, slug, date, ean, index)" }
+    check(plan(sl = emptyList()).units == 0 && plan(sentIds = emptySet()).units == 0) { "nothing sold/sent -> nothing received" }
+
+    // 4. ledger: a re-run receives nothing; a half-done run resumes with the same EPCs; later sales add only the new units
+    val all = p.toReceive.map { it.epc }.toSet()
+    check(plan(ledger = all, taken = all).let { it.units == 0 && it.alreadyReceived == 24 }) { "ledger re-run receives nothing" }
+    val firstFive = p.toReceive.take(5).map { it.epc }.toSet()
+    val resumed = plan(ledger = firstFive, taken = firstFive)
+    check(resumed.toReceive.map { it.epc }.toSet() == all - firstFive) { "a resumed run mints the same remaining EPCs" }
+    val extra = List(6) { DatedStream.EpcRow(Sgtin96.encode(eA, 5000L + it), eA, "W1", "I1") } // 6 more I1 sold later the same date
+    val more = sales + sale("s-4", "s1", extra)
+    val moreRows = rows + extra
+    val grown = ReceiveStock.plan("s1", date, 20261016L, moreRows, more, sent + "s-4", all, all)
+    check(
+        grown.units == 6 && grown.toReceive.all {
+            it.ean == eA
+        } && grown.toReceive.none { it.epc in all },
+    ) { "13 sold -> 18: 6 new units only: ${grown.units}" }
+    // a collision with an earlier receipt re-draws; the plan stays whole
+    val clash = plan(taken = setOf(p.toReceive.first().epc))
+    check(clash.units == 24 && clash.toReceive.first().epc != p.toReceive.first().epc && clash.toReceive.first().ean == p.toReceive.first().ean) {
+        "a taken EPC is re-drawn, never reused"
+    }
+
+    // 5. state files round-trip
+    val dir = Files.createTempDirectory("receive-selftest")
+    ReceiveStock.appendStock(ReceiveStock.stockFile(dir), ReceiveStock.ledgerFile(dir, date, 1L), p.toReceive.take(3))
+    ReceiveStock.appendStock(ReceiveStock.stockFile(dir), ReceiveStock.ledgerFile(dir, date, 1L), p.toReceive.drop(3).take(2))
+    check(ReceiveStock.readStock(ReceiveStock.stockFile(dir)) == p.toReceive.take(5)) { "received-stock.csv round-trip" }
+    check(RestockMoves.readLedger(ReceiveStock.ledgerFile(dir, date, 1L)) == p.toReceive.take(5).map { it.epc }.toSet()) { "receive ledger" }
+    check(ReceiveStock.readStock(dir.resolve("absent")).isEmpty()) { "absent stock = empty" }
+
+    // 6. the dry chain: sell -> (stockroom holds 1 A) restock refills little -> receive -> restock refills everything
+    fun restock(extra: List<DatedStream.EpcRow>) = RestockMoves.plan("s1", date, rows + extra, sales, sent, soldWall, emptySet(), emptyMap())
+    val before = restock(emptyList())
+    check(before.soldWallUnits == 11 && before.units == 1 && before.shortfallUnits == 10) { "before receiving: 1 of 11 refilled: $before" }
+    val after = restock(ReceiveStock.stockRows(p.toReceive, "s1"))
+    check(after.soldWallUnits == 11 && after.units == 11 && after.shortfallUnits == 0) { "after receiving: 11 of 11 refilled, shortfall 0: $after" }
+    check(after.moves.flatMap { it.epcs }.toSet().size == 11) { "no unit moved twice" }
+    log.info(
+        "[receive] SGTIN-96 round-trip, manifest rule shared, minted EPCs unique/in-block/EAN-decodable, ledger resume, dry chain refills 11/11 (was 1/11) ✓",
+    )
 }

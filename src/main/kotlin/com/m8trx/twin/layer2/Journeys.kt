@@ -308,11 +308,25 @@ class Journeys(
 
 private fun java.util.Random.asKotlinRandom(): KRandom = KRandom(this.nextLong())
 
-/** Real SKUs off the store's `assortment.csv`, used to build priced baskets. */
-class StoreCatalog(private val skus: List<Sku>) {
+/**
+ * Real SKUs off the store's `assortment.csv`, used to build priced baskets.
+ *
+ * [departmentWeights] (default empty = the original behaviour, byte-for-byte, no extra RNG draws) lets the
+ * history generator express category seasonality and a slow department without a second basket model: a
+ * drawn line is ACCEPTED with probability `weight(department) / max(1, maxWeight)` and otherwise redrawn
+ * whole (category and price), up to [MAX_REDRAWS] times. Unit counts per basket are untouched — demand shifts
+ * between departments, it does not appear or vanish.
+ */
+class StoreCatalog(private val skus: List<Sku>, private val departmentWeights: Map<String, Double> = emptyMap()) {
     data class Sku(val itemCd: String, val ean: String, val priceUsd: Double, val department: String, val fixture: String, val category: String)
 
     private val byCategory: Map<String, List<Sku>> = skus.groupBy { it.category }
+
+    /** The same catalog with department acceptance weights — see the class doc. */
+    fun withDepartmentWeights(weights: Map<String, Double>): StoreCatalog = StoreCatalog(skus, weights)
+
+    /** Every SKU this store carries (read-only view, for lookups such as price by EAN). */
+    val all: List<Sku> get() = skus
 
     /**
      * The stock a vendor's EAS system would have tagged — see [EasTagging] for the rule and, importantly,
@@ -348,10 +362,73 @@ class StoreCatalog(private val skus: List<Sku>) {
         val targetLine = model.basket.avgLinePriceUsd.value
 
         return (1..units).map {
-            val pool = if (mix.isNotEmpty()) byCategory[weightedPick(mix, rng)] ?: skus else skus
-            val sku = nearestPriced(pool, drawTargetPrice(targetLine, rng), rng)
+            val sku = drawAccepted(mix, targetLine, rng)
             SaleLine(sku.itemCd, sku.ean, sku.priceUsd, sku.department, sku.fixture)
         }
+    }
+
+    /** One line: drawn, then (only with [departmentWeights]) accepted by department or redrawn whole. */
+    private fun drawAccepted(mix: Map<String, Double>, targetLine: Double, rng: KRandom): Sku {
+        var sku = drawLine(mix, targetLine, rng)
+        if (departmentWeights.isNotEmpty()) {
+            // the heaviest department is always accepted outright; the rest relative to it
+            val maxW = departmentWeights.values.max()
+            var tries = 0
+            while (tries++ < MAX_REDRAWS && rng.nextDouble() >= (departmentWeights[sku.department] ?: 1.0) / maxW) {
+                sku = drawLine(mix, targetLine, rng)
+            }
+        }
+        return sku
+    }
+
+    /**
+     * Each department's share of SALES VALUE over [lines] drawn lines under the current [departmentWeights] —
+     * the quantity [calibrateDepartmentWeights] steers. Departments never drawn are absent.
+     */
+    fun salesShares(rng: KRandom, model: com.m8trx.twin.layer3.OperatingModel, lines: Int): Map<String, Double> {
+        val mix = mappedUnitMix(model)
+        val targetLine = model.basket.avgLinePriceUsd.value
+        val value = HashMap<String, Double>()
+        repeat(lines) {
+            val sku = drawAccepted(mix, targetLine, rng)
+            value[sku.department] = (value[sku.department] ?: 0.0) + sku.priceUsd
+        }
+        val total = value.values.sum()
+        return value.mapValues { it.value / total }
+    }
+
+    /**
+     * Base acceptance weights that make the sampler's SALES-VALUE mix by department land on [shareTargets]
+     * (fractions summing to 1; every key must be a department this catalog carries). The unweighted sampler
+     * puts the cheap hike_camp lines in front of everything — §5's `outdoor` and `fitness_equipment` buckets
+     * both map to the `outdoor` category and the nearest-priced SKU to a ~$26 draw is a hike_camp one — so
+     * the weights are measured, not guessed: a damped multiplicative fixed point over fixed-seed passes of
+     * [lines] lines through the real accept/redraw process. Deterministic for a given [seed]; the result is
+     * scaled so the heaviest department weighs 1.0.
+     */
+    fun calibrateDepartmentWeights(
+        shareTargets: Map<String, Double>,
+        model: com.m8trx.twin.layer3.OperatingModel,
+        seed: Long,
+        lines: Int = CALIBRATION_LINES,
+        passes: Int = CALIBRATION_PASSES,
+    ): Map<String, Double> {
+        var weights: Map<String, Double> = shareTargets.mapValues { 1.0 }
+        repeat(passes) {
+            val got = StoreCatalog(skus, weights).salesShares(KRandom(seed), model, lines)
+            val next = weights.mapValues { (d, w) ->
+                val ratio = shareTargets.getValue(d) / (got[d] ?: 0.002).coerceAtLeast(0.002)
+                (w * Math.pow(ratio.coerceIn(0.25, 4.0), 0.8)).coerceIn(0.005, 1000.0)
+            }
+            val top = next.values.max()
+            weights = next.mapValues { it.value / top }
+        }
+        return weights
+    }
+
+    private fun drawLine(mix: Map<String, Double>, targetLine: Double, rng: KRandom): Sku {
+        val pool = if (mix.isNotEmpty()) byCategory[weightedPick(mix, rng)] ?: skus else skus
+        return nearestPriced(pool, drawTargetPrice(targetLine, rng), rng)
     }
 
     /**
@@ -417,6 +494,10 @@ class StoreCatalog(private val skus: List<Sku>) {
     }
 
     companion object {
+        private const val MAX_REDRAWS = 12
+        private const val CALIBRATION_LINES = 30_000
+        private const val CALIBRATION_PASSES = 8
+
         fun load(assortmentCsv: java.nio.file.Path): StoreCatalog {
             val lines = java.nio.file.Files.readAllLines(assortmentCsv)
             val header = splitCsv(lines.first())

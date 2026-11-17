@@ -36,6 +36,9 @@ import kotlin.system.exitProcess
  *
  * Both are hard failures, not warnings. Dry-run is the default; `M8TRX_PEOPLE_LIVE=true` fires.
  *
+ * `M8TRX_PEOPLE_MODE=live` runs [com.m8trx.twin.layer3.LiveDrive] instead: every requested store's day at wall-clock pace × speed,
+ * wire `ts` on the wall clock (the deliberate exception to the pacing rule), for the `m8trx-twin-live.service` on the box.
+ *
  * Env: `M8TRX_NATS_URL` (required — no default, see [TwinConfig]) · `M8TRX_SPACE_ID` · `M8TRX_SITE_ID` ·
  * `M8TRX_TENANT_ID` · `M8TRX_PEOPLE_STORE` (dec-us-denver) · `M8TRX_PEOPLE_FIXTURE` (default: oracle picks) ·
  * `M8TRX_PEOPLE_DWELL_MS` (12000) · `M8TRX_PEOPLE_HZ` (5.0) · `M8TRX_PEOPLE_NO_VIEWDIR` (false — the
@@ -47,6 +50,13 @@ private const val EXPECTED_SERVER = "edge-twin-denver"
 private const val OFFICE_SPACE = "0efb9aaa"
 
 fun main() {
+    // `live` — the whole chain's people at wall-clock pace × speed, each store on its own local day (Bob, 2026-10-14):
+    // see LiveDrive. The default `episode` mode below is the single-shopper oracle drive this file always was.
+    when (val mode = env("M8TRX_PEOPLE_MODE", "episode").lowercase()) {
+        "live" -> return com.m8trx.twin.layer3.LiveDrive.main()
+        "episode" -> Unit
+        else -> error("M8TRX_PEOPLE_MODE must be episode | live, got '$mode'")
+    }
     val natsUrl = req("M8TRX_NATS_URL")
     val spaceId = req("M8TRX_SPACE_ID")
     val siteId = req("M8TRX_SITE_ID")

@@ -94,12 +94,19 @@ import kotlin.random.Random
  *
  * **A dry-run is not a no-op**: it still runs the pre-flight diagnostics, so it is the right way to
  * test a scope grant or read back existing alarms without writing anything.
+ *
+ * **Day mode** (2026-10-12): set `M8TRX_ALARM_DATE` and the run sends that day's generated gate alarms across
+ * the stores at their own times instead — see [AlarmDay]. Unset, nothing here changes.
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.ConnectAlarmDrive")
 
 private const val DEFAULT_INTEGRATION_ID = "5dfba5cd-fd74-4fb8-9c73-2a495419f863"
 
 fun main() {
+    if (!System.getenv("M8TRX_ALARM_DATE").isNullOrBlank()) {
+        AlarmDay.run()
+        return
+    }
     val config = ConnectConfig.fromEnv()
     val client = ConnectClient(config)
     val driver = AlarmDriver(WebhookClient(config), client)

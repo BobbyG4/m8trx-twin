@@ -194,6 +194,40 @@ fun main() {
         check("weekend §1 — ${it.name}", it.ok, "exp ${"%.1f".format(it.expected)} got ${"%.1f".format(it.observed)}")
     }
 
+    // ── 5. DayDrive epoch mode (2026-10-12) ───────────────────────────────────
+    //
+    // `plan` mode stamps the envelope with the plan's own clock so a day driven at night lands on its own
+    // hours. The pacing must not change with it: the compressed publish timeline is the same in both modes.
+    log.info("[5] DayDrive epoch mode — plan stamps the plan's clock, wall stamps the publish clock")
+    val streams = runner.streamsFor(LocalDate.of(2026, 7, 28), seed = 4242, populationScale = scale)
+    val planFirst = streams.values.flatten().minOf { it.tsMs }
+    val timeline = buildDayTimeline(streams, compress = 18.0)
+    val wireEpoch = 1_000_000_000_000L
+    val planEpoch = timeline.first().ts
+    val planStamps = timeline.map { wireTs(DayEpochMode.PLAN, it, wireEpoch, planEpoch) }
+    val wallStamps = timeline.map { wireTs(DayEpochMode.WALL, it, wireEpoch, planEpoch) }
+    check(
+        "a plan-mode day's first wire ts equals the plan's first ts",
+        planStamps.first() == planFirst,
+        "first wire ts ${planStamps.first()} vs plan $planFirst",
+    )
+    check("wall mode (the default) still starts at the publish epoch", wallStamps.first() == wireEpoch, "got ${wallStamps.first()}")
+    check(
+        "plan-mode stamps fall on the plan's date (Denver store hours, 10:00..21:00 local)",
+        planStamps.all {
+            val local = java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.of("America/Denver"))
+            local.toLocalDate() == LocalDate.of(2026, 7, 28) && local.hour in 10..21
+        },
+    )
+    val maxEpisodeGapPlan = timeline.groupBy { it.objectId }.values
+        .flatMap { ws -> ws.map { it.s.tsMs }.zipWithNext { a, b -> b - a } }
+        .filter { it <= 1_000 }.maxOrNull() ?: 0
+    check("plan-mode intra-episode stamp spacing stays real time (<= 1000ms)", maxEpisodeGapPlan in 1..1_000, "worst=$maxEpisodeGapPlan")
+    check(
+        "epoch mode parses wall|plan and defaults to wall",
+        DayEpochMode.parse("wall") == DayEpochMode.WALL && DayEpochMode.parse("PLAN") == DayEpochMode.PLAN,
+    )
+
     log.info("")
     log.info("scenarioSelfTest — {} passed, {} failed", passed, failed)
     if (failed > 0) exitProcess(1)

@@ -405,3 +405,128 @@ tasks.register<JavaExec>("connectAcceptance") {
         },
     )
 }
+
+// History generator (BRIEF-TWIN-HISTORY-GENERATOR-2026-10-11) — the chain's simulated year as the CSV contract
+// mig 259 loads core-side. OFFLINE: no network, no credentials, nothing published. Same seed → byte-identical
+// files. Env: M8TRX_HISTORY_SEED (20261016) · M8TRX_HISTORY_FROM (2026-01-01) · M8TRX_HISTORY_TO (2026-10-04) ·
+// M8TRX_HISTORY_OUT (out/history-2026-10) · M8TRX_HISTORY_STORES · M8TRX_HISTORY_THREADS.
+tasks.register<JavaExec>("historyGenerate") {
+    group = "verification"
+    description = "Generate the chain's history (Jan 1 → Oct 4) offline as mig 259's eleven-file CSV contract."
+    mainClass.set("com.m8trx.twin.history.HistoryGenerateKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+tasks.register<JavaExec>("historySelfTest") {
+    group = "verification"
+    description = "Offline self-tests for the history generator: hours, keys, conversion <= 1, sums, totals vs model, determinism, MANIFEST."
+    mainClass.set("com.m8trx.twin.history.HistorySelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// Stock-depth file (2026-10-12): the new stockroom units a numbered migration loads so the restock moves can refill the walls
+// Oct 5 -> Oct 16. OFFLINE; reads .twin-state, writes only out/stock-depth-2026-10/. Env: see StockDepthReport.kt.
+tasks.register<JavaExec>("stockDepthReport") {
+    group = "verification"
+    description = "Write out/stock-depth-2026-10/stock_depth.csv + MANIFEST.csv + summary.md (offline, no sends)."
+    mainClass.set("com.m8trx.twin.history.StockDepthReport")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "8g"
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(21))
+        },
+    )
+}
+
+// The offline suite in one go — every self-test that needs no network, no credentials and no edge.
+tasks.register("offlineSelfTest") {
+    group = "verification"
+    description = "Run every offline self-test: scenarioSelfTest, peopleSelfTest, connectSelfTest, historySelfTest."
+    dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
+}
+
+// ── Store operations for the demo sprint (2026-10-13): stock · fixmoves · tasks ─────────────────
+// All three act as the store's own staff (user JWT, the shared demo password out of band) because the count inbox, the
+// zone update and the task lifecycle are not on the Connect surface. SAFE BY DEFAULT — dry run; <PREFIX>_LIVE=true sends.
+fun opsTask(name: String, main: String, text: String) = tasks.register<JavaExec>(name) {
+    group = "verification"
+    description = text
+    mainClass.set(main)
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "4g"
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+opsTask(
+    "connectStockDrive",
+    "com.m8trx.twin.ops.StockDriveKt",
+    "Real cloud counts per store per day (count inbox). Dry-run unless M8TRX_STOCK_LIVE=true.",
+)
+opsTask(
+    "connectFixtureMoves",
+    "com.m8trx.twin.ops.FixtureMoveDriveKt",
+    "Movable fixtures only, 1-2 per store per local day, to a free slot of their region (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
+)
+opsTask(
+    "connectFixtureRevert",
+    "com.m8trx.twin.ops.FixtureRevertKt",
+    "One-shot: put back the fixtures the old step should not have moved (Denver GF-R2-U2, GB-R3-U5). Dry-run unless M8TRX_REVERT_LIVE=true.",
+)
+opsTask("connectTaskDay", "com.m8trx.twin.ops.TaskDriveKt", "The day's task work per store (task REST). Dry-run unless M8TRX_TASKS_LIVE=true.")
+opsTask(
+    "demoStepsSelfTest",
+    "com.m8trx.twin.ops.DemoStepsSelfTestKt",
+    "Offline: the stock/fixmoves/tasks generators + the traffic9 file set, deterministic seeds.",
+)
+opsTask(
+    "demoStepsStubRun",
+    "com.m8trx.twin.ops.DemoStepsStubRunKt",
+    "Offline: drive the three steps' LIVE paths against a local stub HTTP server; prints the request shapes.",
+)
+tasks.named("offlineSelfTest") { dependsOn("demoStepsSelfTest") }
+
+// ── The people plane LIVE (2026-10-14): wall-clock pace × speed, each store on its own local day ─────────────────────
+// SAFE BY DEFAULT — dry run (plans every requested store, prints the rates, the cap and the first 60 s of events for
+// Denver and Paris); M8TRX_PEOPLE_LIVE=true publishes through the twin edge. On the box it runs as m8trx-twin-live.service
+// from a copy of the runtime classpath (liveDist), never under gradle, so it holds no gradle lock while it runs.
+tasks.register<JavaExec>("connectLivePeople") {
+    group = "verification"
+    description = "Live people plane (M8TRX_PEOPLE_MODE=live): every store on its own local day at wall pace x M8TRX_LIVE_SPEED. Dry-run by default."
+    mainClass.set("com.m8trx.twin.layer1.PeopleDriveKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "6g"
+    environment("M8TRX_PEOPLE_MODE", System.getenv("M8TRX_PEOPLE_MODE") ?: "live")
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+
+tasks.register<JavaExec>("liveSelfTest") {
+    group = "verification"
+    description = "Offline: the live people mode — clock, scale cap, shift, 5 Hz cadence at any speed, thinning, edge binding, Denver's plan."
+    mainClass.set("com.m8trx.twin.layer3.LiveSelfTestKt")
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "4g"
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+tasks.named("offlineSelfTest") { dependsOn("liveSelfTest") }
+
+// The live service's classpath: the main jar + every runtime jar, copied to M8TRX_LIVE_DIST (on the box
+// /opt/m8trx/twin-ops/live-dist) so a later `./gradlew build` by the hourly pass never rewrites a jar under a running JVM.
+tasks.register<Sync>("liveDist") {
+    group = "distribution"
+    description = "Copy the live service's runtime classpath (main jar + dependencies) to M8TRX_LIVE_DIST (default build/live-dist)."
+    from(tasks.named("jar"))
+    from(configurations.named("runtimeClasspath"))
+    into(System.getenv("M8TRX_LIVE_DIST") ?: layout.buildDirectory.dir("live-dist").get().asFile.path)
+}
