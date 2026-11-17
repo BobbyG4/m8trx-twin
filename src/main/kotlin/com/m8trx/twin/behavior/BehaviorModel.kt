@@ -121,7 +121,9 @@ class BehaviorModel(
             for (u in times) {
                 val i = idx++
                 if (hours != null && hour !in hours) continue
-                val entry = ZonedDateTime.of(date, LocalTime.of(hour, 0), zone).toInstant().plusMillis((u * 3_600_000).toLong())
+                val span = minOf(1.0, (shape?.lengthHours ?: curve.size.toDouble()) - h)
+                val entry = ZonedDateTime.of(date, open.plusHours(h.toLong()), zone)
+                    .toInstant().plusMillis((u * span * 3_600_000).toLong())
                 val rng = Random(mix(seed, date.toEpochDay(), i.toLong()))
                 val persona = ShopperAgent.weightedPick(params.personas, rng)
                 val plan = timeline.at(entry)
@@ -143,7 +145,17 @@ class BehaviorModel(
     }
 
     /** What a caller decides about one day: footfall, the hourly arrival curve (one share per open hour) and when the doors open. */
-    class DayShape(val expectedVisitors: Double, val curve: List<Double>, val open: LocalTime, val weekend: Boolean)
+    class DayShape(
+        val expectedVisitors: Double,
+        val curve: List<Double>,
+        val open: LocalTime,
+        val weekend: Boolean,
+        /** The opening window in hours (11.5 for 10:30 to 22:00); the last curve bucket is partial when this is not a whole number. */
+        val lengthHours: Double = curve.size.toDouble(),
+    ) {
+        /** The curve buckets that last a whole hour: a partial closing bucket takes no quiet-hour walk. */
+        val fullBuckets: List<Int> get() = curve.indices.filter { it + 1 <= lengthHours + 1e-9 }
+    }
 
     /** A day's records and its expected footfall. Reconciliation follows the twin's existing §1 identity. */
     inner class DayRun(val date: LocalDate, val records: List<ShopperRecord>, val expectedVisitors: Double) {

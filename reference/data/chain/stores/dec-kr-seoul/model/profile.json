@@ -3,16 +3,17 @@
   "timezone": "Asia/Seoul",
   "area_sqm": 493.5,
   "hours": {
-    "mon": "10:00-21:00",
-    "tue": "10:00-21:00",
-    "wed": "10:00-21:00",
-    "thu": "10:00-21:00",
-    "fri": "10:00-21:00",
-    "sat": "10:00-21:00",
-    "sun": "10:00-21:00"
+    "mon": "10:30-22:00",
+    "tue": "10:30-22:00",
+    "wed": "10:30-22:00",
+    "thu": "10:30-22:00",
+    "fri": "10:30-22:00",
+    "sat": "10:30-22:00",
+    "sun": "10:30-22:00"
   },
-  "location_factor": 1.0,
-  "delivery_lead_min": 30,
-  "provisional": true,
-  "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+  "location_factor": 1.5,
+  "delivery_lead_min": 60,
+  "saturday_lift": 1.0,
+  "provisional": false,
+  "source": "twin estimate, Bob 2026-11-17: best guess from normal retail practice per city and store size"
 }

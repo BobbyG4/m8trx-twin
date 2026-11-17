@@ -10,7 +10,12 @@ import java.nio.file.Path
  * The Phase 1 store model (`reference/data/chain/stores/<slug>/model/`), read once for the store-day run.
  * Read-only: nothing here writes under `model/` except the calibration file ([Calibration]).
  */
-class StoreDayModel(val slug: String, val chainDir: Path = Path.of("reference/data/chain")) {
+class StoreDayModel(
+    val slug: String,
+    val chainDir: Path = Path.of("reference/data/chain"),
+    /** Test seam: edits the profile tree after it is read (hours, saturday_lift), so a self-test can vary one thing. Null in every real run. */
+    profileTweak: ((com.fasterxml.jackson.databind.node.ObjectNode) -> Unit)? = null,
+) {
     val modelDir: Path = chainDir.resolve("stores/$slug/model")
 
     data class DemandRow(
@@ -39,11 +44,16 @@ class StoreDayModel(val slug: String, val chainDir: Path = Path.of("reference/da
     /** One stock-plan row: [kind] is `floor` (zone = a sales-floor fixture) or `backroom` (zone = a BR rack). */
     data class StockRow(val ean: String, val zone: String, val qty: Int, val kind: String)
 
-    val profile = ConnectMappers.snake.readTree(Files.readAllBytes(modelDir.resolve("profile.json")))
+    val profile = ConnectMappers.snake.readTree(Files.readAllBytes(modelDir.resolve("profile.json"))).also {
+        profileTweak?.invoke(it as com.fasterxml.jackson.databind.node.ObjectNode)
+    }
     val timezone: String = profile.path("timezone").asText()
     val deliveryLeadMin: Int = profile.path("delivery_lead_min").asInt(60)
     val areaSqm: Double = profile.path("area_sqm").asDouble()
     val locationFactor: Double = profile.path("location_factor").asDouble(1.0)
+
+    /** Saturday's visitor lift where the store is closed on Sunday (`closed_sunday_saturday_lift`, resolved per store); 1.0 otherwise. */
+    val saturdayLift: Double = profile.path("saturday_lift").asDouble(1.0)
 
     /**
      * Footfall of this store against Denver's (the operating model's volumes are Denver's): `location_factor x area / Denver area`,

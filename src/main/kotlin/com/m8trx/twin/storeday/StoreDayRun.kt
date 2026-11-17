@@ -182,7 +182,7 @@ class RunTally(val sim: StoreDaySim) {
             if (!r.plan.closed) {
                 val shape = r.plan.shape!!
                 ps.lastCloseMs = java.time.ZonedDateTime.of(r.date, shape.open, java.time.ZoneId.of(sim.model.timezone)).toInstant().toEpochMilli() +
-                    shape.curve.size * 3_600_000L
+                    (shape.lengthHours * 3_600_000L).toLong()
                 ps.lastClose = r.closeOnHand
                 ps.lastRequired = required
             }

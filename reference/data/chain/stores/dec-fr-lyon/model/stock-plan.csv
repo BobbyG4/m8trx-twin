@@ -1,5 +1,5 @@
 ean,zone_code,zone_id,qty,kind
-3583780571207,BR-01,,18,backroom
+3583780571207,BR-01,,12,backroom
 3583782090829,BR-01,,6,backroom
 3583782090836,BR-01,,6,backroom
 3583782090843,BR-01,,6,backroom
@@ -92,6 +92,7 @@ ean,zone_code,zone_id,qty,kind
 3583787146859,BR-01,,6,backroom
 3583787146866,BR-01,,6,backroom
 3583787146880,BR-01,,6,backroom
+3583787208861,BR-01,,12,backroom
 3583787252949,BR-01,,6,backroom
 3583787252956,BR-01,,6,backroom
 3583787412657,BR-01,,6,backroom
@@ -103,6 +104,8 @@ ean,zone_code,zone_id,qty,kind
 3583787538876,BR-01,,6,backroom
 3583787538883,BR-01,,6,backroom
 3583787538890,BR-01,,6,backroom
+3583787788400,BR-01,,6,backroom
+3583787837504,BR-01,,6,backroom
 3583787866917,BR-01,,6,backroom
 3583787866924,BR-01,,6,backroom
 3583787866931,BR-01,,6,backroom
@@ -139,7 +142,8 @@ ean,zone_code,zone_id,qty,kind
 3583787908198,BR-01,,6,backroom
 3583787908228,BR-01,,6,backroom
 3583787908303,BR-01,,6,backroom
-3608390244140,BR-01,,12,backroom
+3583788044697,BR-01,,6,backroom
+3583788044710,BR-01,,6,backroom
 3608390626939,BR-01,,6,backroom
 3608390626946,BR-01,,6,backroom
 3608390626953,BR-01,,6,backroom
@@ -235,6 +239,7 @@ ean,zone_code,zone_id,qty,kind
 3608392154980,BR-01,,6,backroom
 3608392155000,BR-01,,6,backroom
 3608392155031,BR-01,,6,backroom
+3608392336034,BR-01,,6,backroom
 3608392436635,BR-01,,6,backroom
 3608392436659,BR-01,,6,backroom
 3608392436673,BR-01,,6,backroom
@@ -412,7 +417,6 @@ ean,zone_code,zone_id,qty,kind
 3608439331879,BR-01,,6,backroom
 3608439331886,BR-01,,6,backroom
 3608439331893,BR-01,,6,backroom
-3608439333071,BR-01,,12,backroom
 3608439340116,BR-01,,6,backroom
 3608439340123,BR-01,,6,backroom
 3608439340130,BR-01,,6,backroom
@@ -465,7 +469,6 @@ ean,zone_code,zone_id,qty,kind
 3608439389023,BR-01,,6,backroom
 3608439389030,BR-01,,6,backroom
 3608439389047,BR-01,,6,backroom
-3608439396250,BR-01,,12,backroom
 3608439400285,BR-01,,6,backroom
 3608439400292,BR-01,,6,backroom
 3608439400308,BR-01,,6,backroom
@@ -478,7 +481,7 @@ ean,zone_code,zone_id,qty,kind
 3608439457043,BR-01,,6,backroom
 3608439457050,BR-01,,6,backroom
 3608439457067,BR-01,,6,backroom
-3608439460524,BR-01,,12,backroom
+3608439462788,BR-01,,12,backroom
 3608439486685,BR-01,,6,backroom
 3608439486692,BR-01,,6,backroom
 3608439486708,BR-01,,6,backroom
@@ -590,6 +593,7 @@ ean,zone_code,zone_id,qty,kind
 3583787110010,BR-02,,6,backroom
 3583787110027,BR-02,,6,backroom
 3583787110041,BR-02,,6,backroom
+3583787110072,BR-02,,6,backroom
 3583787146743,BR-02,,6,backroom
 3583787146750,BR-02,,6,backroom
 3583787146767,BR-02,,6,backroom
@@ -600,7 +604,6 @@ ean,zone_code,zone_id,qty,kind
 3583787146835,BR-02,,6,backroom
 3583787146873,BR-02,,6,backroom
 3583787146897,BR-02,,6,backroom
-3583787208861,BR-02,,18,backroom
 3583787303948,BR-02,,6,backroom
 3583787303955,BR-02,,6,backroom
 3583787303962,BR-02,,6,backroom
@@ -635,8 +638,7 @@ ean,zone_code,zone_id,qty,kind
 3583787908839,BR-02,,6,backroom
 3583787908846,BR-02,,6,backroom
 3583787908853,BR-02,,6,backroom
-3583788044697,BR-02,,6,backroom
-3583788044710,BR-02,,6,backroom
+3608390244140,BR-02,,12,backroom
 3608390422340,BR-02,,6,backroom
 3608390422357,BR-02,,6,backroom
 3608390422364,BR-02,,6,backroom
@@ -892,6 +894,7 @@ ean,zone_code,zone_id,qty,kind
 3608439293252,BR-02,,6,backroom
 3608439294464,BR-02,,18,backroom
 3608439313271,BR-02,,6,backroom
+3608439333071,BR-02,,12,backroom
 3608439341663,BR-02,,6,backroom
 3608439341670,BR-02,,6,backroom
 3608439341687,BR-02,,6,backroom
@@ -924,6 +927,7 @@ ean,zone_code,zone_id,qty,kind
 3608439346286,BR-02,,6,backroom
 3608439346309,BR-02,,6,backroom
 3608439349409,BR-02,,12,backroom
+3608439360145,BR-02,,6,backroom
 3608439363122,BR-02,,6,backroom
 3608439363139,BR-02,,6,backroom
 3608439363160,BR-02,,6,backroom
@@ -959,6 +963,7 @@ ean,zone_code,zone_id,qty,kind
 3608439385056,BR-02,,6,backroom
 3608439385063,BR-02,,6,backroom
 3608439385131,BR-02,,6,backroom
+3608439396250,BR-02,,12,backroom
 3608439404870,BR-02,,6,backroom
 3608439404887,BR-02,,6,backroom
 3608439404894,BR-02,,6,backroom
@@ -972,7 +977,6 @@ ean,zone_code,zone_id,qty,kind
 3608439437694,BR-02,,6,backroom
 3608439437731,BR-02,,6,backroom
 3608439437748,BR-02,,6,backroom
-3608439438271,BR-02,,12,backroom
 3608439445460,BR-02,,6,backroom
 3608439445477,BR-02,,6,backroom
 3608439445484,BR-02,,6,backroom
@@ -1003,7 +1007,7 @@ ean,zone_code,zone_id,qty,kind
 3608439456985,BR-02,,6,backroom
 3608439456992,BR-02,,6,backroom
 3608439457005,BR-02,,6,backroom
-3608439462788,BR-02,,12,backroom
+3608439460524,BR-02,,6,backroom
 3608439483486,BR-02,,6,backroom
 3608439483493,BR-02,,6,backroom
 3608439483509,BR-02,,6,backroom
@@ -1850,7 +1854,7 @@ ean,zone_code,zone_id,qty,kind
 3608439685903,BR-04,,6,backroom
 3608439685927,BR-04,,6,backroom
 3608439686177,BR-04,,6,backroom
-3583784004657,BR-05,,24,backroom
+3583784004657,BR-05,,18,backroom
 3583784007450,BR-05,,6,backroom
 3583784120432,BR-05,,6,backroom
 3583784120456,BR-05,,6,backroom
@@ -1905,7 +1909,7 @@ ean,zone_code,zone_id,qty,kind
 3608390009091,BR-05,,6,backroom
 3608390009107,BR-05,,6,backroom
 3608390009817,BR-05,,6,backroom
-3608390049356,BR-05,,24,backroom
+3608390049356,BR-05,,18,backroom
 3608390261932,BR-05,,24,backroom
 3608390346110,BR-05,,6,backroom
 3608390346127,BR-05,,6,backroom
@@ -2048,7 +2052,7 @@ ean,zone_code,zone_id,qty,kind
 3608449847032,BR-05,,6,backroom
 3608449847049,BR-05,,6,backroom
 3608449847056,BR-05,,6,backroom
-3608449847063,BR-05,,12,backroom
+3608449847063,BR-05,,6,backroom
 3608449847070,BR-05,,6,backroom
 3608449847087,BR-05,,6,backroom
 3608449847094,BR-05,,12,backroom
@@ -2073,10 +2077,10 @@ ean,zone_code,zone_id,qty,kind
 3608449847285,BR-05,,6,backroom
 3608449886956,BR-05,,30,backroom
 3608449915571,BR-05,,6,backroom
-3608449915588,BR-05,,12,backroom
+3608449915588,BR-05,,6,backroom
 3608449915595,BR-05,,12,backroom
 3608449915601,BR-05,,12,backroom
-3608449915618,BR-05,,12,backroom
+3608449915618,BR-05,,6,backroom
 3608449915625,BR-05,,6,backroom
 3608449915694,BR-05,,12,backroom
 3608449915700,BR-05,,6,backroom
@@ -2157,7 +2161,6 @@ ean,zone_code,zone_id,qty,kind
 3583787107645,BR-06,,6,backroom
 3583787107652,BR-06,,6,backroom
 3583787107676,BR-06,,6,backroom
-3583787110072,BR-06,,6,backroom
 3583787110102,BR-06,,6,backroom
 3583787116180,BR-06,,6,backroom
 3583787116197,BR-06,,6,backroom
@@ -2213,12 +2216,10 @@ ean,zone_code,zone_id,qty,kind
 3583787642580,BR-06,,6,backroom
 3583787729601,BR-06,,6,backroom
 3583787788110,BR-06,,6,backroom
-3583787788400,BR-06,,6,backroom
 3583787790281,BR-06,,6,backroom
 3583787791455,BR-06,,6,backroom
 3583787791523,BR-06,,6,backroom
 3583787810637,BR-06,,6,backroom
-3583787837504,BR-06,,6,backroom
 3583787932841,BR-06,,6,backroom
 3583788283607,BR-06,,6,backroom
 3608390269587,BR-06,,6,backroom
@@ -2285,7 +2286,6 @@ ean,zone_code,zone_id,qty,kind
 3608392226397,BR-06,,6,backroom
 3608392318795,BR-06,,6,backroom
 3608392320019,BR-06,,6,backroom
-3608392336034,BR-06,,6,backroom
 3608392435362,BR-06,,6,backroom
 3608392441561,BR-06,,6,backroom
 3608392441585,BR-06,,6,backroom
@@ -2399,12 +2399,12 @@ ean,zone_code,zone_id,qty,kind
 3608439336508,BR-06,,6,backroom
 3608439348471,BR-06,,6,backroom
 3608439350757,BR-06,,6,backroom
-3608439360145,BR-06,,6,backroom
 3608439362620,BR-06,,6,backroom
 3608439362989,BR-06,,6,backroom
 3608439389108,BR-06,,6,backroom
 3608439412813,BR-06,,6,backroom
 3608439412820,BR-06,,6,backroom
+3608439438271,BR-06,,6,backroom
 3608439450198,BR-06,,6,backroom
 3608439450211,BR-06,,6,backroom
 3583780104122,ACC-01,292d329f-01e3-5876-a1ab-3c2d18a65746,5,floor

@@ -316,7 +316,7 @@ private fun checkStore(site: String) {
     )
     check(
         "the delivery lands at open minus the lead",
-        results.all { r ->
+        results.filter { !it.plan.closed }.all { r ->
             val open = java.time.ZonedDateTime.of(r.date, r.plan.shape!!.open, zone).toInstant().toEpochMilli()
             r.wire.filter { it.kind == "receive" }.minOfOrNull { it.dueMs } == open - model.deliveryLeadMin * 60_000L
         },
@@ -341,10 +341,14 @@ private fun checkStore(site: String) {
         },
         "cap ${knobs.quietHours * walkCap} units/day",
     )
-    val quietOk = results.all { r ->
-        val curve = r.plan.shape!!.curve
-        val quiet = curve.indices.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).map { r.plan.shape.open.hour + it }.toSet()
-        r.moves.filter { it.reason == "top-up" }.all { Instant.ofEpochMilli(it.dueMs).atZone(zone).hour in quiet }
+    val quietOk = results.filter { !it.plan.closed }.all { r ->
+        val shape = r.plan.shape!!
+        val curve = shape.curve
+        val openMs = java.time.ZonedDateTime.of(r.date, shape.open, zone).toInstant().toEpochMilli()
+        // a walk starts 5 minutes into a quiet bucket and runs up to 45 minutes of throughput (into the next hour for a half-hour opening)
+        val quiet = shape.fullBuckets.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours)
+            .map { (openMs + it * 3_600_000L + 5 * 60_000L)..(openMs + it * 3_600_000L + 50 * 60_000L) }
+        r.moves.filter { it.reason == "top-up" }.all { mv -> quiet.any { mv.dueMs in it } }
     }
     check(
         "top-ups happen only in the quietest hours of the curve",

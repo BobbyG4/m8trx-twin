@@ -34,9 +34,9 @@
   },
   "department_buy" : {
     "general" : 0.1226,
-    "hike_camp" : 0.5823,
-    "running" : 0.7738
+    "hike_camp" : 0.5744,
+    "running" : 0.7582
   },
   "cell_weight_power" : 1.0,
-  "dwell_scale" : 2.263
+  "dwell_scale" : 2.2662
 }

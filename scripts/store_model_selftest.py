@@ -11,6 +11,7 @@ import csv
 import glob
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -151,9 +152,10 @@ def check_store(slug):
     we = sum(float(r["units_per_day_weekend"]) for r in dem)
     ok(abs(wk - vis["weekday"] * mult * conv * upt) < 0.05, "weekday total %.3f != visitors x conversion x upt" % wk)
     ok(abs(we - vis["weekend"] * mult * conv * upt) < 0.05, "weekend total %.3f != visitors x conversion x upt" % we)
+    ok(all(prof["hours"][d] == "closed" or re.fullmatch(r"\d\d:\d\d-\d\d:\d\d", prof["hours"][d]) for d in B.DAYS), "hours malformed")
     if slug == B.REFERENCE_STORE:
         ok(abs(wk - 411.4) < 0.05 and abs(we - 701.8) < 0.05, "Denver totals != today's 411.4 / 701.8")
-        ok(prof["location_factor"] == 1.0 and all(h == "10:00-21:00" for h in prof["hours"].values()), "Denver profile != today's")
+        ok(prof["location_factor"] == 1.0 and prof["hours"] == B.HOURS[slug] and prof["provisional"] is False, "Denver profile != D3 estimates")
     sh = sorted((float(r["share"]) for r in dem), reverse=True)
     head = sum(sh[: len(sh) // 10])
     ok(0.40 <= head <= 0.55, "head (top 10 %% of EANs) carries %.1f %%, outside 40-55 %%" % (100 * head))
@@ -215,8 +217,11 @@ def main():
         ok(prof["store_id"] == slug and {k: v for k, v in prof.items() if k != "store_id"} == pj["stores"][slug], "profile.json != the store's block")
     ok(len(pj["stores"]) == 10, "store-profiles.json should carry all ten stores")
     for s_, p_ in pj["stores"].items():
-        ok(p_["delivery_lead_min"] == (60 if p_["area_sqm"] >= 500 else 30), "delivery lead wrong for %s" % s_)
-        ok(p_["provisional"] is True and p_["location_factor"] == 1.0, "profile %s not provisional/1.0" % s_)
+        ok(p_["delivery_lead_min"] == (60 if p_["area_sqm"] >= 450 else 30), "delivery lead wrong for %s" % s_)
+        ok(p_["provisional"] is False and p_["location_factor"] == B.LOCATION_FACTORS[s_] and p_["hours"] == B.HOURS[s_],
+           "profile %s != the D3 estimates" % s_)
+        ok(p_["source"] == B.PROFILE_SOURCE, "profile %s source" % s_)
+        ok(p_["saturday_lift"] == (1.10 if p_["hours"]["sun"] == "closed" else 1.0), "saturday lift wrong for %s" % s_)
     # ---- the nine neutral behavior files are what the generator writes
     ok(subprocess.run([sys.executable, os.path.join(ROOT, "scripts/build_store_behavior.py"), "--check"]).returncode == 0,
        "reference/data/behavior/<slug>.json is not what build_store_behavior.py writes")

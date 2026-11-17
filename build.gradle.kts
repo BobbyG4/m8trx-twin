@@ -617,6 +617,12 @@ storeDayTask(
     "Offline: every planted scenario verifies in a 28-day Denver + Paris run; non-planted stores byte-identical; the key matches the eval's fields; determinism.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDayPlantSelfTest") }
+storeDayTask(
+    "storeProfilesSelfTest",
+    "com.m8trx.twin.storeday.StoreProfilesSelfTestKt",
+    "Offline: the D3 store profiles are obeyed: weekly hours per store, closed Sundays, Saturday lift, window-independent visitors, delivery at open minus lead, volume ordering over 28 days.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeProfilesSelfTest") }
 
 // ── Store ops, Phase 3 TOOLING (2026-11-17): the Denver reset, the live ops driver, the gap check — DRY-RUN ONLY ─────────────
 // Nothing here sends: com.m8trx.twin.storeops builds its one live class (LiveSender) only behind an explicit live flag and a
