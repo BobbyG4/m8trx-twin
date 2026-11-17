@@ -64,6 +64,19 @@ interface FloorHooks {
 
     /** A picked-up cell was put back. [u] is a uniform draw from the shopper's stream (decides a misplacement). */
     fun putBack(c: Cell, atMs: Long, u: Double)
+
+    /**
+     * Slice 2e. The factor that turns the behavior file's flat engaged-span draw (`browse.dwell_seconds`) into this visit's span at
+     * [f] with presentation [p]: fixture kind, content, attraction and range depth. Null (the default) leaves the behavior model's own
+     * span (`draw x sqrt(content appeal)`), which is what every plain behavior run and Denver's tuned truths use.
+     */
+    fun dwellScale(f: Fixture, p: FixturePresentation): Double? = null
+
+    /** Slice 2e. How many cells a shopper considers at a visit whose engaged span is [dwellMs]; [base] is the behavior file's `cells_considered`. */
+    fun cellsConsidered(base: Int, dwellMs: Long): Int = base
+
+    /** Slice 2e. Multiplier on a try-on's span (the bench and the fitting room). */
+    fun tryOnScale(): Double = 1.0
 }
 
 /** The oracle's whole account of one shopper — the link a real store keeps through a loyalty or receipt id. */
@@ -239,14 +252,17 @@ class ShopperAgent(
         hooks: FloorHooks? = null,
         outs: MutableList<StockOut> = mutableListOf(),
     ): Long {
-        val dwell = (uniformMs(params.browse.dwellSeconds, rng) * sqrt(p.contentAppeal.coerceAtLeast(0.25))).toLong().coerceAtLeast(MIN_DWELL_MS)
+        val drawMs = uniformMs(params.browse.dwellSeconds, rng)
+        val dwellScale = hooks?.dwellScale(f, p)
+        val dwell = (drawMs * (dwellScale ?: sqrt(p.contentAppeal.coerceAtLeast(0.25)))).toLong().coerceAtLeast(MIN_DWELL_MS)
+        val reach = hooks?.cellsConsidered(params.engagement.cellsConsidered, dwell) ?: params.engagement.cellsConsidered
         var t = episode(id, f, dwell, start, rng, sink)
         val pickups = mutableListOf<Pickup>()
         // Reserve the browse visit's slot so any try-on it leads to is recorded after it, in time order.
         val slot = visits.size
         visits += Visit(f.code, Visit.Kind.BROWSE, start, dwell, impression = true, pickups = emptyList())
 
-        for (idx in considered(p.cells, rng, hooks)) {
+        for (idx in considered(p.cells, rng, hooks, reach)) {
             val c = p.cells[idx]
             val pick = min(params.engagement.maxProbability, params.engagement.basePickup * p.cellPickup(c))
             if (rng.nextDouble() >= pick) continue
@@ -255,7 +271,7 @@ class ShopperAgent(
             val wantsTry = (c.category == "apparel" || c.category == "footwear") && rng.nextDouble() < params.engagement.tryOnRate.getValue(persona)
             if (wantsTry && inStock) {
                 tried = true
-                t = tryOn(id, c, t, rng, sink, visits)
+                t = tryOn(id, c, t, rng, sink, visits, hooks)
             }
             val buy = params.purchase.baseBuy.getValue(persona) * p.cellConversion(c, idx) * priceFactor(c) *
                 (if (tried) params.purchase.tryOnBuyUplift else 1.0) * (hooks?.buyScale(c) ?: 1.0)
@@ -285,7 +301,7 @@ class ShopperAgent(
         (params.content.priceReferenceUsd / c.priceUsd.coerceAtLeast(1.0)).pow(params.purchase.priceElasticity).coerceIn(0.15, MAX_PRICE_FACTOR)
 
     /** Cells a shopper looks at closely: facings × price preference, without replacement. */
-    private fun considered(cells: List<Cell>, rng: Random, hooks: FloorHooks? = null): List<Int> {
+    private fun considered(cells: List<Cell>, rng: Random, hooks: FloorHooks? = null, limit: Int = params.engagement.cellsConsidered): List<Int> {
         if (cells.isEmpty()) return emptyList()
         if (hooks != null) {
             // Demand-weighted draw without replacement; log keys because demand shares are small enough to underflow u^(1/w).
@@ -293,7 +309,7 @@ class ShopperAgent(
                 i to
                     kotlin.math.ln(rng.nextDouble().coerceAtLeast(1e-300)) / hooks.cellWeight(cells[i]).coerceAtLeast(1e-12)
             }
-                .sortedByDescending { it.second }.take(params.engagement.cellsConsidered).map { it.first }
+                .sortedByDescending { it.second }.take(limit).map { it.first }
         }
         val ref = params.content.priceReferenceUsd
         val e = params.content.priceElasticity
@@ -305,8 +321,16 @@ class ShopperAgent(
     }
 
     /** Footwear is tried at the bench (a real fixture, so a real episode); apparel in the fitting room space. */
-    private fun tryOn(id: String, c: Cell, start: Long, rng: Random, sink: SampleSink?, visits: MutableList<Visit>): Long {
-        val d = uniformMs(params.engagement.tryOnSeconds, rng)
+    private fun tryOn(
+        id: String,
+        c: Cell,
+        start: Long,
+        rng: Random,
+        sink: SampleSink?,
+        visits: MutableList<Visit>,
+        hooks: FloorHooks? = null,
+    ): Long {
+        val d = (uniformMs(params.engagement.tryOnSeconds, rng) * (hooks?.tryOnScale() ?: 1.0)).toLong()
         val bench = world.footwearBench
         return if (c.category == "footwear" && bench != null) {
             val end = episode(id, bench, d, start, rng, sink)

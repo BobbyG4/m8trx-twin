@@ -111,6 +111,17 @@ class StoreDayModel(val slug: String, val chainDir: Path = Path.of("reference/da
     /** Case size per EAN: 6, or 1 for a bike-priced line (the stock plan rounds those to singles). */
     fun caseSize(ean: String): Int = if ((demand[ean]?.priceUsd ?: 0.0) >= 500.0) 1 else 6
 
+    /** Slice 2e: each fixture's category and its goods mix (facings per level goods class), from `fixtures.json`. Read only. */
+    class FixtureSpec(val category: String, val goodsFacings: Map<String, Int>)
+
+    val fixtureSpecs: Map<String, FixtureSpec> = ConnectMappers.snake.readTree(Files.readAllBytes(modelDir.resolve("fixtures.json")))
+        .path("fixtures").fields().asSequence().associate { (code, f) ->
+            code to FixtureSpec(
+                f.path("fixture_category").asText(),
+                f.path("levels").groupBy({ it.path("goods").asText() }, { it.path("facings").asInt() }).mapValues { it.value.sum() },
+            )
+        }
+
     /** The store's staffing: associates on the floor off-peak (operating model `staffing`). */
     val offpeakAssociates: Int = ConnectMappers.snake.readTree(Files.readAllBytes(Path.of("reference/data/store-operating-model.json")))
         .path("staffing").path("associates_on_floor_offpeak").asInt(3)

@@ -32,7 +32,15 @@ fun main() {
     val from = LocalDate.parse(env("M8TRX_STORE_DAY_CAL_FROM", "2026-09-07"))
     val model = StoreDayModel(site)
     val depts = model.demand.values.map { it.department }.toSortedSet()
-    var cal = Calibration(model.lines.map { it.fixture }.toSortedSet().associateWith { 1.0 }, depts.associateWith { 1.0 }, power)
+    // Slice 2e: a warm start from the committed calibration (the 2a/2b fit) unless M8TRX_STORE_DAY_CAL_WARM=off; the dwell scale is fitted first.
+    val warm = env("M8TRX_STORE_DAY_CAL_WARM", "on") != "off" && Files.exists(calibrationPath(site))
+    var cal = if (warm) {
+        loadCalibration(site)
+    } else {
+        Calibration(model.lines.map { it.fixture }.toSortedSet().associateWith { 1.0 }, depts.associateWith { 1.0 }, power)
+    }
+    cal = cal.copy(dwellScale = DwellStats.fit(site, cal, from, DAYS))
+    log.info("dwell scale {} (session median fitted to the operating model)", "%.4f".format(cal.dwellScale))
     var best: Pair<Double, Calibration>? = null
     for (it in 1..iterations) {
         val m = measure(buildSim(site, cal), from)
@@ -63,9 +71,11 @@ fun main() {
         val buy = cal.departmentBuy.mapValues { (d, b) ->
             (b * median * Math.pow(m.target.getValue(d) / m.actual.getValue(d).toDouble().coerceAtLeast(1.0), 0.8)).coerceIn(0.005, 50.0)
         }
-        cal = Calibration(fixScale, buy, power)
+        cal = Calibration(fixScale, buy, power, cal.dwellScale)
     }
     cal = best!!.second
+    // The fixture stop scales moved the number of stops per visit a little: re-fit the dwell scale on them, then freeze it.
+    cal = cal.copy(dwellScale = DwellStats.fit(site, cal, from, DAYS))
     // Stage 2: freeze the fixtures and trim only the department buy scales. A buy draw is compared with the same uniform
     // every run, so units rise monotonically with the scale and this converges where stage 1's coupled moves wander.
     var trimBest: Pair<Double, Calibration>? = null
@@ -81,6 +91,7 @@ fun main() {
                 (b * Math.pow(m.target.getValue(d) / m.actual.getValue(d).toDouble().coerceAtLeast(1.0), 0.8)).coerceIn(0.005, 50.0)
             },
             power,
+            cal.dwellScale,
         )
     }
     cal = trimBest!!.second
@@ -89,7 +100,10 @@ fun main() {
     Files.writeString(calibrationPath(site), cal.toJson())
     val out = Path.of(env("M8TRX_STORE_DAY_OUT", "out/day")).resolve(site)
     Files.createDirectories(out)
-    Files.writeString(out.resolve("CALIBRATION.md"), report(site, cal, finalM, from, model, measure(sim, LocalDate.of(2027, 1, 4), 28)))
+    Files.writeString(
+        out.resolve("CALIBRATION.md"),
+        report(site, cal, finalM, from, model, measure(sim, LocalDate.of(2027, 1, 4), 28)) + dwellSection(sim, from),
+    )
     log.info("wrote {} and {}", calibrationPath(site), out.resolve("CALIBRATION.md"))
 }
 
@@ -261,4 +275,24 @@ private fun report(site: String, cal: Calibration, m: Measure, from: LocalDate, 
             it.ean
         }.toSet().size} EANs off the floor (no fixture holds them) are not in the on-floor target.",
     )
+}
+
+/** Slice 2e: what the fitted dwell scale produced, for CALIBRATION.md. */
+private fun dwellSection(sim: StoreDaySim, from: LocalDate): String = buildString {
+    val st = DwellStats.stocked(sim, from, DAYS)
+    val med = DwellStats.median(st.sessionMin)
+    val target = DwellStats.targetSessionMin()
+    appendLine()
+    appendLine("## Dwell (slice 2e)")
+    appendLine()
+    appendLine(
+        "dwell_scale ${"%.4f".format(sim.cal.dwellScale)}: median session ${"%.1f".format(med)} min against the operating model's $target " +
+            "(${"%+.1f".format(100 * (med / target - 1))} %); mean engaged stop ${"%.0f".format(st.meanAll())} s.",
+    )
+    appendLine()
+    appendLine("| fixture kind | browse visits | mean s | median s |")
+    appendLine("|---|---:|---:|---:|")
+    st.browseByKind.forEach { (k, v) ->
+        appendLine("| ${k.label} | ${v.size} | ${"%.0f".format(v.average())} | ${"%.0f".format(DwellStats.median(v))} |")
+    }
 }

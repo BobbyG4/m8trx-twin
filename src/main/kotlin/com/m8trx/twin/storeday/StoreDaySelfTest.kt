@@ -661,6 +661,7 @@ fun main() {
     val sites = if (only != null) listOf(only) else StoreState.STORE_SLUGS
     sites.forEach { checkStore(it) }
     sites.forEach { checkPeriods(it) }
+    sites.forEach { checkDwell(it) }
     if (only == null) {
         checkCalendar()
         checkChain()

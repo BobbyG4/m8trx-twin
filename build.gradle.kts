@@ -602,6 +602,11 @@ storeDayTask(
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDaySelfTest") }
 storeDayTask(
+    "storeDayDwellReport",
+    "com.m8trx.twin.storeday.DwellReportKt",
+    "Offline: per-kind mean dwell per engaged visit, store mean vs the operating model, session length (M8TRX_STORE_DAY_SITE comma list, M8TRX_STORE_DAY_DWELL=off for the 2d floor).",
+)
+storeDayTask(
     "storeDayPlantRun",
     "com.m8trx.twin.storeday.PlantRunKt",
     "Offline: plant the eval scenarios in Denver and Paris, simulate, write out/scenarios/<run>/answer-key.json + VERIFY.md. Record only.",
