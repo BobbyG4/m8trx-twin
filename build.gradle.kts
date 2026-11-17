@@ -458,12 +458,12 @@ tasks.register("offlineSelfTest") {
     dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
 }
 
-// ── Store model, Phase 1 (Denver): profile, fixture kits, demand, planogram v2, stock to plan — files only ─────────
+// ── Store model, Phase 1 (all ten stores): profile, fixture kits, demand, planogram v2, stock to plan — files only ─────────
 // Python 3 stdlib; reads and writes nothing outside the repo, talks to no server. Rebuilds the model twice to prove
 // byte-identical output, checks the committed files, and that no file the live box reads differs from origin/main.
 tasks.register<Exec>("storeModelSelfTest") {
     group = "verification"
-    description = "Offline: Denver store model self-test (kits, demand, planogram v2, stock plan, determinism, live files untouched)."
+    description = "Offline: store model self-test for all ten stores (kits, demand, planogram v2, stock plan, determinism, live files untouched)."
     workingDir = projectDir
     commandLine("python3", "scripts/store_model_selftest.py")
 }

@@ -75,7 +75,8 @@ LC_AFFINITY = ["bike", "bulk", "shoe", "fold", "hang", "peg"]    # bottom -> top
 WALL_KIT = {                            # (levels, height each) of a wall bay by level class
     "shoe": (6, 10), "fold": (6, 10), "peg": (6, 10), "hang": (2, 30), "bike": (1, 60), "bulk": (5, 12),
 }
-WALL_LC_BY_DEPT = {"running": "shoe", "hike_camp": "shoe", "climb": "hang", "snow": "hang", "cycling": "bike", "general": "bulk"}
+WALL_LC_BY_DEPT = {"running": "shoe", "hike_camp": "shoe", "climb": "hang", "snow": "hang", "cycling": "bike", "general": "bulk",
+                   "water": "bulk"}
 MAX_FACINGS_PER_EAN = 6                # no EAN line gets more than 6 facings anywhere (also the deepening cap: 6x the minimum need)
 DEEPEN_CAP = MAX_FACINGS_PER_EAN
 FILL_TARGET = 0.88                      # required_qty = facings x capacity x 0.88 (every fixture >= 70 %)
@@ -88,7 +89,7 @@ ISLAND_LEVELS = [TABLE_TOP, BIN]        # table_top + bin
 BR_LEVELS = 6                           # back-room rack: shelf x 6
 # --- stock to plan ---
 DEVIATION_EXACT, DEVIATION_SHORT = 0.92, 0.06     # 92 % exact, 6 % short by 1-2, remaining 2 % over by 1
-SPILL_FROM = "hike_camp"                # the department with the largest off-floor demand; it spills onto General's unused fixtures
+SPILL_FROM = "hike_camp"                # the department with the largest off-floor demand (chosen per store in build); it spills onto the lean departments' unused fixtures
 COVER_DAYS = 7                          # back-room cover
 OFFFLOOR_EXTRA_DAYS = 7                 # an off-floor EAN has no floor stock: its back room carries the floor's days too
 CASE_PACK = 6                           # back room is rounded up to cases of 6 ...
@@ -110,7 +111,9 @@ SEASON_ANCHORS = {
 }
 SALES_WEIGHT = {"hike_camp": 27.0, "running": 18.0, "cycling": 16.0, "snow": 11.0, "climb": 5.0, "water": 2.0}
 SALES_CAP = 0.34
-DEPT_ORDER = ["hike_camp", "running", "climb", "snow", "cycling", "general"]
+ALL_DEPTS = ["hike_camp", "running", "climb", "snow", "cycling", "water", "general"]
+DEPT_ORDER = list(ALL_DEPTS)            # narrowed in place to the departments a store carries at the start of build()
+LEAN_DEPTS = ("general", "water")       # departments sized by their own demand; the fixtures they do not need are spillover room
 
 
 # ===================================================== helpers =====================================================
@@ -568,6 +571,7 @@ def build(slug, out_dir):
     opm = json.load(open(OPMODEL, encoding="utf-8"))
     keys, kmeta = load_keys()
     profiles = build_profiles(kmeta)
+    DEPT_ORDER[:] = [d for d in ALL_DEPTS if any(r["department"] == d for r in rows)]
     prof = dict(profiles["stores"][slug])
     prof["_denver_area"] = profiles["stores"][REFERENCE_STORE]["area_sqm"]
     styles, share, arith, dinfo = build_demand(slug, rows, prof, opm)
@@ -608,7 +612,8 @@ def build(slug, out_dir):
     gen_partial = defaultdict(list)
     gen_used = {}                 # General face -> height its own styles use
     gen_walls = []
-    for dept in ["general"] + [d for d in DEPT_ORDER if d != "general"]:
+    gen_deep = {}
+    for dept in [d for d in DEPT_ORDER if d in LEAN_DEPTS] + [d for d in DEPT_ORDER if d not in LEAN_DEPTS]:
         faces = sorted(c for c, z in floor_fx.items() if z["fixture_category"] in ("gondola_front", "gondola_back") and z.get("department") == dept)
         walls = sorted(c for c, z in floor_fx.items() if z["fixture_category"] in ("perimeter_west", "perimeter_east") and z.get("department") == dept)
         dstyles = [s for s in styles if s.dept == dept and s.id not in cased]
@@ -616,12 +621,12 @@ def build(slug, out_dir):
         for s in dstyles:
             by_lc[s.lc].append(s)
         dem = {lc: sum(s.demand for s in ss) for lc, ss in by_lc.items()}
-        if dept == "general":
+        if dept in LEAN_DEPTS:
             # sized by its own demand: each EAN at most MAX_FACINGS_PER_EAN facings; the rest of the region is spillover space
-            gen_walls = walls
+            gen_walls = gen_walls + walls
             walls, wall_lc, alloc = [], None, {}
-            gen_deep = {lc: trial_levels(ss, lc) for lc, ss in by_lc.items()}
-            gq = {lc: float(n * LEVEL_CLASS[lc][3]) for lc, (n, _) in gen_deep.items()}
+            gen_deep.update({(dept, lc): trial_levels(ss, lc) for lc, ss in by_lc.items()})
+            gq = {lc: float(gen_deep[(dept, lc)][0] * LEVEL_CLASS[lc][3]) for lc in by_lc}
             dealt = deal_faces(faces, gq, sorted(by_lc, key=lambda l: -dem[l]), exact=True)
         else:
             wall_lc = WALL_LC_BY_DEPT[dept]
@@ -642,7 +647,7 @@ def build(slug, out_dir):
         for fx in faces:
             if not dealt[fx]:
                 continue
-            if dept == "general":
+            if dept in LEAN_DEPTS:
                 gen_used[fx] = sum(x[4] for x in dealt[fx])
             lvs = levels_from_stack(fx, width_of(zones[fx]["rect_mm"], zones[fx]["fixture_category"]), dealt[fx])
             # lowest bulk level of a face is the floor
@@ -665,9 +670,9 @@ def build(slug, out_dir):
             for s in ss:
                 if s.run > maxw:
                     off_floor.append((s, "run of %d wider than any %s level (%d facings)" % (s.run, lc, maxw)))
-            left = place_levels(lvs, list(fit), "dept", counter, allow_repeat=(dept != "general"), pool_for_repeat=None,
-                                 deep=gen_deep[lc][1] if dept == "general" else 1)
-            if dept == "general":       # what General's styles claim at their facing cap; the rest of the level is spillover room
+            left = place_levels(lvs, list(fit), "dept", counter, allow_repeat=(dept not in LEAN_DEPTS), pool_for_repeat=None,
+                                 deep=gen_deep[(dept, lc)][1] if dept in LEAN_DEPTS else 1)
+            if dept in LEAN_DEPTS:       # what General's styles claim at their facing cap; the rest of the level is spillover room
                 for lv in lvs:
                     if lv.reserved < lv.facings:
                         gen_partial[lc].append(lv)
@@ -680,9 +685,16 @@ def build(slug, out_dir):
         dept_info[dept] = {"faces": faces, "walls": walls, "wall_lc": wall_lc, "quota": alloc}
 
     # ---- spillover: the General fixtures General does not need hold hike_camp's best off-floor styles (whole size runs)
+    global SPILL_FROM
+    pruned = Counter()
+    for s, r in off_floor:
+        if r.startswith("no room"):
+            pruned[s.dept] += s.run
+    if pruned:
+        SPILL_FROM = max(sorted(pruned), key=lambda d: pruned[d])
     hc_before = sum(s.run for s, _ in off_floor if s.dept == SPILL_FROM)
     spill_pool = sorted([s for s, r in off_floor if s.dept == SPILL_FROM and r.startswith("no room")], key=lambda s: (-s.demand, s.id))
-    gen_faces = dept_info["general"]["faces"]
+    gen_faces = sorted(f for d in LEAN_DEPTS if d in dept_info for f in dept_info[d]["faces"])
     left_h = {fx: FACE_HEIGHT - gen_used.get(fx, 0) for fx in gen_faces}
     if spill_pool:
         sdem = defaultdict(float)
@@ -729,7 +741,7 @@ def build(slug, out_dir):
     on_floor_ids = {s.id for s in styles} - {s.id for s, _ in off_floor}
     avail = [s for s in styles if s.id in on_floor_ids]
     by_demand = sorted(avail, key=lambda s: (-s.demand, s.id))
-    feature_dept = max((d for d in DEPT_ORDER if d != "general"), key=lambda d: season_weight(d))
+    feature_dept = max((d for d in DEPT_ORDER if d not in LEAN_DEPTS), key=lambda d: season_weight(d))
 
     def mk_levels(fx, specs, cat):
         w = width_of(zones[fx]["rect_mm"], cat)
@@ -908,6 +920,7 @@ def build(slug, out_dir):
     for d in sorted(DEPT_ORDER, key=lambda d: (-dept_br[d], d)):
         racks_of[d] = brs[i0:i0 + n_of[d]]
         i0 += n_of[d]
+    rack_cap = lambda r: sum(lv.facings * lv.cap for lv in kit[r])
     sid_rack = {}
     load = Counter()
     style_units = defaultdict(int)
@@ -915,6 +928,9 @@ def build(slug, out_dir):
         style_units[s.id] += q
     for s in sorted(styles, key=lambda s: (-style_units[s.id], s.id)):
         rk = min(racks_of[s.dept], key=lambda r: (load[r], r))     # least-loaded rack of the department
+        if load[rk] + style_units[s.id] > rack_cap(rk):             # department's racks are full: least-loaded rack with room
+            fits = [r for r in brs if load[r] + style_units[s.id] <= rack_cap(r)]
+            rk = min(fits or brs, key=lambda r: (load[r] / float(rack_cap(r)), r))
         sid_rack[s.id] = rk
         load[rk] += style_units[s.id]
     rack_units = Counter()
@@ -976,8 +992,8 @@ def summary(slug, styles, share, arith, dinfo, lines, kit, brs, off_floor, dept_
     head = sum(srt[: max(1, len(srt) // 10)]) / sum(srt)
     ng = sorted((share[e["ean"]] for s in styles if s.dept != "general" for e in s.eans), reverse=True)
     head_ng = sum(ng[: max(1, len(ng) // 10)]) / sum(ng)
-    w("- Demand head: the top 10 %% of EANs (%d) carry %.1f %% of units (%.1f %% excluding the 17-EAN general department, "
-      "which alone carries %.1f %% of units)\n" % (len(srt) // 10, 100 * head, 100 * head_ng, 100 * dem_dept["general"]))
+    w("- Demand head: the top 10 %% of EANs (%d) carry %.1f %% of units (%.1f %% excluding the %d-EAN general department, "
+      "which alone carries %.1f %% of units)\n" % (len(srt) // 10, 100 * head, 100 * head_ng, sum(1 for s in styles if s.dept == "general" for _ in s.eans), 100 * dem_dept["general"]))
 
     w("## Demand arithmetic\n")
     w("units/day = visitors/day x location_factor x area_scale x conversion x units per transaction (model values, neutral:")
@@ -1010,18 +1026,21 @@ def summary(slug, styles, share, arith, dinfo, lines, kit, brs, off_floor, dept_
                     and zones[l["fixture_code"]].get("department") == "general")
     sp_units = sum(l["required_qty"] for l in lines if l.get("spill_from"))
     w("## General's corner and the spillover\n")
-    w("General (17 EANs) is sized by its own demand: at most %d facings per EAN and no repeat blocks, so it needs only part of its 16 fixtures. "
+    n_gen_eans = sum(len(s.eans) for s in styles if s.dept == "general")
+    n_gen_fx = len(spill_info["gen_faces"]) + len(spill_info["gen_walls"])
+    w("General (%d EANs) is sized by its own demand: at most %d facings per EAN and no repeat blocks, so it needs only part of its %d fixtures. "
       "The rest of the General region is spillover space for %s, the department with the largest off-floor demand; its best off-floor "
       "styles (whole size runs, same rules) go there, tagged `spill_from: %s` in planogram.json with their department kept as %s.\n" %
-      (MAX_FACINGS_PER_EAN, SPILL_FROM, SPILL_FROM, SPILL_FROM))
-    w("- General fixtures (16 in the region): %d used by General alone, %d shared (General levels plus spillover levels), %d spillover only"
-      % (n_g, n_b, n_s))
-    w("- General floor units in its own rows: %d (4,874 before this revision); spillover floor units: %d" % (gen_units, sp_units))
+      (n_gen_eans, MAX_FACINGS_PER_EAN, n_gen_fx, SPILL_FROM, SPILL_FROM, SPILL_FROM))
+    w("- General fixtures (%d in the region): %d used by General alone, %d shared (General levels plus spillover levels), %d spillover only"
+      % (n_gen_fx, n_g, n_b, n_s))
+    w("- General floor units in its own rows: %d; spillover floor units: %d" % (gen_units, sp_units))
     w("- %s off-floor EANs: %d before spillover, %d after" % (SPILL_FROM, spill_info["before"], spill_info["after"]))
     w("- Cycling's off-floor bike frame sizes are deliberately left as they are: a store displays one frame size per model and keeps "
       "the rest in the back room. Cycling is excluded from spillover.\n")
     w("## Per department - space vs demand\n")
-    w("Department rows are fixed geometry (rule 1): every department holds 14 gondola faces + 2 wall bays, so space across departments is "
+    w("Department rows are fixed geometry (rule 1): every department holds %d gondola faces + %d wall bays, so space across departments is " %
+      (len(dept_info[DEPT_ORDER[0]]["faces"]), len(dept_info[DEPT_ORDER[0]]["walls"])) +
       "fixed by the floor plan and cannot follow demand; space follows demand *inside* each department (next table).\n")
     w("| department | fixtures | facings | floor units | EANs | on floor | off floor | space share (height units) | demand share |")
     w("|---|---:|---:|---:|---:|---:|---:|---:|---:|")
@@ -1148,7 +1167,7 @@ def summary(slug, styles, share, arith, dinfo, lines, kit, brs, off_floor, dept_
     w("- Total floor capacity (~%d units) is about twice the 15,005 EPCs Denver holds today; the plan is a target, Phase 3 plans the transition." % sum(
         fx_doc[c]["capacity_units"] for c in kit if c not in brs))
     w("- Department space cannot follow demand across departments (rule 1 fixes 16 fixtures each); it does inside each department.")
-    w("- General (17 EANs) cannot use 16 fixtures at <= %d facings per EAN: it takes what it needs and the rest spills over from %s (above)." % (MAX_FACINGS_PER_EAN, SPILL_FROM))
+    w("- General (%d EANs) cannot use %d fixtures at <= %d facings per EAN: it takes what it needs and the rest spills over from %s (above)." % (n_gen_eans, n_gen_fx, MAX_FACINGS_PER_EAN, SPILL_FROM))
     w("- Feature fixtures (islands, round rack, accessories walls, impulse, checkout) repeat styles already placed in a department (block > 1).")
     w("- Runs wider than any level of their class go off the floor (listed above).\n")
     w("## Output digests (sha256)\n")
@@ -1158,12 +1177,68 @@ def summary(slug, styles, share, arith, dinfo, lines, kit, brs, off_floor, dept_
     return "\n".join(L) + "\n"
 
 
+SUMMARY_MD = os.path.join(CHAIN, "STORE-MODEL-SUMMARY.md")
+
+
+def chain_summary(slugs):
+    """One row per store, read back from the committed model files (so it describes exactly what is on disk)."""
+    L = ["# Store model - chain summary (generated)", "",
+         "Generated by `scripts/build_store_model.py --all` from each store's `model/` files. Do not edit by hand. "
+         "Per-store detail: `stores/<slug>/model/SUMMARY.md`.", "",
+         "| store | m2 | tz | EANs | on floor | off floor | floor fixtures | lines | floor units at plan | capacity | fill | min fixture fill "
+         "| back room units (racks) | demand wk / we units per day | spill dept | spill units | deliberate empties |",
+         "|---|---:|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---:|---|"]
+    for slug in slugs:
+        mdir = os.path.join(CHAIN, "stores", slug, "model")
+        prof = json.load(open(os.path.join(mdir, "profile.json"), encoding="utf-8"))
+        fx = json.load(open(os.path.join(mdir, "fixtures.json"), encoding="utf-8"))["fixtures"]
+        pg = json.load(open(os.path.join(mdir, "planogram.json"), encoding="utf-8"))
+        dem = read_csv(os.path.join(mdir, "demand.csv"))
+        stock = read_csv(os.path.join(mdir, "stock-plan.csv"))
+        lines = pg["lines"]
+        stocked = {c: v for c, v in fx.items() if v.get("zone_type") == "fixture" and v.get("role") == "stock"}
+        req = defaultdict(int)
+        for l in lines:
+            req[l["fixture_code"]] += l["required_qty"]
+        cap = sum(v["capacity_units"] for v in stocked.values())
+        fills = [req[c] / float(v["capacity_units"]) for c, v in stocked.items() if v["capacity_units"] > 0]
+        on_floor = len({l["ean"] for l in lines})
+        spill = [l for l in lines if l.get("spill_from")]
+        spill_dept = ",".join(sorted({l["spill_from"] for l in spill})) or "-"
+        empties = ",".join(sorted(c for c, v in fx.items() if v.get("deliberate_empty") and v.get("space") == "sales_floor")) or "-"
+        back = sum(int(r["qty"]) for r in stock if r["kind"] == "backroom")
+        racks = len({r["zone_code"] for r in stock if r["kind"] == "backroom"})
+        wk = sum(float(r["units_per_day_weekday"]) for r in dem)
+        we = sum(float(r["units_per_day_weekend"]) for r in dem)
+        tot = sum(req.values())
+        L.append("| %s | %.0f | %s | %d | %d | %d | %d | %d | %d | %d | %.1f %% | %.1f %% | %d (%d) | %.1f / %.1f | %s | %d | %s |" % (
+            slug, prof["area_sqm"], prof["timezone"], len(dem), on_floor, len(dem) - on_floor, len(stocked), len(lines), tot, cap,
+            100.0 * tot / cap, 100.0 * min(fills), back, racks, wk, we, spill_dept, sum(l["required_qty"] for l in spill), empties))
+    L += ["", "Rules held for every store (asserted by `store_model_selftest.py`): no empty floor fixture except the deliberate service "
+          "fixtures; every stocked fixture at least 70 %% filled; size runs contiguous on one level; at most %d facings per EAN; "
+          "General (and water where a store has it) sized by its own demand, the rest of its region taken by spillover from the "
+          "most-pruned department; bike frame sizes may stay in the back room; back-room racks within capacity." % MAX_FACINGS_PER_EAN, ""]
+    return "\n".join(L) + "\n"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--store", default=REFERENCE_STORE)
     ap.add_argument("--out", default=None, help="output dir (default stores/<slug>/model); profiles go beside it only for the default")
     ap.add_argument("--no-profiles", action="store_true")
+    ap.add_argument("--all", action="store_true", help="build the model for every chain store (default output dirs)")
     args = ap.parse_args()
+    if args.all:
+        slugs = sorted(d for d in os.listdir(os.path.join(CHAIN, "stores")) if os.path.exists(os.path.join(CHAIN, "stores", d, "layout.json")))
+        for slug in slugs:
+            outs, profiles = build(slug, os.path.join(CHAIN, "stores", slug, "model"))
+            print("%-18s %s" % (slug, " ".join(sha(outs[n].encode("utf-8"))[:8] for n in sorted(outs))))
+        if not args.no_profiles:
+            with open(PROFILES, "w", encoding="utf-8", newline="") as f:
+                f.write(jdump(profiles))
+            with open(SUMMARY_MD, "w", encoding="utf-8", newline="") as f:
+                f.write(chain_summary(slugs))
+        return
     out = args.out or os.path.join(CHAIN, "stores", args.store, "model")
     outs, profiles = build(args.store, out)
     ptxt = jdump(profiles)

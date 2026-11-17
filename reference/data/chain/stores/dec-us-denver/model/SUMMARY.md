@@ -37,7 +37,7 @@ Feature island department (highest seasonal weight): **snow**.
 General (17 EANs) is sized by its own demand: at most 6 facings per EAN and no repeat blocks, so it needs only part of its 16 fixtures. The rest of the General region is spillover space for hike_camp, the department with the largest off-floor demand; its best off-floor styles (whole size runs, same rules) go there, tagged `spill_from: hike_camp` in planogram.json with their department kept as hike_camp.
 
 - General fixtures (16 in the region): 1 used by General alone, 1 shared (General levels plus spillover levels), 14 spillover only
-- General floor units in its own rows: 219 (4,874 before this revision); spillover floor units: 2873
+- General floor units in its own rows: 219; spillover floor units: 2873
 - hike_camp off-floor EANs: 333 before spillover, 15 after
 - Cycling's off-floor bike frame sizes are deliberately left as they are: a store displays one frame size per model and keeps the rest in the back room. Cycling is excluded from spillover.
 
