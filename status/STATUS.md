@@ -15,7 +15,9 @@
   rotating counts after the first two open hours, compliance truth per period (compliant at count 69–97% across stores).
 - **Phase 2d ✅** (#33) — 7 eval archetypes planted in Denver + Paris within physical capacity, 90/90 checks verified from
   the truth ledger, answer key in the eval's shape (`reference/data/scenarios/answer-key-example.json`; file only).
-- **Phase 2e (dwell by fixture kind) — building** (plan § 5.2).
+- **Phase 2e ✅** (#34) — dwell differs by fixture kind and content (footwear ≈ 3× pegboard, bench try-on longest), median
+  session 18 min in all stores, calibration re-fitted; known deviation: apparel zone minutes ≈ 2× the model's (not tuned).
+- **Phase 3 tooling (dry-run only) — building**; running it live waits for Bob's go + plan § 8 Q14–Q16 answers.
 - **Phase 3 designed, not started** — `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
   received + ~6.4k move batches, paced over hours, announced) needs Bob's go and a scheduled night.
 - **Waiting on Bob:** D3 numbers (location factors, real hours, delivery cut-off — Phase 1 uses provisional values);

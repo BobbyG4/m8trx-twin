@@ -577,6 +577,22 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
     `m8trx-twin/ops/box/` with the other box ops files. Its copy in `m8trx-shared/scripts/twin-ops/` is superseded (the twin
     lane does not write to the shared vault). Whoever next touches that folder can delete it or leave a pointer.
 
+*Round 3 (twin, 2026-11-17 evening — before Phase 3's Denver reset night; brief `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`).*
+
+14. **The old curated directives.** Each store has an `api_push` directive from June/October (Denver: 28 targets, ref
+    `PLN-dec-us-denver-<date>`, active, no stop date). From the reset day the twin issues weekly period plans
+    (`PLNW-<slug>-<yyyymmdd>`, with `expiry_date`). How is the old directive ended?
+    - Does a re-send with the same `external_directive_id`, the same targets, and an `expiry_date` of the reset day set its stop
+      date? A3 says a re-send *without* one keeps the stored stop.
+    - Or must it be left, so that its 28 lines stay required alongside the new plan?
+    - Same question for the other nine stores when they go live.
+15. **A relocation to the back room.** Phase 2c's resets send displaced units "to the back room". Is an `inventory_movement`
+    whose `to_zone_id` is a back-room rack zone (the stockroom space's rack zones) accepted? Or should it target the stockroom
+    space itself?
+16. **The reset night's write volume** for Denver: about 30,000 units received (≤ 200 a request, paced to ~1 request every 10 s)
+    and about 6,400 movement batches (≤ 2/s), on a night with no walk. Is that pace safe for the audit triggers that starved
+    the pool in Session 8, or should it be slower? The twin will announce the night to the lanes before it starts.
+
 ## 9. Decisions for Bob
 
 - **D1** Phase 0 landing (§ 3) — approve the recipe, then each merge and the box rebuild.
