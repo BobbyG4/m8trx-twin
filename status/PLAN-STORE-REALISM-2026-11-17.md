@@ -87,7 +87,9 @@ dependency bumps (#26) in it. Proposed landing, each step on Bob's word.
 - **#21:** its six non-bump commits cherry-pick onto `main` cleanly. Against the landed stack it has two union-style conflicts
   (`build.gradle.kts` task registrations, `Journeys.kt`). Drop its bump commit `6a0e7ae`, which repeats #26.
 
-### 3.2 Landing recipe
+### 3.2 Landing recipe — ✅ DONE 2026-11-17
+
+> **Landed:** #27 (`51c27bb`) = the box stack merged with `main`, keys export fixed and verified against `/spatial/identity` in all ten stores (only drift: Denver "Entrance" vs "Entrance Area", § 8 Q12); #17 auto-merged, #18/#19 closed. #28 (`092a2b1`) = #21's six commits on current `main`, bump dropped; #21 closed. All branches kept (the box tracks #19's). **Still open in Phase 0:** box rebuild from `main`, ops scripts into the repo, Denver `shift=open`, digest fix — each on Bob's word.
 
 1. **One consolidated PR, "land what the box runs":** branch from `80f810b`, merge `main` (resolution above), fix the keys export,
    `offlineSelfTest` green. Use a merge commit, not a squash, so the per-bump and pricing history survives.

@@ -45,7 +45,8 @@ only.** The other three containers there (`:4222`, `:33080`, `:5433`) are the pr
 - **Denver floor**: 115 fixture zones; 23 never stocked; 77 of the 92 stocked now empty in the twin's ledger (12% of floor units
   left); seed stock per fixture 8–713 (median 104). Layout is the parametric `build_layout.py` grid (6 gondola rows × 7 units).
 
-**Open PRs (none reviewed by Bob):** a stack `main ← #17 ← feat/recent-window-1012 (no PR) ← #18 ← #19` (PRs #23–#25, the
+**✅ PRs SETTLED 2026-11-17 (Bob: "go on PRs whenever ready"):** #27 landed the whole box stack on `main` (`51c27bb`; #17 auto-merged, #18/#19 closed as superseded); #28 landed #21's behavior package on current `main` (`092a2b1`; #21 closed). **No open PRs. `main` now contains everything the box runs** — the box itself still tracks #19's branch until its rebuild (Bob's word). *Before that:* 
+**Open PRs (as found, none reviewed by Bob):** a stack `main ← #17 ← feat/recent-window-1012 (no PR) ← #18 ← #19` (PRs #23–#25, the
 CORE-REQ-007/008 pricing work, merged into #19's branch, not main); #17 merges clean, #18/#19 conflict with main in 4 files (the
 duplicated pricing), #21 (behavior sim, TWIN-REQ-007) is independent but collides with the stack and repeats main's #26 bumps.
 **Merging to main changes nothing on the box** — no CI; the box tracks #19's branch.
