@@ -131,6 +131,8 @@ class DayResult(
     /** Planned slots (required > 0) with no unit on the fixture when the shopper day opened, and why: `no-stock` or `capacity`. */
     val unfilled: Map<Slot, String> = emptyMap(),
     val counts: List<CountRecord> = emptyList(),
+    /** Slice 2d: back-room units per EAN at the day's close (only filled for a planted store: the scenario checks read cover). */
+    val closeBackroom: Map<String, Int> = emptyMap(),
 )
 
 /**
@@ -139,7 +141,18 @@ class DayResult(
  * Slice 2c adds the weekly planogram period (its directive, the reset of the floor on its first day) and the weekly count.
  * Offline and record-only: this class never opens a socket.
  */
-class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal: Calibration, val knobs: Knobs = Knobs()) {
+class StoreDaySim(
+    val model: StoreDayModel,
+    val behavior: BehaviorModel,
+    val cal: Calibration,
+    val knobs: Knobs = Knobs(),
+    /** Slice 2d: the scenarios planted in this store; null (the default, and every store that is not planted) is the 2c simulation exactly. */
+    val plant: StorePlant? = null,
+) {
+    init {
+        require(plant == null || knobs.periods) { "${model.slug}: planted scenarios ride the weekly period plan, so Knobs.periods must be on" }
+    }
+
     /** The Phase 1 plan: the plan of the anchor period and of every date before it. */
     val plan: ShelfPlan = behavior.stock.plan("model-v2", model.planLines)
     private val zone: ZoneId = ZoneId.of(model.timezone)
@@ -171,7 +184,30 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
     val zoneNames: Map<String, String> = com.m8trx.twin.history.ChainKeys.load().store(model.slug).zones.associate { it.zoneId to it.name }
 
     /** The store's weekly planogram periods (slice 2c). */
-    val periods = PeriodPlans(model, neighbours, overlay::departmentWeights, behavior.params.seed, knobs.periodKnobs, knobs.periods, zoneNames)
+    val periods = PeriodPlans(
+        model,
+        neighbours,
+        overlay::departmentWeights,
+        behavior.params.seed,
+        knobs.periodKnobs,
+        knobs.periods,
+        zoneNames,
+        plant?.let { PlantPlanEdit(model, it) },
+    )
+
+    /** The levers in force on the day being simulated (null on every day of an unplanted store, and before a planted window opens). */
+    private var plantNow: PlantLevers? = null
+
+    /**
+     * The offline starting snapshot. For a planted store it also starts from the planted stock position: no unit above a slot's
+     * edited requirement on the floor, and a product's `initial_units` cap on the whole store (a product the scenario wants
+     * nearly out cannot start with a full back room, because nothing but sales ever takes stock out).
+     */
+    fun initialState(): StoreState {
+        val p = plant ?: return StoreState.initial(model)
+        val required = periods.periodOf(maxOf(PeriodPlans.ANCHOR, PeriodPlans.periodStart(p.from))).required
+        return StoreState.initial(model, required, p.levers.initialUnits)
+    }
 
     /** One period's plan as the floor meets it: the shoppers' [ShelfPlan] and the demand weight over its cells. */
     inner class PeriodView(val period: PeriodPlan, shelf: ShelfPlan) {
@@ -217,13 +253,15 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         val log: DayLog,
         val view: PeriodView,
         val conversion: Double = 1.0,
+        val lev: PlantLevers? = null,
         val schedule: (Long, () -> Unit) -> Unit = { _, a -> a() },
     ) : FloorHooks {
-        override fun cellWeight(c: Cell): Double = view.weights[c] ?: 1e-7
+        override fun cellWeight(c: Cell): Double = (view.weights[c] ?: 1e-7) * (lev?.cellMul(c.ean) ?: 1.0)
 
-        override fun fixtureScale(code: String): Double = cal.fixtureScale[code] ?: 1.0
+        override fun fixtureScale(code: String): Double = (cal.fixtureScale[code] ?: 1.0) * (lev?.fixtureMul(code) ?: 1.0)
 
-        override fun buyScale(c: Cell): Double = (cal.departmentBuy[model.demand[c.ean]?.department] ?: 1.0) * conversion
+        override fun buyScale(c: Cell): Double =
+            (cal.departmentBuy[model.demand[c.ean]?.department] ?: 1.0) * conversion * (lev?.buyMul(c.ean, c.fixture) ?: 1.0)
 
         override fun available(c: Cell): Boolean = state == null || state.count(c.fixture, c.ean) > 0
 
@@ -324,7 +362,8 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         val startSold = state.soldEpcs().size
         val queue = PriorityQueue<Queued>(compareBy({ it.dueMs }, { it.seq }))
         var qseq = 0L
-        val hooks = Hooks(state, log, view, dayPlan.conversion) { due, action -> queue += Queued(due, qseq++, action) }
+        plantNow = plant?.takeIf { it.activeOn(date) }?.levers
+        val hooks = Hooks(state, log, view, dayPlan.conversion, plantNow) { due, action -> queue += Queued(due, qseq++, action) }
         val ratePerMs = { stockers: Int -> stockers * knobs.staffUnitsPerHour / 3_600_000.0 }
 
         // 0. the period: its directive goes out on the first open day, and a changed plan is reset before the delivery ----------
@@ -409,6 +448,26 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
             cap -= stray.epcs.size
             stage(stray.fixture, stray.ean, stray.epcs.map { state.pickUpEpc(it) }, "stray-return")
         }
+        // Slice 2d: a planted shelf is never stocked above its planned (full) quantity. Staff take the surplus of a planted slot (a put-back
+        // that came home to a refilled slot, a start-up snapshot that ran over) back to the rack before the day; unplanted stores skip this.
+        plantNow?.let {
+            val pf = plant!!.protectedFixtures
+            val pe = plant.protectedEans
+            for (loc in state.locations().filter { !state.isBackroomLoc(it) }.toList()) {
+                for (ean in state.eansAt(loc).toList().sorted()) {
+                    if (loc !in pf && ean !in pe) continue
+                    val extra = state.count(loc, ean) - (view.required[Slot(loc, ean)] ?: 0)
+                    if (extra <= 0) continue
+                    val epcs = (0 until extra).mapNotNull { state.pickUp(loc, ean) }
+                    cum += epcs.size
+                    val due = stockStart + (cum / ratePerMs(preOpenStockers)).toLong()
+                    val rack = rackFor(state, ean)
+                    epcs.forEach { state.place(it, rack, 0) }
+                    log.moves += MoveLog(due, "capacity-return", rack, ean, epcs)
+                    log.wire += moveEvent(due, "staff-preopen", rack, epcs, log.nextSeq())
+                }
+            }
+        }
         for (slot in deficitOrder(state, view, 1.0)) {
             if (cap <= 0) break
             val n = min(min(view.required.getValue(slot) - state.count(slot.fixture, slot.ean), state.backroomCount(slot.ean)), cap)
@@ -443,9 +502,17 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
                     val epcs = takeFromBackroom(state, slot.ean, n)
                     val due = walkAt + (done / rate).toLong()
                     queue += Queued(due, qseq++) {
-                        epcs.forEach { state.place(it, slot.fixture, view.homeLevel[Slot(slot.fixture, slot.ean)] ?: 1) }
-                        log.moves += MoveLog(due, "top-up", slot.fixture, slot.ean, epcs)
-                        log.wire += moveEvent(due, "staff-quiet-hour", slot.fixture, epcs, log.nextSeq())
+                        // a planted shelf takes no more than its planned quantity: units that no longer fit (a put-back landed meanwhile)
+                        // go back to the rack they came from, which the platform never saw them leave
+                        val guard = plant != null && plantNow != null && (slot.fixture in plant.protectedFixtures || slot.ean in plant.protectedEans)
+                        val room = if (guard) maxOf(0, view.required.getValue(slot) - state.count(slot.fixture, slot.ean)) else epcs.size
+                        val put = epcs.take(room)
+                        epcs.drop(room).forEach { state.place(it, rackFor(state, slot.ean), 0) }
+                        put.forEach { state.place(it, slot.fixture, view.homeLevel[Slot(slot.fixture, slot.ean)] ?: 1) }
+                        if (put.isNotEmpty()) {
+                            log.moves += MoveLog(due, "top-up", slot.fixture, slot.ean, put)
+                            log.wire += moveEvent(due, "staff-quiet-hour", slot.fixture, put, log.nextSeq())
+                        }
                     }
                 }
             }
@@ -522,6 +589,7 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
             if (resetNeeded) from else null,
             unfilled,
             log.counts.sortedBy { it.startMs },
+            if (plant != null) backroomByEan(state) else emptyMap(),
         )
     }
 
@@ -703,7 +771,7 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         val out = java.util.TreeMap<String, Int>()
         val eans = if (knobs.periods) (model.backroomTarget.keys + deficit.keys).toSortedSet() else model.backroomTarget.keys
         for (ean in eans) {
-            val cover = model.backroomTarget[ean] ?: 0
+            val cover = plantNow?.backroomAbs?.get(ean) ?: model.backroomTarget[ean] ?: 0
             val cs = model.caseSize(ean)
             val back = state.backroomCount(ean)
             val shortfall = cover - (back - (deficit[ean] ?: 0))
@@ -744,6 +812,15 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         }
         return out.groupBy { it.ean to it.fixture }.map { (k, v) -> Stray(k.first, k.second, v.flatMap { it.epcs }) }
             .sortedWith(compareBy({ it.fixture }, { it.ean }))
+    }
+
+    private fun backroomByEan(state: StoreState): Map<String, Int> {
+        val out = java.util.TreeMap<String, Int>()
+        for (loc in state.locations()) {
+            if (!state.isBackroomLoc(loc)) continue
+            for (ean in state.eansAt(loc)) out.merge(ean, state.count(loc, ean), Int::plus)
+        }
+        return out
     }
 
     /** Floor units per (fixture, EAN), plan slots and strays alike. */

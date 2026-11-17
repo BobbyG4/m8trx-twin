@@ -601,3 +601,14 @@ storeDayTask(
     "Offline: ordering rule, sold-from-fixture, no double sale, conservation, 28-day band, weekday/weekend, department shares, determinism.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDaySelfTest") }
+storeDayTask(
+    "storeDayPlantRun",
+    "com.m8trx.twin.storeday.PlantRunKt",
+    "Offline: plant the eval scenarios in Denver and Paris, simulate, write out/scenarios/<run>/answer-key.json + VERIFY.md. Record only.",
+)
+storeDayTask(
+    "storeDayPlantSelfTest",
+    "com.m8trx.twin.storeday.PlantSelfTestKt",
+    "Offline: every planted scenario verifies in a 28-day Denver + Paris run; non-planted stores byte-identical; the key matches the eval's fields; determinism.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeDayPlantSelfTest") }
