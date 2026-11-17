@@ -178,12 +178,30 @@ object StockCounts {
         return CountPlan(countId, store.slug, date, k, fullFloor, pulls, missing, over, observations)
     }
 
-    private fun tag(epc: String, over: Boolean, from: Instant, to: Instant, rng: Random): Tag {
+    internal fun tag(epc: String, over: Boolean, from: Instant, to: Instant, rng: Random): Tag {
         val reads = if (over) 5 + rng.nextInt(5) else 3 + rng.nextInt(7)
         val rssi = if (over) -48 - rng.nextInt(8) else -45 - rng.nextInt(20)
         val span = (to.epochSecond - from.epochSecond).coerceAtLeast(1)
         val first = from.plusSeconds(rng.nextLong(span))
         val last = first.plusSeconds(rng.nextLong((to.epochSecond - first.epochSecond).coerceAtLeast(0) + 1))
         return Tag(epc, reads, rssi, rssi - 3.5, first, last)
+    }
+
+    /**
+     * Slice 2c (offline store day): the pull of ONE fixture reading exactly [epcs], the units the store's truth says are on it
+     * at [start] (no `missing`, no `over` injected: the floor itself supplies the misplacements and gaps). Framed and timed as
+     * [planOne] frames a pull (60 s plus a quarter second a tag, [FRAME_MAX_TAGS] tags a frame; an empty fixture is one empty frame).
+     */
+    fun truthPull(countId: String, code: String, zoneId: String, epcs: List<String>, start: Instant, rng: Random): FixturePull {
+        val seconds = 60L + epcs.size / 4
+        val end = start.plusSeconds(seconds)
+        val chunks = epcs.chunked(FRAME_MAX_TAGS).ifEmpty { listOf(emptyList()) }
+        val span = seconds / chunks.size
+        val frames = chunks.mapIndexed { seq, chunk ->
+            val fs = start.plusSeconds(span * seq)
+            val fe = if (seq == chunks.lastIndex) end else fs.plusSeconds(span)
+            Frame(seq, fs, fe, chunk.map { tag(it, false, fs, fe, rng) })
+        }
+        return FixturePull(code, zoneId, uuid("twin-stock-pull", countId, code), frames)
     }
 }

@@ -115,11 +115,12 @@ object StoreDayOutput {
         }
 
         // truth: on hand vs plan -----------------------------------------------------------------------------------
-        val slots = (sim.model.required.keys + r.openOnHand.keys + r.closeOnHand.keys).toSortedSet()
+        val required = r.required.ifEmpty { sim.model.required }
+        val slots = (required.keys + r.openOnHand.keys + r.closeOnHand.keys).toSortedSet()
         Files.newBufferedWriter(truth.resolve("onhand.csv")).use { w ->
             w.write("date,fixture,ean,plan_qty,open_qty,close_qty\n")
             slots.forEach { s ->
-                w.write("$date,${s.fixture},${s.ean},${sim.model.required[s] ?: 0},${r.openOnHand[s] ?: 0},${r.closeOnHand[s] ?: 0}\n")
+                w.write("$date,${s.fixture},${s.ean},${required[s] ?: 0},${r.openOnHand[s] ?: 0},${r.closeOnHand[s] ?: 0}\n")
             }
         }
 
@@ -148,6 +149,7 @@ object StoreDayOutput {
     }
 
     fun summary(sim: StoreDaySim, r: DayResult): Map<String, Any> {
+        val required = r.required.ifEmpty { sim.model.required }
         val tx = r.records.count { it.bought }
         val units = r.saleUnits.size
         val lostSales = r.records.sumOf { rec -> rec.stockOuts.count { it.lost } }
@@ -173,8 +175,12 @@ object StoreDayOutput {
             "misplacements" to r.misplacements,
             "units_start" to r.startUnits,
             "units_end" to r.endUnits,
-            "floor_units_open" to r.openOnHand.entries.filter { it.key in sim.model.required }.sumOf { it.value },
-            "floor_units_close" to r.closeOnHand.entries.filter { it.key in sim.model.required }.sumOf { it.value },
+            "floor_units_open" to r.openOnHand.entries.filter { it.key in required }.sumOf { it.value },
+            "floor_units_close" to r.closeOnHand.entries.filter { it.key in required }.sumOf { it.value },
+            "directive_issued" to (r.issued?.let { sim.periods.directiveId(it.start) } ?: ""),
+            "period_lines_changed" to (r.issued?.linesChanged ?: 0),
+            "reset_units" to r.moves.filter { it.reason.startsWith("reset-") }.sumOf { it.epcs.size },
+            "counts" to r.counts.map { c -> mapOf("count_id" to c.countId, "fixtures" to c.pulls.size, "reads" to c.pulls.sumOf { it.epcs }) },
         )
     }
 }
