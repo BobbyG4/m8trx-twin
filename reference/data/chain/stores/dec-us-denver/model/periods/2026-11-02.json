@@ -1,0 +1,12 @@
+{
+  "store" : "dec-us-denver",
+  "period_start" : "2026-11-02",
+  "period_end" : "2026-11-09",
+  "external_directive_id" : "PLNW-dec-us-denver-20261102",
+  "previous_directive_id" : "PLNW-dec-us-denver-20261026",
+  "lines" : 6365,
+  "total_required" : 26863,
+  "lines_changed" : 0,
+  "plan_digest" : "51380abe21ce19f5",
+  "changes" : [ ]
+}

@@ -1,0 +1,103 @@
+{
+  "store" : "dec-us-denver",
+  "period_start" : "2026-11-09",
+  "period_end" : "2026-11-16",
+  "external_directive_id" : "PLNW-dec-us-denver-20261109",
+  "previous_directive_id" : "PLNW-dec-us-denver-20261102",
+  "lines" : 6365,
+  "total_required" : 26864,
+  "lines_changed" : 13,
+  "plan_digest" : "9b48543b97ddc93c",
+  "changes" : [ {
+    "kind" : "facings",
+    "department" : "climb",
+    "fixture" : "GF-R4-U5",
+    "ean" : "3608390942541",
+    "from" : "1",
+    "to" : "2"
+  }, {
+    "kind" : "facings",
+    "department" : "climb",
+    "fixture" : "GF-R4-U5",
+    "ean" : "3608390944521",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U6",
+    "ean" : "3608392149764",
+    "from" : "1",
+    "to" : "2"
+  }, {
+    "kind" : "facings",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U6",
+    "ean" : "3608409846402",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "swap",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U2",
+    "ean" : "3608391533250",
+    "from" : "GF-R2-U2",
+    "to" : "GB-R2-U2"
+  }, {
+    "kind" : "swap",
+    "department" : "cycling",
+    "fixture" : "GB-R2-U2",
+    "ean" : "3608390862221",
+    "from" : "GB-R2-U2",
+    "to" : "GF-R2-U2"
+  }, {
+    "kind" : "facings",
+    "department" : "hike_camp",
+    "fixture" : "GF-R6-U6",
+    "ean" : "3608439483486",
+    "from" : "1",
+    "to" : "2"
+  }, {
+    "kind" : "facings",
+    "department" : "hike_camp",
+    "fixture" : "GF-R6-U6",
+    "ean" : "3608439483516",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "swap",
+    "department" : "hike_camp",
+    "fixture" : "GF-R1-U4",
+    "ean" : "3608392229503",
+    "from" : "GF-R1-U4",
+    "to" : "GB-R1-U4"
+  }, {
+    "kind" : "swap",
+    "department" : "hike_camp",
+    "fixture" : "GB-R1-U4",
+    "ean" : "3608439366086",
+    "from" : "GB-R1-U4",
+    "to" : "GF-R1-U4"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GPS-04",
+    "ean" : "3608394135390",
+    "from" : "2",
+    "to" : "4"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GPS-04",
+    "ean" : "3608393936660",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GPS-04",
+    "ean" : "3608394135376",
+    "from" : "2",
+    "to" : "1"
+  } ]
+}

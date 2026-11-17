@@ -14,13 +14,15 @@ package com.m8trx.twin.connect.model.webhook
  * distinct `site_id`) + one `compliance_target` per placement (`mapping_status=pending_zone_mapping` — the
  * `raw_fixture_code → zone` resolver is a LATER slice).
  *
- * Wire (snake): `name`, `external_directive_id`, `effective_date`, `targets[]`.
+ * Wire (snake): `name`, `external_directive_id`, `effective_date`, `expiry_date`, `targets[]`.
  */
 data class PlanogramDirective(
     val name: String,
     val externalDirectiveId: String, // idempotency key — re-send replaces this directive's sites/targets
     val effectiveDate: String?, // optional; the ingester defaults to now
     val targets: List<DirectiveTarget>,
+    /** The stop date (A3, deployed 2026-11-17): after [effectiveDate]; a bare day is the store's own midnight. Omitted when null. */
+    val expiryDate: String? = null,
 )
 
 /**

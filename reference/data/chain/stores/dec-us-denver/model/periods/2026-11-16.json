@@ -1,0 +1,145 @@
+{
+  "store" : "dec-us-denver",
+  "period_start" : "2026-11-16",
+  "period_end" : "2026-11-23",
+  "external_directive_id" : "PLNW-dec-us-denver-20261116",
+  "previous_directive_id" : "PLNW-dec-us-denver-20261109",
+  "lines" : 6365,
+  "total_required" : 26867,
+  "lines_changed" : 19,
+  "plan_digest" : "1259f1c436881da9",
+  "changes" : [ {
+    "kind" : "facings",
+    "department" : "climb",
+    "fixture" : "GF-R4-U4",
+    "ean" : "3608392244568",
+    "from" : "2",
+    "to" : "4"
+  }, {
+    "kind" : "facings",
+    "department" : "climb",
+    "fixture" : "GF-R4-U4",
+    "ean" : "3608392244735",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "climb",
+    "fixture" : "GF-R4-U4",
+    "ean" : "3608392398513",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "swap",
+    "department" : "climb",
+    "fixture" : "GF-R4-U2",
+    "ean" : "3608391819514",
+    "from" : "GF-R4-U2",
+    "to" : "GB-R4-U2"
+  }, {
+    "kind" : "swap",
+    "department" : "climb",
+    "fixture" : "GB-R4-U2",
+    "ean" : "3583787480434",
+    "from" : "GB-R4-U2",
+    "to" : "GF-R4-U2"
+  }, {
+    "kind" : "facings",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U6",
+    "ean" : "3608392149795",
+    "from" : "1",
+    "to" : "3"
+  }, {
+    "kind" : "facings",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U6",
+    "ean" : "3608392149764",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U6",
+    "ean" : "3608409846402",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "swap",
+    "department" : "cycling",
+    "fixture" : "GB-R2-U4",
+    "ean" : "3608393569165",
+    "from" : "GB-R2-U4",
+    "to" : "GF-R2-U4"
+  }, {
+    "kind" : "swap",
+    "department" : "cycling",
+    "fixture" : "GF-R2-U4",
+    "ean" : "3608391192648",
+    "from" : "GF-R2-U4",
+    "to" : "GB-R2-U4"
+  }, {
+    "kind" : "facings",
+    "department" : "hike_camp",
+    "fixture" : "PE-01",
+    "ean" : "3608439404931",
+    "from" : "2",
+    "to" : "3"
+  }, {
+    "kind" : "facings",
+    "department" : "hike_camp",
+    "fixture" : "PE-01",
+    "ean" : "3608439404900",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GB-R5-U3",
+    "ean" : "3608390768011",
+    "from" : "2",
+    "to" : "4"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GB-R5-U3",
+    "ean" : "3608390767991",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "facings",
+    "department" : "running",
+    "fixture" : "GB-R5-U3",
+    "ean" : "3608390767984",
+    "from" : "2",
+    "to" : "1"
+  }, {
+    "kind" : "swap",
+    "department" : "running",
+    "fixture" : "GB-R5-U2",
+    "ean" : "3608390866366",
+    "from" : "GB-R5-U2",
+    "to" : "GF-R5-U2"
+  }, {
+    "kind" : "swap",
+    "department" : "running",
+    "fixture" : "GF-R5-U2",
+    "ean" : "3608429804796",
+    "from" : "GF-R5-U2",
+    "to" : "GB-R5-U2"
+  }, {
+    "kind" : "swap",
+    "department" : "snow",
+    "fixture" : "PW-04",
+    "ean" : "3608392758317",
+    "from" : "PW-04",
+    "to" : "GF-R3-U1"
+  }, {
+    "kind" : "swap",
+    "department" : "snow",
+    "fixture" : "GF-R3-U1",
+    "ean" : "3608390346110",
+    "from" : "GF-R3-U1",
+    "to" : "PW-04"
+  } ]
+}

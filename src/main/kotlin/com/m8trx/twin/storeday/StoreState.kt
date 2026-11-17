@@ -37,6 +37,12 @@ class StoreState(val slug: String) {
     var nextSerial: Long = deliveryBase(slug)
     var asOf: LocalDate? = null
 
+    /**
+     * Slice 2c: the first day of the planogram period the floor is arranged for (null = the Phase 1 baseline, nothing issued yet).
+     * A day in a different period issues that period's directive and resets the floor from this one to it.
+     */
+    var planPeriod: LocalDate? = null
+
     val size: Int get() = units.size
     fun unit(epc: String): Unit? = units[epc]
     fun soldEpcs(): List<String> = soldOrder
@@ -160,7 +166,7 @@ class StoreState(val slug: String) {
         }
         Files.writeString(
             Path.of("$base.meta"),
-            "slug=$slug\nnext_serial=$nextSerial\nas_of=${asOf ?: ""}\nunits=${units.size}\nsold=${soldOrder.size}\n",
+            "slug=$slug\nnext_serial=$nextSerial\nas_of=${asOf ?: ""}\nplan_period=${planPeriod ?: ""}\nunits=${units.size}\nsold=${soldOrder.size}\n",
         )
     }
 
@@ -192,6 +198,7 @@ class StoreState(val slug: String) {
             val s = StoreState(meta.getValue("slug"))
             s.nextSerial = meta.getValue("next_serial").toLong()
             s.asOf = meta["as_of"]?.takeIf { it.isNotBlank() }?.let(LocalDate::parse)
+            s.planPeriod = meta["plan_period"]?.takeIf { it.isNotBlank() }?.let(LocalDate::parse)
             Files.newBufferedReader(Path.of("$base.csv")).useLines { ls ->
                 ls.drop(1).forEach { l ->
                     val c = l.split(",")

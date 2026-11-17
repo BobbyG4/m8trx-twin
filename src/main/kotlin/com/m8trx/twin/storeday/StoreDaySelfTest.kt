@@ -19,10 +19,10 @@ import kotlin.system.exitProcess
  * hard rules. Writes only under `build/storeday-selftest/`; sends nothing.
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.storeday.StoreDaySelfTest")
-private var passed = 0
-private var failed = 0
+internal var passed = 0
+internal var failed = 0
 
-private fun check(name: String, ok: Boolean, detail: String) {
+internal fun check(name: String, ok: Boolean, detail: String) {
     if (ok) passed++ else failed++
     log.info("  {} {} - {}", if (ok) "✓" else "✗", name, detail)
 }
@@ -660,9 +660,11 @@ fun main() {
     val only = System.getenv("M8TRX_STORE_DAY_SELFTEST_SITE")?.takeIf { it.isNotBlank() }
     val sites = if (only != null) listOf(only) else StoreState.STORE_SLUGS
     sites.forEach { checkStore(it) }
+    sites.forEach { checkPeriods(it) }
     if (only == null) {
         checkCalendar()
         checkChain()
+        checkPeriodsChain()
     }
     log.info("storeDaySelfTest: {} passed, {} failed ({} stores)", passed, failed, sites.size)
     if (failed > 0) exitProcess(1)

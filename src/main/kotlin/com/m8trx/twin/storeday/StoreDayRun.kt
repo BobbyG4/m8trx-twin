@@ -18,6 +18,9 @@ import java.util.TreeMap
  * path to resume from, no extension; default: the offline initial snapshot) · `M8TRX_STORE_DAY_SAMPLES` (false) ·
  * knobs `M8TRX_STORE_DAY_CALENDAR` (true) · `M8TRX_STORE_DAY_MISPLACE` (0.005) · `_STAFF_UPH` (120) · `_PREOPEN_STOCKERS` (3) · `_TOPUP_STOCKERS` (1) ·
  * `_TOPUP_THRESHOLD` (0.60) · `_QUIET_HOURS` (3).
+ * Slice 2c: `M8TRX_STORE_DAY_PERIODS` (true; false is the 2b day) · `_PERIOD_LINES_MIN`/`_MAX` (2/3 lines changing facings per department per week) ·
+ * `_PERIOD_SWAPS` (at most 1 style swap per department per week) · `_RESET_LEAD_MIN` (180) · `_COUNT_SHARE` (0.25; 0 = no counts) · `_COUNT_SKIP_OPEN_HOURS` (2) ·
+ * `M8TRX_STORE_DAY_PERIODS_DIR` (also write `<yyyy-mm-dd>.json` period files there; default none, the run writes `<out>/<slug>/periods/`).
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.storeday.StoreDayRun")
 
@@ -34,6 +37,15 @@ fun knobsFromEnv(): Knobs {
         quietHours = env("M8TRX_STORE_DAY_QUIET_HOURS", d.quietHours.toString()).toInt(),
         samples = env("M8TRX_STORE_DAY_SAMPLES", "false").toBoolean(),
         calendar = env("M8TRX_STORE_DAY_CALENDAR", d.calendar.toString()).toBoolean(),
+        periods = env("M8TRX_STORE_DAY_PERIODS", d.periods.toString()).toBoolean(),
+        periodKnobs = PeriodKnobs(
+            linesMin = env("M8TRX_STORE_DAY_PERIOD_LINES_MIN", d.periodKnobs.linesMin.toString()).toInt(),
+            linesMax = env("M8TRX_STORE_DAY_PERIOD_LINES_MAX", d.periodKnobs.linesMax.toString()).toInt(),
+            swapMax = env("M8TRX_STORE_DAY_PERIOD_SWAPS", d.periodKnobs.swapMax.toString()).toInt(),
+        ),
+        resetLeadMin = env("M8TRX_STORE_DAY_RESET_LEAD_MIN", d.resetLeadMin.toString()).toInt(),
+        countShare = env("M8TRX_STORE_DAY_COUNT_SHARE", d.countShare.toString()).toDouble(),
+        countSkipOpenHours = env("M8TRX_STORE_DAY_COUNT_SKIP_OPEN_HOURS", d.countSkipOpenHours.toString()).toInt(),
     )
 }
 
@@ -88,6 +100,21 @@ class RunTally(val sim: StoreDaySim) {
     var conservationOk = true
     val firstDate: LocalDate? get() = days.firstOrNull()?.date
 
+    /** Slice 2c: what one planogram period did over the run. */
+    class PeriodStats(val start: LocalDate, val plan: PeriodPlan) {
+        var issued = false
+        var resetUnits = 0
+        var resetBatches = 0
+        val counts = ArrayList<CountRecord>()
+        val countRows = ArrayList<PeriodTruth.Row>()
+        var lastCloseMs = 0L
+        var lastClose: Map<Slot, Int> = emptyMap()
+        var lastRequired: Map<Slot, Int> = emptyMap()
+        val rows: List<PeriodTruth.Row> get() = countRows + PeriodTruth.endRows(plan, lastCloseMs, lastClose)
+    }
+
+    val periodStats = TreeMap<LocalDate, PeriodStats>()
+
     fun add(r: DayResult) {
         val s = StoreDayOutput.summary(sim, r)
         val weekendShape = r.plan.shape?.weekend ?: (r.date.dayOfWeek.value >= 6)
@@ -134,12 +161,78 @@ class RunTally(val sim: StoreDaySim) {
             weekdayVisitors += r.expectedVisitors * r.plan.conversion
             weekdayVisits += r.records.size
         }
-        val floorClose = r.closeOnHand.entries.filter { it.key in sim.model.required }.sumOf { it.value }
+        val required = r.required.ifEmpty { sim.model.required }
+        val floorClose = r.closeOnHand.entries.filter { it.key in required }.sumOf { it.value }
         floorCloseMin = minOf(floorCloseMin, floorClose)
         floorCloseMax = maxOf(floorCloseMax, floorClose)
         storeUnitsMin = minOf(storeUnitsMin, r.endUnits)
         storeUnitsMax = maxOf(storeUnitsMax, r.endUnits)
         if (r.startUnits + r.receivedEpcs.size != r.endUnits + r.saleUnits.size) conservationOk = false
+        if (sim.knobs.periods) {
+            val start = PeriodPlans.periodStart(r.date)
+            val ps = periodStats.getOrPut(start) { PeriodStats(start, sim.periods.periodOf(start)) }
+            if (r.issued != null) ps.issued = true
+            val resets = r.moves.filter { it.reason.startsWith("reset-") }
+            ps.resetUnits += resets.sumOf { it.epcs.size }
+            ps.resetBatches += resets.size
+            r.counts.forEach { c ->
+                ps.counts += c
+                ps.countRows += PeriodTruth.countRows(ps.plan, c)
+            }
+            if (!r.plan.closed) {
+                val shape = r.plan.shape!!
+                ps.lastCloseMs = java.time.ZonedDateTime.of(r.date, shape.open, java.time.ZoneId.of(sim.model.timezone)).toInstant().toEpochMilli() +
+                    shape.curve.size * 3_600_000L
+                ps.lastClose = r.closeOnHand
+                ps.lastRequired = required
+            }
+        }
+    }
+
+    /** Compliance the weekly counts saw: the share of planned lines holding at least their requirement, over all pulls, and the worst fixture. */
+    class CountCompliance(
+        val pulls: Int,
+        val lines: Int,
+        val compliant: Int,
+        val worstFixture: String,
+        val worstPct: Double,
+        val periodEndPct: Double,
+        val atLeast60Pct: Double,
+    ) {
+        val meanPct: Double get() = if (lines == 0) 0.0 else 100.0 * compliant / lines
+    }
+
+    fun countCompliance(): CountCompliance {
+        var lines = 0
+        var ok = 0
+        var worst = 101.0
+        var worstName = "-"
+        var pulls = 0
+        var sixty = 0
+        periodStats.values.forEach { ps ->
+            ps.countRows.filter { it.required > 0 }.groupBy { it.period to it.fixture }.forEach { (k, rs) ->
+                pulls++
+                val c = rs.count(PeriodTruth::compliant)
+                lines += rs.size
+                sixty += rs.count { it.onHand * 10 >= it.required * 6 }
+                ok += c
+                val pct = 100.0 * c / rs.size
+                if (pct < worst) {
+                    worst = pct
+                    worstName = "${k.second}@${k.first}"
+                }
+            }
+        }
+        val end = periodStats.values.flatMap { it.rows.filter { r -> r.point == "period_end" && r.required > 0 } }
+        return CountCompliance(
+            pulls,
+            lines,
+            ok,
+            worstName,
+            if (pulls == 0) 0.0 else worst,
+            if (end.isEmpty()) 0.0 else 100.0 * end.count(PeriodTruth::compliant) / end.size,
+            if (lines == 0) 0.0 else 100.0 * sixty / lines,
+        )
     }
 
     /** What a shopper can take: EANs some fixture holds. Off-floor EANs (a small store cannot shelve its whole range) cannot sell. */
@@ -187,6 +280,7 @@ fun runStore(
         calibrationPath(site),
     )
     val tally = RunTally(sim)
+    val periodsDir = System.getenv("M8TRX_STORE_DAY_PERIODS_DIR")?.takeIf { it.isNotBlank() }?.let { Path.of(it) }
     for (i in 0 until days) {
         val date = from.plusDays(i.toLong())
         val r = sim.simulate(state, date, seed)
@@ -202,6 +296,14 @@ fun runStore(
     }
     if (write) {
         state.save(root.resolve("state/latest"))
+        tally.periodStats.values.forEach { ps ->
+            val dir = root.resolve("periods").resolve(ps.start.toString())
+            Files.createDirectories(dir)
+            Files.writeString(dir.resolve("period.json"), sim.periods.periodJson(ps.plan))
+            Files.writeString(dir.resolve("directive.json"), ConnectMappers.snake.writeValueAsString(sim.periods.directiveJson(ps.plan)) + "\n")
+            PeriodTruth.write(dir, ps.rows)
+            periodsDir?.let { sim.periods.writePeriodFile(it, ps.plan) }
+        }
         Files.createDirectories(root)
         Files.writeString(root.resolve("run-summary.md"), RunReport.markdown(tally, from, days, seed, knobs))
     }
@@ -260,6 +362,24 @@ object ChainReport {
             )
         }
         appendLine()
+        appendLine("Slice 2c, weekly planogram periods and counts:")
+        appendLine()
+        appendLine(
+            "| store | periods issued | lines changed per period | reset units (batches) | counts | fixtures counted (distinct/of floor) | compliant at count (mean %, strict) | at least 60 % of required | worst fixture | period end compliant % |",
+        )
+        appendLine("|---|---:|---|---:|---:|---|---:|---:|---|---:|")
+        for (t in ts.filter { it.sim.knobs.periods }) {
+            val ps = t.periodStats.values
+            val cc = t.countCompliance()
+            val counted = ps.flatMap { p -> p.counts.flatMap { c -> c.pulls.map { it.fixture } } }
+            appendLine(
+                "| ${t.sim.model.slug} | ${ps.count { it.issued }} | ${ps.joinToString("/") { it.plan.linesChanged.toString() }} " +
+                    "| ${ps.sumOf { it.resetUnits }} (${ps.sumOf { it.resetBatches }}) | ${ps.sumOf { it.counts.size }} " +
+                    "| ${counted.size} (${counted.toSet().size} of ${t.sim.periods.periodOf(PeriodPlans.ANCHOR).fixtures.size}) | ${f(cc.meanPct)} " +
+                    "| ${f(cc.atLeast60Pct)} | ${f(cc.worstPct)} % ${cc.worstFixture} | ${f(cc.periodEndPct)} |",
+            )
+        }
+        appendLine()
         appendLine("Department share of units sold, simulated vs the demand target (percentage points in brackets):")
         appendLine()
         val depts = ts.flatMap { it.unitsByDept.keys }.toSortedSet()
@@ -307,6 +427,20 @@ object RunReport {
         appendLine("| floor units at close (plan slots) | ${t.floorCloseMin} .. ${t.floorCloseMax} |")
         appendLine("| store units (floor + back room) at close | ${t.storeUnitsMin} .. ${t.storeUnitsMax} |")
         appendLine("| units by week | ${t.weekUnits.entries.joinToString(", ") { "w${it.key}=${it.value}" }} |")
+        if (t.sim.knobs.periods) {
+            val ps = t.periodStats.values
+            val cc = t.countCompliance()
+            appendLine("| periods issued | ${ps.count { it.issued }} (lines changed ${ps.joinToString("/") { it.plan.linesChanged.toString() }}) |")
+            appendLine("| reset units | ${ps.sumOf { it.resetUnits }} in ${ps.sumOf { it.resetBatches }} batches |")
+            appendLine(
+                "| counts | ${ps.sumOf {
+                    it.counts.size
+                }} counts, ${cc.pulls} fixture pulls; compliant at count ${"%.1f".format(
+                    cc.meanPct,
+                )} % (at least 60 % of required ${"%.1f".format(cc.atLeast60Pct)} %; worst ${cc.worstFixture} " +
+                    "${"%.1f".format(cc.worstPct)} %), period end ${"%.1f".format(cc.periodEndPct)} % |",
+            )
+        }
         appendLine()
         appendLine("| department | units | share | demand share |")
         appendLine("|---|---:|---:|---:|")
