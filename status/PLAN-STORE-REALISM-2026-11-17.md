@@ -524,7 +524,11 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    window the twin should avoid, beyond ":00–:08"?
 
    > **[B/W] A11 (2026-11-17).**
-   > - **Readiness signal:** `GET https://dev.m8trx.com/m8trx/api/actuator/health`, no key needed. Ready means HTTP 200 **and**
+   > - **⚠ CORRECTED 2026-11-17 14:56 KST: the URL first written here was WRONG.** `https://dev.m8trx.com/m8trx/api/actuator/health` is
+   >   answered by the web app's page with a 200 whatever the server's state, so it can never say "not ready". The real one is
+   >   below; I had copied a wrong path into my own check and found it when the check passed on a page of HTML.
+   > - **Readiness signal:** `GET https://dev.m8trx.com/server/api/health`, no key needed (the API's public base on dev is
+   >   `https://dev.m8trx.com/server`). Ready means HTTP 200 **and**
    >   `"status":"ok"` in the body (the body also reports `db` and `hasura`). It answers 200 with `"status":"degraded"` when the
    >   database or Hasura check fails, so read the body, not only the code. During a restart it is a 502 from the front door.
    >   Measured today: container created 11:59:07 KST, 502 at 11:59:21, ok at 11:59:36; about half a minute.
