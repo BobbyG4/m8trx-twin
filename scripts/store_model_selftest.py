@@ -113,7 +113,10 @@ def main():
         ok(lv is not None, "line on unknown level %s" % (key,))
         if lv is None:
             continue
-        ok(l["facings"] >= 1, "facings < 1 at %s" % (key,))
+        ok(1 <= l["facings"] <= B.MAX_FACINGS_PER_EAN, "facings %d outside 1..%d at %s" % (l["facings"], B.MAX_FACINGS_PER_EAN, key))
+        if "spill_from" in l:
+            ok(l["spill_from"] == l["department"] == B.SPILL_FROM and floor[l["fixture_code"]].get("department") == "general",
+               "spill line wrongly tagged at %s" % (key,))
         ok(l["required_qty"] <= l["facings"] * lv["units_per_facing"], "line over capacity at %s" % (key,))
         ok(l["form"] == lv["form"] and l["display_level"] == lv["display_level"], "form/display mismatch at %s" % (key,))
         used[(l["fixture_code"], l["level"])] += l["facings"]
