@@ -8,7 +8,12 @@
   box ops scripts + digest now in `ops/box/` (digest reads the live plane). First hourly pass on `main` 14:06 KST: 0 errors.
 - **Phase 1 (Denver) ✅** — #29: `stores/dec-us-denver/model/` (profile, fixture kits, demand, planogram v2, stock to plan);
   2,497 of 2,586 EANs on the floor, 87.6% fill, only the two service fixtures empty. Offline; nothing sent.
-- **Phase 2a (Denver store-day) — building** (brief `status/briefs/BRIEF-PHASE2-STORE-DAY-SIMULATION-2026-11-17.md`).
+- **Phase 2a ✅** (#30) — stock-aware Denver store-day: deliveries, quiet-hour top-ups, wire plan, truth ledger; 28 days no drain.
+- **Phase 2b ✅** (#31) — all ten stores (Phase 1 models for all), StoryCalendar overlays, misplacement ≈ 5% of units sold;
+  28-day run: w4/w1 99–115% everywhere, stock in band, lost sales 0.7–3.7%.
+- **Phase 2c (weekly planogram periods, resets, counts) — building**; 2d (planted scenarios + answer key) next.
+- **Phase 3 designed, not started** — `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
+  received + ~6.4k move batches, paced over hours, announced) needs Bob's go and a scheduled night.
 - **Waiting on Bob:** D3 numbers (location factors, real hours, delivery cut-off — Phase 1 uses provisional values);
   Denver's entrance zone retyped `entry_exit` → `region` on 2026-11-11 by a person in the app (plan § 8 A12) — intended?;
   disable `twin-outbound` (506/506 failed)?
