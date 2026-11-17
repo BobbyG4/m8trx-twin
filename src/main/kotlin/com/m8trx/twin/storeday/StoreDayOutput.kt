@@ -155,6 +155,10 @@ object StoreDayOutput {
         return linkedMapOf(
             "store" to sim.model.slug,
             "date" to r.date.toString(),
+            "closed" to r.plan.closed,
+            "holiday" to (r.plan.holiday ?: ""),
+            "promo" to (r.plan.promo ?: ""),
+            "conversion_multiplier" to Math.round(r.plan.conversion * 10_000) / 10_000.0,
             "expected_visitors" to Math.round(r.expectedVisitors * 10) / 10.0,
             "visitors" to r.records.size,
             "transactions" to tx,

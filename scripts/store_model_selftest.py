@@ -217,6 +217,9 @@ def main():
     for s_, p_ in pj["stores"].items():
         ok(p_["delivery_lead_min"] == (60 if p_["area_sqm"] >= 500 else 30), "delivery lead wrong for %s" % s_)
         ok(p_["provisional"] is True and p_["location_factor"] == 1.0, "profile %s not provisional/1.0" % s_)
+    # ---- the nine neutral behavior files are what the generator writes
+    ok(subprocess.run([sys.executable, os.path.join(ROOT, "scripts/build_store_behavior.py"), "--check"]).returncode == 0,
+       "reference/data/behavior/<slug>.json is not what build_store_behavior.py writes")
     # ---- chain summary doc is what the builder writes from the committed model files
     slugs = all_slugs()
     ok(read(B.SUMMARY_MD) == B.chain_summary(slugs), "STORE-MODEL-SUMMARY.md is not what the builder produces")

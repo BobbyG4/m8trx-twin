@@ -12,7 +12,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.IdentityHashMap
@@ -48,8 +47,11 @@ data class Calibration(val fixtureScale: Map<String, Double>, val departmentBuy:
 
 /** The operational knobs of a store day (brief 2a). */
 data class Knobs(
-    /** Chance a put-back lands on a neighbouring fixture instead of its own. */
-    val misplaceProb: Double = 0.02,
+    /**
+     * Chance a put-back lands on a neighbouring fixture instead of its own. Shoppers put back about ten units for every unit
+     * they buy, so 0.005 puts roughly 5 % of units sold on the wrong fixture over a month (the 2a default, 0.02, was about 20 %).
+     */
+    val misplaceProb: Double = 0.005,
     /** Units one staff member moves per hour. */
     val staffUnitsPerHour: Double = 120.0,
     /** Staff stocking before open; default = the staffing model's off-peak associates on the floor. */
@@ -62,6 +64,10 @@ data class Knobs(
     val quietHours: Int = 3,
     /** Record the 5 Hz position samples (the sidecar). Off by default; a month of them is gigabytes. */
     val samples: Boolean = false,
+    /** Apply [StoryCalendar] overlays (slice 2b). False reproduces the 2a day: the behavior model's own week wave, no holidays. */
+    val calendar: Boolean = true,
+    /** Scale the staff counts by the store's size (never above the knob value, never below one). False uses the counts as given. */
+    val scaleStaff: Boolean = true,
 )
 
 /** One unit that left a fixture in a sale. [fixture] is where the shopper stood: the platform should stamp the sale there. */
@@ -95,6 +101,7 @@ class DayResult(
     val misplacements: Int,
     val samples: MemorySampleSink?,
     val expectedVisitors: Double,
+    val plan: DayPlan,
 )
 
 /**
@@ -105,13 +112,18 @@ class DayResult(
 class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal: Calibration, val knobs: Knobs = Knobs()) {
     val plan: ShelfPlan = behavior.stock.plan("model-v2", model.planLines)
     private val zone: ZoneId = ZoneId.of(model.timezone)
-    private val openTime: LocalTime = LocalTime.parse(behavior.model.store.operatingHours.open)
+    val overlay = DayOverlay(model, behavior, knobs.calendar)
 
-    init {
-        // The delivery window is cut from the store's own hours; the behavior model's arrivals use the operating model's.
-        val h = model.profile.path("hours").path("mon").asText().substringBefore('-')
-        require(LocalTime.parse(h) == openTime) { "profile opens at $h but the operating model opens at $openTime" }
-    }
+    /** Staff scale with the store (Denver, the 3-and-2 reference, is 1.0): at least two (or the knob if lower), at most the knob. */
+    private val staffScale = if (knobs.scaleStaff) minOf(1.0, model.visitScale / model.locationFactor) else 1.0
+
+    private fun staff(n: Int) = if (n <= 0) 0 else maxOf(minOf(n, 2), minOf(n, Math.round(n * staffScale).toInt()))
+
+    val preOpenStockers: Int = staff(knobs.preOpenStockers)
+    val topUpStockers: Int = staff(knobs.topUpStockers)
+
+    /** The store's operating-model volume for a weekday or weekend, before any scale: what `demand.csv` is built from. */
+    fun baseVisitors(weekend: Boolean): Double = behavior.model.traffic.visitorsPerDay.let { if (weekend) it.weekend else it.weekday }.toDouble()
 
     /** Cells of one EAN share that EAN's demand by facings. */
     private val weights = IdentityHashMap<Cell, Double>().also { w ->
@@ -137,12 +149,17 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
 
     // ── hooks ─────────────────────────────────────────────────────────────────────────────────────────
 
-    private inner class Hooks(val state: StoreState?, val log: DayLog, val schedule: (Long, () -> Unit) -> Unit = { _, a -> a() }) : FloorHooks {
+    private inner class Hooks(
+        val state: StoreState?,
+        val log: DayLog,
+        val conversion: Double = 1.0,
+        val schedule: (Long, () -> Unit) -> Unit = { _, a -> a() },
+    ) : FloorHooks {
         override fun cellWeight(c: Cell): Double = weights[c] ?: 1e-7
 
         override fun fixtureScale(code: String): Double = cal.fixtureScale[code] ?: 1.0
 
-        override fun buyScale(c: Cell): Double = cal.departmentBuy[model.demand[c.ean]?.department] ?: 1.0
+        override fun buyScale(c: Cell): Double = (cal.departmentBuy[model.demand[c.ean]?.department] ?: 1.0) * conversion
 
         override fun available(c: Cell): Boolean = state == null || state.count(c.fixture, c.ean) > 0
 
@@ -215,13 +232,25 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
 
     fun simulate(state: StoreState, date: LocalDate, seed: Long): DayResult {
         val log = DayLog(date)
+        val dayPlan = overlay.plan(date)
+        val startUnits = state.totalNotSold()
+        if (dayPlan.closed) {
+            // A closed day: no delivery, no staff, no shoppers. Tomorrow's order covers what today would have.
+            state.asOf = date
+            val onHand = floorCounts(state)
+            return DayResult(
+                date, emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), 0, startUnits, startUnits, onHand, onHand, 0, null, 0.0,
+                dayPlan,
+            )
+        }
+        val shape = dayPlan.shape!!
+        val openTime = shape.open
         val open = ZonedDateTime.of(date, openTime, zone).toInstant().toEpochMilli()
         val t0 = open - model.deliveryLeadMin * 60_000L
-        val startUnits = state.totalNotSold()
         val startSold = state.soldEpcs().size
         val queue = PriorityQueue<Queued>(compareBy({ it.dueMs }, { it.seq }))
         var qseq = 0L
-        val hooks = Hooks(state, log) { due, action -> queue += Queued(due, qseq++, action) }
+        val hooks = Hooks(state, log, dayPlan.conversion) { due, action -> queue += Queued(due, qseq++, action) }
         val ratePerMs = { stockers: Int -> stockers * knobs.staffUnitsPerHour / 3_600_000.0 }
 
         // 1. delivery ---------------------------------------------------------------------------------
@@ -265,11 +294,11 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         // 2. pre-open stocking: strays home first, then every slot below plan, fullest need first ------------
         val stockStart = t0 + 6 * 60_000L
         val stockEnd = open - 60_000L
-        var cap = floor((stockEnd - stockStart) * ratePerMs(knobs.preOpenStockers)).toInt()
+        var cap = floor((stockEnd - stockStart) * ratePerMs(preOpenStockers)).toInt()
         var cum = 0
         fun stage(fixture: String, ean: String, epcs: List<String>, reason: String) {
             cum += epcs.size
-            val due = stockStart + (cum / ratePerMs(knobs.preOpenStockers)).toLong()
+            val due = stockStart + (cum / ratePerMs(preOpenStockers)).toLong()
             val level = model.homeLevel[Slot(fixture, ean)] ?: 1
             epcs.forEach { state.place(it, fixture, level) }
             log.moves += MoveLog(due, reason, fixture, ean, epcs)
@@ -290,13 +319,12 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         val openOnHand = floorCounts(state)
 
         // 3. quiet-hour walks and the day, interleaved by time ---------------------------------------------
-        val weekend = date.dayOfWeek.value >= 6
-        val curve = if (weekend) behavior.model.traffic.hourlyCurve.weekend else behavior.model.traffic.hourlyCurve.weekday
+        val curve = shape.curve
         val quiet = curve.indices.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).sorted()
         for (idx in quiet) {
             val walkAt = open + idx * 3_600_000L + 5 * 60_000L
             queue += Queued(walkAt, qseq++) {
-                val rate = ratePerMs(knobs.topUpStockers)
+                val rate = ratePerMs(topUpStockers)
                 var budget = floor(45 * 60_000L * rate).toInt()
                 var done = 0
                 for (slot in deficitOrder(state, knobs.topUpThreshold)) {
@@ -328,7 +356,9 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
             sink,
             null,
             hooks,
-        ) { entryMs -> drain(entryMs) }
+            { entryMs -> drain(entryMs) },
+            shape,
+        )
         drain(Long.MAX_VALUE)
         check(state.count(UnitState.IN_TRANSIT) == 0) { "units still in transit at close" }
         state.asOf = date
@@ -377,7 +407,7 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
             floorCounts(
                 state,
             ),
-            log.misplaced, sink, run.expectedVisitors,
+            log.misplaced, sink, run.expectedVisitors, dayPlan,
         )
     }
 
@@ -446,6 +476,6 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
     /** A fully stocked day: no state, every cell always has a unit. The calibration and the demand check read this. */
     fun stockedDay(date: LocalDate, seed: Long): BehaviorModel.DayRun {
         val log = DayLog(date)
-        return behavior.runDay(date, PlanTimeline.single(plan), seed, 1.0, null, null, Hooks(null, log))
+        return behavior.runDay(date, PlanTimeline.single(plan), seed, model.visitScale, null, null, Hooks(null, log))
     }
 }

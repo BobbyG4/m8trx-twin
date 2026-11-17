@@ -93,6 +93,8 @@ class BehaviorModel(
      *
      * [hooks] and [beforeArrival] are the store-day run's seam (slice 2a): stock-aware pickups, and a callback with each
      * arrival's entry time (epoch ms) so staff events scheduled before it can be applied first. Both default to off.
+     * [shape] (slice 2b) replaces the day's expected visitors, curve and opening time, so calendar overlays, per-store hours and
+     * holiday day shapes can be applied by the caller; null keeps the model's own day exactly as before.
      */
     fun runDay(
         date: LocalDate,
@@ -103,11 +105,12 @@ class BehaviorModel(
         hours: IntRange? = null,
         hooks: FloorHooks? = null,
         beforeArrival: ((Long) -> Unit)? = null,
+        shape: DayShape? = null,
     ): DayRun {
-        val weekend = date.dayOfWeek.value >= 6
-        val curve = if (weekend) model.traffic.hourlyCurve.weekend else model.traffic.hourlyCurve.weekday
-        val daily = expectedVisitors(date, scale)
-        val open = LocalTime.parse(model.store.operatingHours.open)
+        val weekend = shape?.weekend ?: (date.dayOfWeek.value >= 6)
+        val curve = shape?.curve ?: if (weekend) model.traffic.hourlyCurve.weekend else model.traffic.hourlyCurve.weekday
+        val daily = shape?.expectedVisitors ?: expectedVisitors(date, scale)
+        val open = shape?.open ?: LocalTime.parse(model.store.operatingHours.open)
         val arrivals = Random(mix(seed, date.toEpochDay(), -1))
         val records = ArrayList<ShopperRecord>()
         var idx = 0
@@ -138,6 +141,9 @@ class BehaviorModel(
             },
         )
     }
+
+    /** What a caller decides about one day: footfall, the hourly arrival curve (one share per open hour) and when the doors open. */
+    class DayShape(val expectedVisitors: Double, val curve: List<Double>, val open: LocalTime, val weekend: Boolean)
 
     /** A day's records and its expected footfall. Reconciliation follows the twin's existing §1 identity. */
     inner class DayRun(val date: LocalDate, val records: List<ShopperRecord>, val expectedVisitors: Double) {

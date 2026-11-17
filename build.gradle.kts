@@ -574,7 +574,7 @@ behaviorTask(
     "Req 9 re-measure: one backdated episode to the twin edge (+ one backdated sale_event if keyed). Dry-run unless M8TRX_PROBE_LIVE=true.",
 )
 
-// ── Store day, Phase 2a (Denver): stock-aware shoppers + staff + deliveries → a wire plan and a truth ledger ─────────
+// ── Store day, Phase 2a-2b (ten stores): stock-aware shoppers + staff + deliveries → a wire plan and a truth ledger ─────────
 // OFFLINE and RECORD-ONLY: these tasks write files under out/day/ and reference/data/.../model/calibration.json; nothing in
 // com.m8trx.twin.storeday opens a socket. Names start with storeDay* so no live-prefix filter ever matches them.
 fun storeDayTask(name: String, main: String, desc: String) = tasks.register<JavaExec>(name) {
@@ -588,7 +588,7 @@ fun storeDayTask(name: String, main: String, desc: String) = tasks.register<Java
 storeDayTask(
     "storeDayRun",
     "com.m8trx.twin.storeday.StoreDayRunKt",
-    "Offline: simulate N Denver store days (M8TRX_STORE_DAY_SITE/FROM/DAYS/SEED) into out/day/<slug>/. Record only.",
+    "Offline: simulate N store days for one store or all ten (M8TRX_STORE_DAY_SITE/FROM/DAYS/SEED) into out/day/<slug>/. Record only.",
 )
 storeDayTask(
     "storeDayCalibrate",
