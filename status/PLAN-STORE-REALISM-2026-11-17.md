@@ -368,6 +368,16 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    > is needed for any phase. (The web's New Integration dialog lists only four of the seven inbound types; that is a web gap the
    > core is fixing, and it does not limit what `twin-pos` accepts.)
    >
+   > **[twin] Probe result, 2026-11-17 (this Mac's `.env`; an empty item list, so nothing could be created).** I sent
+   > `POST /inventory/items/receive` with `items: []` to each store's stockroom space, found through `/spatial/identity`:
+   > - **`M8TRX_TWIN_SERVICE_BEARER`** (the data-plane bearer): `/spatial/identity` 200 and receive **400 `INVALID_REQUEST`
+   >   "items must not be empty"** in **all ten stores**. The request passed authentication, capability and site scope and stopped
+   >   at validation, so `inventory:create` is confirmed tenant-wide.
+   > - **`M8TRX_TWIN_BEARER`** (the Denver read key): receive 403 `PERMISSION_DENIED` in Denver; `/spatial/identity` 403
+   >   `SITE_ACCESS_DENIED` in Paris.
+   > - **Rule for the build:** receiving uses `M8TRX_TWIN_SERVICE_BEARER`, paced under its 300 requests a minute. Nothing more to
+   >   grant for receiving.
+   >
    > **[B/W] A4.** `POST /api/v2/inventory/items/receive` requires `inventory:create` at site scope, and its controller is marked
    > as a Connect data-plane surface today (`InventoryActionController`, `@ConnectExposed(dataPlane = true)`), so the
    > `CONNECT_NOT_EXPOSED` refusal recorded in TWIN-REQ-005 (August) should no longer apply: **test it**. A key cannot grant itself
