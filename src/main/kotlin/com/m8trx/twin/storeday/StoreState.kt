@@ -17,6 +17,9 @@ enum class UnitState { ON_FLOOR, BACKROOM, SOLD, IN_TRANSIT }
  *  - **offline initial snapshot (this class, [INITIAL_BASE])**: 20,000,000,000 .. < [DELIVERY_BASE] (10 billion serials)
  *  - **store-day deliveries ([DELIVERY_BASE])**: 30,000,000,000 upward, one counter ([nextSerial]) carried in the snapshot
  *  - the SGTIN-96 serial field is 38 bits = 274,877,906,944, so the delivery counter has ~245 billion serials of room.
+ *  - **per store (slice 2b):** the same EAN is sold in all ten stores and an EPC is global, so each store gets its own slice.
+ *    Store index 0 is Denver (its ranges are exactly the constants above); the other nine take indices 1..9 in slug order.
+ *    Initial snapshot: [INITIAL_BASE] + index x 1e9. Deliveries: [DELIVERY_BASE] + index x 2e10 (the last store ends below 2.3e11).
  *
  * A unit is either `ON_FLOOR` (location = a sales-floor fixture code, [Unit.level] its shelf level, 1 = top), `BACKROOM`
  * (location = a BR rack), `IN_TRANSIT` (minted on a delivery truck, or carried by staff between back room and fixture), or
@@ -31,7 +34,7 @@ class StoreState(val slug: String) {
     private val units = HashMap<String, Unit>()
     private val index = TreeMap<String, TreeMap<String, ArrayDeque<String>>>()
     private val soldOrder = ArrayList<String>()
-    var nextSerial: Long = DELIVERY_BASE
+    var nextSerial: Long = deliveryBase(slug)
     var asOf: LocalDate? = null
 
     val size: Int get() = units.size
@@ -165,6 +168,24 @@ class StoreState(val slug: String) {
         const val INITIAL_BASE = 20_000_000_000L
         const val DELIVERY_BASE = 30_000_000_000L
         const val SERIAL_CEILING = 1L shl Sgtin96.SERIAL_BITS
+        private const val INITIAL_STRIDE = 1_000_000_000L
+        private const val DELIVERY_STRIDE = 20_000_000_000L
+        private const val DENVER = "dec-us-denver"
+
+        /** The chain's ten sales-floor stores, Denver first (index 0), then the rest by slug. */
+        val STORE_SLUGS = listOf(
+            DENVER, "dec-fr-bordeaux", "dec-fr-lille", "dec-fr-lyon", "dec-fr-marseille", "dec-fr-paris", "dec-kr-busan", "dec-kr-seoul",
+            "dec-us-nyc", "dec-us-sf",
+        )
+
+        fun serialIndex(slug: String): Int = STORE_SLUGS.indexOf(slug).also { require(it >= 0) { "no serial slice for store '$slug'" } }
+
+        fun initialBase(slug: String): Long = INITIAL_BASE + serialIndex(slug) * INITIAL_STRIDE
+
+        fun deliveryBase(slug: String): Long = DELIVERY_BASE + serialIndex(slug) * DELIVERY_STRIDE
+
+        /** Serial range a store's units may take: initial snapshot first, deliveries after. */
+        fun deliveryEnd(slug: String): Long = deliveryBase(slug) + DELIVERY_STRIDE
 
         fun load(base: Path): StoreState {
             val meta = Files.readAllLines(Path.of("$base.meta")).associate { it.substringBefore('=') to it.substringAfter('=') }
@@ -188,7 +209,7 @@ class StoreState(val slug: String) {
          */
         fun initial(m: StoreDayModel): StoreState {
             val s = StoreState(m.slug)
-            var serial = INITIAL_BASE
+            var serial = initialBase(m.slug)
             for (r in m.stockPlan) {
                 val isFloor = r.kind == "floor"
                 val level = if (isFloor) m.homeLevel[Slot(r.zone, r.ean)] ?: 1 else 0
@@ -196,7 +217,7 @@ class StoreState(val slug: String) {
                     s.add(Sgtin96.encode(r.ean, serial++), r.ean, if (isFloor) UnitState.ON_FLOOR else UnitState.BACKROOM, r.zone, level)
                 }
             }
-            check(serial < DELIVERY_BASE) { "initial snapshot overran its serial range" }
+            check(serial < initialBase(m.slug) + INITIAL_STRIDE) { "initial snapshot overran its serial range" }
             return s
         }
     }

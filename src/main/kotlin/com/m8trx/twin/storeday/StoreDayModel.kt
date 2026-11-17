@@ -42,6 +42,21 @@ class StoreDayModel(val slug: String, val chainDir: Path = Path.of("reference/da
     val profile = ConnectMappers.snake.readTree(Files.readAllBytes(modelDir.resolve("profile.json")))
     val timezone: String = profile.path("timezone").asText()
     val deliveryLeadMin: Int = profile.path("delivery_lead_min").asInt(60)
+    val areaSqm: Double = profile.path("area_sqm").asDouble()
+    val locationFactor: Double = profile.path("location_factor").asDouble(1.0)
+
+    /**
+     * Footfall of this store against Denver's (the operating model's volumes are Denver's): `location_factor x area / Denver area`,
+     * the same product `build_store_model.py` writes into `demand.csv`. 1.0 for Denver.
+     */
+    val visitScale: Double = locationFactor * areaSqm / denverArea(chainDir)
+
+    /** One day's opening hours from the profile (`"10:00-21:00"`), or null when the store is closed that weekday. */
+    fun hoursOn(day: java.time.DayOfWeek): Pair<java.time.LocalTime, java.time.LocalTime>? {
+        val key = day.name.take(3).lowercase()
+        val m = Regex("""(\d{1,2}:\d{2})-(\d{1,2}:\d{2})""").matchEntire(profile.path("hours").path(key).asText().trim()) ?: return null
+        return java.time.LocalTime.parse(m.groupValues[1].padStart(5, '0')) to java.time.LocalTime.parse(m.groupValues[2].padStart(5, '0'))
+    }
 
     val demand: Map<String, DemandRow> = StoreStock.readCsv(modelDir.resolve("demand.csv")).associate { r ->
         r.getValue("ean") to DemandRow(
@@ -100,6 +115,10 @@ class StoreDayModel(val slug: String, val chainDir: Path = Path.of("reference/da
     val offpeakAssociates: Int = ConnectMappers.snake.readTree(Files.readAllBytes(Path.of("reference/data/store-operating-model.json")))
         .path("staffing").path("associates_on_floor_offpeak").asInt(3)
 }
+
+private fun denverArea(chainDir: Path): Double = ConnectMappers.snake.readTree(
+    Files.readAllBytes(chainDir.resolve("../store-profiles.json")),
+).path("stores").path("dec-us-denver").path("area_sqm").asDouble()
 
 data class Slot(val fixture: String, val ean: String) : Comparable<Slot> {
     override fun compareTo(other: Slot): Int = compareValuesBy(this, other, { it.fixture }, { it.ean })

@@ -458,12 +458,12 @@ tasks.register("offlineSelfTest") {
     dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
 }
 
-// ── Store model, Phase 1 (Denver): profile, fixture kits, demand, planogram v2, stock to plan — files only ─────────
+// ── Store model, Phase 1 (all ten stores): profile, fixture kits, demand, planogram v2, stock to plan — files only ─────────
 // Python 3 stdlib; reads and writes nothing outside the repo, talks to no server. Rebuilds the model twice to prove
 // byte-identical output, checks the committed files, and that no file the live box reads differs from origin/main.
 tasks.register<Exec>("storeModelSelfTest") {
     group = "verification"
-    description = "Offline: Denver store model self-test (kits, demand, planogram v2, stock plan, determinism, live files untouched)."
+    description = "Offline: store model self-test for all ten stores (kits, demand, planogram v2, stock plan, determinism, live files untouched)."
     workingDir = projectDir
     commandLine("python3", "scripts/store_model_selftest.py")
 }
@@ -574,7 +574,7 @@ behaviorTask(
     "Req 9 re-measure: one backdated episode to the twin edge (+ one backdated sale_event if keyed). Dry-run unless M8TRX_PROBE_LIVE=true.",
 )
 
-// ── Store day, Phase 2a (Denver): stock-aware shoppers + staff + deliveries → a wire plan and a truth ledger ─────────
+// ── Store day, Phase 2a-2b (ten stores): stock-aware shoppers + staff + deliveries → a wire plan and a truth ledger ─────────
 // OFFLINE and RECORD-ONLY: these tasks write files under out/day/ and reference/data/.../model/calibration.json; nothing in
 // com.m8trx.twin.storeday opens a socket. Names start with storeDay* so no live-prefix filter ever matches them.
 fun storeDayTask(name: String, main: String, desc: String) = tasks.register<JavaExec>(name) {
@@ -588,7 +588,7 @@ fun storeDayTask(name: String, main: String, desc: String) = tasks.register<Java
 storeDayTask(
     "storeDayRun",
     "com.m8trx.twin.storeday.StoreDayRunKt",
-    "Offline: simulate N Denver store days (M8TRX_STORE_DAY_SITE/FROM/DAYS/SEED) into out/day/<slug>/. Record only.",
+    "Offline: simulate N store days for one store or all ten (M8TRX_STORE_DAY_SITE/FROM/DAYS/SEED) into out/day/<slug>/. Record only.",
 )
 storeDayTask(
     "storeDayCalibrate",

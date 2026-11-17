@@ -1,0 +1,1991 @@
+{
+  "store_id": "dec-fr-marseille",
+  "kit_version": "kit-v1",
+  "constants": {
+    "level_class": {
+      "shoe": {
+        "form": "shelf",
+        "facings_per_m": 6.0,
+        "units_per_facing": 3,
+        "height_units": 12
+      },
+      "fold": {
+        "form": "shelf",
+        "facings_per_m": 5.0,
+        "units_per_facing": 6,
+        "height_units": 12
+      },
+      "hang": {
+        "form": "rail",
+        "facings_per_m": 25.0,
+        "units_per_facing": 2,
+        "height_units": 30
+      },
+      "peg": {
+        "form": "pegboard",
+        "facings_per_m": 8.0,
+        "units_per_facing": 6,
+        "height_units": 10
+      },
+      "bulk": {
+        "form": "shelf",
+        "facings_per_m": 2.0,
+        "units_per_facing": 2,
+        "height_units": 12
+      },
+      "bike": {
+        "form": "floor",
+        "facings_per_m": 5.0,
+        "units_per_facing": 1,
+        "height_units": 60
+      }
+    },
+    "table_top": [
+      4.0,
+      8
+    ],
+    "bin": [
+      3.0,
+      20
+    ],
+    "backroom": [
+      4.0,
+      24
+    ],
+    "face_height_units": 60,
+    "level_numbering": "top-down within a fixture (1 = top)"
+  },
+  "fixtures": {
+    "ACC-01": {
+      "zone_id": "cf163b93-21fc-576b-8ef4-a3e691e9ed97",
+      "zone_name": "Accessories Bay 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "accessories_wall",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 468,
+      "role": "stock"
+    },
+    "ACC-02": {
+      "zone_id": "47954c4d-5687-5a6f-91ef-49b3c3736a07",
+      "zone_name": "Accessories Bay 2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "accessories_wall",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1733,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 468,
+      "role": "stock"
+    },
+    "ACC-03": {
+      "zone_id": "41aae96b-d5d4-5153-9484-833c175e9b99",
+      "zone_name": "Accessories Bay 3",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "accessories_wall",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 1734,
+          "facings": 13,
+          "units_per_facing": 6,
+          "capacity_units": 78,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 468,
+      "role": "stock"
+    },
+    "BR-01": {
+      "zone_id": "",
+      "zone_name": "Backroom Fixture 1",
+      "space": "stockroom",
+      "zone_type": "fixture",
+      "fixture_category": "backroom_rack",
+      "department": "boh",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 4320,
+      "role": "backroom"
+    },
+    "BR-02": {
+      "zone_id": "",
+      "zone_name": "Backroom Fixture 2",
+      "space": "stockroom",
+      "zone_type": "fixture",
+      "fixture_category": "backroom_rack",
+      "department": "boh",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 4320,
+      "role": "backroom"
+    },
+    "BR-03": {
+      "zone_id": "",
+      "zone_name": "Backroom Fixture 3",
+      "space": "stockroom",
+      "zone_type": "fixture",
+      "fixture_category": "backroom_rack",
+      "department": "boh",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 4320,
+      "role": "backroom"
+    },
+    "BR-04": {
+      "zone_id": "",
+      "zone_name": "Backroom Fixture 4",
+      "space": "stockroom",
+      "zone_type": "fixture",
+      "fixture_category": "backroom_rack",
+      "department": "boh",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "store",
+          "width_mm": 7550,
+          "facings": 30,
+          "units_per_facing": 24,
+          "capacity_units": 720,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 4320,
+      "role": "backroom"
+    },
+    "CO-01": {
+      "zone_id": "a554933f-f1cb-5f6e-9308-9ea07a68859c",
+      "zone_name": "Checkout Counter 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "checkout",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "bin",
+          "goods": "bin",
+          "width_mm": 3450,
+          "facings": 10,
+          "units_per_facing": 20,
+          "capacity_units": 200,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 200,
+      "role": "stock"
+    },
+    "CO-02": {
+      "zone_id": "961ddb33-e9e7-536e-9bf7-af842e7ee7bb",
+      "zone_name": "Checkout Counter 2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "checkout",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "bin",
+          "goods": "bin",
+          "width_mm": 3450,
+          "facings": 10,
+          "units_per_facing": 20,
+          "capacity_units": 200,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 200,
+      "role": "stock"
+    },
+    "CO-IR": {
+      "zone_id": "bce97fc2-ba21-5f08-ad4e-6caea6a91c7b",
+      "zone_name": "Impulse Fixture",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "impulse_rack",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 7200,
+          "facings": 57,
+          "units_per_facing": 6,
+          "capacity_units": 342,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 7200,
+          "facings": 57,
+          "units_per_facing": 6,
+          "capacity_units": 342,
+          "display_level": "reach"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 7200,
+          "facings": 57,
+          "units_per_facing": 6,
+          "capacity_units": 342,
+          "display_level": "reach"
+        },
+        {
+          "level": 4,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 7200,
+          "facings": 57,
+          "units_per_facing": 6,
+          "capacity_units": 342,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 1368,
+      "role": "stock"
+    },
+    "D-01": {
+      "zone_id": "54d5600c-f37b-54a9-ae34-25bc4512cf2a",
+      "zone_name": "Hiking, Trekking & Camping",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "hike_camp",
+      "role": "area"
+    },
+    "D-02": {
+      "zone_id": "01003efc-2c7d-5ca3-9fbb-455a8a375baa",
+      "zone_name": "Running & Trail",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "running",
+      "role": "area"
+    },
+    "D-03": {
+      "zone_id": "f8950202-bc4e-5060-91a7-4dcea6c02ff3",
+      "zone_name": "General / Multi-sport",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "general",
+      "role": "area"
+    },
+    "FB-01": {
+      "zone_id": "9ed1eadb-dbfe-5a31-9ce5-a473bb94fc1d",
+      "zone_name": "Footwear Bench Seat",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "footwear_bench",
+      "department": "",
+      "levels": [],
+      "capacity_units": 0,
+      "role": "service",
+      "deliberate_empty": true,
+      "reason": "service fixture: try-on seating, no stock by design"
+    },
+    "FR-01": {
+      "zone_id": "",
+      "zone_name": "Fitting Stall 1",
+      "space": "fitting_room",
+      "zone_type": "try_on_zone",
+      "fixture_category": "",
+      "department": "",
+      "role": "try_on_zone"
+    },
+    "FR-02": {
+      "zone_id": "",
+      "zone_name": "Fitting Stall 2",
+      "space": "fitting_room",
+      "zone_type": "try_on_zone",
+      "fixture_category": "",
+      "department": "",
+      "role": "try_on_zone"
+    },
+    "FR-03": {
+      "zone_id": "",
+      "zone_name": "Fitting Stall 3",
+      "space": "fitting_room",
+      "zone_type": "try_on_zone",
+      "fixture_category": "",
+      "department": "",
+      "role": "try_on_zone"
+    },
+    "GA-01": {
+      "zone_id": "2ae06e63-dfb5-54f0-bbff-97f57f7e8082",
+      "zone_name": "Treadmill 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gait_treadmill",
+      "department": "",
+      "levels": [],
+      "capacity_units": 0,
+      "role": "service",
+      "deliberate_empty": true,
+      "reason": "service fixture: gait analysis, no stock by design"
+    },
+    "GB-R1-U1": {
+      "zone_id": "eab3892a-bb38-5a1d-8c17-b18da5d3d922",
+      "zone_name": "Gondola R1 Back U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "floor",
+          "goods": "bike",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 1,
+          "capacity_units": 10,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 10,
+      "role": "stock"
+    },
+    "GB-R1-U2": {
+      "zone_id": "42d4d5e4-1497-5fb8-a5d7-61916b84be45",
+      "zone_name": "Gondola R1 Back U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "floor",
+          "goods": "bike",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 1,
+          "capacity_units": 10,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 10,
+      "role": "stock"
+    },
+    "GB-R2-U1": {
+      "zone_id": "bb5760b2-b9df-5768-b0d6-f01de13a1902",
+      "zone_name": "Gondola R2 Back U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 300,
+      "role": "stock"
+    },
+    "GB-R2-U2": {
+      "zone_id": "6f409732-ba1c-5a17-91ad-a03d29041220",
+      "zone_name": "Gondola R2 Back U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 300,
+      "role": "stock"
+    },
+    "GB-R3-U1": {
+      "zone_id": "dd64f2d1-ed30-507e-99ac-8f7882dd6269",
+      "zone_name": "Gondola R3 Back U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "floor",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 40,
+      "role": "stock"
+    },
+    "GB-R3-U2": {
+      "zone_id": "7606f41d-49a6-55c1-bc60-967dbffa0771",
+      "zone_name": "Gondola R3 Back U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_back",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "floor",
+          "goods": "bulk",
+          "width_mm": 2000,
+          "facings": 4,
+          "units_per_facing": 2,
+          "capacity_units": 8,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 232,
+      "role": "stock"
+    },
+    "GF-R1-U1": {
+      "zone_id": "ec399af6-e774-5257-b5f8-8de5f19bcaeb",
+      "zone_name": "Gondola R1 Front U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "floor",
+          "goods": "bike",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 1,
+          "capacity_units": 10,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 10,
+      "role": "stock"
+    },
+    "GF-R1-U2": {
+      "zone_id": "65426544-e302-5f5d-b7c6-9f06b5155222",
+      "zone_name": "Gondola R1 Front U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "floor",
+          "goods": "bike",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 1,
+          "capacity_units": 10,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 10,
+      "role": "stock"
+    },
+    "GF-R2-U1": {
+      "zone_id": "63df6251-223b-5e9e-b4ef-4c4a48cb3514",
+      "zone_name": "Gondola R2 Front U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "fold",
+          "width_mm": 2000,
+          "facings": 10,
+          "units_per_facing": 6,
+          "capacity_units": 60,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 372,
+      "role": "stock"
+    },
+    "GF-R2-U2": {
+      "zone_id": "23414d4a-ab2f-53a9-a91c-b22958fe716d",
+      "zone_name": "Gondola R2 Front U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "rail",
+          "goods": "hang",
+          "width_mm": 2000,
+          "facings": 50,
+          "units_per_facing": 2,
+          "capacity_units": 100,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 388,
+      "role": "stock"
+    },
+    "GF-R3-U1": {
+      "zone_id": "9c41c5cb-6323-5053-a0f4-052fa8630eda",
+      "zone_name": "Gondola R3 Front U1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "rail",
+          "goods": "hang",
+          "width_mm": 2000,
+          "facings": 50,
+          "units_per_facing": 2,
+          "capacity_units": 100,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "rail",
+          "goods": "hang",
+          "width_mm": 2000,
+          "facings": 50,
+          "units_per_facing": 2,
+          "capacity_units": 100,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 200,
+      "role": "stock"
+    },
+    "GF-R3-U2": {
+      "zone_id": "1df963f9-1fde-570b-842e-f323b6043fff",
+      "zone_name": "Gondola R3 Front U2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gondola_front",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "pegboard",
+          "goods": "peg",
+          "width_mm": 2000,
+          "facings": 16,
+          "units_per_facing": 6,
+          "capacity_units": 96,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "rail",
+          "goods": "hang",
+          "width_mm": 2000,
+          "facings": 50,
+          "units_per_facing": 2,
+          "capacity_units": 100,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 388,
+      "role": "stock"
+    },
+    "GPS-01": {
+      "zone_id": "36fbaffd-7a41-57f6-a007-3518fec88e6c",
+      "zone_name": "GPS Display Case 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gps_case",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        }
+      ],
+      "capacity_units": 144,
+      "role": "stock"
+    },
+    "GPS-02": {
+      "zone_id": "1c249083-c482-5085-b6a0-464a4d555797",
+      "zone_name": "GPS Display Case 2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gps_case",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        }
+      ],
+      "capacity_units": 144,
+      "role": "stock"
+    },
+    "GPS-03": {
+      "zone_id": "c05033d1-714b-5473-8edf-de2696facbbf",
+      "zone_name": "GPS Display Case 3",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gps_case",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        }
+      ],
+      "capacity_units": 144,
+      "role": "stock"
+    },
+    "GPS-04": {
+      "zone_id": "56fda7a8-7212-5741-beb7-7fa252eb1099",
+      "zone_name": "GPS Display Case 4",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "gps_case",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2700,
+          "facings": 16,
+          "units_per_facing": 3,
+          "capacity_units": 48,
+          "display_level": "eye"
+        }
+      ],
+      "capacity_units": 144,
+      "role": "stock"
+    },
+    "PE-01": {
+      "zone_id": "782b6b3b-5e7a-5922-acff-f871fd91e779",
+      "zone_name": "East Wall Bay 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_east",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "PE-02": {
+      "zone_id": "448382d0-d3d8-5199-91d5-f26f4a6995dc",
+      "zone_name": "East Wall Bay 2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_east",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "PE-03": {
+      "zone_id": "3ca20e61-ad2e-5fb3-afdc-239eb593343b",
+      "zone_name": "East Wall Bay 3",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_east",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "PI-01": {
+      "zone_id": "089233c8-613c-5602-8fe2-3ccc31353299",
+      "zone_name": "Promo Island 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "promo_island",
+      "department": "",
+      "levels": [
+        {
+          "level": 1,
+          "form": "bin",
+          "goods": "bin",
+          "width_mm": 1400,
+          "facings": 4,
+          "units_per_facing": 20,
+          "capacity_units": 80,
+          "display_level": "stoop"
+        },
+        {
+          "level": 2,
+          "form": "table_top",
+          "goods": "table",
+          "width_mm": 1400,
+          "facings": 5,
+          "units_per_facing": 8,
+          "capacity_units": 40,
+          "display_level": "reach"
+        }
+      ],
+      "capacity_units": 120,
+      "role": "stock"
+    },
+    "PW-01": {
+      "zone_id": "12f626f3-7e2e-5198-a4ae-4d63314c7747",
+      "zone_name": "West Wall Bay 1",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_west",
+      "department": "hike_camp",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "PW-02": {
+      "zone_id": "415cf3d6-ed30-57fc-ba60-216d4f009df3",
+      "zone_name": "West Wall Bay 2",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_west",
+      "department": "running",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2233,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "PW-03": {
+      "zone_id": "4d1f6906-2bd0-52ba-9e07-e10559cbd29c",
+      "zone_name": "West Wall Bay 3",
+      "space": "sales_floor",
+      "zone_type": "fixture",
+      "fixture_category": "perimeter_west",
+      "department": "general",
+      "levels": [
+        {
+          "level": 1,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "top"
+        },
+        {
+          "level": 2,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 3,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "eye"
+        },
+        {
+          "level": 4,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 5,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "reach"
+        },
+        {
+          "level": 6,
+          "form": "shelf",
+          "goods": "shoe",
+          "width_mm": 2234,
+          "facings": 13,
+          "units_per_facing": 3,
+          "capacity_units": 39,
+          "display_level": "stoop"
+        }
+      ],
+      "capacity_units": 234,
+      "role": "stock"
+    },
+    "RCV-01": {
+      "zone_id": "",
+      "zone_name": "Receiving Dock",
+      "space": "stockroom",
+      "zone_type": "fixture",
+      "fixture_category": "receiving_dock",
+      "department": "",
+      "levels": [],
+      "capacity_units": 0,
+      "role": "staging",
+      "deliberate_empty": true,
+      "reason": "staging: no planned stock"
+    },
+    "Z-01": {
+      "zone_id": "9b80d15f-d305-5c88-aac6-778b8fbff2e0",
+      "zone_name": "Entrance",
+      "space": "sales_floor",
+      "zone_type": "entry_exit",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    },
+    "Z-02": {
+      "zone_id": "f7559d73-36c8-54f6-9870-e257dc8d7d1f",
+      "zone_name": "Checkout Area",
+      "space": "sales_floor",
+      "zone_type": "checkout",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    },
+    "Z-03": {
+      "zone_id": "2d580944-3406-5b10-84fe-94ba8da1c4ba",
+      "zone_name": "Non-Retail Left Strip",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    },
+    "Z-06": {
+      "zone_id": "4c4279fd-0230-5c24-8572-9873b355ee2d",
+      "zone_name": "GPS & Accessories",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    },
+    "Z-07": {
+      "zone_id": "968ccbc5-2116-5224-9f5d-6db2c9cec493",
+      "zone_name": "Accessories Wall",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    },
+    "Z-08": {
+      "zone_id": "cf2b639f-49d4-5b12-b8cd-750584418b5e",
+      "zone_name": "Footwear Bench",
+      "space": "sales_floor",
+      "zone_type": "try_on_zone",
+      "fixture_category": "",
+      "department": "",
+      "role": "try_on_zone"
+    },
+    "Z-09": {
+      "zone_id": "2e8605b2-f9e8-51e6-81a3-cc5d847ac51b",
+      "zone_name": "Gait Analysis",
+      "space": "sales_floor",
+      "zone_type": "try_on_zone",
+      "fixture_category": "",
+      "department": "",
+      "role": "try_on_zone"
+    },
+    "Z-11": {
+      "zone_id": "a6a2efaa-838a-53f4-972e-634eb32d61f2",
+      "zone_name": "Service Cluster",
+      "space": "sales_floor",
+      "zone_type": "region",
+      "fixture_category": "",
+      "department": "",
+      "role": "area"
+    }
+  }
+}

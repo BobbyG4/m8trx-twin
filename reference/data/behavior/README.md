@@ -55,3 +55,7 @@ Each truth multiplies exactly one measure. **Set it to 1.0 and the effect is gon
 ## What is not a truth
 
 These numbers make the store look like a store. Placement does not change them: persona shares, stops per visit, dwell, base pickup and buy rates, try-on rates, and willingness to pay (`purchase.price_elasticity`). They are calibrated so a seeded week reconciles to the operating model. Visitors, transactions, units and revenue each land within the tolerances in `layer3/Reconciliation.kt`, for every day of the week.
+
+## The other nine stores (slice 2b)
+
+`dec-us-denver.json` is the only tuned file. The nine other stores have **neutral** files generated from it by `scripts/build_store_behavior.py` (`--check` proves they are current): every truth multiplier is 1.0 (off), `hero_appeal` is 1.0 with no hero styles, the store's own timezone and a seed of Denver's plus its serial index; everything else is Denver's. To tune a store, copy its file and edit the copy; do not edit the generated one.

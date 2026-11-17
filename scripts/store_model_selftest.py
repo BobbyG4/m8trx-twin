@@ -57,10 +57,12 @@ def git(*args):
     return subprocess.run(["git", "-C", ROOT] + list(args), capture_output=True, text=True)
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--store", default=B.REFERENCE_STORE)
-    slug = ap.parse_args().store
+def all_slugs():
+    return sorted(d for d in os.listdir(os.path.join(B.CHAIN, "stores")) if os.path.exists(os.path.join(B.CHAIN, "stores", d, "layout.json")))
+
+
+def check_store(slug):
+    n0, f0 = CHECKS, len(FAILS)
     sdir = os.path.join(B.CHAIN, "stores", slug)
     mdir = os.path.join(sdir, "model")
     layout = json.load(open(os.path.join(sdir, "layout.json"), encoding="utf-8"))
@@ -115,7 +117,7 @@ def main():
             continue
         ok(1 <= l["facings"] <= B.MAX_FACINGS_PER_EAN, "facings %d outside 1..%d at %s" % (l["facings"], B.MAX_FACINGS_PER_EAN, key))
         if "spill_from" in l:
-            ok(l["spill_from"] == l["department"] == B.SPILL_FROM and floor[l["fixture_code"]].get("department") == "general",
+            ok(l["spill_from"] == l["department"] and floor[l["fixture_code"]].get("department") in B.LEAN_DEPTS,
                "spill line wrongly tagged at %s" % (key,))
         ok(l["required_qty"] <= l["facings"] * lv["units_per_facing"], "line over capacity at %s" % (key,))
         ok(l["form"] == lv["form"] and l["display_level"] == lv["display_level"], "form/display mismatch at %s" % (key,))
@@ -187,13 +189,6 @@ def main():
             rack_cap[r["zone_code"]] += int(r["qty"])
     for rk, q in rack_cap.items():
         ok(q <= fixtures[rk]["capacity_units"], "back-room rack %s holds %d > capacity %d" % (rk, q, fixtures[rk]["capacity_units"]))
-    # ---- profiles
-    pj = json.load(open(B.PROFILES, encoding="utf-8"))
-    ok(len(pj["stores"]) == 10, "store-profiles.json should carry all ten stores")
-    for s, p in pj["stores"].items():
-        ok(p["delivery_lead_min"] == (60 if p["area_sqm"] >= 500 else 30), "delivery lead wrong for %s" % s)
-        ok(p["provisional"] is True and p["location_factor"] == 1.0, "profile %s not provisional/1.0" % s)
-    ok(prof["store_id"] == slug and {k: v for k, v in prof.items() if k != "store_id"} == pj["stores"][slug], "profile.json != the store's block")
     # ---- determinism: two rebuilds, byte-identical to each other and to the committed files
     with tempfile.TemporaryDirectory() as t1, tempfile.TemporaryDirectory() as t2:
         o1, p1 = B.build(slug, t1)
@@ -202,6 +197,32 @@ def main():
         for name, text in o1.items():
             ok(read(os.path.join(mdir, name)) == text, "committed %s is not what the builder produces" % name)
         ok(read(B.PROFILES) == B.jdump(p1), "committed store-profiles.json is not what the builder produces")
+    print("  %-18s %d checks, %d failed" % (slug, CHECKS - n0, len(FAILS) - f0))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--store", default=None, help="one store (default: all ten)")
+    args = ap.parse_args()
+    slugs = [args.store] if args.store else all_slugs()
+    if not args.store:
+        ok(len(slugs) == 10, "expected ten stores, found %d" % len(slugs))
+    for slug in slugs:
+        check_store(slug)
+    pj = json.load(open(B.PROFILES, encoding="utf-8"))
+    for slug in slugs:
+        prof = json.load(open(os.path.join(B.CHAIN, "stores", slug, "model", "profile.json"), encoding="utf-8"))
+        ok(prof["store_id"] == slug and {k: v for k, v in prof.items() if k != "store_id"} == pj["stores"][slug], "profile.json != the store's block")
+    ok(len(pj["stores"]) == 10, "store-profiles.json should carry all ten stores")
+    for s_, p_ in pj["stores"].items():
+        ok(p_["delivery_lead_min"] == (60 if p_["area_sqm"] >= 500 else 30), "delivery lead wrong for %s" % s_)
+        ok(p_["provisional"] is True and p_["location_factor"] == 1.0, "profile %s not provisional/1.0" % s_)
+    # ---- the nine neutral behavior files are what the generator writes
+    ok(subprocess.run([sys.executable, os.path.join(ROOT, "scripts/build_store_behavior.py"), "--check"]).returncode == 0,
+       "reference/data/behavior/<slug>.json is not what build_store_behavior.py writes")
+    # ---- chain summary doc is what the builder writes from the committed model files
+    slugs = all_slugs()
+    ok(read(B.SUMMARY_MD) == B.chain_summary(slugs), "STORE-MODEL-SUMMARY.md is not what the builder produces")
     # ---- no live file changed vs origin/main
     base = git("rev-parse", "--verify", "-q", "origin/main")
     if base.returncode == 0:
@@ -211,7 +232,7 @@ def main():
         ok(not d1 and not d2, "files the live box reads differ from origin/main: %s" % (d1 + d2))
     else:
         print("  note: origin/main not found, protected-file diff skipped")
-    print("store-model self-test: %d checks, %d failed (%s)" % (CHECKS, len(FAILS), slug))
+    print("store-model self-test: %d checks, %d failed (%s)" % (CHECKS, len(FAILS), ", ".join(slugs)))
     if FAILS:
         sys.exit(1)
 

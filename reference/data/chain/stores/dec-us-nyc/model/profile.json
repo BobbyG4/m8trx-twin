@@ -1,0 +1,18 @@
+{
+  "store_id": "dec-us-nyc",
+  "timezone": "America/New_York",
+  "area_sqm": 636.0,
+  "hours": {
+    "mon": "10:00-21:00",
+    "tue": "10:00-21:00",
+    "wed": "10:00-21:00",
+    "thu": "10:00-21:00",
+    "fri": "10:00-21:00",
+    "sat": "10:00-21:00",
+    "sun": "10:00-21:00"
+  },
+  "location_factor": 1.0,
+  "delivery_lead_min": 60,
+  "provisional": true,
+  "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+}
