@@ -17,7 +17,8 @@
   the truth ledger, answer key in the eval's shape (`reference/data/scenarios/answer-key-example.json`; file only).
 - **Phase 2e ✅** (#34) — dwell differs by fixture kind and content (footwear ≈ 3× pegboard, bench try-on longest), median
   session 18 min in all stores, calibration re-fitted; known deviation: apparel zone minutes ≈ 2× the model's (not tuned).
-- **Phase 3 tooling (dry-run only) — building.** § 8 A14–A16 answered 2026-11-17 18:02: old directives end by a post-midnight
+- **Phase 3 tooling ✅ (dry-run only, #35)** — `storeDayReset` (Denver dry run: 28,552 units to receive, 572 requests, ~9.5 h → two nights), `StoreOpsLive` + `storeOpsLiveDryRun`, retry/backoff, LiveDrive people-source switch (default unchanged), gap-ledger template, unit/service files not installed. Live paths refuse until the F-9 probe passes.
+  *Was:* **Phase 3 tooling (dry-run only) — building.** § 8 A14–A16 answered 2026-11-17 18:02: old directives end by a post-midnight
   re-send with `expiry_date`; back-room moves target rack zones; the reset pace must be one 50-EPC receive at a time (~6 h for
   30k units). **⛔ BLOCKER (core gap F-9): a received item gets no product and no location.** First step, on Bob's word: a
   one-unit probe on Denver (receive 1 → read back → move → sell). If F-9 holds, deliveries via receive (Phase 2's
