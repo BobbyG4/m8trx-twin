@@ -62,17 +62,43 @@ class PeriodPlans(
     private val knobs: PeriodKnobs,
     private val enabled: Boolean = true,
     private val zoneNames: Map<String, String> = emptyMap(),
+    /** Slice 2d: a planted store's plan edit; null (every other store) leaves every period exactly as slice 2c made it. */
+    private val plantEdit: PlantPlanEdit? = null,
 ) {
     private val cache = HashMap<LocalDate, PeriodPlan>()
+    private val edited = HashMap<LocalDate, PeriodPlan>()
     private val base: PeriodPlan = PeriodPlan(ANCHOR, model.lines, emptyList(), 0)
 
     /** The plan in force on [date]. */
     fun forDate(date: LocalDate): PeriodPlan = periodOf(periodStart(date))
 
+    /** Planted fixtures and products are left alone by the weekly changes (empty without a plant: the 2c draws, unchanged). */
+    private val protectedEans: Set<String> = plantEdit?.plant?.protectedEans.orEmpty()
+    private val protectedFixtures: Set<String> = plantEdit?.plant?.protectedFixtures.orEmpty()
+
+    private fun protectedLine(l: StoreDayModel.V2Line) = l.ean in protectedEans || l.fixture in protectedFixtures
+
+    /** The plan in force for the period starting [start]: slice 2c's plan, with a planted store's edit on top once its window has begun. */
     fun periodOf(start: LocalDate): PeriodPlan {
+        val plain = plainOf(start)
+        val edit = plantEdit?.takeIf { it.activeOn(start) } ?: return plain
+        return edited.getOrPut(start) {
+            val lines = edit.apply(plain.lines)
+            val prev = if (start > ANCHOR) periodOf(start.minusDays(PERIOD_DAYS)).lines else plain.lines
+            PeriodPlan(start, lines, plain.changes, countChanged(prev, lines))
+        }
+    }
+
+    private fun countChanged(prev: List<StoreDayModel.V2Line>, now: List<StoreDayModel.V2Line>): Int {
+        val old = prev.associate { Triple(it.fixture, it.level, it.position) to Triple(it.ean, it.facings, it.required) }
+        val new = now.associate { Triple(it.fixture, it.level, it.position) to Triple(it.ean, it.facings, it.required) }
+        return (old.keys + new.keys).count { old[it] != new[it] }
+    }
+
+    private fun plainOf(start: LocalDate): PeriodPlan {
         require(start.dayOfWeek == DayOfWeek.MONDAY) { "a period starts on a Monday: $start" }
         if (!enabled || start <= ANCHOR) return if (start == ANCHOR) base else PeriodPlan(start, base.lines, emptyList(), 0)
-        return cache.getOrPut(start) { next(periodOf(start.minusDays(PERIOD_DAYS)), start) }
+        return cache.getOrPut(start) { next(plainOf(start.minusDays(PERIOD_DAYS)), start) }
     }
 
     /** A period's directive id: one per store and period. */
@@ -152,7 +178,7 @@ class PeriodPlans(
         l.copy(facings = facings, required = max(1, Math.round(l.required.toDouble() * facings / l.facings).toInt()))
 
     private fun facingChange(lines: MutableList<StoreDayModel.V2Line>, dept: String, nLines: Int, rng: Random, changes: MutableList<PlanChange>) {
-        val idx = lines.indices.filter { lines[it].department == dept }
+        val idx = lines.indices.filter { lines[it].department == dept && !protectedLine(lines[it]) }
         if (idx.size < 2) return
         repeat(8) {
             val r = idx[pick(rng, idx.size) { demandOf(lines[idx[it]].ean) / lines[idx[it]].facings }]
@@ -178,7 +204,7 @@ class PeriodPlans(
     }
 
     private fun styleSwap(lines: MutableList<StoreDayModel.V2Line>, dept: String, rng: Random, changes: MutableList<PlanChange>) {
-        val idx = lines.indices.filter { lines[it].department == dept }
+        val idx = lines.indices.filter { lines[it].department == dept && !protectedLine(lines[it]) }
         if (idx.isEmpty()) return
         repeat(8) {
             val a = idx[rng.nextInt(idx.size)]
@@ -202,10 +228,16 @@ class PeriodPlans(
 
     private fun rangeChange(lines: MutableList<StoreDayModel.V2Line>, dept: String, changes: MutableList<PlanChange>) {
         val onFloor = lines.map { it.ean }.toSet()
-        val incoming = model.demand.values.filter { it.department == dept && it.ean !in onFloor }.sortedWith(compareBy({ -it.share }, { it.ean }))
-            .firstOrNull() ?: return
-        val slowest = lines.indices.filter { lines[it].department == dept }.minWithOrNull(compareBy({ demandOf(lines[it].ean) }, { it }))
-            ?: return
+        val incoming =
+            model.demand.values.filter {
+                it.department == dept && it.ean !in onFloor && it.ean !in protectedEans
+            }.sortedWith(compareBy({ -it.share }, { it.ean }))
+                .firstOrNull() ?: return
+        val slowest =
+            lines.indices.filter {
+                lines[it].department == dept && !protectedLine(lines[it])
+            }.minWithOrNull(compareBy({ demandOf(lines[it].ean) }, { it }))
+                ?: return
         val old = lines[slowest]
         changes += PlanChange("range", dept, old.fixture, old.ean, old.ean, incoming.ean)
         lines[slowest] = old.copy(ean = incoming.ean)

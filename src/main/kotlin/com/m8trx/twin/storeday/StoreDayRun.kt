@@ -54,13 +54,13 @@ fun calibrationPath(slug: String): Path = Path.of("reference/data/chain/stores/$
 
 fun loadCalibration(slug: String): Calibration = calibrationPath(slug).takeIf { Files.exists(it) }?.let(Calibration::load) ?: Calibration.NEUTRAL
 
-fun buildSim(site: String, cal: Calibration = loadCalibration(site), knobs: Knobs = Knobs()): StoreDaySim {
+fun buildSim(site: String, cal: Calibration = loadCalibration(site), knobs: Knobs = Knobs(), plant: StorePlant? = null): StoreDaySim {
     require("office" !in site) {
         "office sites are refused: the twin has no office layout and the only edge that sees the office is production hardware ($site)"
     }
     require(site in StoreState.STORE_SLUGS) { "'$site' is not one of the ten sales-floor stores ${StoreState.STORE_SLUGS}" }
     val model = StoreDayModel(site)
-    return StoreDaySim(model, BehaviorModel(BehaviorParams.forSite(site)), cal, knobs)
+    return StoreDaySim(model, BehaviorModel(BehaviorParams.forSite(site)), cal, knobs, plant)
 }
 
 /** Running totals over a multi-day run: the numbers the PR body and the self-test quote. */
@@ -263,11 +263,14 @@ fun runStore(
     seedOverride: Long?,
     statePath: String?,
     write: Boolean = true,
+    /** Slice 2d: the scenarios planted in this store (null: the 2c run) and a look at every simulated day. */
+    plant: StorePlant? = null,
+    observer: ((StoreDaySim, DayResult) -> Unit)? = null,
 ): RunTally {
-    val sim = buildSim(site, knobs = knobs)
+    val sim = buildSim(site, knobs = knobs, plant = plant)
     val seed = seedOverride ?: sim.behavior.params.seed
     val root = outRoot.resolve(site)
-    val state = statePath?.takeIf { it.isNotBlank() }?.let { StoreState.load(Path.of(it)) } ?: StoreState.initial(sim.model)
+    val state = statePath?.takeIf { it.isNotBlank() }?.let { StoreState.load(Path.of(it)) } ?: sim.initialState()
     if (write && statePath.isNullOrBlank()) state.save(root.resolve("state/initial"))
     log.info(
         "storeDayRun (record only, sends nothing) {} {} + {} days seed={} units={} calendar={} calibration={}",
@@ -286,6 +289,7 @@ fun runStore(
         val r = sim.simulate(state, date, seed)
         if (write) StoreDayOutput.write(root.resolve(date.toString()), sim, r)
         tally.add(r)
+        observer?.invoke(sim, r)
         val s = tally.days.last().summary
         log.info(
             "{} {} visitors={} tx={} units={} stockOuts={} lost={} received={} moves={} floorClose={}{}",

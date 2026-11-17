@@ -214,13 +214,30 @@ class StoreState(val slug: String) {
          * unit, serials [INITIAL_BASE] + n in stock-plan row order. The store starts at the plan's own starting position
          * (92% of slots exact, 6% short, 2% over), not a perfect planogram.
          */
-        fun initial(m: StoreDayModel): StoreState {
+        fun initial(m: StoreDayModel, floorCap: Map<Slot, Int>? = null, unitCap: Map<String, Int> = emptyMap()): StoreState {
             val s = StoreState(m.slug)
             var serial = initialBase(m.slug)
+            // A planted store (slice 2d) starts no higher than its edited plan: floor rows are capped at the slot's requirement and a
+            // product's whole-store cap is spent floor first, then back room. Serial numbers still advance per planned unit, so the
+            // surviving units keep the serials they would have had.
+            val left = unitCap.toMutableMap()
+            val keepOf = java.util.IdentityHashMap<StoreDayModel.StockRow, Int>()
+            for (r in m.stockPlan.sortedBy { if (it.kind == "floor") 0 else 1 }) {
+                var keep = r.qty
+                if (floorCap != null && r.kind == "floor") keep = minOf(keep, floorCap[Slot(r.zone, r.ean)] ?: keep)
+                left[r.ean]?.let { cap ->
+                    keep = minOf(keep, cap)
+                    left[r.ean] = cap - keep
+                }
+                keepOf[r] = keep
+            }
             for (r in m.stockPlan) {
                 val isFloor = r.kind == "floor"
                 val level = if (isFloor) m.homeLevel[Slot(r.zone, r.ean)] ?: 1 else 0
-                repeat(r.qty) {
+                val keep = keepOf.getValue(r)
+                val dropped = r.qty - keep
+                serial += dropped
+                repeat(keep) {
                     s.add(Sgtin96.encode(r.ean, serial++), r.ean, if (isFloor) UnitState.ON_FLOOR else UnitState.BACKROOM, r.zone, level)
                 }
             }
