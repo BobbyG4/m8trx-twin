@@ -27,7 +27,7 @@ status: DESIGN — nothing here runs without Bob's go; the reset night is schedu
    - Each unsold unit whose EAN has a plan cell goes there (a move).
    - A unit whose EAN is off plan or over plan goes to the back room (a move).
    - What the plan still lacks is **received** as new EPCs (receiving serial block) into the back room, then moved to its cells.
-3. **Send.** Paced, health-checked (`GET …/actuator/health` must be `ok` before each batch; on 502 wait for ok; on 429 wait 60 s
+3. **Send.** Paced, health-checked (`GET https://dev.m8trx.com/server/api/health` must answer 200 with `"status":"ok"` before each batch; on 502 wait for ok; on 429 wait 60 s
    and honour `Retry-After`). Every batch has an idempotent external id, so a resumed run re-sends nothing that was accepted.
 4. **Ledgers.** Write the post-reset `StoreState` snapshot. From this point it is the live state the store-day continues from.
 5. **Push the period planogram** for the reset day (with its stop date).
