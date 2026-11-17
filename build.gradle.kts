@@ -617,3 +617,50 @@ storeDayTask(
     "Offline: every planted scenario verifies in a 28-day Denver + Paris run; non-planted stores byte-identical; the key matches the eval's fields; determinism.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDayPlantSelfTest") }
+
+// ── Store ops, Phase 3 TOOLING (2026-11-17): the Denver reset, the live ops driver, the gap check — DRY-RUN ONLY ─────────────
+// Nothing here sends: com.m8trx.twin.storeops builds its one live class (LiveSender) only behind an explicit live flag and a
+// confirmation, and no task below sets either. Names start with storeDay*/storeOps* (never connect/people/live/day).
+fun storeOpsTask(name: String, main: String, desc: String) = tasks.register<JavaExec>(name) {
+    group = "verification"
+    description = desc
+    mainClass.set(main)
+    classpath = sourceSets["main"].runtimeClasspath
+    maxHeapSize = "6g"
+    javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+}
+storeOpsTask(
+    "storeDayReset",
+    "com.m8trx.twin.storeops.StoreDayResetKt",
+    "Dry run: map Denver's (or M8TRX_RESET_SITE's) ledger to the period plan; write the paced receive/move/directive schedule, post-reset state and report under out/reset/. Sends nothing.",
+)
+storeOpsTask(
+    "storeOpsLiveDryRun",
+    "com.m8trx.twin.storeops.StoreOpsLiveKt",
+    "Dry run of the live ops driver against a simulated clock: a store-day sent in plan order, ordering asserted, would-send.jsonl under out/store-ops/. Sends nothing.",
+)
+storeOpsTask(
+    "storeDayGapCheck",
+    "com.m8trx.twin.storeops.StoreDayGapCheckKt",
+    "Read-only design: print the gap ledger's planned check list (signal -> platform read surface or 'no surface') and write the template. No network.",
+)
+storeOpsTask(
+    "storeDayReceiveProbe",
+    "com.m8trx.twin.storeops.ReceiveProbeKt",
+    "Design only, never sends: print the one-unit receive probe (receive, read back product and location, move, sell, read the sale line; F-9).",
+)
+storeOpsTask(
+    "storeOpsSelfTest",
+    "com.m8trx.twin.storeops.StoreOpsSelfTestKt",
+    "Offline: reset mapping conserves units, pace and ordering, idempotent ids, driver dry run, backoff rules, no live client in dry paths, LiveDrive default unchanged.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeOpsSelfTest") }
+
+// The store-ops service's classpath, copied like liveDist so the hourly pass's build never rewrites a jar under a running JVM.
+tasks.register<Sync>("storeOpsDist") {
+    group = "distribution"
+    description = "Copy the store-ops service's runtime classpath (main jar + dependencies) to M8TRX_STORE_OPS_DIST (default build/store-ops-dist)."
+    from(tasks.named("jar"))
+    from(configurations.named("runtimeClasspath"))
+    into(System.getenv("M8TRX_STORE_OPS_DIST") ?: layout.buildDirectory.dir("store-ops-dist").get().asFile.path)
+}

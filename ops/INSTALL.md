@@ -50,3 +50,60 @@ Do NOT `enable` the unit: it must not come back by itself after a reboot during 
 - `twin · live · STOPPED <KST> · reason=stopped|HOLD published=… evicted_at_stop=… wall=… plan_clocks=…`
 - `twin · live · REFUSED …` (HOLD, the day replay, a bad setting, no store with an edge — never restarted)
 - `twin · live · FAILED rc=N … · systemd retries in 30 s (3 tries in 10 min)`
+
+---
+
+# store-ops driver (Phase 3 tooling, 2026-11-17) — NOT INSTALLED, drafted only
+
+Drafted with the Phase 3 tooling slice (`status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`). **Nothing below has been run on the
+box and nothing is installed by this PR.** In that slice the JVM refuses a live run (exit 3), so even an installed unit sends nothing
+until the live slice lands and Bob gives the go for the reset night.
+
+| File | Installs to | What it is |
+|---|---|---|
+| `m8trx-twin-store-ops.service` | `/etc/systemd/system/` | the unit (not a timer; started and stopped by hand) |
+| `twin-store-ops.sh` | `/opt/m8trx/twin-ops/` | its ExecStart: refuses on HOLD, runs the JVM from `store-ops-dist/`, Slack through `twin-notify`, logs to `log/store-ops.log` |
+| `store-ops` | `/opt/m8trx/twin-ops/` | the operator command: `store-ops start [--stores csv]`, `stop`, `status`, `dry-run` |
+| `store-ops-owner.example.csv` | `/opt/m8trx/twin-ops/store-ops-owner.csv` (copy, then edit) | who writes each store: `storeday` or `hourly` |
+
+## Install (on the box, as m8trx, after the clone is on the merged branch; only when Bob says go)
+
+```
+cd /opt/m8trx/twin
+install -m 755 ops/twin-store-ops.sh ops/store-ops /opt/m8trx/twin-ops/
+install -m 644 ops/store-ops-owner.example.csv /opt/m8trx/twin-ops/store-ops-owner.csv   # then edit: Denver = storeday, the rest hourly
+sudo install -m 644 ops/m8trx-twin-store-ops.service /etc/systemd/system/
+sudo systemctl daemon-reload
+systemd-analyze verify /etc/systemd/system/m8trx-twin-store-ops.service   # prints nothing when clean
+```
+
+Do NOT `enable` the unit. The driver reads the same HOLD file as the live people plane (`$OPS/HOLD`), so `hold` stops it too.
+
+## The one owner file (two writers must never run for one store)
+
+`/opt/m8trx/twin-ops/store-ops-owner.csv` has `slug,owner` lines. The driver serves only stores listed `storeday`; an unlisted store
+belongs to the hourly pass. **The hourly pass has to read the same file.** `twin-hourly.sh` is box-only and this repo does not touch
+it; the edit that makes it honour the file is, where it builds its store list:
+
+```
+M8TRX_OPS_STORES="$(awk -F, '!/^#/ && $2 ~ /hourly/ {print $1}' "$OPS/store-ops-owner.csv" | paste -sd, -)"   # hourly's stores
+```
+
+(and when a store is not in the file at all it must still be served by the hourly pass: add the stores the file does not list.)
+Flip Denver in ONE step: stop the hourly pass for it (edit the file to `storeday`), then `store-ops start`. The driver refuses to start
+for a store the file still gives to `hourly`, and `store-ops start` re-checks before it builds anything.
+
+## Files it writes
+
+- `/opt/m8trx/twin-ops/store-ops.env`: stores (and later knobs); no secrets.
+- `/opt/m8trx/twin-ops/store-ops-dist/`: the runtime classpath copy (`./gradlew storeOpsDist`).
+- `<out>/<slug>/state/day-start.{csv,meta}`: the store state at the start of the day being served; a restart re-simulates that day
+  from it (same seed, same date, same ids) and the sent-ledger skips what the platform already accepted.
+- `/opt/m8trx/twin-ops/log/store-ops.log`: the run log.
+
+## Dry runs (safe anywhere, no network, no credentials)
+
+`./gradlew storeDayReset` (the Denver reset schedule and report under `out/reset/`), `./gradlew storeOpsLiveDryRun` (one simulated
+day, what it would send), `./gradlew storeDayGapCheck` (the gap ledger's planned checks), `./gradlew storeOpsSelfTest`.
+For a real reset night the reset needs the box's `.twin-state` (`sold-epcs.txt`, `receive/received-stock.csv`, `moves/placements.csv`,
+`stock/missing-epcs.txt`) copied right before the run.

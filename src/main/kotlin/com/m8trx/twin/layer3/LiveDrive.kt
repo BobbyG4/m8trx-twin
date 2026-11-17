@@ -294,6 +294,8 @@ object LiveDrive {
         val tenantId: String,
         val edges: Map<String, Edge>,
         val chainDir: Path,
+        /** Where a store-day's position streams come from; the default is the plane's own generator, exactly as before the switch. */
+        val peopleSource: PeopleSource = PeopleSource.Generator,
     ) {
         fun describe() = "sites=${sites.size} speed=${speed}x dwell=${dwell.name.lowercase()} shift=${shiftText()} " +
             "scale=${scaleOverride ?: "weekday-table x ${SCALE_CAP}/1.25"} cap=${maxEventsPerS.toInt()}ev/s,${maxArrivalsPerMin.toInt()}arr/min"
@@ -339,6 +341,7 @@ object LiveDrive {
                     tenantId = env("M8TRX_TENANT_ID") ?: "unset-dry-run",
                     edges = env("M8TRX_LIVE_EDGES")?.let(::parseEdges) ?: KNOWN_EDGES,
                     chainDir = Path.of(env("M8TRX_CHAIN_DIR") ?: "reference/data/chain"),
+                    peopleSource = PeopleSource.parse(env(PeopleSource.ENV_SOURCE), env(PeopleSource.ENV_DIR)),
                 )
             }
 
@@ -386,7 +389,10 @@ object LiveDrive {
         val store = keys.store(slug)
         val seed = daySeed(s.seedBase, date)
         val scale = liveScale(date, s.scaleOverride)
-        val streams = ScenarioRun(storeCode = slug, chainDir = s.chainDir).streamsFor(date, seed, scale, store.zone)
+        val streams = when (val src = s.peopleSource) {
+            PeopleSource.Generator -> ScenarioRun(storeCode = slug, chainDir = s.chainDir).streamsFor(date, seed, scale, store.zone)
+            is PeopleSource.StoreDaySidecar -> PeopleSource.readSidecar(PeopleSource.sidecarFile(src.dir, slug, date))
+        }
         val (edge, problem) = edgeFor(s, slug, store.salesFloorSpaceId)
         return StorePlan(
             slug, store.zone, siteIds[slug] ?: error("no site id for $slug"), store.salesFloorSpaceId, edge, problem,
