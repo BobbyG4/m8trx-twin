@@ -84,7 +84,22 @@ class PlantLedger(val sim: StoreDaySim) {
         if (r.plan.closed) return
         val byFixture = HashMap<String, Int>()
         val valueByFixture = HashMap<String, Double>()
+        val pl = sim.plant
+        // A shopper's put-back can land one unit on a neighbouring slot during the day (the 2a misplacement). Staff return it the next
+        // morning, so those units are the only ones allowed above a slot's planned quantity at a close.
+        val misplaced = r.moves.filter { it.reason == "misplaced" }.groupingBy { Slot(it.fixture, it.ean) }.fold(0) { n, m -> n + m.epcs.size }
         r.closeOnHand.forEach { (slot, q) ->
+            if (pl != null && (slot.fixture in pl.protectedFixtures || slot.ean in pl.protectedEans)) {
+                val cap = r.required[slot]
+                if (cap == null) {
+                    strayUnits += q
+                } else if (q > cap + (misplaced[slot] ?: 0)) {
+                    overCapacity +=
+                        "${r.date} ${slot.fixture} ${slot.ean} $q>$cap ${r.moves.filter { m ->
+                            m.fixture == slot.fixture && m.ean == slot.ean
+                        }.map { m -> m.reason + m.epcs.size }} open=${r.openOnHand[slot]}"
+                }
+            }
             byFixture.merge(slot.fixture, q, Int::plus)
             valueByFixture.merge(slot.fixture, q * (price[slot.ean] ?: 0.0), Double::plus)
             ean(slot.ean).floorQtySum += q
@@ -102,6 +117,10 @@ class PlantLedger(val sim: StoreDaySim) {
 
     var openDays = 0
 
+    /** Planted slots that held more than their planned (full) quantity at a close, and units sitting off-plan on a planted fixture. */
+    val overCapacity = ArrayList<String>()
+    var strayUnits = 0L
+
     companion object {
         /** A fixture holding this many units or fewer at close counts as empty (a stray put-back can land on a bare fixture). */
         const val EMPTY_QTY = 2
@@ -116,6 +135,9 @@ class PlantLedger(val sim: StoreDaySim) {
 
     /** Mean units a day that wanted the product: sold plus lost to an empty facing. */
     fun demandPerDay(e: String): Double = ((eans[e]?.units ?: 0) + (eans[e]?.lost ?: 0)) / denominator
+
+    /** Mean floor on-hand of an EAN at the days' close, in units. */
+    fun floorUnits(e: String): Double = (eans[e]?.floorQtySum ?: 0L) / maxOf(1, openDays).toDouble()
 
     /** Mean store-wide on-hand (floor and back room) at the days' close, in units. */
     fun onHandUnits(e: String): Double = (eans[e]?.totalQtySum ?: 0L) / maxOf(1, openDays).toDouble()

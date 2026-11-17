@@ -448,6 +448,26 @@ class StoreDaySim(
             cap -= stray.epcs.size
             stage(stray.fixture, stray.ean, stray.epcs.map { state.pickUpEpc(it) }, "stray-return")
         }
+        // Slice 2d: a planted shelf is never stocked above its planned (full) quantity. Staff take the surplus of a planted slot (a put-back
+        // that came home to a refilled slot, a start-up snapshot that ran over) back to the rack before the day; unplanted stores skip this.
+        plantNow?.let {
+            val pf = plant!!.protectedFixtures
+            val pe = plant.protectedEans
+            for (loc in state.locations().filter { !state.isBackroomLoc(it) }.toList()) {
+                for (ean in state.eansAt(loc).toList().sorted()) {
+                    if (loc !in pf && ean !in pe) continue
+                    val extra = state.count(loc, ean) - (view.required[Slot(loc, ean)] ?: 0)
+                    if (extra <= 0) continue
+                    val epcs = (0 until extra).mapNotNull { state.pickUp(loc, ean) }
+                    cum += epcs.size
+                    val due = stockStart + (cum / ratePerMs(preOpenStockers)).toLong()
+                    val rack = rackFor(state, ean)
+                    epcs.forEach { state.place(it, rack, 0) }
+                    log.moves += MoveLog(due, "capacity-return", rack, ean, epcs)
+                    log.wire += moveEvent(due, "staff-preopen", rack, epcs, log.nextSeq())
+                }
+            }
+        }
         for (slot in deficitOrder(state, view, 1.0)) {
             if (cap <= 0) break
             val n = min(min(view.required.getValue(slot) - state.count(slot.fixture, slot.ean), state.backroomCount(slot.ean)), cap)
@@ -482,9 +502,17 @@ class StoreDaySim(
                     val epcs = takeFromBackroom(state, slot.ean, n)
                     val due = walkAt + (done / rate).toLong()
                     queue += Queued(due, qseq++) {
-                        epcs.forEach { state.place(it, slot.fixture, view.homeLevel[Slot(slot.fixture, slot.ean)] ?: 1) }
-                        log.moves += MoveLog(due, "top-up", slot.fixture, slot.ean, epcs)
-                        log.wire += moveEvent(due, "staff-quiet-hour", slot.fixture, epcs, log.nextSeq())
+                        // a planted shelf takes no more than its planned quantity: units that no longer fit (a put-back landed meanwhile)
+                        // go back to the rack they came from, which the platform never saw them leave
+                        val guard = plant != null && plantNow != null && (slot.fixture in plant.protectedFixtures || slot.ean in plant.protectedEans)
+                        val room = if (guard) maxOf(0, view.required.getValue(slot) - state.count(slot.fixture, slot.ean)) else epcs.size
+                        val put = epcs.take(room)
+                        epcs.drop(room).forEach { state.place(it, rackFor(state, slot.ean), 0) }
+                        put.forEach { state.place(it, slot.fixture, view.homeLevel[Slot(slot.fixture, slot.ean)] ?: 1) }
+                        if (put.isNotEmpty()) {
+                            log.moves += MoveLog(due, "top-up", slot.fixture, slot.ean, put)
+                            log.wire += moveEvent(due, "staff-quiet-hour", slot.fixture, put, log.nextSeq())
+                        }
                     }
                 }
             }

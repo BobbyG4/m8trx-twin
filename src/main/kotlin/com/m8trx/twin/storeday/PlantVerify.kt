@@ -29,6 +29,13 @@ object PlantVerify {
             "look_not_buy" -> lookNotBuy(l, sc, ::add)
             else -> error("no verification for archetype ${sc.archetype}")
         }
+        add(
+            "no planted slot ever held more than its planned (full) quantity at a close (a same-day misplaced put-back excepted)",
+            l.overCapacity.isEmpty(),
+            "${l.overCapacity.size} over-capacity closes (e.g. ${l.overCapacity.take(
+                6,
+            )}); ${l.strayUnits} off-plan unit-closes on planted fixtures (put-backs)",
+        )
         add("the plant window holds for at least 28 days", l.days >= 28, "${l.days} days from ${l.dates.firstOrNull()} to ${l.dates.lastOrNull()}")
         out
     }
@@ -186,7 +193,7 @@ object PlantVerify {
 
     private fun quietStock(l: PlantLedger, sc: PlantScenario, plan: PeriodPlan, add: (String, Boolean, String) -> Unit) {
         val prods = sc.role("products")
-        val hi = l.percentile(l.floorEans.map { l.onHandUnits(it) }, 0.75)
+        fun planned(e: String) = plan.lines.filter { it.ean == e }.sumOf { it.required }
         add(
             "the ${prods.size} products sold zero for the whole window",
             prods.all {
@@ -195,9 +202,9 @@ object PlantVerify {
             prods.joinToString { "$it ${l.eans[it]?.units ?: 0}" },
         )
         add(
-            "each holds a high on-hand (at or above the store's 75th percentile)",
-            prods.all { l.onHandUnits(it) >= hi },
-            prods.joinToString { "$it ${f1(l.onHandUnits(it))}" } + "; p75 ${f1(hi)}",
+            "each holds high on-hand: at or near full planned capacity (90% or more of its lines' required quantity on the floor)",
+            prods.all { l.floorUnits(it) >= 0.9 * planned(it) },
+            prods.joinToString { "$it ${f1(l.floorUnits(it))} of ${planned(it)}" },
         )
         val med = medianImps(l)
         add(

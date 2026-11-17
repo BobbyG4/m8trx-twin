@@ -192,6 +192,20 @@ fun main() {
         swapOk && den.plant.levers.swaps.isNotEmpty() && once.all { it.department == (model.demand[it.ean]?.department ?: it.department) },
         "${den.plant.levers.swaps.size} swaps in Denver",
     )
+    ok(
+        "no lever raises a line's required quantity above the Phase 1 capacity (every edited line at or below its unedited line, Denver and Paris)",
+        runs.all { r ->
+            PlantPlanEdit(r.sim.model, r.plant).apply(r.sim.model.lines).zip(r.sim.model.lines).all { (e, b) -> e.required <= b.required }
+        },
+        "2 stores, ${runs.sumOf { it.sim.model.lines.size }} lines",
+    )
+    ok(
+        "no planted slot exceeds its planned quantity at any close, in 28 days",
+        runs.all {
+            it.ledger.overCapacity.isEmpty()
+        },
+        runs.joinToString { "${it.slug} ${it.ledger.overCapacity.size}" },
+    )
     val p1 = den.sim.periods.periodOf(from)
     val p5 = den.sim.periods.periodOf(from.plusWeeks(4))
     val prot = den.plant.protectedEans

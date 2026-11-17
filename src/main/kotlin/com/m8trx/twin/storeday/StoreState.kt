@@ -221,10 +221,16 @@ class StoreState(val slug: String) {
             // product's whole-store cap is spent floor first, then back room. Serial numbers still advance per planned unit, so the
             // surviving units keep the serials they would have had.
             val left = unitCap.toMutableMap()
+            val floorUsed = HashMap<Slot, Int>()
             val keepOf = java.util.IdentityHashMap<StoreDayModel.StockRow, Int>()
             for (r in m.stockPlan.sortedBy { if (it.kind == "floor") 0 else 1 }) {
                 var keep = r.qty
-                if (floorCap != null && r.kind == "floor") keep = minOf(keep, floorCap[Slot(r.zone, r.ean)] ?: keep)
+                if (floorCap != null && r.kind == "floor") {
+                    // a slot the edited plan no longer has starts empty (its product moved), and a slot never starts above its requirement
+                    val slot = Slot(r.zone, r.ean)
+                    keep = minOf(keep, (floorCap[slot] ?: 0) - (floorUsed[slot] ?: 0))
+                    floorUsed.merge(slot, keep, Int::plus)
+                }
                 left[r.ean]?.let { cap ->
                     keep = minOf(keep, cap)
                     left[r.ean] = cap - keep

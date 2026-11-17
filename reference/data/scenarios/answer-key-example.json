@@ -156,17 +156,17 @@
     "roles" : {
       "fixture" : [ {
         "kind" : "fixture",
-        "fixture_code" : "GF-R2-U2",
-        "zone_id" : "3ebd2e33-7bb1-55d0-bfd2-9e92d54de2e6",
-        "zone_name" : "Gondola R2 Front U2"
+        "fixture_code" : "GPS-06",
+        "zone_id" : "63340ce6-0988-52ec-b857-74a8da4e2e3f",
+        "zone_name" : "GPS Display Case 6"
       } ]
     },
-    "zone_ids" : [ "3ebd2e33-7bb1-55d0-bfd2-9e92d54de2e6" ],
-    "zone_names" : [ "Gondola R2 Front U2" ],
+    "zone_ids" : [ "63340ce6-0988-52ec-b857-74a8da4e2e3f" ],
+    "zone_names" : [ "GPS Display Case 6" ],
     "product_eans" : [ ],
     "item_cds" : [ ]
   },
-  "expected_recommendation" : "'Gondola R2 Front U2' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
+  "expected_recommendation" : "'GPS Display Case 6' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
   "evidence_expected" : [ "inventory_zone_product_count x unit price per fixture: the largest on-hand value", "behavioral_projection impression and dwell per fixture per day: the bottom decile" ]
 }, {
   "scenario_id" : "dec-us-denver:restock_first",
@@ -479,17 +479,17 @@
     "roles" : {
       "fixture" : [ {
         "kind" : "fixture",
-        "fixture_code" : "GB-R3-U5",
-        "zone_id" : "c72c6fe0-a938-5778-aa71-2490d11f5296",
-        "zone_name" : "Gondola R3 Back U5"
+        "fixture_code" : "GPS-01",
+        "zone_id" : "785ebde6-4b7d-5c5a-9624-2271bda56cd0",
+        "zone_name" : "GPS Display Case 1"
       } ]
     },
-    "zone_ids" : [ "c72c6fe0-a938-5778-aa71-2490d11f5296" ],
-    "zone_names" : [ "Gondola R3 Back U5" ],
+    "zone_ids" : [ "785ebde6-4b7d-5c5a-9624-2271bda56cd0" ],
+    "zone_names" : [ "GPS Display Case 1" ],
     "product_eans" : [ ],
     "item_cds" : [ ]
   },
-  "expected_recommendation" : "'Gondola R3 Back U5' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
+  "expected_recommendation" : "'GPS Display Case 1' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
   "evidence_expected" : [ "inventory_zone_product_count x unit price per fixture: the largest on-hand value", "behavioral_projection impression and dwell per fixture per day: the bottom decile" ]
 }, {
   "scenario_id" : "dec-fr-paris:restock_first",
