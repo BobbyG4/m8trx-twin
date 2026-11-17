@@ -116,9 +116,9 @@
         "department" : "climb",
         "category" : "apparel",
         "price_usd" : 30.0,
-        "fixture_code" : "GB-R2-U4",
-        "zone_id" : "35470d8b-6e56-5449-9311-dfd70f17c6fc",
-        "zone_name" : "Gondola R2 Back U4"
+        "fixture_code" : "GF-R2-U5",
+        "zone_id" : "596af12f-4dbb-5b91-bef7-3d17b7ac4e90",
+        "zone_name" : "Gondola R2 Front U5"
       } ],
       "target_fixture" : [ {
         "kind" : "fixture",
@@ -138,13 +138,13 @@
         "zone_name" : "Gondola R6 Back U2"
       } ]
     },
-    "zone_ids" : [ "35470d8b-6e56-5449-9311-dfd70f17c6fc", "e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd" ],
-    "zone_names" : [ "Gondola R2 Back U4", "Gondola R6 Back U2" ],
+    "zone_ids" : [ "596af12f-4dbb-5b91-bef7-3d17b7ac4e90", "e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd" ],
+    "zone_names" : [ "Gondola R2 Front U5", "Gondola R6 Back U2" ],
     "product_eans" : [ "3583787275337", "3608393232502" ],
     "item_cds" : [ "4724865", "5625145" ]
   },
-  "expected_recommendation" : "Move 4724865 (apparel 30.0 USD) from 'Gondola R2 Back U4' into 'Gondola R6 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
-  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone against the target zone" ]
+  "expected_recommendation" : "Move 4724865 (apparel 30.0 USD) from 'Gondola R2 Front U5' (few visits, but long dwell per visit: those who stop there linger) into 'Gondola R6 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
+  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone (few visits, high dwell per visit) against the target zone", "behavioral_projection impression and dwell per fixture per day: dwell per visit (dwell / impressions) at its fixture, top decile" ]
 }, {
   "scenario_id" : "dec-us-denver:under_seen",
   "archetype" : "under_seen",
@@ -190,14 +190,14 @@
       } ],
       "b" : [ {
         "kind" : "product",
-        "ean" : "3608390896844",
-        "item_cd" : "4894443",
+        "ean" : "3608392812019",
+        "item_cd" : "5525007",
         "department" : "snow",
-        "category" : "apparel",
-        "price_usd" : 16.99,
-        "fixture_code" : "GB-R3-U3",
-        "zone_id" : "f3a03d27-90bc-5f76-a4e7-8d08862d87ad",
-        "zone_name" : "Gondola R3 Back U3"
+        "category" : "accessories",
+        "price_usd" : 12.99,
+        "fixture_code" : "ACC-01",
+        "zone_id" : "14d36fe7-d505-561f-ac22-effdd9fb3282",
+        "zone_name" : "Accessories Bay 1"
       } ],
       "c" : [ {
         "kind" : "product",
@@ -211,12 +211,12 @@
         "zone_name" : "Gondola R3 Back U3"
       } ]
     },
-    "zone_ids" : [ "f3a03d27-90bc-5f76-a4e7-8d08862d87ad" ],
-    "zone_names" : [ "Gondola R3 Back U3" ],
-    "product_eans" : [ "3608390896837", "3608390896844", "3608449805155" ],
-    "item_cds" : [ "4894442", "4894443", "4560141" ]
+    "zone_ids" : [ "f3a03d27-90bc-5f76-a4e7-8d08862d87ad", "14d36fe7-d505-561f-ac22-effdd9fb3282" ],
+    "zone_names" : [ "Gondola R3 Back U3", "Accessories Bay 1" ],
+    "product_eans" : [ "3608390896837", "3608392812019", "3608449805155" ],
+    "item_cds" : [ "4894442", "5525007", "4560141" ]
   },
-  "expected_recommendation" : "Restock 4894442 (apparel 16.99 USD) first (sells fast, stock for under 2 days), then 4894443 (apparel 16.99 USD) (sells fast, healthy stock). Never 4560141 (apparel 24.99 USD) (sells slowly, nearly out).",
+  "expected_recommendation" : "Restock 4894442 (apparel 16.99 USD) first (sells fast, stock for under 2 days), then 5525007 (accessories 12.99 USD) (sells fast, healthy stock). Never 4560141 (apparel 24.99 USD) (sells slowly, nearly out).",
   "evidence_expected" : [ "sale_line per day: the two fast products", "inventory_zone_product_count per fixture: stock against velocity (days of cover)" ]
 }, {
   "scenario_id" : "dec-us-denver:quiet_stock",
@@ -439,9 +439,9 @@
         "department" : "climb",
         "category" : "apparel",
         "price_usd" : 35.0,
-        "fixture_code" : "GB-R3-U2",
-        "zone_id" : "ef2671b8-87f0-56d4-b63c-44771c50c64c",
-        "zone_name" : "Gondola R3 Back U2"
+        "fixture_code" : "PE-06",
+        "zone_id" : "94b83ab1-2fdb-5047-aab7-41644a9c44a3",
+        "zone_name" : "East Wall Bay 6"
       } ],
       "target_fixture" : [ {
         "kind" : "fixture",
@@ -461,13 +461,13 @@
         "zone_name" : "Gondola R7 Back U2"
       } ]
     },
-    "zone_ids" : [ "ef2671b8-87f0-56d4-b63c-44771c50c64c", "bd59c524-7543-539d-b66b-d78fae220d2c" ],
-    "zone_names" : [ "Gondola R3 Back U2", "Gondola R7 Back U2" ],
+    "zone_ids" : [ "94b83ab1-2fdb-5047-aab7-41644a9c44a3", "bd59c524-7543-539d-b66b-d78fae220d2c" ],
+    "zone_names" : [ "East Wall Bay 6", "Gondola R7 Back U2" ],
     "product_eans" : [ "3608392248818", "3608393232502" ],
     "item_cds" : [ "5407230", "5625145" ]
   },
-  "expected_recommendation" : "Move 5407230 (apparel 35.0 USD) from 'Gondola R3 Back U2' into 'Gondola R7 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
-  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone against the target zone" ]
+  "expected_recommendation" : "Move 5407230 (apparel 35.0 USD) from 'East Wall Bay 6' (few visits, but long dwell per visit: those who stop there linger) into 'Gondola R7 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
+  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone (few visits, high dwell per visit) against the target zone", "behavioral_projection impression and dwell per fixture per day: dwell per visit (dwell / impressions) at its fixture, top decile" ]
 }, {
   "scenario_id" : "dec-fr-paris:under_seen",
   "archetype" : "under_seen",

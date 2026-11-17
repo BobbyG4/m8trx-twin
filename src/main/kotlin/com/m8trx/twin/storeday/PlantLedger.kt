@@ -122,6 +122,9 @@ class PlantLedger(val sim: StoreDaySim) {
     var strayUnits = 0L
 
     companion object {
+        /** A fixture needs this many visits over the run before its dwell per visit is ranked (a 28-day run of a quiet fixture still has several a day). */
+        const val MIN_VISITS_FOR_DWELL = 20
+
         /** A fixture holding this many units or fewer at close counts as empty (a stray put-back can land on a bare fixture). */
         const val EMPTY_QTY = 2
     }
@@ -146,6 +149,12 @@ class PlantLedger(val sim: StoreDaySim) {
     fun coverDays(e: String): Double = demandPerDay(e).let { if (it <= 0.0) Double.POSITIVE_INFINITY else onHandUnits(e) / it }
 
     fun impressions(f: String): Int = fixtures[f]?.impressions ?: 0
+
+    /** Mean engaged dwell per visit (impression) at a fixture, in seconds: 0 when nobody stopped. */
+    fun dwellPerVisit(f: String): Double = fixtures[f]?.let { if (it.impressions == 0) 0.0 else it.dwellMs / 1000.0 / it.impressions } ?: 0.0
+
+    /** Merchandise fixtures with enough visits in the run for a dwell per visit to mean something (the rest are noise). */
+    val merchWithVisits: List<String> get() = merch.filter { impressions(it) >= MIN_VISITS_FOR_DWELL }
 
     fun onHandValue(f: String): Double = (fixtures[f]?.onHandValueSum ?: 0.0) / maxOf(1, openDays)
 

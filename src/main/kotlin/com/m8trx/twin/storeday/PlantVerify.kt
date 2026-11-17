@@ -139,6 +139,12 @@ object PlantVerify {
             l.impressions(a) <= medianImps(l),
             "$a ${l.impressions(a)} impressions, median ${f1(medianImps(l))}",
         )
+        val dwellCut = l.percentile(l.merchWithVisits.map { l.dwellPerVisit(it) }, 0.90)
+        add(
+            "its fixture is high-dwell: dwell per visit in the top decile of the merchandise fixtures",
+            l.impressions(a) >= PlantLedger.MIN_VISITS_FOR_DWELL && l.dwellPerVisit(a) >= dwellCut,
+            "$a ${f1(l.dwellPerVisit(a))} s per visit over ${l.impressions(a)} visits, p90 ${f1(dwellCut)} s",
+        )
         add(
             "the target fixture is high-visit (top decile) and holds the slow seller there",
             l.impressions(target) >= topImps(l, 0.9) &&
