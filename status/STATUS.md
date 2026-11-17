@@ -25,7 +25,8 @@
   replenishment, ask C) wait for the core fix.
 - **Phase 3 designed, not started** — `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
   received + ~6.4k move batches, paced over hours, announced) needs Bob's go and a scheduled night.
-- **Waiting on Bob:** D3 numbers (location factors, real hours, delivery cut-off — Phase 1 uses provisional values);
+- **D3 ✅** (#36) — twin estimates: per-city hours (French Sundays closed), location factors, 60/30-min lead at 450 m²; 28-day volume vs Denver NYC 1.65, Paris 1.39, SF 1.09, Seoul 1.04 … Marseille 0.23 (`reference/data/STORE-PROFILES-ESTIMATES.md`).
+- **Waiting on Bob:**
   Denver's entrance zone retyped `entry_exit` → `region` on 2026-11-11 by a person in the app (plan § 8 A12) — intended?;
   disable `twin-outbound` (506/506 failed)?
 
