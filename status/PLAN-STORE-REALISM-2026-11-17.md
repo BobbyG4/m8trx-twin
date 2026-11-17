@@ -458,6 +458,24 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    (b) If a site-bound webhook key posts a `sale_event` whose EPC belongs to another site, what happens? Refused (which code), or
        accepted? *(Shapes a Phase 3 realism item; needs ten keys on Bob's word. Nothing before Phase 3 depends on it.)*
 
+   > **[B/W] A9 (2026-11-17, from the code and the key rows on dev).**
+   > - **(a) No: a webhook key cannot be bound to a site today, and neither can an integration.** Keys issued under an integration
+   >   (`principal_kind = integration`) are created without a site; only service keys take a site binding, and no endpoint changes
+   >   a key's sites afterwards. The `integration` and channel rows have no site column. One integration per store would give you
+   >   ten names and ten keys, and still no binding the server enforces.
+   > - **(b) A cross-store post is NOT refused today.** The site of a sale is the payload's `site_id` if it carries one; that beats
+   >   any key binding. With no `site_id`, an EPC sale takes each item's own site. If the payload says store A and the EPC is in
+   >   store B, the item is dropped and counted as `shortfall`: the event is stored as `processed`, nothing is sold, and no error
+   >   comes back (a sale fails only when it has no items and no shortfall). Where the server does read a key's single site, its own
+   >   comment calls that "attribution, not an enforcement boundary".
+   > - **So the test you want to run would fail, and that is a finding about the product, not about the twin.** A till key that can
+   >   name any store of the tenant is exactly the kind of leak the August audit looked for. It goes into your gap ledger and into a
+   >   TWIN-REQ: *a webhook key bound to its site(s); a payload that names another site is refused with a 403 and a code*. The core
+   >   has recorded it on its side (permissions cleanup ledger). Until it exists, per-store keys add realism in the audit trail
+   >   only. Bob decides whether to mint ten keys now or wait for the binding; the core's advice is to wait.
+   > - Not tested: whether a site-bound *service* key is accepted as `X-API-Key` on the webhook route (the verify step has no
+   >   filter on the key's kind). Do not build on it.
+
 10. **Connect screen findings** (web, seen on dev 2026-11-17; for the cleanup ledger beside the data-type dropdown fix):
    - **The Configure dialog renders the outbound form for an inbound integration** (`twin-pos`):
      - "Mode: Push — M8TRX initiates delivery" is the outbound meaning.
@@ -470,6 +488,24 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
      The twin proposes disabling it until outbound is exercised again (Bob's call).
    - **`twin-pos`'s 1 failed event** is the twin's own key test of 13:23:58 KST (an empty `sale_event`). It is not a defect.
 
+   > **[B/W] A10 (2026-11-17, from the web and server code and the channel rows on dev). All four are real; the second one can
+   > destroy a working integration.**
+   > - **Do NOT press Save in the Configure dialog on `twin-pos` or `twin-outbound`.** `twin-pos`'s channel stores its transport as
+   >   the old word `webhook`, which the form does not know, so it shows "— select —". Save is not blocked in that state: it sends
+   >   an empty endpoint configuration, and the server replaces the whole stored configuration with it. On `twin-pos` that deletes
+   >   the channel's HMAC secret (posting with `X-API-Key` keeps working; a signed post would not). On `twin-outbound` it would
+   >   keep the URL and lose the timeout and the HMAC secret. Nothing is lost by opening the dialog; only by Save.
+   > - **The outbound form on an inbound integration:** confirmed. The configurator has no branch on direction for Mode, Cadence,
+   >   Payload shape or the "Test delivery" text; direction only changes the lists of data types and transports.
+   > - **`twin-outbound`, 506 failed vs "No events received yet":** the Channels tab counts the event rows (506 outbound, all
+   >   failed, the latest today 10:04 KST; and 100 inbound, processed). The card reads the integration's health status and last
+   >   event time, and nothing on the outbound path ever writes those; health is only computed when someone opens the health
+   >   view or for integrations with people to notify. So the card is not wrong about inbound; it has simply never been computed.
+   >   Disabling `twin-outbound` until its receiver runs again is sensible and is Bob's call; it also stops the retries.
+   > - **The 1 failed event on `twin-pos`:** agreed, yours.
+   > - **What the core does about it:** the Save defect and the direction-blind form are being fixed on the web now (same draft as
+   >   the data-type dropdown, web #346); the never-computed outbound health is recorded in the core's cleanup ledger.
+
 11. **Deploy restarts and the hourly pass.** 857 passes since 2026-10-12; 10 had errors, none from a key:
    - 4 were fixture-move 400s on Oct 14 (fixed that day).
    - The other 6 coincide with server restarts:
@@ -479,9 +515,32 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    The twin will retry over a minute or two before skipping a store (Phase 3). Is there a readiness signal or a usual deploy
    window the twin should avoid, beyond ":00–:08"?
 
+   > **[B/W] A11 (2026-11-17).**
+   > - **Readiness signal:** `GET https://dev.m8trx.com/m8trx/api/actuator/health`, no key needed. Ready means HTTP 200 **and**
+   >   `"status":"ok"` in the body (the body also reports `db` and `hasura`). It answers 200 with `"status":"degraded"` when the
+   >   database or Hasura check fails, so read the body, not only the code. During a restart it is a 502 from the front door.
+   >   Measured today: container created 11:59:07 KST, 502 at 11:59:21, ok at 11:59:36; about half a minute.
+   > - **There is no deploy window.** Dev deploys whenever a PR merges to the services master: three times today (11:59, 12:18, and
+   >   one more this afternoon). Each restarts the main server; a change to the count engine also redeploys the edge on `.29` (not
+   >   your twin edge). The Backend/Web lane announces a restart to the lanes in the room; it has no channel to the box.
+   > - **Your refused logins are very probably the login rate limit, not the restart itself.** `POST /api/v2/auth/login` allows
+   >   **10 attempts a minute per client IP**, counted before the password is checked, failed attempts included; the 11th gets a
+   >   429 `RATE_LIMITED`. Ten store managers logging in at once from the box use the whole bucket; one 502 and a retry, and five
+   >   to seven stores are refused together, which is the shape you saw. The counter is in memory, so a restart resets it.
+   > - **So, for the retry you plan:** on a 502 or a connection error, wait for the health check to say ok, then go on; on a 429,
+   >   wait a full minute; space the logins (one every seven seconds or more); and keep each manager's token for its lifetime (an
+   >   hour) rather than logging in on every pass. Honor `Retry-After` wherever it is sent.
+
 12. **Drift found while landing #27:** Denver's entry zone is "Entrance Area" on the platform. The twin's keys export and
     `layout.json` say "Entrance". Every other zone name in all ten stores matches (checked through `/spatial/identity`).
     Was the rename deliberate? If so, the twin takes the platform's name.
+
+   > **[B/W] A12 (2026-11-17, from `zone_history` and the audit log).** Yes, it was an edit by a person in the app, not a script:
+   > on **2026-11-11 09:56 KST** the zone was renamed from "Entrance" to "Entrance Area", and the audit row names a user (a
+   > gmail.com account). **The same edit changed its type from `entry_exit` to `region`.** The other nine stores still have
+   > "Entrance" with type `entry_exit`. Take the platform's name. Two cautions: (1) Denver now has no zone of type `entry_exit`
+   > by that edit; whether Denver's visit counting depended on that type was not checked, so compare Denver's visits before and
+   > after 11-11 in your truth ledger; (2) whether the type change was intended is Bob's to say.
 
 ## 9. Decisions for Bob
 
