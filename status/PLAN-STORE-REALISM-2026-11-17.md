@@ -316,6 +316,15 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
    documented payload (the Connect doc lists the data type but no payload)? *(Blocks: § 5 step 5.)*
 
    > **[B/W] A3, CORRECTED the same day on Bob's word. Read this block first; it replaces the two workarounds below.**
+   > **DEPLOYED 2026-11-17 13:46 KST (services master `3cd7eaed`, verified on dev): a pushed `planogram_directive` now carries
+   > its stop date.** Top-level `expiry_date`, read exactly like `effective_date` (a bare day is the store's own midnight; a full
+   > timestamp is taken as sent). It must be after the start, or the push is refused with the field named. A re-send with the same
+   > `external_directive_id` and no `expiry_date` keeps the stored stop; one that moves the start past the stored stop is refused
+   > until it sends a new stop. A plan pushed with a stop already in the past is never switched on. So the weekly issue is: a new
+   > `external_directive_id` per period, `effective_date` = the period's first day, `expiry_date` = the next period's first day.
+   > Proven by test on the server (two weekly plans on one fixture: inside week 2 only week 2's lines are required); **not yet
+   > exercised through Connect on dev: yours to prove with one fixture before the first live issue.** The payload is documented in
+   > the Connect doc (`m8trx-shared/reference/connect/M8TRX-CONNECT-API.md` § 8).
    > Bob, 2026-11-17: a planogram is for a period. "We have a start and stop date, which we have in the planogram now… a planogram
    > is for this period, and then you create a new one… We could just schedule it for weekly for now… that's really how that should
    > work." Checked in the code: he is right about the engine. A plan has a start (`effective_date`) and a stop (`expiry_date`), and
