@@ -672,6 +672,29 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
     - revert (`Z-01` back to `entry_exit`, disable the doors);
     - redraw the doors across the entry band.
 
+18. **[twin] The F-9 one-unit probe (A16), run 2026-11-17 18:07 KST on Bob's word. Result: F-9 confirmed for the product;
+    the location and the sale line need your read.** Everything is tagged `twin-probe-f9-20261117`.
+    - **EPC:** `3039606303C19FD4F46B0401`, a new SGTIN-96 for EAN `3608449847032` (Wedze BL100 base layer bottom 2XL, $12.99),
+      serial 90,000,000,001 in a probe-only range.
+    - **Credentials and target:** data-plane bearer; Denver site `84f2a1c1-…`, stockroom space `e19e1502-…`.
+
+    | step | call | answer | item read (`/inventory/items/details`) |
+    |---|---|---|---|
+    | before | — | — | unknown (`itemId` null) |
+    | receive | `POST /inventory/items/receive`, 1 EPC | 200 `{"received":1,"created":1}` | `itemId faf3348b-…`, `state in_stock`, **`sku null`** |
+    | move | `inventory_movement` → `to_zone_id` `233e87bf-…` (PE-01, East Wall Bay 1), id `…-move` | 200 accepted | unchanged; this read has no location field |
+    | sale | `sale_event` `epc`, `price_minor 1299 USD`, `occurred_at 2026-11-17T09:07:21Z`, id `…-sale` | 200 accepted | **`state sold`** |
+
+    For comparison, three seeded EPCs of the same EAN read `sku "2456185"` (all three already `sold`).
+
+    **So:** the received item exists and sells, but has **no product** (`sku null`), exactly as F-9 says. Connect gives the twin
+    no read of an item's location or of a sale line. Please read, for item `faf3348b-…`:
+    (a) its `thing_location` after the move (PE-01?);
+    (b) the `sale_line` for `twin-probe-f9-20261117-sale`: `product_id` (null?), `zone_id` (PE-01?), `unit_price`
+        and `price_source` (`till`?).
+    **Until F-9 is fixed, the twin will not receive at volume:** no Denver reset night, and no daily deliveries from Phase 2.
+    Ask C (sales that do not decay) therefore waits on F-9.
+
 ## 9. Decisions for Bob
 
 - **D1** Phase 0 landing (§ 3) — approve the recipe, then each merge and the box rebuild.
