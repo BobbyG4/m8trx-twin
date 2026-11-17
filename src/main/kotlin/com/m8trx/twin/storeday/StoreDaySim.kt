@@ -29,12 +29,19 @@ import kotlin.math.min
  * fixtures draw more shoppers), a buy multiplier per DEPARTMENT (a $5 general line converts more readily than a $5,000 bike),
  * and the exponent applied to a cell's demand share when a shopper picks what to look at.
  */
-data class Calibration(val fixtureScale: Map<String, Double>, val departmentBuy: Map<String, Double>, val cellWeightPower: Double) {
+data class Calibration(
+    val fixtureScale: Map<String, Double>,
+    val departmentBuy: Map<String, Double>,
+    val cellWeightPower: Double,
+    /** Slice 2e: the store's level of the dwell model ([DwellModel]), fitted so the mean engaged span per browse visit meets the operating model. */
+    val dwellScale: Double = 1.0,
+) {
     fun toJson(): String = ConnectMappers.snake.writerWithDefaultPrettyPrinter().writeValueAsString(
         mapOf(
             "fixture_scale" to fixtureScale.toSortedMap().mapValues { Math.round(it.value * 10_000) / 10_000.0 },
             "department_buy" to departmentBuy.toSortedMap().mapValues { Math.round(it.value * 10_000) / 10_000.0 },
             "cell_weight_power" to cellWeightPower,
+            "dwell_scale" to Math.round(dwellScale * 10_000) / 10_000.0,
         ),
     ) + "\n"
 
@@ -44,7 +51,12 @@ data class Calibration(val fixtureScale: Map<String, Double>, val departmentBuy:
         fun load(path: Path): Calibration {
             val n = ConnectMappers.snake.readTree(Files.readAllBytes(path))
             fun map(k: String) = n.path(k).fields().asSequence().associate { it.key to it.value.asDouble() }
-            return Calibration(map("fixture_scale"), map("department_buy"), n.path("cell_weight_power").asDouble(1.0))
+            return Calibration(
+                map("fixture_scale"),
+                map("department_buy"),
+                n.path("cell_weight_power").asDouble(1.0),
+                n.path("dwell_scale").asDouble(1.0),
+            )
         }
     }
 }
@@ -82,6 +94,8 @@ data class Knobs(
     val countShare: Double = 0.25,
     /** The count starts in the quietest open hour after skipping this many opening hours (the floor the shoppers have worked on). */
     val countSkipOpenHours: Int = 2,
+    /** Slice 2e: dwell by fixture kind and content, and interactions that scale with it ([DwellModel]). False is the 2d floor. */
+    val dwell: Boolean = true,
 )
 
 /** One unit that left a fixture in a sale. [fixture] is where the shopper stood: the platform should stamp the sale there. */
@@ -244,6 +258,9 @@ class StoreDaySim(
 
     private val baseView: PeriodView get() = viewFor(PeriodPlans.ANCHOR)
 
+    /** Slice 2e: the dwell model of this store (null when [Knobs.dwell] is off). */
+    val dwellModel: DwellModel? = if (knobs.dwell) DwellModel(model, plan, behavior.params, cal.dwellScale) else null
+
     private val demandRank: Map<String, Double> = model.demand.mapValues { it.value.share }
 
     // ── hooks ─────────────────────────────────────────────────────────────────────────────────────────
@@ -257,6 +274,16 @@ class StoreDaySim(
         val schedule: (Long, () -> Unit) -> Unit = { _, a -> a() },
     ) : FloorHooks {
         override fun cellWeight(c: Cell): Double = (view.weights[c] ?: 1e-7) * (lev?.cellMul(c.ean) ?: 1.0)
+
+        override fun dwellScale(f: com.m8trx.twin.layer1.Fixture, p: com.m8trx.twin.behavior.FixturePresentation): Double? =
+            dwellModel?.scale(f, p)?.let {
+                it *
+                    (lev?.dwellMul(f.code) ?: 1.0)
+            }
+
+        override fun cellsConsidered(base: Int, dwellMs: Long): Int = dwellModel?.cellsConsidered(base, dwellMs) ?: base
+
+        override fun tryOnScale(): Double = if (dwellModel != null) DwellKnobs.TRY_ON_SCALE else 1.0
 
         override fun fixtureScale(code: String): Double = (cal.fixtureScale[code] ?: 1.0) * (lev?.fixtureMul(code) ?: 1.0)
 
@@ -274,10 +301,13 @@ class StoreDaySim(
 
         override fun putBack(c: Cell, atMs: Long, u: Double) {
             val st = state ?: return
-            if (u >= knobs.misplaceProb) return
+            // 2e: nobody carries a bike to the next aisle, so a bike-class put-back (the model's case-size-1 lines) stays where it was.
+            if (dwellModel != null && (model.demand[c.ean]?.priceUsd ?: 0.0) >= DwellKnobs.MISPLACE_MAX_PRICE_USD) return
+            val misplaceProb = knobs.misplaceProb * (if (dwellModel != null) DwellKnobs.MISPLACE_SCALE else 1.0)
+            if (u >= misplaceProb) return
             val near = neighbours[c.fixture].orEmpty()
             if (near.isEmpty()) return
-            val to = near[min(near.size - 1, floor(u / knobs.misplaceProb * near.size).toInt())]
+            val to = near[min(near.size - 1, floor(u / misplaceProb * near.size).toInt())]
             // The unit is in the shopper's hand from now until [atMs] and lands on the neighbour then: held IN_TRANSIT, so no
             // other shopper can take it from either fixture before the move is due (the wire-order rule).
             val epc = st.pickUpLast(c.fixture, c.ean) ?: return

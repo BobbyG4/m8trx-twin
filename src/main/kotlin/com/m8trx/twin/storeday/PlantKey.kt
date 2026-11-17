@@ -143,7 +143,8 @@ object PlantKey {
 
             "move_fast_seller" -> "Move ${n.label(
                 sc.one("product"),
-            )} from '${fx(sc.one("product"))}' into '${zn(sc.one("target_fixture"))}' (high visits), " +
+            )} from '${fx(sc.one("product"))}' (few visits, but long dwell per visit: " +
+                "those who stop there linger) into '${zn(sc.one("target_fixture"))}' (high visits), " +
                 "displacing the slow seller ${n.label(sc.one("displaced"))}."
 
             "under_seen" -> "'${zn(
@@ -187,7 +188,8 @@ object PlantKey {
 
         "move_fast_seller" -> listOf(
             "sale_line per unit per day: the product's velocity against its department",
-            "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone against the target zone",
+            "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone (few visits, high dwell per visit) against the target zone",
+            "behavioral_projection impression and dwell per fixture per day: dwell per visit (dwell / impressions) at its fixture, top decile",
         )
 
         "under_seen" -> listOf(

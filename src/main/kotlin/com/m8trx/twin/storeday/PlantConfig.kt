@@ -11,6 +11,8 @@ import java.time.LocalDate
  *
  *  - [fixtureMul]: a fixture's stop weight (how many shoppers stop there, so its impressions and dwell). The same lever the
  *    calibration uses ([Calibration.fixtureScale]).
+ *  - [fixtureDwellMul] (slice 2e): the engaged span at a fixture, on top of what its kind and content give ([DwellModel]): the
+ *    presentation that holds shoppers (a demo, seating, an associate). It moves the span, not the visits.
  *  - [fixtureBuyMul] / [buyMul]: a shopper's chance to buy what is in hand, per fixture or per EAN (price shock, a presentation
  *    that does not convert).
  *  - [cellMul]: how readily a cell is looked at closely (the demand weight of [FloorHooks.cellWeight]).
@@ -29,9 +31,11 @@ data class PlantLevers(
     val backroomAbs: Map<String, Int> = emptyMap(),
     val initialUnits: Map<String, Int> = emptyMap(),
     val swaps: List<PlantSwap> = emptyList(),
+    val fixtureDwellMul: Map<String, Double> = emptyMap(),
 ) {
     /** Every fixture code the levers touch. */
-    val fixtures: Set<String> get() = fixtureMul.keys + fixtureBuyMul.keys + requiredFixtureMul.keys + swaps.map { it.toFixture }
+    val fixtures: Set<String> get() = fixtureMul.keys + fixtureBuyMul.keys + fixtureDwellMul.keys + requiredFixtureMul.keys +
+        swaps.map { it.toFixture }
 
     /** Every EAN the levers touch. */
     val eans: Set<String>
@@ -39,6 +43,8 @@ data class PlantLevers(
             swaps.flatMap { listOf(it.ean, it.displaces) }
 
     fun fixtureMul(code: String): Double = fixtureMul[code] ?: 1.0
+
+    fun dwellMul(code: String): Double = fixtureDwellMul[code] ?: 1.0
 
     fun buyMul(ean: String, fixture: String): Double = (buyMul[ean] ?: 1.0) * (fixtureBuyMul[fixture] ?: 1.0)
 
@@ -63,6 +69,7 @@ data class PlantLevers(
                 merge(x.backroomAbs, y.backroomAbs, "backroom_abs"),
                 merge(x.initialUnits, y.initialUnits, "initial_units"),
                 x.swaps + y.swaps,
+                merge(x.fixtureDwellMul, y.fixtureDwellMul, "fixture_dwell_mul"),
             )
         }
     }
@@ -132,6 +139,7 @@ class PlantConfig(val from: LocalDate, val days: Int, val stores: Map<String, St
                     iMap(l.path("backroom_abs")),
                     iMap(l.path("initial_units")),
                     l.path("swaps").map { PlantSwap(it.path("ean").asText(), it.path("to_fixture").asText(), it.path("displaces").asText()) },
+                    dMap(l.path("fixture_dwell_mul")),
                 ),
             )
         }
