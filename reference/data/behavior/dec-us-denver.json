@@ -1,0 +1,119 @@
+{
+  "_doc": "TWIN-REQ-007 behavior parameters for ONE site. Every number has a `_doc` sibling saying what it means and what changing it does. Multipliers of 1.0 switch an effect OFF. Defaults are the brief's PROPOSED starting points or twin's stated reasoning, NOT measurements. Read by com.m8trx.twin.behavior.BehaviorParams; the prose guide for a presenter is reference/data/behavior/README.md.",
+  "site": "dec-us-denver",
+  "timezone": "America/Denver",
+  "seed": 20261104,
+  "_seed_doc": "Every run takes a seed. Same seed + this file + the same plan + the same date = the same shoppers, paths, impressions and sales, to the row.",
+
+  "traffic": {
+    "_doc": "Daily visitors = operating-model visitors_per_day (weekday or weekend) x day_of_week_factor x weekly seasonality. The hourly shape is the operating model's hourly_curve.",
+    "day_of_week_factor": {
+      "MONDAY": 0.90, "TUESDAY": 0.88, "WEDNESDAY": 0.95, "THURSDAY": 1.02, "FRIDAY": 1.25,
+      "SATURDAY": 1.08, "SUNDAY": 0.92
+    },
+    "_day_of_week_factor_doc": "Weekdays scale the weekday base (850), Saturday/Sunday the weekend base (1450). Friday evening and Saturday are the busiest days, Tuesday the quietest.",
+    "seasonality_amplitude": 0.08,
+    "seasonality_period_weeks": 6.0,
+    "_seasonality_doc": "A slow wave so a month of days is not one day copied: factor = 1 + amplitude x sin(2 pi x weeks_since_2026-01-05 / period). 0.0 turns it off."
+  },
+
+  "_personas_doc": "Share of visits. browser = looks, rarely buys. mission = came to buy something. try_on = handles and tries before deciding. gift = knows what they want, grabs it fast and pays (the one persona whose sale line needs no prior impression).",
+  "personas": {
+    "browser": 0.73, "mission": 0.12, "try_on": 0.12, "gift": 0.03
+  },
+
+  "browse": {
+    "_doc": "How many floor fixtures a visit stops at, and how long. Dwell at a fixture is scaled by its appeal (square root, so a hero table holds people longer but not absurdly).",
+    "stops": { "browser": [2, 5], "mission": [3, 6], "try_on": [3, 6], "gift": [1, 1] },
+    "dwell_seconds": [25, 80],
+    "entrance_stop_rate": 0.09,
+    "_entrance_stop_rate_doc": "Chance a shopper stops at EACH entrance-zone fixture on the way in, before the entrance-table truth and content appeal. Everyone passes the entrance; a minority stops.",
+    "checkout_queue_seconds": [60, 180],
+    "mission_category_boost": 3.0,
+    "_mission_category_boost_doc": "A mission shopper weights fixtures by (1 + boost x share of the fixture's facings in their target category)."
+  },
+
+  "content": {
+    "_doc": "Fixture appeal from WHAT IS ON IT. Empty fixtures still get looked at, rarely. Hero styles pull people to whatever fixture holds them.",
+    "empty_fixture_appeal": 0.15,
+    "hero_appeal": 1.6,
+    "_hero_appeal_doc": "Appeal multiplier for a fixture holding at least one hero style (scaled by the hero share of its facings, capped at this value).",
+    "heroes": [
+      "kiprun-kipride-max-mens-running-shoes-362185",
+      "kiprun-kipstorm-tempo-mens-running-shoes-362245"
+    ],
+    "_heroes_doc": "Hero styles by handle. Kiprun KipRide Max and KipStorm Tempo, the premium running shoes a presenter can name.",
+    "complements": {
+      "footwear": ["accessories", "apparel"],
+      "apparel": ["accessories", "footwear"],
+      "outdoor": ["accessories", "bag_pack"],
+      "accessories": [],
+      "bag_pack": ["accessories"]
+    },
+    "_complements_doc": "Category -> categories that complete it. A cell is a complement when it sits beside a hero style and its category is listed under the hero's category.",
+    "price_reference_usd": 25.0,
+    "price_elasticity": 2.0,
+    "_price_doc": "Which item on a face a shopper reaches for: weight x (reference / price)^elasticity. Higher elasticity = cheaper items handled more often. Calibrated so the basket value lands near the operating model's ATV."
+  },
+
+  "engagement": {
+    "_doc": "A shopper at a fixture considers a few cells and picks some up (engagement). Picking up is what makes a sale possible.",
+    "cells_considered": 4,
+    "base_pickup": 0.26,
+    "max_probability": 0.95,
+    "try_on_rate": { "browser": 0.05, "mission": 0.30, "try_on": 0.75, "gift": 0.0 },
+    "_try_on_rate_doc": "Chance a picked-up apparel or footwear item is tried on (footwear at the bench FB-01, apparel in the fitting room).",
+    "try_on_seconds": [120, 300]
+  },
+
+  "purchase": {
+    "_doc": "Chance a picked-up item is bought, before the truths. try_on_buy_uplift multiplies it for items that were tried on.",
+    "base_buy": { "browser": 0.013, "mission": 0.45, "try_on": 0.13, "gift": 1.0 },
+    "try_on_buy_uplift": 1.3,
+    "mission_continue_after_buy": 0.85,
+    "_mission_continue_doc": "After a mission shopper buys, the chance they keep browsing at each remaining planned stop.",
+    "impulse_at_checkout": 0.35,
+    "price_elasticity": 0.85,
+    "_price_elasticity_doc": "Willingness to pay for an item in hand: buy chance x (price_reference_usd / price)^this, bounded to [0.15, 1.25]. 0.0 = price does not matter at the till.",
+    "_impulse_doc": "Chance a buyer adds an item from the checkout impulse fixture while queueing (an impulse line; no dwell needed)."
+  },
+
+  "truths": {
+    "_doc": "The six fixed, explainable truths (TWIN-REQ-007 requirement 10). Each multiplies exactly one measure, so turning it to 1.0 removes it and doubling (value - 1) doubles it. Prose for the presenter: reference/data/behavior/README.md.",
+    "entrance_table_impressions": 1.8,
+    "entrance_table_pickup": 1.4,
+    "_entrance_doc": "The entrance table wins: everyone passes it. Applies to fixtures in the entrance zone (Z-01 in Denver).",
+    "back_corner_impressions": 0.5,
+    "back_corner_distance_quantile": 0.8,
+    "back_corner_off_path_mm": 4000.0,
+    "_back_corner_doc": "The back corner loses: few shoppers walk there. A fixture is back-corner when it is in the farthest 20% from the entrance door AND its centre is more than 4 m sideways from the door's centre line (off the main path).",
+    "eye_level_pickup": 1.3,
+    "floor_level_pickup": 0.7,
+    "levels_per_fixture": 4,
+    "eye_level": 2,
+    "_level_doc": "Eye level lifts: people reach what they see. The plan has no level field, so twin derives one: a fixture's lines in position_sequence order fill levels 1 (top) to levels_per_fixture (floor) by facings, each line taking the level its facing span's midpoint falls in. Level eye_level is eye height; the last level is the floor. A plan line with display_level overrides the derivation.",
+    "size_run_conversion": 0.5,
+    "size_run_full_break_share": 0.5,
+    "_size_run_doc": "A broken size run sinks: conversion of a style on a fixture = max(size_run_conversion, 1 - (1 - size_run_conversion) x missing_share / full_break_share), where missing_share is the share of the style's catalog sizes absent from that fixture. Half the sizes gone = the full x0.5.",
+    "color_story_coherent": 1.25,
+    "color_story_clash": 0.85,
+    "color_story_min_share": 0.6,
+    "color_story_clash_families": 5,
+    "_color_story_doc": "A color story lifts the whole face: when one color family holds at least 60% of ALL a fixture's facings (unnamed colors count in the total) with 3+ cells of that family, impressions AND pickup of everything on it rise x1.25; when 5+ families share a face with none above 35%, it clashes and both fall x0.85. Applies to impressions and pickup together, as the brief states it.",
+    "adjacency_complement": 1.2,
+    "_adjacency_doc": "A complement beside a hero sells: a cell whose position is next to a hero style's cell on the same fixture, in a complement category, converts x1.2."
+  },
+
+  "noise": {
+    "appeal_sd": 0.10,
+    "_doc": "Per-shopper, per-fixture log-normal jitter on appeal, so two shoppers do not rank fixtures identically. 0.0 = no jitter."
+  },
+
+  "reset": {
+    "_doc": "The scripted planogram change for history and demos (requirement 5). before = the published plan with the hero styles parked on a back-corner fixture; after = the hero styles move to the entrance table, with a complement beside them. Everything else is untouched; control_fixture is asserted flat.",
+    "hero_back_corner_fixture": "GB-R1-U7",
+    "entrance_table_fixture": "PI-01",
+    "complement_handles": ["ekiden-running-socks-adult-3-pack-11690"],
+    "control_fixture": "GB-R6-U3"
+  }
+}
