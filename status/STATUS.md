@@ -2,6 +2,19 @@
 
 ---
 
+## ▶ PROGRESS on PLAN-STORE-REALISM (2026-11-17, Session 20)
+
+- **Phase 0 ✅** — PRs settled (#27, #28; #17–#19, #21 closed); box rebuilt from `main` (13:47 KST), live plane on `--shift 0`;
+  box ops scripts + digest now in `ops/box/` (digest reads the live plane). First hourly pass on `main` 14:06 KST: 0 errors.
+- **Phase 1 (Denver) ✅** — #29: `stores/dec-us-denver/model/` (profile, fixture kits, demand, planogram v2, stock to plan);
+  2,497 of 2,586 EANs on the floor, 87.6% fill, only the two service fixtures empty. Offline; nothing sent.
+- **Phase 2a (Denver store-day) — building** (brief `status/briefs/BRIEF-PHASE2-STORE-DAY-SIMULATION-2026-11-17.md`).
+- **Waiting on Bob:** D3 numbers (location factors, real hours, delivery cut-off — Phase 1 uses provisional values);
+  Denver's entrance zone retyped `entry_exit` → `region` on 2026-11-11 by a person in the app (plan § 8 A12) — intended?;
+  disable `twin-outbound` (506/506 failed)?
+
+---
+
 ## ⚠⚠ WHAT ACTUALLY RUNS (step 0 of CORE-REQ-009 — read-only survey, Session 20, **2026-11-17**, gmail seat)
 
 > **This section supersedes every "deploy state" / "branch state" line below it.** The twin lane went quiet after S19
