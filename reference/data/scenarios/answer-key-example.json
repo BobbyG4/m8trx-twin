@@ -1,0 +1,647 @@
+[ {
+  "scenario_id" : "dec-us-denver:promote",
+  "archetype" : "promote",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "fast_quiet" : [ {
+        "kind" : "product",
+        "ean" : "3608439260063",
+        "item_cd" : "4646131",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 14.0,
+        "fixture_code" : "GB-R2-U6",
+        "zone_id" : "901209d3-f969-5dcb-a98a-38736d6545dd",
+        "zone_name" : "Gondola R2 Back U6"
+      } ],
+      "fast_busy" : [ {
+        "kind" : "product",
+        "ean" : "3608439294464",
+        "item_cd" : "4435748",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 11.99,
+        "fixture_code" : "GB-R6-U1",
+        "zone_id" : "c0d7e1b1-5596-5c65-b729-cf4eeae73670",
+        "zone_name" : "Gondola R6 Back U1"
+      } ],
+      "low_cover" : [ {
+        "kind" : "product",
+        "ean" : "3608390866465",
+        "item_cd" : "5101375",
+        "department" : "running",
+        "category" : "apparel",
+        "price_usd" : 24.99,
+        "fixture_code" : "GB-R5-U3",
+        "zone_id" : "a2ef9022-79cd-5bf3-88b5-d331f1363e8c",
+        "zone_name" : "Gondola R5 Back U3"
+      } ],
+      "lookers" : [ {
+        "kind" : "product",
+        "ean" : "3608449847285",
+        "item_cd" : "2456169",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 12.99,
+        "fixture_code" : "GB-R3-U2",
+        "zone_id" : "590a71d3-76a4-5bad-abfb-5215aecc8526",
+        "zone_name" : "Gondola R3 Back U2"
+      }, {
+        "kind" : "product",
+        "ean" : "3583789463688",
+        "item_cd" : "4560174",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 24.99,
+        "fixture_code" : "GB-R3-U2",
+        "zone_id" : "590a71d3-76a4-5bad-abfb-5215aecc8526",
+        "zone_name" : "Gondola R3 Back U2"
+      } ]
+    },
+    "zone_ids" : [ "901209d3-f969-5dcb-a98a-38736d6545dd", "c0d7e1b1-5596-5c65-b729-cf4eeae73670", "a2ef9022-79cd-5bf3-88b5-d331f1363e8c", "590a71d3-76a4-5bad-abfb-5215aecc8526" ],
+    "zone_names" : [ "Gondola R2 Back U6", "Gondola R6 Back U1", "Gondola R5 Back U3", "Gondola R3 Back U2" ],
+    "product_eans" : [ "3608439260063", "3608439294464", "3608390866465", "3608449847285", "3583789463688" ],
+    "item_cds" : [ "4646131", "4435748", "5101375", "2456169", "4560174" ]
+  },
+  "expected_recommendation" : "Promote 4646131 (outdoor 14.0 USD): it sells as fast as 4435748 (outdoor 11.99 USD) but sits in the quiet fixture 'Gondola R2 Back U6', so more exposure should lift it. Do not promote 4435748 (outdoor 11.99 USD): it already sits in the busy fixture 'Gondola R6 Back U1'. Do not promote 5101375 (apparel 24.99 USD): it has under 5 days of stock. 2456169 (apparel 12.99 USD) and 4560174 (apparel 24.99 USD) are looked at and not bought: not promotion candidates (price or presentation).",
+  "evidence_expected" : [ "sale_line per unit with the floor zone_id: units per day per product (the two promotion candidates equal, the lookers near zero)", "behavioral_projection impression per fixture per day: the quiet and the busy fixture", "inventory_zone_product_count per fixture per product: the low-cover product" ]
+}, {
+  "scenario_id" : "dec-us-denver:layout",
+  "archetype" : "layout",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "strong_dept" : [ {
+        "kind" : "department_region",
+        "department" : "general",
+        "region_code" : "D-06",
+        "zone_id" : "357e276b-75bd-58d0-9028-d11ed22741e7",
+        "zone_name" : "General / Multi-sport"
+      } ],
+      "busy_dept" : [ {
+        "kind" : "department_region",
+        "department" : "climb",
+        "region_code" : "D-03",
+        "zone_id" : "7764ac70-6f9a-597c-90b4-13851aa41ea8",
+        "zone_name" : "Climbing & Mountaineering"
+      } ]
+    },
+    "zone_ids" : [ "357e276b-75bd-58d0-9028-d11ed22741e7", "7764ac70-6f9a-597c-90b4-13851aa41ea8" ],
+    "zone_names" : [ "General / Multi-sport", "Climbing & Mountaineering" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "Swap the placement of 'General / Multi-sport' (strong sellers, in the least-visited region) and 'Climbing & Mountaineering' (slow sellers, in the most-visited region). A layout answer that moves anything else is wrong.",
+  "evidence_expected" : [ "traffic_projection zone visit_count per zone per day: the two department regions", "sale_line with the floor zone_id: units per product by department", "inventory_zone_product_count per fixture per product" ]
+}, {
+  "scenario_id" : "dec-us-denver:move_fast_seller",
+  "archetype" : "move_fast_seller",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "product" : [ {
+        "kind" : "product",
+        "ean" : "3583787275337",
+        "item_cd" : "4724865",
+        "department" : "climb",
+        "category" : "apparel",
+        "price_usd" : 30.0,
+        "fixture_code" : "GB-R2-U4",
+        "zone_id" : "35470d8b-6e56-5449-9311-dfd70f17c6fc",
+        "zone_name" : "Gondola R2 Back U4"
+      } ],
+      "target_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GB-R6-U2",
+        "zone_id" : "e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd",
+        "zone_name" : "Gondola R6 Back U2"
+      } ],
+      "displaced" : [ {
+        "kind" : "product",
+        "ean" : "3608393232502",
+        "item_cd" : "5625145",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 160.0,
+        "fixture_code" : "GB-R6-U2",
+        "zone_id" : "e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd",
+        "zone_name" : "Gondola R6 Back U2"
+      } ]
+    },
+    "zone_ids" : [ "35470d8b-6e56-5449-9311-dfd70f17c6fc", "e3ffb44d-8a6d-5b76-8f84-f4e74ead41cd" ],
+    "zone_names" : [ "Gondola R2 Back U4", "Gondola R6 Back U2" ],
+    "product_eans" : [ "3583787275337", "3608393232502" ],
+    "item_cds" : [ "4724865", "5625145" ]
+  },
+  "expected_recommendation" : "Move 4724865 (apparel 30.0 USD) from 'Gondola R2 Back U4' into 'Gondola R6 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
+  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone against the target zone" ]
+}, {
+  "scenario_id" : "dec-us-denver:under_seen",
+  "archetype" : "under_seen",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GF-R2-U2",
+        "zone_id" : "3ebd2e33-7bb1-55d0-bfd2-9e92d54de2e6",
+        "zone_name" : "Gondola R2 Front U2"
+      } ]
+    },
+    "zone_ids" : [ "3ebd2e33-7bb1-55d0-bfd2-9e92d54de2e6" ],
+    "zone_names" : [ "Gondola R2 Front U2" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "'Gondola R2 Front U2' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
+  "evidence_expected" : [ "inventory_zone_product_count x unit price per fixture: the largest on-hand value", "behavioral_projection impression and dwell per fixture per day: the bottom decile" ]
+}, {
+  "scenario_id" : "dec-us-denver:restock_first",
+  "archetype" : "restock_first",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "a" : [ {
+        "kind" : "product",
+        "ean" : "3608390896837",
+        "item_cd" : "4894442",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 16.99,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "f3a03d27-90bc-5f76-a4e7-8d08862d87ad",
+        "zone_name" : "Gondola R3 Back U3"
+      } ],
+      "b" : [ {
+        "kind" : "product",
+        "ean" : "3608390896844",
+        "item_cd" : "4894443",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 16.99,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "f3a03d27-90bc-5f76-a4e7-8d08862d87ad",
+        "zone_name" : "Gondola R3 Back U3"
+      } ],
+      "c" : [ {
+        "kind" : "product",
+        "ean" : "3608449805155",
+        "item_cd" : "4560141",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 24.99,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "f3a03d27-90bc-5f76-a4e7-8d08862d87ad",
+        "zone_name" : "Gondola R3 Back U3"
+      } ]
+    },
+    "zone_ids" : [ "f3a03d27-90bc-5f76-a4e7-8d08862d87ad" ],
+    "zone_names" : [ "Gondola R3 Back U3" ],
+    "product_eans" : [ "3608390896837", "3608390896844", "3608449805155" ],
+    "item_cds" : [ "4894442", "4894443", "4560141" ]
+  },
+  "expected_recommendation" : "Restock 4894442 (apparel 16.99 USD) first (sells fast, stock for under 2 days), then 4894443 (apparel 16.99 USD) (sells fast, healthy stock). Never 4560141 (apparel 24.99 USD) (sells slowly, nearly out).",
+  "evidence_expected" : [ "sale_line per day: the two fast products", "inventory_zone_product_count per fixture: stock against velocity (days of cover)" ]
+}, {
+  "scenario_id" : "dec-us-denver:quiet_stock",
+  "archetype" : "quiet_stock",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "products" : [ {
+        "kind" : "product",
+        "ean" : "3583784303026",
+        "item_cd" : "4294665",
+        "department" : "hike_camp",
+        "category" : "footwear",
+        "price_usd" : 95.0,
+        "fixture_code" : "GB-R1-U5",
+        "zone_id" : "453220df-5875-5df5-bcd3-40d9d0ff3a2e",
+        "zone_name" : "Gondola R1 Back U5"
+      }, {
+        "kind" : "product",
+        "ean" : "3583784303019",
+        "item_cd" : "4294664",
+        "department" : "hike_camp",
+        "category" : "footwear",
+        "price_usd" : 95.0,
+        "fixture_code" : "GB-R1-U5",
+        "zone_id" : "453220df-5875-5df5-bcd3-40d9d0ff3a2e",
+        "zone_name" : "Gondola R1 Back U5"
+      }, {
+        "kind" : "product",
+        "ean" : "3583784303002",
+        "item_cd" : "4294663",
+        "department" : "hike_camp",
+        "category" : "footwear",
+        "price_usd" : 95.0,
+        "fixture_code" : "GB-R1-U5",
+        "zone_id" : "453220df-5875-5df5-bcd3-40d9d0ff3a2e",
+        "zone_name" : "Gondola R1 Back U5"
+      }, {
+        "kind" : "product",
+        "ean" : "3583784303040",
+        "item_cd" : "4294667",
+        "department" : "hike_camp",
+        "category" : "footwear",
+        "price_usd" : 95.0,
+        "fixture_code" : "GB-R1-U5",
+        "zone_id" : "453220df-5875-5df5-bcd3-40d9d0ff3a2e",
+        "zone_name" : "Gondola R1 Back U5"
+      }, {
+        "kind" : "product",
+        "ean" : "3583784303033",
+        "item_cd" : "4294666",
+        "department" : "hike_camp",
+        "category" : "footwear",
+        "price_usd" : 95.0,
+        "fixture_code" : "GB-R1-U5",
+        "zone_id" : "453220df-5875-5df5-bcd3-40d9d0ff3a2e",
+        "zone_name" : "Gondola R1 Back U5"
+      } ]
+    },
+    "zone_ids" : [ "453220df-5875-5df5-bcd3-40d9d0ff3a2e" ],
+    "zone_names" : [ "Gondola R1 Back U5" ],
+    "product_eans" : [ "3583784303026", "3583784303019", "3583784303002", "3583784303040", "3583784303033" ],
+    "item_cds" : [ "4294665", "4294664", "4294663", "4294667", "4294666" ]
+  },
+  "expected_recommendation" : "The 5 products 4294665 (footwear 95.0 USD), 4294664 (footwear 95.0 USD), 4294663 (footwear 95.0 USD), 4294667 (footwear 95.0 USD), 4294666 (footwear 95.0 USD) are stuck: high on-hand, zero sales for the whole window, on fixtures with below-median visits while their categories sell elsewhere. Move them to a busier spot or mark them down; do not restock.",
+  "evidence_expected" : [ "inventory_zone_product_count per fixture per product: high on-hand", "sale_line: zero units for the window", "traffic_projection zone visit_count: below-median zones" ]
+}, {
+  "scenario_id" : "dec-us-denver:look_not_buy",
+  "archetype" : "look_not_buy",
+  "store_id" : "84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",
+  "store_slug" : "dec-us-denver",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "price_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "PE-02",
+        "zone_id" : "db2ada86-a3d6-5599-8217-bbe334f55bcf",
+        "zone_name" : "East Wall Bay 2"
+      } ],
+      "stockout_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "PW-02",
+        "zone_id" : "ffb7e63f-e697-5448-89de-c3aecd453b23",
+        "zone_name" : "West Wall Bay 2"
+      } ],
+      "control_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GF-R3-U3",
+        "zone_id" : "48d6af54-6499-5966-92a0-7cc6d3a0b20a",
+        "zone_name" : "Gondola R3 Front U3"
+      } ]
+    },
+    "zone_ids" : [ "db2ada86-a3d6-5599-8217-bbe334f55bcf", "ffb7e63f-e697-5448-89de-c3aecd453b23", "48d6af54-6499-5966-92a0-7cc6d3a0b20a" ],
+    "zone_names" : [ "East Wall Bay 2", "West Wall Bay 2", "Gondola R3 Front U3" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "Flag 'West Wall Bay 2' as 'fix the stock' (top-3 impressions, nothing on the shelf) and 'East Wall Bay 2' as 'price or presentation' (top-3 impressions, premium prices, near-zero sales). The control 'Gondola R3 Front U3' has the same attention and normal sales: do not flag it.",
+  "evidence_expected" : [ "behavioral_projection impression, dwell and engagement per fixture per day: the top three", "sale_line with the floor zone_id: near-zero units at two of them", "inventory_zone_product_count: qty zero at the stock-out fixture; product.unit_price at the price fixture" ]
+}, {
+  "scenario_id" : "dec-fr-paris:promote",
+  "archetype" : "promote",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "fast_quiet" : [ {
+        "kind" : "product",
+        "ean" : "3608439238710",
+        "item_cd" : "4841008",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 20.0,
+        "fixture_code" : "GB-R3-U4",
+        "zone_id" : "3b68334e-bb0b-56af-bdef-f60a735468d4",
+        "zone_name" : "Gondola R3 Back U4"
+      } ],
+      "fast_busy" : [ {
+        "kind" : "product",
+        "ean" : "3583783858190",
+        "item_cd" : "2562988",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 14.99,
+        "fixture_code" : "GB-R7-U1",
+        "zone_id" : "7c7dda19-fa0e-518b-9cb0-10883eb312f1",
+        "zone_name" : "Gondola R7 Back U1"
+      } ],
+      "low_cover" : [ {
+        "kind" : "product",
+        "ean" : "3608390860296",
+        "item_cd" : "5075735",
+        "department" : "running",
+        "category" : "apparel",
+        "price_usd" : 29.99,
+        "fixture_code" : "GB-R6-U3",
+        "zone_id" : "f8af3c08-4970-5899-83d2-2481fafc8c8c",
+        "zone_name" : "Gondola R6 Back U3"
+      } ],
+      "lookers" : [ {
+        "kind" : "product",
+        "ean" : "3608449847230",
+        "item_cd" : "2456164",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 12.99,
+        "fixture_code" : "GB-R4-U2",
+        "zone_id" : "3f62dd08-9e28-5a44-9d29-d747fdc7fd97",
+        "zone_name" : "Gondola R4 Back U2"
+      }, {
+        "kind" : "product",
+        "ean" : "3583789463688",
+        "item_cd" : "4560174",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 24.99,
+        "fixture_code" : "GB-R4-U2",
+        "zone_id" : "3f62dd08-9e28-5a44-9d29-d747fdc7fd97",
+        "zone_name" : "Gondola R4 Back U2"
+      } ]
+    },
+    "zone_ids" : [ "3b68334e-bb0b-56af-bdef-f60a735468d4", "7c7dda19-fa0e-518b-9cb0-10883eb312f1", "f8af3c08-4970-5899-83d2-2481fafc8c8c", "3f62dd08-9e28-5a44-9d29-d747fdc7fd97" ],
+    "zone_names" : [ "Gondola R3 Back U4", "Gondola R7 Back U1", "Gondola R6 Back U3", "Gondola R4 Back U2" ],
+    "product_eans" : [ "3608439238710", "3583783858190", "3608390860296", "3608449847230", "3583789463688" ],
+    "item_cds" : [ "4841008", "2562988", "5075735", "2456164", "4560174" ]
+  },
+  "expected_recommendation" : "Promote 4841008 (outdoor 20.0 USD): it sells as fast as 2562988 (outdoor 14.99 USD) but sits in the quiet fixture 'Gondola R3 Back U4', so more exposure should lift it. Do not promote 2562988 (outdoor 14.99 USD): it already sits in the busy fixture 'Gondola R7 Back U1'. Do not promote 5075735 (apparel 29.99 USD): it has under 5 days of stock. 2456164 (apparel 12.99 USD) and 4560174 (apparel 24.99 USD) are looked at and not bought: not promotion candidates (price or presentation).",
+  "evidence_expected" : [ "sale_line per unit with the floor zone_id: units per day per product (the two promotion candidates equal, the lookers near zero)", "behavioral_projection impression per fixture per day: the quiet and the busy fixture", "inventory_zone_product_count per fixture per product: the low-cover product" ]
+}, {
+  "scenario_id" : "dec-fr-paris:layout",
+  "archetype" : "layout",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "strong_dept" : [ {
+        "kind" : "department_region",
+        "department" : "general",
+        "region_code" : "D-07",
+        "zone_id" : "fad203b1-b5dd-5495-8ab2-e36851065b55",
+        "zone_name" : "General / Multi-sport"
+      } ],
+      "busy_dept" : [ {
+        "kind" : "department_region",
+        "department" : "climb",
+        "region_code" : "D-03",
+        "zone_id" : "fa139645-f4d7-5eee-acd4-cfd8807d0236",
+        "zone_name" : "Climbing & Mountaineering"
+      } ]
+    },
+    "zone_ids" : [ "fad203b1-b5dd-5495-8ab2-e36851065b55", "fa139645-f4d7-5eee-acd4-cfd8807d0236" ],
+    "zone_names" : [ "General / Multi-sport", "Climbing & Mountaineering" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "Swap the placement of 'General / Multi-sport' (strong sellers, in the least-visited region) and 'Climbing & Mountaineering' (slow sellers, in the most-visited region). A layout answer that moves anything else is wrong.",
+  "evidence_expected" : [ "traffic_projection zone visit_count per zone per day: the two department regions", "sale_line with the floor zone_id: units per product by department", "inventory_zone_product_count per fixture per product" ]
+}, {
+  "scenario_id" : "dec-fr-paris:move_fast_seller",
+  "archetype" : "move_fast_seller",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "product" : [ {
+        "kind" : "product",
+        "ean" : "3608392248818",
+        "item_cd" : "5407230",
+        "department" : "climb",
+        "category" : "apparel",
+        "price_usd" : 35.0,
+        "fixture_code" : "GB-R3-U2",
+        "zone_id" : "ef2671b8-87f0-56d4-b63c-44771c50c64c",
+        "zone_name" : "Gondola R3 Back U2"
+      } ],
+      "target_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GB-R7-U2",
+        "zone_id" : "bd59c524-7543-539d-b66b-d78fae220d2c",
+        "zone_name" : "Gondola R7 Back U2"
+      } ],
+      "displaced" : [ {
+        "kind" : "product",
+        "ean" : "3608393232502",
+        "item_cd" : "5625145",
+        "department" : "hike_camp",
+        "category" : "outdoor",
+        "price_usd" : 160.0,
+        "fixture_code" : "GB-R7-U2",
+        "zone_id" : "bd59c524-7543-539d-b66b-d78fae220d2c",
+        "zone_name" : "Gondola R7 Back U2"
+      } ]
+    },
+    "zone_ids" : [ "ef2671b8-87f0-56d4-b63c-44771c50c64c", "bd59c524-7543-539d-b66b-d78fae220d2c" ],
+    "zone_names" : [ "Gondola R3 Back U2", "Gondola R7 Back U2" ],
+    "product_eans" : [ "3608392248818", "3608393232502" ],
+    "item_cds" : [ "5407230", "5625145" ]
+  },
+  "expected_recommendation" : "Move 5407230 (apparel 35.0 USD) from 'Gondola R3 Back U2' into 'Gondola R7 Back U2' (high visits), displacing the slow seller 5625145 (outdoor 160.0 USD).",
+  "evidence_expected" : [ "sale_line per unit per day: the product's velocity against its department", "traffic_projection zone visit_count and dwell_time_seconds: its fixture's zone against the target zone" ]
+}, {
+  "scenario_id" : "dec-fr-paris:under_seen",
+  "archetype" : "under_seen",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GB-R3-U5",
+        "zone_id" : "c72c6fe0-a938-5778-aa71-2490d11f5296",
+        "zone_name" : "Gondola R3 Back U5"
+      } ]
+    },
+    "zone_ids" : [ "c72c6fe0-a938-5778-aa71-2490d11f5296" ],
+    "zone_names" : [ "Gondola R3 Back U5" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "'Gondola R3 Back U5' is the under-seen fixture: the largest on-hand value in the store, in the bottom decile of impressions and dwell. Any other fixture is wrong.",
+  "evidence_expected" : [ "inventory_zone_product_count x unit price per fixture: the largest on-hand value", "behavioral_projection impression and dwell per fixture per day: the bottom decile" ]
+}, {
+  "scenario_id" : "dec-fr-paris:restock_first",
+  "archetype" : "restock_first",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "a" : [ {
+        "kind" : "product",
+        "ean" : "3608449847162",
+        "item_cd" : "2456159",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 12.99,
+        "fixture_code" : "GB-R4-U3",
+        "zone_id" : "3704be8d-b23e-554b-8ceb-b77ca77ae1a2",
+        "zone_name" : "Gondola R4 Back U3"
+      } ],
+      "b" : [ {
+        "kind" : "product",
+        "ean" : "3608449847155",
+        "item_cd" : "2456158",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 12.99,
+        "fixture_code" : "GB-R4-U3",
+        "zone_id" : "3704be8d-b23e-554b-8ceb-b77ca77ae1a2",
+        "zone_name" : "Gondola R4 Back U3"
+      } ],
+      "c" : [ {
+        "kind" : "product",
+        "ean" : "3608449847193",
+        "item_cd" : "2456162",
+        "department" : "snow",
+        "category" : "apparel",
+        "price_usd" : 12.99,
+        "fixture_code" : "GB-R4-U3",
+        "zone_id" : "3704be8d-b23e-554b-8ceb-b77ca77ae1a2",
+        "zone_name" : "Gondola R4 Back U3"
+      } ]
+    },
+    "zone_ids" : [ "3704be8d-b23e-554b-8ceb-b77ca77ae1a2" ],
+    "zone_names" : [ "Gondola R4 Back U3" ],
+    "product_eans" : [ "3608449847162", "3608449847155", "3608449847193" ],
+    "item_cds" : [ "2456159", "2456158", "2456162" ]
+  },
+  "expected_recommendation" : "Restock 2456159 (apparel 12.99 USD) first (sells fast, stock for under 2 days), then 2456158 (apparel 12.99 USD) (sells fast, healthy stock). Never 2456162 (apparel 12.99 USD) (sells slowly, nearly out).",
+  "evidence_expected" : [ "sale_line per day: the two fast products", "inventory_zone_product_count per fixture: stock against velocity (days of cover)" ]
+}, {
+  "scenario_id" : "dec-fr-paris:quiet_stock",
+  "archetype" : "quiet_stock",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "products" : [ {
+        "kind" : "product",
+        "ean" : "3608394088160",
+        "item_cd" : "5772460",
+        "department" : "cycling",
+        "category" : "apparel",
+        "price_usd" : 99.99,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "751379c8-ab39-5f84-a1c3-aaf2f7009f12",
+        "zone_name" : "Gondola R3 Back U3"
+      }, {
+        "kind" : "product",
+        "ean" : "3608394088139",
+        "item_cd" : "5772456",
+        "department" : "cycling",
+        "category" : "apparel",
+        "price_usd" : 99.99,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "751379c8-ab39-5f84-a1c3-aaf2f7009f12",
+        "zone_name" : "Gondola R3 Back U3"
+      }, {
+        "kind" : "product",
+        "ean" : "3608393572615",
+        "item_cd" : "5692269",
+        "department" : "cycling",
+        "category" : "apparel",
+        "price_usd" : 119.0,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "751379c8-ab39-5f84-a1c3-aaf2f7009f12",
+        "zone_name" : "Gondola R3 Back U3"
+      }, {
+        "kind" : "product",
+        "ean" : "3608390968824",
+        "item_cd" : "5143878",
+        "department" : "cycling",
+        "category" : "apparel",
+        "price_usd" : 109.0,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "751379c8-ab39-5f84-a1c3-aaf2f7009f12",
+        "zone_name" : "Gondola R3 Back U3"
+      }, {
+        "kind" : "product",
+        "ean" : "3608393571595",
+        "item_cd" : "5678855",
+        "department" : "cycling",
+        "category" : "apparel",
+        "price_usd" : 119.0,
+        "fixture_code" : "GB-R3-U3",
+        "zone_id" : "751379c8-ab39-5f84-a1c3-aaf2f7009f12",
+        "zone_name" : "Gondola R3 Back U3"
+      } ]
+    },
+    "zone_ids" : [ "751379c8-ab39-5f84-a1c3-aaf2f7009f12" ],
+    "zone_names" : [ "Gondola R3 Back U3" ],
+    "product_eans" : [ "3608394088160", "3608394088139", "3608393572615", "3608390968824", "3608393571595" ],
+    "item_cds" : [ "5772460", "5772456", "5692269", "5143878", "5678855" ]
+  },
+  "expected_recommendation" : "The 5 products 5772460 (apparel 99.99 USD), 5772456 (apparel 99.99 USD), 5692269 (apparel 119.0 USD), 5143878 (apparel 109.0 USD), 5678855 (apparel 119.0 USD) are stuck: high on-hand, zero sales for the whole window, on fixtures with below-median visits while their categories sell elsewhere. Move them to a busier spot or mark them down; do not restock.",
+  "evidence_expected" : [ "inventory_zone_product_count per fixture per product: high on-hand", "sale_line: zero units for the window", "traffic_projection zone visit_count: below-median zones" ]
+}, {
+  "scenario_id" : "dec-fr-paris:look_not_buy",
+  "archetype" : "look_not_buy",
+  "store_id" : "a6cc38a2-296d-4a4a-8ee3-236d3c44faf1",
+  "store_slug" : "dec-fr-paris",
+  "planted_from" : "2026-11-02",
+  "planted_to" : "2026-11-29",
+  "entities" : {
+    "roles" : {
+      "price_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "PE-02",
+        "zone_id" : "39882a7c-d089-5e1a-9088-47fcd6afa036",
+        "zone_name" : "East Wall Bay 2"
+      } ],
+      "stockout_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "PW-02",
+        "zone_id" : "e66fd359-9ccb-5a2d-8f22-e0962d2eb475",
+        "zone_name" : "West Wall Bay 2"
+      } ],
+      "control_fixture" : [ {
+        "kind" : "fixture",
+        "fixture_code" : "GF-R4-U2",
+        "zone_id" : "b149d1e4-58ee-5628-a457-2ec9d93f3018",
+        "zone_name" : "Gondola R4 Front U2"
+      } ]
+    },
+    "zone_ids" : [ "39882a7c-d089-5e1a-9088-47fcd6afa036", "e66fd359-9ccb-5a2d-8f22-e0962d2eb475", "b149d1e4-58ee-5628-a457-2ec9d93f3018" ],
+    "zone_names" : [ "East Wall Bay 2", "West Wall Bay 2", "Gondola R4 Front U2" ],
+    "product_eans" : [ ],
+    "item_cds" : [ ]
+  },
+  "expected_recommendation" : "Flag 'West Wall Bay 2' as 'fix the stock' (top-3 impressions, nothing on the shelf) and 'East Wall Bay 2' as 'price or presentation' (top-3 impressions, premium prices, near-zero sales). The control 'Gondola R4 Front U2' has the same attention and normal sales: do not flag it.",
+  "evidence_expected" : [ "behavioral_projection impression, dwell and engagement per fixture per day: the top three", "sale_line with the floor zone_id: near-zero units at two of them", "inventory_zone_product_count: qty zero at the stock-out fixture; product.unit_price at the price fixture" ]
+} ]
