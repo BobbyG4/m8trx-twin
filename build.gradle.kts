@@ -645,6 +645,11 @@ storeOpsTask(
     "Read-only design: print the gap ledger's planned check list (signal -> platform read surface or 'no surface') and write the template. No network.",
 )
 storeOpsTask(
+    "storeDayReceiveProbe",
+    "com.m8trx.twin.storeops.ReceiveProbeKt",
+    "Design only, never sends: print the one-unit receive probe (receive, read back product and location, move, sell, read the sale line; F-9).",
+)
+storeOpsTask(
     "storeOpsSelfTest",
     "com.m8trx.twin.storeops.StoreOpsSelfTestKt",
     "Offline: reset mapping conserves units, pace and ordering, idempotent ids, driver dry run, backoff rules, no live client in dry paths, LiveDrive default unchanged.",

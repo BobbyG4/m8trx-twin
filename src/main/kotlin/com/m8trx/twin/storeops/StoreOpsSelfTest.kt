@@ -37,6 +37,8 @@ fun main() {
         "ordering guard: receive before move, no move after sale, no double sale, non-decreasing time" to ::orderingGuard,
         "ownership: a store the hourly pass serves is refused; one file, two readers" to ::ownership,
         "reset (synthetic): conserves units, received = plan - reusable, minted EPCs never collide" to ::resetSynthetic,
+        "reset: old directive end (A14) is scheduled after midnight, before the new plan; back-room moves by zone (A15); probe gate (F-9)" to
+            ::resetOldDirective,
         "reset (Denver, seed ledger): conservation, no collision, pace, ordering, idempotent ids, post-state" to ::resetDenver,
         "driver dry run: one Denver day sends exactly the wire plan in order; HOLD stops it; no live client built" to ::driverDry,
         "no network: LiveSender cannot be built unless live, and no dry path builds it" to ::noNetwork,
@@ -88,8 +90,14 @@ private fun policy() {
             p.backoff(it)
         } == listOf(5_000L, 10_000L, 20_000L, 40_000L, 80_000L, 160_000L, 300_000L, 300_000L),
     ) { "backoff doubles to the cap" }
-    check((p.decide(Outcome.Http(502), 20) as Decision.Wait).alert && !(p.decide(Outcome.Http(502), 19) as Decision.Wait).alert) {
-        "alert at the 20th failure"
+    check((p.decide(Outcome.Http(502), 5) as Decision.Wait).alert && !(p.decide(Outcome.Http(502), 4) as Decision.Wait).alert) {
+        "alert at the 5th failure"
+    }
+    check(p.decide(Outcome.Http(504), 10) is Decision.Halt && p.decide(Outcome.Unreachable("x"), 10) is Decision.Halt) {
+        "10 failures in a row on a 5xx halt the lane (A16)"
+    }
+    check(p.decide(Outcome.Http(504), 9) is Decision.Wait && (p.decide(Outcome.Http(429), 12) as Decision.Wait).ms == 60_000L) {
+        "504 retried; 429 keeps waiting"
     }
 }
 
@@ -306,15 +314,17 @@ private fun resetDenver() {
     // schedule: sizes, pace, order
     val items = b.items
     val rec = items.filter { it.kind == "receive" }
-    check(
-        rec.all {
-            it.epcs.size in 1..200
-        } && rec.sumOf { it.epcs.size } == p.received.size,
-    ) { "receive requests of <= 200 EPCs carry every new EPC" }
-    check(rec.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == pacing.receiveIntervalMs }) { "1 receive request per 10 s" }
+    check(rec.all { it.epcs.size in 1..50 } && rec.sumOf { it.epcs.size } == p.received.size) { "receive requests of <= 50 EPCs carry every new EPC" }
+    check(rec.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == 40_000L }) { "receives strictly one at a time, about 40 s each (A16)" }
     val mov = items.filter { it.kind == "move" }
-    check(mov.all { it.epcs.size <= 200 }) { "move batches <= 200 units" }
-    check(mov.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs >= 500L }) { "moves at most 2 a second" }
+    check(mov.all { it.epcs.size <= 25 }) { "move batches stay small (<= 25 units)" }
+    check(mov.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == 2_000L }) { "one move batch every 2 s" }
+    check(
+        mov.filter {
+            it.payload.path("to_zone_id").asText().startsWith("@backroom_zone:BR-")
+        }.all { !it.payload.has("to_fixture_code") },
+    ) { "back-room moves go by to_zone_id, never a fixture code (A15)" }
+    check(mov.none { it.payload.path("to_zone_id").asText() == "@backroom_space" }) { "no move targets the space (A15)" }
     check(items.map { it.dueMs }.zipWithNext().all { (x, y) -> y >= x }) { "schedule is in time order" }
     check(items.last().kind == "planogram" && items.last().payload.path("expiry_date").asText() == b.period.end.toString()) {
         "directive last, with its stop date"
@@ -332,9 +342,21 @@ private fun resetDenver() {
     ) { "ids and times stable across reruns" }
     // a hard pace error is refused
     check(
-        runCatching { ResetPacing(movesPerS = 3.0) }.isFailure && runCatching { ResetPacing(receiveIntervalMs = 100) }.isFailure &&
+        runCatching { ResetPacing(moveEveryMs = 100) }.isFailure && runCatching { ResetPacing(receiveEstMs = 100) }.isFailure &&
             runCatching { ResetPacing(receiveChunk = 201) }.isFailure,
     ) { "pace ceilings enforced" }
+    StoreDayReset.write(OUT.resolve("denver-report"), DENVER, FIRST_DAY, inputs, b, pacing)
+    val rep = Files.readString(OUT.resolve("denver-report/report.md"))
+    check(rep.contains("BLOCKER: no old directive provided") && rep.contains("two-night split") && rep.contains("F-9 BLOCKER")) {
+        "the report names the open blockers and proposes a split"
+    }
+    val nights = StoreDayReset.nights(items)
+    check(
+        nights.size >= 2 && nights.sumOf {
+            it.to - it.from + 1
+        } == items.size && nights.all { it.durationMs <= 6 * 3_600_000L },
+    ) { "nights cover every item, each within 6 h" }
+    check(items.last().dueMs > 5 * 3_600_000L) { "the estimate is hours, not minutes: ${items.last().dueMs / 3_600_000.0} h" }
     // post-reset state: loads back, every unit placed, the period is recorded so the store-day does not re-issue it
     val st = StoreDayReset.postState(DENVER, p, FIRST_DAY, b.period.start)
     st.save(OUT.resolve("post-reset"))
@@ -525,4 +547,75 @@ private fun liveSidecar() {
             m.getValue("cust-1")[1].p.x == 11.0,
     ) { "sidecar read" }
     check(runCatching { PeopleSource.readSidecar(OUT.resolve("nope.jsonl")) }.isFailure) { "a missing sidecar is refused, never a silent fallback" }
+}
+
+private fun resetOldDirective() {
+    val chain = Path.of("reference/data/chain")
+    val st = OUT.resolve("old-state")
+    Files.createDirectories(st.resolve("reset"))
+    val oldId = "PLN-dec-us-denver-20260630"
+    Files.writeString(
+        st.resolve("reset/old-directive-$DENVER.json"),
+        "{\"name\":\"old\",\"external_directive_id\":\"$oldId\",\"effective_date\":\"2026-06-30\",\"targets\":[" +
+            "{\"site_id\":\"S\",\"raw_fixture_code\":\"Fx\",\"raw_item_identifier\":\"3583780104122\",\"required_quantity\":4}," +
+            "{\"site_id\":\"S\",\"raw_fixture_code\":\"Fy\",\"raw_item_identifier\":\"3583782090829\",\"required_quantity\":2}]}",
+    )
+    val (inputs, b, _) = StoreDayReset.build(DENVER, FIRST_DAY, chain, st, ResetPacing())
+    val items = b.items
+    check(b.oldDirectives.size == 1) { "old directive loaded" }
+    val tail = items.takeLast(2)
+    check(tail[0].kind == "planogram" && tail[0].extId.endsWith("-end-$oldId") && tail[1].extId == "PLNW-dec-us-denver-20261123") {
+        "old end, then the PLNW plan, last"
+    }
+    val end = tail[0].payload
+    check(
+        !end.has("effective_date") && end.path("expiry_date").asText() == "2026-11-23" && end.path("external_directive_id").asText() == oldId &&
+            end.path("targets").size() == 2,
+    ) {
+        "same id, same targets, no effective_date, expiry = the reset day: $end"
+    }
+    check(tail.all { it.afterLocalMidnight } && items.dropLast(2).none { it.afterLocalMidnight }) { "only those two are gated to after midnight" }
+    check(
+        tail[0].dueMs < tail[1].dueMs && items.dropLast(2).all {
+            it.dueMs < tail[0].dueMs
+        },
+    ) { "every receive and move precedes the old end, which precedes the new plan" }
+    val mid = FIRST_DAY.atStartOfDay(java.time.ZoneId.of("America/Denver")).toInstant().toEpochMilli()
+    check(StoreDayReset.earliestStartMs(items, mid) + tail[0].dueMs == mid) { "earliest start puts the old end exactly at midnight" }
+    OrderingGuard(inputs.ledger.byFixture.values.flatten()).also { g -> items.forEach { g.check(it) } }
+    // a wire-plan back-room move is rewritten from the space placeholder to the rack zone placeholder (A15)
+    val mv = com.m8trx.twin.connect.model.ConnectMappers.snake.readTree(
+        "{\"external_movement_id\":\"m\",\"to_zone_id\":\"@backroom_space\",\"items\":[{\"epc\":\"E\"}]}",
+    )
+    val it = SendItem.fromWire(com.m8trx.twin.storeday.WireEvent(1, 1, 0, "move", mv, mapOf("to" to "BR-03")), DENVER)
+    check(it.payload.path("to_zone_id").asText() == "@backroom_zone:BR-03") { "store-day back-room move -> rack zone" }
+    val ph = Placeholders("S", "SP", mapOf("BR-03" to "zone-3"))
+    check(
+        ph.resolve(
+            it.payload,
+        ).path("to_zone_id").asText() == "zone-3" && ph.resolvable(it.payload) && !Placeholders("S", "SP").resolvable(it.payload),
+    ) {
+        "zone placeholder resolves, or refuses"
+    }
+    // F-9: the live flag refuses without a passed probe result
+    val f = ReceiveProbe.resultFile(OUT.resolve("probe-state"), DENVER)
+    Files.deleteIfExists(f)
+    check(ReceiveProbe.refusal(f) != null && StoreDayReset.liveRefusal(DENVER, OUT.resolve("probe-state")).contains("probe")) {
+        "no result file: refused"
+    }
+    Files.createDirectories(f.parent)
+    Files.writeString(f, "{\"passed\":false}")
+    check(ReceiveProbe.refusal(f) != null) { "failed probe: refused" }
+    Files.writeString(f, "{\"passed\":true,\"checks\":{\"product\":true,\"location\":false}}")
+    check(ReceiveProbe.refusal(f) != null) { "a failed check inside a passed result: refused" }
+    Files.writeString(f, "{\"passed\":true,\"checks\":{\"product\":true,\"location\":true}}")
+    check(ReceiveProbe.refusal(f) == null) { "recorded pass: the probe gate opens (other gates remain)" }
+    val plan = ReceiveProbe.plan(DENVER)
+    check(
+        plan.map { it.step } == (1..6).toList() && plan[1].call.contains("details") && plan[4].call.contains("sale_event") &&
+            plan[5].checks.contains("zone_id"),
+    ) { "probe lists receive, read, move, read, sell, sale line" }
+    check(Sgtin96.serial(ReceiveProbe.probeEpc(DENVER, "3583780104122")) == StoreState.deliveryEnd(DENVER) - 1) {
+        "probe EPC is the last serial of the block"
+    }
 }

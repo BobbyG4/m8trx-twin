@@ -24,7 +24,17 @@ enum class Route(val label: String) {
  * [rank] breaks ties at one instant the way the store-day wire plan does (receive, move, sale). [extId] is the idempotency key:
  * stable across reruns, content-derived where the platform has no id field of its own (a receive request).
  */
-class SendItem(val seq: Int, val dueMs: Long, val rank: Int, val kind: String, val extId: String, val payload: JsonNode, val epcs: List<String>) {
+class SendItem(
+    val seq: Int,
+    val dueMs: Long,
+    val rank: Int,
+    val kind: String,
+    val extId: String,
+    val payload: JsonNode,
+    val epcs: List<String>,
+    /** Must not go out before the store's local midnight of the reset day (A14: the old directive's end and the new plan). */
+    val afterLocalMidnight: Boolean = false,
+) {
     val route: Route
         get() = routeOf(kind)
 
@@ -52,7 +62,12 @@ class SendItem(val seq: Int, val dueMs: Long, val rank: Int, val kind: String, v
          * the people plane (the sidecar), and the caller counts those explicitly rather than dropping them unseen.
          */
         fun fromWire(e: WireEvent, slug: String): SendItem {
-            val p = e.payload as JsonNode
+            var p = e.payload as JsonNode
+            // A15: a back-room move targets a fixture ZONE of the stockroom space, never the space itself: the store-day plan carries
+            // the placeholder `@backroom_space`, and its `to` id names the rack
+            if (e.kind == "move" && p.path("to_zone_id").asText() == "@backroom_space") {
+                p = (p.deepCopy<ObjectNode>()).also { it.put("to_zone_id", "@backroom_zone:${e.ids["to"]}") }
+            }
             val epcs = epcsOf(e.kind, p)
             val id = when (e.kind) {
                 "move" -> p.path("external_movement_id").asText()
@@ -132,12 +147,23 @@ class SentLedger(private val file: Path?) {
 }
 
 /** `@site` and `@backroom_space`, the placeholders the store-day wire plan carries, resolved to this store's real ids. */
-class Placeholders(private val siteId: String?, private val backroomSpaceId: String?) {
+class Placeholders(
+    private val siteId: String?,
+    private val backroomSpaceId: String?,
+    /** Back-room rack code (`BR-01`) to the stockroom fixture zone's id, read from `/spatial/identity` at run time. */
+    private val backroomZones: Map<String, String> = emptyMap(),
+) {
     fun resolve(n: JsonNode): JsonNode = when {
         n.isTextual -> when (n.asText()) {
             "@site" -> ConnectMappers.snake.nodeFactory.textNode(siteId ?: "@site")
+
             "@backroom_space" -> ConnectMappers.snake.nodeFactory.textNode(backroomSpaceId ?: "@backroom_space")
-            else -> n
+
+            else -> if (n.asText().startsWith(ZONE_PREFIX)) {
+                ConnectMappers.snake.nodeFactory.textNode(backroomZones[n.asText().removePrefix(ZONE_PREFIX)] ?: n.asText())
+            } else {
+                n
+            }
         }
 
         n.isObject -> ConnectMappers.snake.createObjectNode().also { o ->
@@ -152,8 +178,12 @@ class Placeholders(private val siteId: String?, private val backroomSpaceId: Str
     /** True when every placeholder in [n] has an id to be replaced by. */
     fun resolvable(n: JsonNode): Boolean = !hasPlaceholder(resolve(n))
 
+    companion object {
+        const val ZONE_PREFIX = "@backroom_zone:"
+    }
+
     private fun hasPlaceholder(n: JsonNode): Boolean = when {
-        n.isTextual -> n.asText().startsWith("@site") || n.asText().startsWith("@backroom_space")
+        n.isTextual -> n.asText().startsWith("@site") || n.asText().startsWith("@backroom_space") || n.asText().startsWith(ZONE_PREFIX)
         n.isContainerNode -> n.any(::hasPlaceholder)
         else -> false
     }

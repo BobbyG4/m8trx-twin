@@ -39,8 +39,8 @@ import kotlin.system.exitProcess
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.StoreOpsLive")
 
-/** Pace per wire kind after any delay: a backlog after an outage must not burst. Webhook kinds 2/s, receipts 1 every 2 s. */
-val OPS_SPACING_MS: Map<String, Long> = mapOf("move" to 500L, "sale" to 500L, "receive" to 2_000L)
+/** Pace per wire kind after any delay: a backlog after an outage must not burst. Moves one batch per 2 s, receipts one at a time (A16), sales 2/s. */
+val OPS_SPACING_MS: Map<String, Long> = mapOf("move" to 2_000L, "sale" to 500L, "receive" to 40_000L)
 
 class OpsLiveConfig(
     val stores: List<String>,

@@ -26,9 +26,9 @@ object ResetPlanner {
 
     class Final(val epc: String, val ean: String, val state: UnitState, val location: String, val level: Int)
 
-    /** A batch of units to one destination: a floor fixture code, or [BACKROOM]. */
+    /** A batch of units to one destination: a floor fixture code, or a back-room rack code (`BR-nn`, a fixture ZONE of the stockroom space, A15). */
     class Move(val dest: String, val ean: String, val epcs: List<String>) {
-        val toBack: Boolean get() = dest == BACKROOM
+        val toBack: Boolean get() = dest.startsWith("BR-")
     }
 
     class Result(
@@ -50,8 +50,6 @@ object ResetPlanner {
         val movedUnits: Int get() = moves.sumOf { it.epcs.size }
     }
 
-    const val BACKROOM = "BR"
-
     fun plan(
         slug: String,
         ledger: Map<String, List<String>>,
@@ -62,7 +60,7 @@ object ResetPlanner {
         knownEans: Set<String>,
         reserved: Set<String>,
         defaultRack: String = "BR-01",
-        chunk: Int = 200,
+        chunk: Int = 25,
     ): Result {
         // ── the ledger as units, EAN decoded from the EPC itself ─────────────────────────────────────────
         val units = ArrayList<LedgerUnit>()
@@ -89,7 +87,7 @@ object ResetPlanner {
         var serial = serialStart
         val finals = ArrayList<Final>()
         val cellMoves = java.util.TreeMap<Pair<String, String>, ArrayList<String>>(compareBy({ it.first }, { it.second }))
-        val backMoves = java.util.TreeMap<String, ArrayList<String>>()
+        val backMoves = java.util.TreeMap<Pair<String, String>, ArrayList<String>>(compareBy({ it.first }, { it.second }))
         val received = ArrayList<String>()
         var stayedFloor = 0
         var stayedBack = 0
@@ -128,7 +126,7 @@ object ResetPlanner {
             }
             // 3. the rest to the back room
             for (u in fl) {
-                backMoves.getOrPut(ean) { ArrayList() } += u.epc
+                backMoves.getOrPut(rack to ean) { ArrayList() } += u.epc
                 finals += Final(u.epc, ean, UnitState.BACKROOM, rack, 0)
             }
             for (u in br) {
@@ -160,7 +158,7 @@ object ResetPlanner {
         check(serial <= StoreState.deliveryEnd(slug)) { "$slug: the reset overran its delivery serial block" }
 
         val moves = cellMoves.flatMap { (k, epcs) -> epcs.chunked(chunk).map { Move(k.first, k.second, it) } } +
-            backMoves.flatMap { (ean, epcs) -> epcs.chunked(chunk).map { Move(BACKROOM, ean, it) } }
+            backMoves.flatMap { (k, epcs) -> epcs.chunked(chunk).map { Move(k.first, k.second, it) } }
         val placed = finals.count { it.state == UnitState.ON_FLOOR }
         val toBack = finals.count { it.state == UnitState.BACKROOM }
         return Result(

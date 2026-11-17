@@ -47,10 +47,19 @@ sealed interface Decision {
     data class Halt(val reason: String) : Decision
 }
 
-class RetryPolicy(val rateLimitWaitMs: Long = 60_000, val backoffBaseMs: Long = 5_000, val backoffCapMs: Long = 300_000, val stuckAfter: Int = 20) {
+class RetryPolicy(
+    val rateLimitWaitMs: Long = 60_000,
+    val backoffBaseMs: Long = 5_000,
+    val backoffCapMs: Long = 300_000,
+    val stuckAfter: Int = 5,
+    /** A16: stop on pool or health trouble. This many failures in a row on one event (5xx / no answer) halts the lane; the event stays due. */
+    val haltAfter: Int = 10,
+) {
     /** [attempt] is 1 for the first try of an event, 2 for its first retry, and so on. */
     fun decide(o: Outcome, attempt: Int): Decision {
         val stuck = attempt >= stuckAfter
+        val trouble = attempt >= haltAfter && (o is Outcome.Unreachable || (o is Outcome.Http && o.status >= 500))
+        if (trouble) return Decision.Halt("$attempt failures in a row ($o): pool or health trouble, lane stopped, the event stays due")
         return when (o) {
             Outcome.Accepted -> Decision.Done
 
