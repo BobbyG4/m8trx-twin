@@ -225,6 +225,8 @@ map onto planogram and parameter edits:
 
 ### 5.2 Follow-up slice 2e — dwell that differs by fixture (found while building 2d, 2026-11-17)
 
+> **Built, offline (2026-11-17, branch `feat/store-day-2e-dwell`).** Notes and numbers: `reference/data/chain/stores/dec-us-denver/model/PHASE2E-NOTES.md`. Median session fitted to the operating model's 18 min per store; `move_fast_seller` re-planted with a dwell-per-visit check.
+
 Dwell per visit comes out nearly constant across fixtures in the store-day: the behavior model's engaged span hardly depends on
 what the fixture is or holds. So "where do people linger" today only reflects how many visits a fixture gets. Bob called dwell
 "the most important thing with attracting the flow", so this gets its own slice before the gap ledger leans on it:
