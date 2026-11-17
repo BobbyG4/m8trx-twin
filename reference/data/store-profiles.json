@@ -1,0 +1,195 @@
+{
+  "schema": "store-profiles-v1",
+  "provisional": true,
+  "chain_default": {
+    "hours": {
+      "mon": "10:00-21:00",
+      "tue": "10:00-21:00",
+      "wed": "10:00-21:00",
+      "thu": "10:00-21:00",
+      "fri": "10:00-21:00",
+      "sat": "10:00-21:00",
+      "sun": "10:00-21:00"
+    },
+    "location_factor": 1.0,
+    "delivery_lead_rule": {
+      "area_sqm_at_least": 500.0,
+      "lead_min": 60,
+      "else_lead_min": 30
+    },
+    "provisional": true,
+    "source": "today's 10:00-21:00 and location_factor 1.0 everywhere; provisional pending Bob's D3"
+  },
+  "stores": {
+    "dec-fr-bordeaux": {
+      "timezone": "Europe/Paris",
+      "area_sqm": 315.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-fr-lille": {
+      "timezone": "Europe/Paris",
+      "area_sqm": 483.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-fr-lyon": {
+      "timezone": "Europe/Paris",
+      "area_sqm": 441.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-fr-marseille": {
+      "timezone": "Europe/Paris",
+      "area_sqm": 313.5,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-fr-paris": {
+      "timezone": "Europe/Paris",
+      "area_sqm": 588.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 60,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-kr-busan": {
+      "timezone": "Asia/Seoul",
+      "area_sqm": 270.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-kr-seoul": {
+      "timezone": "Asia/Seoul",
+      "area_sqm": 493.5,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 30,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-us-denver": {
+      "timezone": "America/Denver",
+      "area_sqm": 655.5,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 60,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-us-nyc": {
+      "timezone": "America/New_York",
+      "area_sqm": 636.0,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 60,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    },
+    "dec-us-sf": {
+      "timezone": "America/Los_Angeles",
+      "area_sqm": 662.5,
+      "hours": {
+        "mon": "10:00-21:00",
+        "tue": "10:00-21:00",
+        "wed": "10:00-21:00",
+        "thu": "10:00-21:00",
+        "fri": "10:00-21:00",
+        "sat": "10:00-21:00",
+        "sun": "10:00-21:00"
+      },
+      "location_factor": 1.0,
+      "delivery_lead_min": 60,
+      "provisional": true,
+      "source": "timezone/area_sqm from keys-2026-10-11.csv; hours and location_factor are today's values, provisional pending Bob's D3"
+    }
+  }
+}

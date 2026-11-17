@@ -454,9 +454,20 @@ tasks.register<JavaExec>("stockDepthReport") {
 // The offline suite in one go — every self-test that needs no network, no credentials and no edge.
 tasks.register("offlineSelfTest") {
     group = "verification"
-    description = "Run every offline self-test: scenarioSelfTest, peopleSelfTest, connectSelfTest, historySelfTest."
+    description = "Run every offline self-test: scenarioSelfTest, peopleSelfTest, connectSelfTest, historySelfTest, storeModelSelfTest."
     dependsOn("scenarioSelfTest", "peopleSelfTest", "connectSelfTest", "historySelfTest")
 }
+
+// ── Store model, Phase 1 (Denver): profile, fixture kits, demand, planogram v2, stock to plan — files only ─────────
+// Python 3 stdlib; reads and writes nothing outside the repo, talks to no server. Rebuilds the model twice to prove
+// byte-identical output, checks the committed files, and that no file the live box reads differs from origin/main.
+tasks.register<Exec>("storeModelSelfTest") {
+    group = "verification"
+    description = "Offline: Denver store model self-test (kits, demand, planogram v2, stock plan, determinism, live files untouched)."
+    workingDir = projectDir
+    commandLine("python3", "scripts/store_model_selftest.py")
+}
+tasks.named("offlineSelfTest") { dependsOn("storeModelSelfTest") }
 
 // ── Store operations for the demo sprint (2026-10-13): stock · fixmoves · tasks ─────────────────
 // All three act as the store's own staff (user JWT, the shared demo password out of band) because the count inbox, the
