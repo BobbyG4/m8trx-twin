@@ -172,10 +172,19 @@ class StoreDaySim(
     private val zone: ZoneId = ZoneId.of(model.timezone)
     val overlay = DayOverlay(model, behavior, knobs.calendar)
 
-    /** Staff scale with the store (Denver, the 3-and-2 reference, is 1.0): at least two (or the knob if lower), at most the knob. */
-    private val staffScale = if (knobs.scaleStaff) minOf(1.0, model.visitScale / model.locationFactor) else 1.0
+    /**
+     * Staff scale with the store (Denver, the 3-and-2 reference, is 1.0): with floor area (never above the knob), and up with
+     * footfall where the profile's `location_factor` is above 1 (factor^1.5; D3: NYC 1.8, Paris 1.6, Seoul 1.5 run more people per m2, so more hands).
+     * At least two (or the knob if lower).
+     */
+    private val staffScale = if (knobs.scaleStaff) {
+        minOf(1.0, model.visitScale / model.locationFactor) *
+            maxOf(1.0, Math.pow(model.locationFactor, 1.5))
+    } else {
+        1.0
+    }
 
-    private fun staff(n: Int) = if (n <= 0) 0 else maxOf(minOf(n, 2), minOf(n, Math.round(n * staffScale).toInt()))
+    private fun staff(n: Int) = if (n <= 0) 0 else maxOf(minOf(n, 2), Math.round(n * staffScale).toInt())
 
     val preOpenStockers: Int = staff(knobs.preOpenStockers)
     val topUpStockers: Int = staff(knobs.topUpStockers)
@@ -516,7 +525,7 @@ class StoreDaySim(
 
         // 3. quiet-hour walks and the day, interleaved by time ---------------------------------------------
         val curve = shape.curve
-        val quiet = curve.indices.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).sorted()
+        val quiet = shape.fullBuckets.sortedWith(compareBy({ curve[it] }, { it })).take(knobs.quietHours).sorted()
         for (idx in quiet) {
             val walkAt = open + idx * 3_600_000L + 5 * 60_000L
             queue += Queued(walkAt, qseq++) {
