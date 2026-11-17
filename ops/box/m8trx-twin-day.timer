@@ -1,0 +1,9 @@
+[Unit]
+Description=m8trx-twin nightly people-plane day, 02:00 Asia/Seoul
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 Asia/Seoul
+# no Persistent=: a missed night must not replay at boot while the office may be using the demo
+
+[Install]
+WantedBy=timers.target

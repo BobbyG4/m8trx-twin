@@ -89,7 +89,7 @@ dependency bumps (#26) in it. Proposed landing, each step on Bob's word.
 
 ### 3.2 Landing recipe — ✅ DONE 2026-11-17
 
-> **Landed:** #27 (`51c27bb`) = the box stack merged with `main`, keys export fixed and verified against `/spatial/identity` in all ten stores (only drift: Denver "Entrance" vs "Entrance Area", § 8 Q12); #17 auto-merged, #18/#19 closed. #28 (`092a2b1`) = #21's six commits on current `main`, bump dropped; #21 closed. All branches kept (the box tracks #19's). **Still open in Phase 0:** box rebuild from `main`, ops scripts into the repo, Denver `shift=open`, digest fix — each on Bob's word.
+> **Landed:** #27 (`51c27bb`) = the box stack merged with `main`, keys export fixed and verified against `/spatial/identity` in all ten stores (only drift: Denver "Entrance" vs "Entrance Area", § 8 Q12); #17 auto-merged, #18/#19 closed. #28 (`092a2b1`) = #21's six commits on current `main`, bump dropped; #21 closed. All branches kept. **Box rebuilt from `main` 2026-11-17 13:47 KST (Bob's go)**: checkout switched to `main`, live plane restarted on a fresh `liveDist` with `--shift 0`, ops scripts committed under `ops/box/`. **Still open in Phase 0:** the digest fix.
 
 1. **One consolidated PR, "land what the box runs":** branch from `80f810b`, merge `main` (resolution above), fix the keys export,
    `offlineSelfTest` green. Use a merge commit, not a squash, so the per-bump and pricing history survives.
@@ -111,8 +111,7 @@ Also in Phase 0:
   default here, since `ops/` already holds the live-plane files.)
 - **Rebuild the box from merged `main`** (pull, `live start` rebuilds `live-dist`) — Bob's go; the live-plane code is unchanged, so
   the rebuild only brings the bumps and pricing work.
-- **Restart Denver's live plane with `shift=open`** — removes the 11h16m plan-clock lag so Denver's people peaks land on Denver's
-  real hours, in step with its sales (Bob's go; a one-line change on the box).
+- **Restart Denver's live plane with `--shift 0`** (✅ done 2026-11-17). ⚠ Corrected: `shift=open` would NOT have removed the lag — it plays 10:00 store time at the moment of start (`LiveDrive.planAnchor`). `--shift 0` sets plan time = now, so every store runs on its real local clock and its people line up with its sales.
 - **Fix the digest's stale "people plane" check** (it reads the dead nightly's log).
 
 ## 4. Phase 1 — the store model (offline; files and generators, nothing sent)

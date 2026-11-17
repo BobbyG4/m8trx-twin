@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# twin-notify "message" — post one line to the uptime-watch Slack channel through the box's existing helper
+# (/opt/m8trx/lanes/bin/notify-slack.sh -> /opt/m8trx/uptime-watch/uptime.env; the helper prefixes "m8trx-gpu lane: ").
+# Masks EPC-like 24-hex tokens, flattens newlines, strips JSON-breaking characters (the helper does not escape), caps length.
+# Never fails the caller. TWIN_NOTIFY_DRY=1 prints the sanitized line instead of posting (used for testing).
+msg="$(printf '%s' "$*" | tr '\n\r\t' '   ' | sed -E 's/[0-9A-Fa-f]{24}/<epc>/g' | tr -d '\000-\037"\\' | cut -c1-700)"
+if [ -n "${TWIN_NOTIFY_DRY:-}" ]; then echo "DRY-NOTIFY: $msg"; exit 0; fi
+/opt/m8trx/lanes/bin/notify-slack.sh "$msg" >/dev/null 2>&1 || true
+exit 0

@@ -1,0 +1,31 @@
+m8trx-twin ops on the box (m8trx-gpu)  -  prepared 2026-10-12, timers DISABLED until the Coordinator's flip
+===========================================================================================================
+Driver clone      /opt/m8trx/twin  (branch feat/recent-window-1012; never commit from the box)
+State / ledgers   /opt/m8trx/twin/.twin-state/  and  status/SIM-RUN-LOG.md  (day.sh appends the SIM-RUN lines itself on any live run)
+Scripts (here)    twin-hourly.sh  twin-day.sh  twin-notify  hold  resume      (deploy-local, outside the clone)
+Units (root)      /etc/systemd/system/m8trx-twin-hourly.{service,timer}   OnCalendar=hourly, Persistent=true
+                  /etc/systemd/system/m8trx-twin-day.{service,timer}      OnCalendar=*-*-* 02:00:00 Asia/Seoul  (= 17:00 UTC)
+Logs              /opt/m8trx/twin-ops/log/hourly-YYYY-MM-DD.log   /opt/m8trx/twin-ops/log/day-YYYY-MM-DD.log   (dates are Asia/Seoul)
+                  per-step gradle logs: /opt/m8trx/twin/out/day-runs/<date>-<HHMMSS>/<step>.log
+                  unit output also in:  journalctl -u m8trx-twin-hourly / -u m8trx-twin-day
+Lock              /opt/m8trx/twin-ops/lock  (flock): one gradle run at a time. Hourly skips a pass if busy; day waits up to 2 h.
+
+HOLD SWITCH       /opt/m8trx/twin-ops/hold     creates HOLD  - both scripts exit at once, publishing nothing
+                  /opt/m8trx/twin-ops/resume   removes HOLD
+                  (a run already in flight finishes; it is not killed. To stop one: systemctl stop m8trx-twin-day.service)
+
+RULES             - Weekday scale only: twin-day.sh pins M8TRX_DAY_SCALE=1.0 (day.sh's weekday default; the weekend values
+                    1.25 / 1.15 are never used). Yesterday's date (Asia/Seoul) is driven every night at 02:00 KST.
+                  - Never run the day step while the office is using the demo (hold first).
+                  - No --live-* by hand from here unless you mean it: the ledgers in .twin-state/ are the idempotence record.
+                  - The Mac and the box must never run the loop at the same time (two writers = duplicate sales).
+
+SLACK             twin-notify -> /opt/m8trx/lanes/bin/notify-slack.sh -> webhook in /opt/m8trx/uptime-watch/uptime.env
+                  (the SAME channel as uptime-watch and the lane posts; the helper prefixes "m8trx-gpu lane: "; the webhook value
+                  is never copied or printed). Posts:
+                    twin-day.sh     start: "twin · people plane · <date> · weekday scale · publishing from the box (hold: ...)"
+                                    end:   the SIM-RUN day line + wall time;  on rc!=0: "FAILED rc=N" + last ERROR line
+                    twin-hourly.sh  ONE post per pass, only if some sent_ok>0 or on error; quiet passes post nothing
+                    hold / resume   one post each
+                  EPC-like 24-hex tokens are masked; quotes/backslashes/newlines stripped (the helper does not JSON-escape).
+                  To change channel: point twin-notify at another env file / helper; to test without posting: TWIN_NOTIFY_DRY=1.

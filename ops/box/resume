@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# resume — remove HOLD; the next timer fire publishes again.
+rm -f /opt/m8trx/twin-ops/HOLD
+/opt/m8trx/twin-ops/twin-notify "twin ops · HOLD REMOVED by ${SUDO_USER:-$USER} at $(TZ=Asia/Seoul date '+%F %T KST') - publishing resumes at the next timer fire"
+echo "HOLD removed"

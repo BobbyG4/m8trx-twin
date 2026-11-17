@@ -12,6 +12,8 @@
 > `AUDIT-GPU-BOX-READONLY-2026-11-08.md`, `HANDOFF-BACKEND-WEB-S388-CLOSE-2026-11-11.md`). The brief that triggered this:
 > `m8trx-shared/twin/requirements/CORE-REQ-009-data-fit-to-evaluate-m8-on.md`. The plan that answers it: `status/PLAN-STORE-REALISM-2026-11-17.md`.
 
+> **⚡ UPDATE 2026-11-17 13:47 KST (Bob's go): the box now runs `main`.** `/opt/m8trx/twin` switched from #19's branch to `main` (`57283a6`; the box's own `status/SIM-RUN-LOG.md` carried over byte-identical, backup in `twin-ops/backup/`). Live plane restarted with a fresh `liveDist` (jnats 2.26.4, kotlin 2.4.21, jackson 2.22.4) and **`M8TRX_LIVE_SHIFT=0`** — Denver now runs on its real local clock (no more 11h16m lag). Rollback: `twin-ops/backup/live-dist-6439647-2026-11-17` + `live.env-2026-11-17`, and `git switch feat/live-pacing-and-plausible-moves-1014`. Box-only scripts and units are now in the repo under `ops/box/`. The table below is the state **as found** before this update.
+
 **Where.** GPU box `m8trx-gpu` (192.168.55.31), user `m8trx`. Driver clone **`/opt/m8trx/twin`**, on branch
 **`feat/live-pacing-and-plausible-moves-1014` @ `80f810b`** (PR #19's head) — **not `main`** (39 ahead, 9 behind) — with an
 uncommitted `status/SIM-RUN-LOG.md` (+10k lines, the box appends SIM-RUN lines itself). Ops scripts **deploy-local** in

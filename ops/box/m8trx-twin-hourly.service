@@ -1,0 +1,13 @@
+[Unit]
+Description=m8trx-twin hourly live pass (stream+alarm, move) - yesterday and today, Asia/Seoul
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=m8trx
+WorkingDirectory=/opt/m8trx/twin
+EnvironmentFile=/opt/m8trx/twin/.env
+Environment=JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+ExecStart=/opt/m8trx/twin-ops/twin-hourly.sh
+Nice=10

@@ -1,0 +1,9 @@
+[Unit]
+Description=m8trx-twin hourly live pass
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target

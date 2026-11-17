@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# hold — stop the twin's timers from publishing (twin-hourly.sh and twin-day.sh exit at once while HOLD exists).
+touch /opt/m8trx/twin-ops/HOLD
+/opt/m8trx/twin-ops/twin-notify "twin ops · HOLD SET by ${SUDO_USER:-$USER} at $(TZ=Asia/Seoul date '+%F %T KST') - the box publishes nothing until resume"
+echo "HOLD set"
