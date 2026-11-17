@@ -223,6 +223,23 @@ map onto planogram and parameter edits:
 | look_not_buy | two high-attention zero-sale fixtures (one price, one stock-out) + a control |
 | entrance_promo | needs a promotion model — **later** (no product table holds promotions) |
 
+### 5.2 Follow-up slice 2e — dwell that differs by fixture (found while building 2d, 2026-11-17)
+
+Dwell per visit comes out nearly constant across fixtures in the store-day: the behavior model's engaged span hardly depends on
+what the fixture is or holds. So "where do people linger" today only reflects how many visits a fixture gets. Bob called dwell
+"the most important thing with attracting the flow", so this gets its own slice before the gap ledger leans on it:
+- **Dwell by fixture kind and content:**
+  - footwear walls and the bench long (try-on);
+  - apparel rails and rounders medium-long;
+  - pegboard accessories short;
+  - promo tables short but frequent;
+  - GPS cases long when engaged.
+- **Dwell rises with attraction and the depth of the range on the fixture.**
+- **Interactions** (pickup and put-back) scale with dwell.
+- **Calibration** against the operating model's dwell figures (`store-operating-model.json`), plus a self-test that dwell
+  distributions differ by kind.
+- **Then re-plant** the "high-dwell, low-visit" half of `move_fast_seller`, which 2d had to plant as visits only.
+
 ## 6. Phase 3 — live, small first, then widen (each step on Bob's go)
 
 1. **Denver live on the new model**, replacing the hourly pass's stream/move/stock steps with the store-day simulation's wire
