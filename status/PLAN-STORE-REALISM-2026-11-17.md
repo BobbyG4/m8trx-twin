@@ -648,3 +648,59 @@ and what the core owes.
 **Small edits made in place:** "racks" to "fixtures" / "rounders" in § 1.6 and § 4.2 (Bob's standing word for anything a person
 reads is "fixture"), and two US spellings. § 3 (your repo's landing recipe) and § 9's decisions are yours and Bob's; no comment
 beyond this: land what the box runs first, exactly as you propose.
+
+## 12. Found by the Backend/Web lane, 2026-11-17 evening: the twin's broker is linked into the office's [B/W]
+
+**Read this before Phase 3.** Bob asked whether the twin was "bleeding into our main floor". The twin's counts are clean (all 104
+of the last seven days sit on the Decathlon tenant). The brokers are not. Traced read-only by an Opus agent; nothing was changed
+on any host. Times KST.
+
+**What is there**
+- `/opt/m8trx/edge-twin/nats.conf` on `.29` makes the twin's NATS (`edge-twin-denver`) a LEAF of the office's NATS
+  (`edge-itx-office`, listener 7422), with `deny_imports: [">"]`. The link was added on Bob's go on 2026-10-14 15:26 for demo
+  defect 38, so the web's Denver live floor could ride the one live-data socket the web has.
+- `deny_imports` stops office → twin. Twin → office is open: **42,049,829 messages (18.8 GB)** have crossed. Both brokers run the
+  default account with no subject permissions.
+- The office edge subscribes with wildcards (`area.*.>`). It takes the space from the message and the SITE from its own setting,
+  with no check that the space is its own, and posts the result to the main server.
+
+**What it did**
+- **22,657 `person_session` rows on mother have site = ITX Office and space = Denver's Sales Floor**, from 2026-10-14 15:24 (one
+  minute after the link came up) to 13:32 today; 400 to 1,277 a day. That is about 69% of the office's people sessions.
+- **Denver's own data is damaged too:** 47,588 Denver impression rows point at those office-filed sessions (in the last three
+  days 4,796 of 9,789, about half). The server links an impression to a session by tracking id and the session that was opened
+  first wins; since 10-14 each Denver shopper has had two sessions, one from each edge.
+- Impressions and try-on sessions sent by the office edge for Denver's zones were refused by the main server (that endpoint
+  checks the zone against the site); the person-sessions endpoint does not check. No cross-site rows were found in the traffic
+  or behavioral projections, the heat maps or the try-on tables. Nothing goes office → Denver. The count path is guarded and
+  was never affected.
+- About 85% of the office broker's 24-hour stream is Denver data.
+
+**What it means for this plan**
+1. **Denver's people numbers since 2026-10-14 are not a measure of what the platform captures.** The step down at go-live that
+   CORE-REQ-009 could not explain (visits about −20%, impressions about −40% against September) is very probably this, together
+   with the entrance zone's change of type on 11-11 (A12). Do not build the first gap ledger's people rows on the existing
+   Denver data; the baseline starts after the link is fixed.
+2. **Nothing of the twin's flows now:** the twin's edge last published at 13:35 today. If that was your rebuild of the box
+   (the `live shift 0` restart), say so in STATUS; if not, it stopped by itself and that needs finding before the reset night.
+3. **Do not restart, re-point or re-enable the twin's NATS, its edge or the live plane without Bob's word.** Starting the live
+   plane again as things stand resumes the mis-filing at about 14 messages a second.
+4. **People for the nine other stores go by the REST route (A5), not through edges or leaves.** A second leaf would repeat this.
+
+**What fixes it, and whose it is**
+- **Core, being built now (services draft, restarts the office edge and the main server on deploy):** an edge acts only on its
+  own site's spaces; the person-sessions endpoint refuses a space that does not belong to its site.
+- **The link itself (the twin's file on `.29`; Bob's word; restarts only the twin's NATS):** either remove the leaf remote
+  (Denver's live view on the web goes dark), or add `deny_exports` for `area.>`, `alarm.>`, `scan.>` and `$JS.>` so only the
+  tenant-and-site subjects (`m8trx.<tenant>.<site>.…`) cross (the web's VisionAI page keeps Denver live; the floor and mobile
+  maps, which listen on `area.*`, lose it). The core's recommendation to Bob is the second, tonight, before any live plane
+  restarts. When Bob has ruled, the change goes into `scripts/twin-edge-refresh.sh`'s source of record too, so a refresh does
+  not put the open link back.
+- **The mis-filed rows** (the 22,657 sessions, and Denver's impressions that point at them) are a deletion and a repair on
+  mother: a DELETIONS manifest first, on Bob's word. Tell me whether the twin can REGENERATE Denver's people data for
+  2026-10-14 onward from its store-day truth (your Phase 4 path), because then the repair is "delete and reload", not a
+  row-by-row re-link.
+- How the web's live-data socket is protected is a separate item on the core's side; it does not need anything from the twin.
+
+Your round 3 questions (Q14 to Q16) are being traced now and will be answered in place in § 8.
+
