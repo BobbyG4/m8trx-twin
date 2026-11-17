@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# store-ops — the twin's store-day ops driver on the box (m8trx-twin-store-ops.service). Run as m8trx on the box.
+# NOT INSTALLED ANYWHERE; drafted with the Phase 3 tooling (dry-run only in that slice). See ops/INSTALL.md "store-ops driver".
+#
+#   store-ops start [--stores csv]   build the classpath (storeOpsDist), then start the unit. Refuses on HOLD, a store the owner
+#                                    file does not give the driver, or the hourly pass still serving that store
+#   store-ops stop                   stop it (the lane finishes the item in hand; the day-start state is already saved)
+#   store-ops status
+#   store-ops dry-run [--stores csv] one simulated day against a fake clock: nothing is sent (the same as storeOpsLiveDryRun)
+#
+# `hold` stops it as well: the JVM polls the HOLD file (the SAME file the live people plane polls) and stops with exit 0, no restart.
+# Settings persist in $OPS/store-ops.env (read by the unit). No secrets live there.
+set -euo pipefail
+
+OPS="${M8TRX_OPS_DIR:-/opt/m8trx/twin-ops}"
+TWIN="${M8TRX_TWIN_DIR:-/opt/m8trx/twin}"
+UNIT=m8trx-twin-store-ops.service
+ENVF="$OPS/store-ops.env"
+OWNERS="${M8TRX_STORE_OPS_OWNER_FILE:-$OPS/store-ops-owner.csv}"
+HOLD="${M8TRX_LIVE_HOLD_FILE:-$OPS/HOLD}"
+export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}"
+
+set_key() { # set_key KEY VALUE — one line per key
+    touch "$ENVF"
+    grep -v "^$1=" "$ENVF" >"$ENVF.tmp" || true
+    echo "$1=$2" >>"$ENVF.tmp"
+    mv "$ENVF.tmp" "$ENVF"
+}
+
+owner_of() { awk -F, -v s="$1" '!/^#/ && $1==s {print $2}' "$OWNERS" 2>/dev/null | tr -d ' ' | tail -1; }
+
+hourly_running() {
+    systemctl is-active --quiet m8trx-twin-hourly.service 2>/dev/null && return 0
+    pgrep -f '[t]win-hourly.sh' >/dev/null && return 0
+    return 1
+}
+
+cmd="${1:-status}"
+[[ $# -gt 0 ]] && shift
+case "$cmd" in
+start)
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --stores) set_key M8TRX_STORE_OPS_STORES "$2"; shift 2 ;;
+        *) echo "store-ops: unknown option $1" >&2; exit 2 ;;
+        esac
+    done
+    [[ -e "$HOLD" ]] && { echo "store-ops: HOLD is set ($HOLD) — run resume first" >&2; exit 3; }
+    [[ -f "$OWNERS" ]] || { echo "store-ops: no owner file $OWNERS — write 'slug,storeday' for each store this driver may serve" >&2; exit 3; }
+    STORES="$(grep -E '^M8TRX_STORE_OPS_STORES=' "$ENVF" 2>/dev/null | cut -d= -f2 || true)"
+    STORES="${STORES:-dec-us-denver}"
+    for s in ${STORES//,/ }; do
+        [[ "$(owner_of "$s")" == "storeday" ]] || { echo "store-ops: $s is not listed 'storeday' in $OWNERS — the hourly pass serves it" >&2; exit 3; }
+    done
+    # the hourly pass may be mid-run for ANOTHER store; it must not be serving one of ours: it reads the same owner file
+    hourly_running && echo "store-ops: note: the hourly pass is running; it must read $OWNERS and skip: ${STORES}" >&2
+    systemctl is-active --quiet "$UNIT" && { echo "store-ops: already running" >&2; exit 3; }
+    echo "store-ops: building the classpath under the shared lock (waits <= 60 s for an hourly gradle run)"
+    (cd "$TWIN" && flock -w 60 "$OPS/lock" env M8TRX_STORE_OPS_DIST="$OPS/store-ops-dist" ./gradlew storeOpsDist -q --no-daemon) ||
+        { echo "store-ops: the lock was busy for 60 s or the build failed — try again after the hourly pass" >&2; exit 4; }
+    sudo systemctl start "$UNIT"
+    echo "store-ops: started for ${STORES} — log: tail -f $OPS/log/store-ops.log"
+    ;;
+stop)
+    sudo systemctl stop "$UNIT"
+    echo "store-ops: stopped"
+    ;;
+dry-run)
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+        --stores) export M8TRX_STORE_OPS_STORES="$2"; shift 2 ;;
+        *) echo "store-ops: unknown option $1" >&2; exit 2 ;;
+        esac
+    done
+    (cd "$TWIN" && ./gradlew storeOpsLiveDryRun -q --no-daemon)
+    ;;
+status)
+    systemctl status --no-pager "$UNIT" 2>/dev/null | head -5 || true
+    echo "── $ENVF"; cat "$ENVF" 2>/dev/null || echo "(none)"
+    echo "── $OWNERS"; cat "$OWNERS" 2>/dev/null || echo "(none)"
+    echo "── last lines of $OPS/log/store-ops.log"; tail -n 8 "$OPS/log/store-ops.log" 2>/dev/null || true
+    ;;
+*)
+    sed -n '2,15p' "$0"
+    exit 2
+    ;;
+esac
