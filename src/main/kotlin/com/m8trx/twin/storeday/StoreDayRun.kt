@@ -19,7 +19,7 @@ import java.util.TreeMap
  * knobs `M8TRX_STORE_DAY_CALENDAR` (true) · `M8TRX_STORE_DAY_MISPLACE` (0.005) · `_STAFF_UPH` (120) · `_PREOPEN_STOCKERS` (3) · `_TOPUP_STOCKERS` (1) ·
  * `_TOPUP_THRESHOLD` (0.60) · `_QUIET_HOURS` (3).
  * Slice 2c: `M8TRX_STORE_DAY_PERIODS` (true; false is the 2b day) · `_PERIOD_LINES_MIN`/`_MAX` (2/3 lines changing facings per department per week) ·
- * `_PERIOD_SWAPS` (at most 1 style swap per department per week) · `_RESET_LEAD_MIN` (180) · `_COUNT_SHARE` (0.25; 0 = no counts) ·
+ * `_PERIOD_SWAPS` (at most 1 style swap per department per week) · `_RESET_LEAD_MIN` (180) · `_COUNT_SHARE` (0.25; 0 = no counts) · `_COUNT_SKIP_OPEN_HOURS` (2) ·
  * `M8TRX_STORE_DAY_PERIODS_DIR` (also write `<yyyy-mm-dd>.json` period files there; default none, the run writes `<out>/<slug>/periods/`).
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.storeday.StoreDayRun")
@@ -45,6 +45,7 @@ fun knobsFromEnv(): Knobs {
         ),
         resetLeadMin = env("M8TRX_STORE_DAY_RESET_LEAD_MIN", d.resetLeadMin.toString()).toInt(),
         countShare = env("M8TRX_STORE_DAY_COUNT_SHARE", d.countShare.toString()).toDouble(),
+        countSkipOpenHours = env("M8TRX_STORE_DAY_COUNT_SKIP_OPEN_HOURS", d.countSkipOpenHours.toString()).toInt(),
     )
 }
 

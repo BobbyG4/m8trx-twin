@@ -60,8 +60,14 @@ fun checkPeriods(site: String) {
     val directives = plans.map { sim.periods.directiveJson(it) }
     val ids = directives.map { it.path("external_directive_id").asText() }
     check(
-        "one directive id per store-period, in the PLN-<slug>-<yyyymmdd> form",
-        ids.toSet().size == ids.size && ids.all { Regex("PLN-$site-\\d{8}").matches(it) },
+        "one directive id per store-period, in the PLNW-<slug>-<yyyymmdd> form, never a curated-directive id",
+        ids.toSet().size == ids.size && ids.all { it.startsWith("PLNW-") } &&
+            ids.none { id ->
+                id == "PLN-$site" ||
+                    (0..400L).any { id == com.m8trx.twin.connect.sim.PlanogramDirectiveDriver.externalRef(site, FROM_DATE.plusDays(it)) } ||
+                    id ==
+                    ConnectMappers.snake.readTree(Files.readAllBytes(sim.model.modelDir.resolve("planogram.json"))).path("directive_ref").asText()
+            } && ids.all { Regex("PLNW-$site-\\d{8}").matches(it) },
         ids.joinToString(", "),
     )
     check(
@@ -210,11 +216,12 @@ fun checkPeriods(site: String) {
         "${counted.toSet().size} of ${floor.size} fixtures, ${counts.joinToString("/") { it.pulls.size.toString() }} per count",
     )
     check(
-        "a count falls on Tuesday to Thursday (or the next open day) and in the day's quietest usable hour",
+        "a count falls on Tuesday to Thursday (or the next open day) and in the quietest hour after the first two open hours",
         counts.all { c ->
             val r = run.results.first { it.date == c.date }
             val curve = r.plan.shape!!.curve
-            val h = curve.indices.filter { it <= curve.size - 3 }.minWith(compareBy({ curve[it] }, { it }))
+            val h = sim.countHour(curve)
+            check(h >= Knobs().countSkipOpenHours || curve.size < 5) { "count in a skipped opening hour" }
             val open = java.time.ZonedDateTime.of(c.date, r.plan.shape.open, java.time.ZoneId.of(model.timezone)).toInstant().toEpochMilli()
             c.date.dayOfWeek in DayOfWeek.TUESDAY..DayOfWeek.THURSDAY && c.startMs == open + h * 3_600_000L
         },

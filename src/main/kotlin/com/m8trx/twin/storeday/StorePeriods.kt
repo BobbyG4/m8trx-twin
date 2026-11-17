@@ -3,7 +3,6 @@ package com.m8trx.twin.storeday
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.webhook.DirectiveTarget
 import com.m8trx.twin.connect.model.webhook.PlanogramDirective
-import com.m8trx.twin.connect.sim.PlanogramDirectiveDriver
 import com.m8trx.twin.history.HistoryCsv
 import java.nio.file.Files
 import java.nio.file.Path
@@ -77,7 +76,7 @@ class PeriodPlans(
     }
 
     /** A period's directive id: one per store and period. */
-    fun directiveId(start: LocalDate): String = PlanogramDirectiveDriver.externalRef(model.slug, start)
+    fun directiveId(start: LocalDate): String = "$ID_PREFIX-${model.slug}-${start.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)}"
 
     /** The exact `planogram_directive` body for a period (site left as the `@site` placeholder the other wire events use). */
     fun directive(p: PeriodPlan, siteId: String = "@site"): PlanogramDirective = PlanogramDirective(
@@ -253,6 +252,9 @@ class PeriodPlans(
         /** The period the Phase 1 plan belongs to: the Monday the offline runs start on. Earlier dates use the same plan. */
         val ANCHOR: LocalDate = LocalDate.of(2026, 11, 2)
         const val PERIOD_DAYS = 7L
+
+        /** Period plans use `PLNW-`, never the `PLN-` of the curated directives (a re-send of one id replaces that directive's targets). */
+        const val ID_PREFIX = "PLNW"
 
         fun periodStart(date: LocalDate): LocalDate = date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
 

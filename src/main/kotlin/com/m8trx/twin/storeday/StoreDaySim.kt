@@ -80,6 +80,8 @@ data class Knobs(
     val resetLeadMin: Int = 180,
     /** The share of the floor fixtures counted each week (1/4: every fixture is counted every four weeks). 0 turns the counts off. */
     val countShare: Double = 0.25,
+    /** The count starts in the quietest open hour after skipping this many opening hours (the floor the shoppers have worked on). */
+    val countSkipOpenHours: Int = 2,
 )
 
 /** One unit that left a fixture in a sale. [fixture] is where the shopper stood: the platform should stamp the sale there. */
@@ -602,6 +604,13 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         return order.filterIndexed { i, _ -> i % groups == g }.sorted()
     }
 
+    /** The count's start hour: the quietest hour after the first [Knobs.countSkipOpenHours], leaving two hours before closing. */
+    fun countHour(curve: List<Double>): Int {
+        val usable = curve.indices.filter { it >= knobs.countSkipOpenHours && it <= curve.size - 3 }
+            .ifEmpty { curve.indices.filter { it <= curve.size - 3 } }.ifEmpty { listOf(0) }
+        return usable.minWith(compareBy({ curve[it] }, { it }))
+    }
+
     /** The day of the period's count: Tuesday to Thursday by seed, or the next open day if that one is closed; null if none is open. */
     fun countDay(periodStart: LocalDate): LocalDate? {
         val pick = 1 + Math.floorMod(HistoryCsv.derive(behavior.params.seed, slug(), periodStart, "count-day"), 3L).toInt()
@@ -627,8 +636,7 @@ class StoreDaySim(val model: StoreDayModel, val behavior: BehaviorModel, val cal
         if (countDay(start) != date) return
         val fixtures = countedFixtures(start)
         if (fixtures.isEmpty()) return
-        val usable = curve.indices.filter { it <= curve.size - 3 }.ifEmpty { listOf(0) }
-        val hour = usable.minWith(compareBy({ curve[it] }, { it }))
+        val hour = countHour(curve)
         val startMs = open + hour * 3_600_000L
         val countId = StockCounts.uuid("twin-stock", slug(), date, behavior.params.seed, 0)
         val rng = kotlin.random.Random(HistoryCsv.derive(behavior.params.seed, slug(), date, "count"))
