@@ -31,10 +31,10 @@
     "PW-03" : 0.9529
   },
   "department_buy" : {
-    "general" : 1.6141,
-    "hike_camp" : 0.4583,
-    "running" : 0.9225
+    "general" : 1.6264,
+    "hike_camp" : 0.4661,
+    "running" : 0.9374
   },
   "cell_weight_power" : 1.0,
-  "dwell_scale" : 2.3793
+  "dwell_scale" : 2.3808
 }

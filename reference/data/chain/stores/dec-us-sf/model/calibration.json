@@ -92,13 +92,13 @@
     "RR-02" : 0.4408
   },
   "department_buy" : {
-    "climb" : 0.4836,
-    "cycling" : 0.0144,
-    "general" : 5.3857,
+    "climb" : 0.489,
+    "cycling" : 0.0159,
+    "general" : 5.5639,
     "hike_camp" : 0.536,
-    "running" : 0.4742,
-    "snow" : 1.2163
+    "running" : 0.4743,
+    "snow" : 1.2244
   },
   "cell_weight_power" : 1.0,
-  "dwell_scale" : 2.6994
+  "dwell_scale" : 2.698
 }
