@@ -39,7 +39,32 @@ data class Pickup(val cell: Cell, val tried: Boolean, val bought: Boolean)
  * exceptions to "no sale without a prior impression on that fixture": the gift persona's quick grab and the
  * checkout impulse add-on.
  */
-data class SoldLine(val cell: Cell, val noLook: Boolean)
+data class SoldLine(val cell: Cell, val noLook: Boolean, val epc: String? = null)
+
+/** A shopper reached for a cell with no unit on its fixture ([lost] = they would have bought it). Store-day runs only. */
+data class StockOut(val cell: Cell, val atMs: Long, val lost: Boolean)
+
+/**
+ * What a store-day run plugs into the agent (slice 2a). Null everywhere else, so the tuned Denver behavior and its
+ * self-test are untouched: with no hooks every method below is bypassed and the random draws are exactly the old ones.
+ *
+ *  - [cellWeight] replaces the flat facings x price weight when a shopper picks the cells to look at closely.
+ *  - [fixtureScale] multiplies a fixture's stop weight (and a gift shopper's pick of fixture), [buyScale] a cell's buy chance;
+ *    both come from the store-day calibration.
+ *  - [available] / [take] / [putBack] tie a pickup to a real unit on the fixture.
+ */
+interface FloorHooks {
+    fun cellWeight(c: Cell): Double
+    fun fixtureScale(code: String): Double
+    fun buyScale(c: Cell): Double
+    fun available(c: Cell): Boolean
+
+    /** Remove one unit of [c]'s EAN from [c]'s fixture; returns its EPC (null if none). */
+    fun take(c: Cell, atMs: Long): String?
+
+    /** A picked-up cell was put back. [u] is a uniform draw from the shopper's stream (decides a misplacement). */
+    fun putBack(c: Cell, atMs: Long, u: Double)
+}
 
 /** The oracle's whole account of one shopper — the link a real store keeps through a loyalty or receipt id. */
 data class ShopperRecord(
@@ -50,6 +75,7 @@ data class ShopperRecord(
     val exitMs: Long,
     val visits: List<Visit>,
     val lines: List<SoldLine>,
+    val stockOuts: List<StockOut> = emptyList(),
 ) {
     val bought: Boolean get() = lines.isNotEmpty()
     val revenueUsd: Double get() = lines.sumOf { it.cell.priceUsd }
@@ -89,9 +115,11 @@ class ShopperAgent(
         pres: Map<String, FixturePresentation>,
         rng: Random,
         sink: SampleSink?,
+        hooks: FloorHooks? = null,
     ): ShopperRecord {
         val visits = mutableListOf<Visit>()
         val lines = mutableListOf<SoldLine>()
+        val outs = mutableListOf<StockOut>()
         var t = entryMs
 
         // Common random numbers: every decision draws from its OWN stream, keyed by what it decides (this
@@ -111,24 +139,24 @@ class ShopperAgent(
         // ── entrance table: everyone passes it; a minority stops ──────────────────────────────────────────
         for (f in world.fixturesIn(Placement.ENTRANCE_TABLE)) {
             val p = pres.getValue(f.code)
-            val stop = params.browse.entranceStopRate * p.contentAppeal * p.impressionFactor * noise(f.code)
+            val stop = params.browse.entranceStopRate * p.contentAppeal * p.impressionFactor * noise(f.code) * (hooks?.fixtureScale(f.code) ?: 1.0)
             if (persona != "gift" && stream("stop:${f.code}").nextDouble() < min(params.engagement.maxProbability, stop)) {
-                t = browseAt(id, persona, f, p, t, stream("visit:${f.code}"), sink, visits, lines)
+                t = browseAt(id, persona, f, p, t, stream("visit:${f.code}"), sink, visits, lines, hooks, outs)
             }
         }
 
         if (persona == "gift") {
-            t = giftGrab(id, pres, t, stream("gift"), ::stream, sink, visits, lines)
+            t = giftGrab(id, pres, t, stream("gift"), ::stream, sink, visits, lines, hooks, outs)
         } else {
             val target = if (persona == "mission" && categoryMix.isNotEmpty()) weightedPick(categoryMix, stream("target")) else null
-            val stops = pickStops(persona, pres, target, stream("stops"), ::stream, ::noise)
+            val stops = pickStops(persona, pres, target, stream("stops"), ::stream, ::noise, hooks)
             for (f in stops) {
                 if (persona == "mission" && lines.isNotEmpty() &&
                     stream("continue:${f.code}").nextDouble() >= params.purchase.missionContinueAfterBuy
                 ) {
                     break
                 }
-                t = browseAt(id, persona, f, pres.getValue(f.code), t, stream("visit:${f.code}"), sink, visits, lines)
+                t = browseAt(id, persona, f, pres.getValue(f.code), t, stream("visit:${f.code}"), sink, visits, lines, hooks, outs)
             }
         }
 
@@ -139,15 +167,17 @@ class ShopperAgent(
             val q = uniformMs(params.browse.checkoutQueueSeconds, co)
             visits += Visit(counter.code, Visit.Kind.CHECKOUT, t, q, impression = true, pickups = emptyList())
             t = episode(id, counter, q, t, co, sink)
-            val impulseCells = world.impulse?.let { plan.cells(it.code) }.orEmpty()
+            val impulseAll = world.impulse?.let { plan.cells(it.code) }.orEmpty()
+            val impulseCells = if (hooks == null) impulseAll else impulseAll.filter(hooks::available)
             if (impulseCells.isNotEmpty() && co.nextDouble() < params.purchase.impulseAtCheckout) {
-                lines += SoldLine(impulseCells[co.nextInt(impulseCells.size)], noLook = true)
+                val c = impulseCells[co.nextInt(impulseCells.size)]
+                lines += SoldLine(c, noLook = true, epc = hooks?.take(c, t))
             }
         }
 
         t = walk(id, t, inward = false, rng = stream("door-out"), sink = sink)
         sink?.evict(id)
-        return ShopperRecord(id, persona, plan.id, entryMs, t, visits, lines)
+        return ShopperRecord(id, persona, plan.id, entryMs, t, visits, lines, outs)
     }
 
     // ── stops ────────────────────────────────────────────────────────────────────────────────────────────
@@ -167,6 +197,7 @@ class ShopperAgent(
         rng: Random,
         stream: (String) -> Random,
         noise: (String) -> Double,
+        hooks: FloorHooks? = null,
     ): List<Fixture> {
         val range = params.browse.stops.getValue(persona)
         val n = range[0] + rng.nextDouble() * (range[1] - range[0])
@@ -174,7 +205,10 @@ class ShopperAgent(
             .filter { world.placement[it.code] == Placement.FLOOR || world.placement[it.code] == Placement.BACK_CORNER }
             .filter { f ->
                 stream("stop:${f.code}").nextDouble() <
-                    min(params.engagement.maxProbability, n * stopWeight(f, pres.getValue(f.code), target) * noise(f.code) / stopNormalizer)
+                    min(
+                        params.engagement.maxProbability,
+                        n * stopWeight(f, pres.getValue(f.code), target) * noise(f.code) * (hooks?.fixtureScale(f.code) ?: 1.0) / stopNormalizer,
+                    )
             }
             .sortedBy { world.distanceFromDoor(it) }
     }
@@ -202,6 +236,8 @@ class ShopperAgent(
         sink: SampleSink?,
         visits: MutableList<Visit>,
         lines: MutableList<SoldLine>,
+        hooks: FloorHooks? = null,
+        outs: MutableList<StockOut> = mutableListOf(),
     ): Long {
         val dwell = (uniformMs(params.browse.dwellSeconds, rng) * sqrt(p.contentAppeal.coerceAtLeast(0.25))).toLong().coerceAtLeast(MIN_DWELL_MS)
         var t = episode(id, f, dwell, start, rng, sink)
@@ -210,20 +246,31 @@ class ShopperAgent(
         val slot = visits.size
         visits += Visit(f.code, Visit.Kind.BROWSE, start, dwell, impression = true, pickups = emptyList())
 
-        for (idx in considered(p.cells, rng)) {
+        for (idx in considered(p.cells, rng, hooks)) {
             val c = p.cells[idx]
             val pick = min(params.engagement.maxProbability, params.engagement.basePickup * p.cellPickup(c))
             if (rng.nextDouble() >= pick) continue
+            val inStock = hooks == null || hooks.available(c)
             var tried = false
-            if ((c.category == "apparel" || c.category == "footwear") && rng.nextDouble() < params.engagement.tryOnRate.getValue(persona)) {
+            val wantsTry = (c.category == "apparel" || c.category == "footwear") && rng.nextDouble() < params.engagement.tryOnRate.getValue(persona)
+            if (wantsTry && inStock) {
                 tried = true
                 t = tryOn(id, c, t, rng, sink, visits)
             }
             val buy = params.purchase.baseBuy.getValue(persona) * p.cellConversion(c, idx) * priceFactor(c) *
-                (if (tried) params.purchase.tryOnBuyUplift else 1.0)
+                (if (tried) params.purchase.tryOnBuyUplift else 1.0) * (hooks?.buyScale(c) ?: 1.0)
             val bought = rng.nextDouble() < min(params.engagement.maxProbability, buy)
+            if (!inStock) {
+                // The facing is empty: the shopper may look but there is nothing to take. Same draws as in stock.
+                outs += StockOut(c, t, lost = bought)
+                continue
+            }
             pickups += Pickup(c, tried, bought)
-            if (bought) lines += SoldLine(c, noLook = false)
+            if (bought) {
+                lines += SoldLine(c, noLook = false, epc = hooks?.take(c, t))
+            } else {
+                hooks?.putBack(c, t, rng.nextDouble())
+            }
         }
         visits[slot] = visits[slot].copy(pickups = pickups)
         return t
@@ -238,8 +285,16 @@ class ShopperAgent(
         (params.content.priceReferenceUsd / c.priceUsd.coerceAtLeast(1.0)).pow(params.purchase.priceElasticity).coerceIn(0.15, MAX_PRICE_FACTOR)
 
     /** Cells a shopper looks at closely: facings × price preference, without replacement. */
-    private fun considered(cells: List<Cell>, rng: Random): List<Int> {
+    private fun considered(cells: List<Cell>, rng: Random, hooks: FloorHooks? = null): List<Int> {
         if (cells.isEmpty()) return emptyList()
+        if (hooks != null) {
+            // Demand-weighted draw without replacement; log keys because demand shares are small enough to underflow u^(1/w).
+            return cells.indices.map { i ->
+                i to
+                    kotlin.math.ln(rng.nextDouble().coerceAtLeast(1e-300)) / hooks.cellWeight(cells[i]).coerceAtLeast(1e-12)
+            }
+                .sortedByDescending { it.second }.take(params.engagement.cellsConsidered).map { it.first }
+        }
         val ref = params.content.priceReferenceUsd
         val e = params.content.priceElasticity
         return cells.indices.map { i ->
@@ -274,19 +329,30 @@ class ShopperAgent(
         sink: SampleSink?,
         visits: MutableList<Visit>,
         lines: MutableList<SoldLine>,
+        hooks: FloorHooks? = null,
+        outs: MutableList<StockOut> = mutableListOf(),
     ): Long {
         val stocked = world.visible.filter {
             (world.placement[it.code] == Placement.FLOOR || world.placement[it.code] == Placement.ENTRANCE_TABLE) &&
                 !pres.getValue(it.code).isEmpty
         }
         if (stocked.isEmpty()) return start
-        val f = stocked.maxBy { stream("gift:${it.code}").nextDouble().pow(1.0 / pres.getValue(it.code).contentAppeal) }
+        val f = stocked.maxBy {
+            stream("gift:${it.code}").nextDouble().pow(1.0 / (pres.getValue(it.code).contentAppeal * (hooks?.fixtureScale(it.code) ?: 1.0)))
+        }
         val p = pres.getValue(f.code)
-        val idx = considered(p.cells, rng).first()
+        val ranked = considered(p.cells, rng, hooks)
         val end = episode(id, f, GRAB_MS, start, rng, sink)
+        val idx = if (hooks == null) ranked.first() else ranked.firstOrNull { hooks.available(p.cells[it]) }
+        if (idx == null) {
+            // Every cell the gift shopper considered is empty: a lost sale, no basket line.
+            outs += StockOut(p.cells[ranked.first()], start, lost = true)
+            visits += Visit(f.code, Visit.Kind.GRAB, start, GRAB_MS, impression = false, pickups = emptyList())
+            return end
+        }
         visits +=
             Visit(f.code, Visit.Kind.GRAB, start, GRAB_MS, impression = false, pickups = listOf(Pickup(p.cells[idx], tried = false, bought = true)))
-        lines += SoldLine(p.cells[idx], noLook = true)
+        lines += SoldLine(p.cells[idx], noLook = true, epc = hooks?.take(p.cells[idx], start))
         return end
     }
 

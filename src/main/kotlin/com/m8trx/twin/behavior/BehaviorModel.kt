@@ -90,8 +90,20 @@ class BehaviorModel(
      *
      * [hours] restricts which arrival hours are KEPT (store-local, e.g. 14..14 for one hour) without changing the
      * draw, so a one-hour slice is exactly that hour of the full day.
+     *
+     * [hooks] and [beforeArrival] are the store-day run's seam (slice 2a): stock-aware pickups, and a callback with each
+     * arrival's entry time (epoch ms) so staff events scheduled before it can be applied first. Both default to off.
      */
-    fun runDay(date: LocalDate, timeline: PlanTimeline, seed: Long, scale: Double = 1.0, sink: SampleSink? = null, hours: IntRange? = null): DayRun {
+    fun runDay(
+        date: LocalDate,
+        timeline: PlanTimeline,
+        seed: Long,
+        scale: Double = 1.0,
+        sink: SampleSink? = null,
+        hours: IntRange? = null,
+        hooks: FloorHooks? = null,
+        beforeArrival: ((Long) -> Unit)? = null,
+    ): DayRun {
         val weekend = date.dayOfWeek.value >= 6
         val curve = if (weekend) model.traffic.hourlyCurve.weekend else model.traffic.hourlyCurve.weekday
         val daily = expectedVisitors(date, scale)
@@ -110,7 +122,8 @@ class BehaviorModel(
                 val rng = Random(mix(seed, date.toEpochDay(), i.toLong()))
                 val persona = ShopperAgent.weightedPick(params.personas, rng)
                 val plan = timeline.at(entry)
-                records += agent.run("s-$date-$i", persona, entry.toEpochMilli(), plan, presentations.of(plan), rng, sink)
+                beforeArrival?.invoke(entry.toEpochMilli())
+                records += agent.run("s-$date-$i", persona, entry.toEpochMilli(), plan, presentations.of(plan), rng, sink, hooks)
             }
         }
         return DayRun(
