@@ -11,7 +11,11 @@
 - **Phase 2a ✅** (#30) — stock-aware Denver store-day: deliveries, quiet-hour top-ups, wire plan, truth ledger; 28 days no drain.
 - **Phase 2b ✅** (#31) — all ten stores (Phase 1 models for all), StoryCalendar overlays, misplacement ≈ 5% of units sold;
   28-day run: w4/w1 99–115% everywhere, stock in band, lost sales 0.7–3.7%.
-- **Phase 2c (weekly planogram periods, resets, counts) — building**; 2d (planted scenarios + answer key) next.
+- **Phase 2c ✅** (#32) — weekly planogram periods (`PLNW-<slug>-<yyyymmdd>`, effective + expiry dates), pre-open resets,
+  rotating counts after the first two open hours, compliance truth per period (compliant at count 69–97% across stores).
+- **Phase 2d ✅** (#33) — 7 eval archetypes planted in Denver + Paris within physical capacity, 90/90 checks verified from
+  the truth ledger, answer key in the eval's shape (`reference/data/scenarios/answer-key-example.json`; file only).
+- **Phase 2e (dwell by fixture kind) — building** (plan § 5.2).
 - **Phase 3 designed, not started** — `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
   received + ~6.4k move batches, paced over hours, announced) needs Bob's go and a scheduled night.
 - **Waiting on Bob:** D3 numbers (location factors, real hours, delivery cut-off — Phase 1 uses provisional values);
