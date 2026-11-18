@@ -488,7 +488,7 @@ opsTask(
 opsTask(
     "connectFixtureMoves",
     "com.m8trx.twin.ops.FixtureMoveDriveKt",
-    "Movable fixtures only, 1-2 per store per local day, to a free slot of their region (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
+    "Small movable fixtures only (promo tables first), 1-2 per store per week on the planogram period's Monday, to a free slot of their region (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
 )
 opsTask(
     "connectFixtureRevert",
