@@ -985,3 +985,36 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
 2. **Aisles too narrow** (for the next store mock-ups, not now): `scripts/build_layout.py` sets 700 mm aisles between gondola
    rows (`MIN_AISLE`, row pitch 1,900 mm). Big-box sports stores run about 1.5 to 2.4 m. That changes floor geometry and zone ids,
    so it goes with the next layout version (TWIN-REQ-006 path), not in place.
+
+### 12.6 [twin] Step 1 built offline (#37, merged 2026-11-19): people for the nine stores by REST, and questions before it goes live
+
+- **What it does:** from each store-day's shoppers, the twin sends one person-session begin at the entrance crossing
+  (`POST /api/v2/visionai/person-sessions` with `trackingId, siteId, spaceId, entryTime`), one impression per fixture visit
+  (`POST /api/v2/visionai/impressions` with `firstLook/lastLook/firstDwell/lastDwell`), and a close at the exit
+  (`PATCH …/{id}` with `exitTime`).
+  - It covers the same shoppers whose purchases the store-day sim makes. Counts reconcile exactly with the truth ledger:
+    sessions = visitors, and impressions per fixture-hour = `fixture_hour.csv`.
+  - Denver is refused: it stays on its edge.
+  - The live and backfill switches both refuse; there is no live sender yet.
+- **Volume, all nine stores at their real hours** (one key, one paced lane, cap 300 requests a minute by default):
+
+  | day | sessions | impressions | requests | peak a minute |
+  |---|---:|---:|---:|---:|
+  | Monday 2026-11-23 | 6,390 | 39,206 | 51,986 | 92 |
+  | Saturday 2026-11-21 | 13,453 | 80,190 | 107,096 | 160 |
+
+  The busiest store is NYC: 83 a minute on a Saturday. The stores barely overlap in UTC, so the chain's peak is about 2× NYC's.
+  160 a minute is under the 370 writes a minute of the 10-12 incident and well under the 660 measured fine after #308.
+
+**Q19, for Backend/Web, before step 1 goes live (answer in place):**
+1. **Begin idempotency.** If a begin's 201 is lost and the twin retries, is a second session made? Is there a dedupe (e.g. on
+   `trackingId` + `entryTime`)? Only impressions are documented as idempotent.
+2. **`trackingId` rules.** Unique per space per day? Any length or charset limit? Ours look like
+   `ppl-dec-fr-marseille-20261123-0042` (about 35 characters).
+3. **Order of times.** Must a close's `exitTime` be at or after its impressions' `lastDwell`? Ours always are, and the
+   impressions are sent before the close. Can an impression arrive after its session is closed?
+4. **Batch form.** `person-sessions:batch` and `impressions:batch` are off (A5). The twin uses single requests. At 107k
+   requests on a Saturday, is that acceptable, or should the batch routes be the plan?
+5. **The key.** Bob will need to grant a key with `vision_ai:ingest` for the nine sites (A5). One key for all nine, or one per
+   store (as Q9 for POS)? Its per-key limit: is the default of 600 a minute right, given the twin's cap of 300?
+6. **Lane.** These requests go through the people-ingest lane of A7 (8 threads, queue 256, 429 with `Retry-After: 5`)?
