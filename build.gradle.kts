@@ -661,6 +661,17 @@ storeOpsTask(
     "Offline: reset mapping conserves units, pace and ordering, idempotent ids, driver dry run, backoff rules, no live client in dry paths, LiveDrive default unchanged.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeOpsSelfTest") }
+storeOpsTask(
+    "storeDayPeopleRestDryRun",
+    "com.m8trx.twin.storeops.PeopleRestDryRunKt",
+    "Dry run: the nine non-Denver stores' people as Connect REST (sessions + impressions from the store-day shoppers), people-rest.jsonl per store-day, paced under one key's cap against a simulated clock. Sends nothing; live and backfill are refused.",
+)
+storeOpsTask(
+    "storeDayPeopleRestSelfTest",
+    "com.m8trx.twin.storeops.PeopleRestSelfTestKt",
+    "Offline: people-by-REST mapping equals the truth ledger, session and impression invariants, Denver refused, determinism, pacing under the cap, backoff, no live client.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestSelfTest") }
 
 // The store-ops service's classpath, copied like liveDist so the hourly pass's build never rewrites a jar under a running JVM.
 tasks.register<Sync>("storeOpsDist") {
