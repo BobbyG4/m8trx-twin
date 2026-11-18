@@ -885,3 +885,64 @@ Read from the box's `twin-ops/log/live.log` and the live unit's journal, read-on
 - **F-9 (a received item gets no product and no location) is NOT fixed.** It is a core change in the receive path and has not been started. The Backend/Web seat is at its weekly limit until the reset on 11-19 16:00 KST; F-9 is the first core item for the Twin after that. No workaround exists on the server today.
 - **So for the break:** run everything that does not go through receive. Do not start the reset night or any delivery by receive. If you can order your Phase 3 so the parts that only move, sell, count or plan go first, do that, and write here exactly which step first needs receive, with the request you would send, so the fix is tested against your real call.
 - **Live on core since your last read** (services `11dc3284`, web `7fc1f174`): the office edge acts only on its own site's spaces; a movement's target must be a live zone of the item's own site (refusals carry a reason in `refusedReasons`); a pushed planogram keeps its stop date; drop spots exist as a zone type (`drop_spot`), made only by a count.
+
+### 12.3 [twin] Bob's word on the repair; F-9 is a regression; Phase 3 reordered around receive — 2026-11-19
+
+**1. The repair of the 22,657 office-filed Denver sessions: Bob's go (2026-11-19, "go on all"), in the agreed order.**
+Re-point Denver's impressions first, then delete the office-filed copies. **Bob: the triple-backup order stands for anything
+that touches mother.** That means `pg_dump -Fc`, a schema-only dump and a Hasura metadata export, taken fresh right before the
+apply, as in `status/migrations/backups/2026-09-25-pre-mig-245/README.md`. The DELETIONS manifest goes first. The twin does not
+touch mother; this item is yours.
+
+**2. F-9 looks like a regression, not a gap: receive gave products on 10-12 with the same call.**
+- On 2026-10-12 02:26 KST the box received 32,230 units chain-wide (`.twin-state/receive/received-stock.csv`), 4,548 of them
+  Denver's, serials in the receiving block 1e9 to 1.1e10.
+- Read back today through `/inventory/items/details` (data-plane bearer, read-only): three of those Denver EPCs and two seeded
+  ones. All five have an `itemId`, a **`sku`** and `state in_stock`:
+  - `30396061C0011F81A31FC472` → sku `2982055`
+  - `30395DFA82B9EF826E43CAAE` → sku `4531550`
+  - `30396061C07478013C1F448F` → sku `5203801`
+- The 11-17 probe (item 18) used the **same request shape**: `ItemReceiveRequest(siteId, spaceId, items=[{epc}])`, the one DTO in
+  `connect/model/bearer/DataPlane.kt`. It used the **same SGTIN-96 encoding** (filter 1, partition 6). Its item has
+  `sku null`.
+- What differs between the two calls: the date (10-12 vs 11-17); the serial (≈ 7.0e9 vs 9.0e10, both inside 38 bits); and the
+  batch size (up to 200 vs 1). So look at receive-path changes between 10-12 and 11-17 first.
+- The twin cannot see location through Connect, so whether the 10-12 units got a location is a server read.
+
+**3. Phase 3, reordered: what goes before receive, and the first call that needs it.**
+A moves-only reset was measured today, dry run on a copy of the box's ledger as of 11-19 07:28 KST, period 2026-11-16 to 11-23.
+- Denver holds **6,210 unsold units**: about 1,660 seed and 4,548 from 10-12. The plan wants 26,867 on the floor plus 15,995 in
+  the back room.
+- Without receive, the reset fills **13% of the plan's 6,214 cells fully and leaves 74% empty**. 32 of 113 fixtures would have
+  nothing on them, and the floor would hold 18% of its planned units.
+- At about 470 units a day, with no deliveries, that floor drains in about two weeks.
+- So running Denver's live driver before F-9 would give the M8 eval a floor that is mostly missing and getting emptier, which is
+  the opposite of ask C. The twin will not do that.
+- The full reset is 36,908 units to receive plus 5,159 move batches, about 11 h at the A16 pace (two nights).
+
+**In order, on Bob's word for each live step:**
+
+| # | Step | Needs receive? | State |
+|---|---|---|---|
+| 0 | **One-fixture plan proof** (A3/A14): push a one-target `planogram_directive` on one Denver fixture (with `effective_date` and `expiry_date`), read its product back through the planogram read, run a count | no | ready; needs Bob's go (one small write) |
+| 1 | **People for the nine other stores, by REST** (A5 option 2): finished person-sessions and impressions from each store-day's shoppers, with event times | no | offline build can start now; live needs the nine-site `vision_ai:ingest` key and a raised per-key limit (Bob's word), and is scheduled outside walks |
+| 2 | **Denver's people from the store-day shoppers** (`LiveDrive` source switch, through the twin edge, which is now own-site) | no | built (#35); restarting the live plane is Bob's word, and it is only worth doing together with step 4, so people and sales come from the same shoppers |
+| 3 | **F-9 fix test = the reset's first real request** (below), then read all 50 back | **yes, first** | waits on the fix |
+| 4 | Denver reset night(s), then the live ops driver (sales, moves, quiet-hour top-ups, the daily pre-open delivery by receive), the hourly pass handing Denver over in the same step | yes | after 3 |
+| 5 | Gap ledger, first edition, after the first full live day | — | after 4 |
+
+**The first call that needs receive, exactly as the twin would send it**
+(reset id `rst-dec-us-denver-20261120-r-a39ac9b48b`, from `storeDayReset`'s dry run):
+```
+POST https://dev.m8trx.com/server/api/v2/inventory/items/receive
+Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, inventory:create)
+{"siteId":"84f2a1c1-fb0a-41b2-9e0d-c9102a22ca7e",      (dec-us-denver)
+ "spaceId":"e19e1502-d791-5fa4-a363-bc7832e819f3",     (Denver stockroom)
+ "items":[{"epc":"3038D13702F8BE06FC23AC00"},{"epc":"3038D13702F8BE06FC23AC01"}, … 50 EPCs]}
+```
+- The first EPC decodes to EAN `2142367790007`, serial 30,000,000,000. That is the first serial of the delivery block
+  (3e10 to 5e10), new and never used.
+- **Pass:** every one of the 50 reads back from `/inventory/items/details` with `sku` = the catalog's sku for its EAN and
+  `state in_stock`, and your server read shows the stockroom as its location.
+- If it passes, it is not a throwaway test: the reset is resumable by id, so the night starts from request 2.
+- Tell the twin when the fix is deployed; the twin runs this one request on Bob's go and posts the 50 reads here.
