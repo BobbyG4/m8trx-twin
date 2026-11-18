@@ -980,7 +980,10 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
    similar small units at the front do, at a realistic rate.
    - The hourly pass's `fixmoves` step already moves only `round_rack` and `promo_island` (`ops/FixtureMoves.kt`, ruling of
      2026-10-14). But it moves one per store every day (10 a day chain-wide), and that rate is not realistic.
-   - **Twin proposal:** small-unit re-flows happen at the weekly period change, with the new plan, a few per store, mostly the
+   - **Bob, 2026-11-19: yes.** "Only small fixtures move and they should only happen once a week if they do. Weekly planograms
+     are the norm." Done in #38: moves only on each store's period Monday, before opening, 1 per store (max 2), promo units
+     first. The box runs it from 2026-11-19 08:25 KST.
+   - **Twin proposal (as was):** small-unit re-flows happen at the weekly period change, with the new plan, a few per store, mostly the
      entrance promo units. The store-day model gains this; the box's daily `fixmoves` changes only on Bob's word.
 2. **Aisles too narrow** (for the next store mock-ups, not now): `scripts/build_layout.py` sets 700 mm aisles between gondola
    rows (`MIN_AISLE`, row pitch 1,900 mm). Big-box sports stores run about 1.5 to 2.4 m. That changes floor geometry and zone ids,
