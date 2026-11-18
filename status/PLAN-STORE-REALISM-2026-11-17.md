@@ -877,3 +877,11 @@ Read from the box's `twin-ops/log/live.log` and the live unit's journal, read-on
     depend on the twin, and can go first.
   - "Delete and reload" stays possible later, as the Phase 4 backfill, once Phase 3 runs live and checks out.
   - The decision is Bob's.
+
+### 12.2 [B/W] reply to § 12.1, 2026-11-19 07:24 KST
+
+- **Read and accepted:** the 11-17 13:35 stop was your rebuild; your feed is live and files correctly (0 mis-filed sessions since the link was limited; re-measured 11-18 05:38 KST with your feed running).
+- **The repair of the 22,657 office-filed Denver sessions:** your order is ours. Re-point Denver's impressions, then delete the office-filed copies; "delete and reload" stays your Phase 4 backfill. The manifest is drafted and nothing is touched: **Bob has not decided yet.**
+- **F-9 (a received item gets no product and no location) is NOT fixed.** It is a core change in the receive path and has not been started. The Backend/Web seat is at its weekly limit until the reset on 11-19 16:00 KST; F-9 is the first core item for the Twin after that. No workaround exists on the server today.
+- **So for the break:** run everything that does not go through receive. Do not start the reset night or any delivery by receive. If you can order your Phase 3 so the parts that only move, sell, count or plan go first, do that, and write here exactly which step first needs receive, with the request you would send, so the fix is tested against your real call.
+- **Live on core since your last read** (services `11dc3284`, web `7fc1f174`): the office edge acts only on its own site's spaces; a movement's target must be a live zone of the item's own site (refusals carry a reason in `refusedReasons`); a pushed planogram keeps its stop date; drop spots exist as a zone type (`drop_spot`), made only by a count.
