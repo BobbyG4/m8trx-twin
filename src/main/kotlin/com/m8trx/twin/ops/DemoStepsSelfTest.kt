@@ -24,7 +24,8 @@ fun main() {
         "stock: deterministic, ids stable, a new date or seed changes the plan" to { stockDeterminism(chain, keys) },
         "stock: platform truth - read sets from the platform's locations (drifted units never read at a wall)" to { stockPlatformTruth(chain, keys) },
         "stock: Denver full floor covers every stocked wall fixture (6-10 missing, over from the stockroom)" to { stockFullFloor(chain, keys) },
-        "fixmoves: movable types only, every store every day, <= 2, deterministic, the Denver gondolas never" to { fixMoves(chain, keys) },
+        "fixmoves: weekly on the period Monday, <= PER_WEEK, promo first, movable types only, deterministic, the Denver gondolas never" to
+            { fixMoves(chain, keys) },
         "fixmoves: geometry - own region, free slot, aisle + gate clearance, inside the room, >= 0.75 m, no slot = null" to
             { fixMovesGeometry(chain, keys) },
         "fixmoves: the hold - only the store's own local date, from 07:30 local" to { fixMovesHold(chain) },
@@ -148,22 +149,32 @@ private fun fixMoves(chain: Path, keys: ChainKeys) {
     }
     val denver = FixtureMoves.Floor.load(chain, "dec-us-denver")
     check(!FixtureMoves.isMovable(denver, "GF-R2-U2") && !FixtureMoves.isMovable(denver, "GB-R3-U5")) { "the two Denver gondolas are movable?" }
-    val start = LocalDate.parse("2026-10-12")
+    val start = LocalDate.parse("2026-10-12") // a Monday
     val perStore = LinkedHashMap<String, Int>()
     for (s in keys.stores) {
         val floor = FixtureMoves.Floor.load(chain, s.slug)
         val movable = FixtureMoves.movable(s, floor)
-        check(movable.isNotEmpty()) { "${s.slug} has no movable fixture — it would sit out every day" }
+        check(movable.isNotEmpty()) { "${s.slug} has no movable fixture" }
         perStore[s.slug] = movable.size
-        for (d in 0 until 14) {
+        val hasPromo = movable.any { floor.fixtures.getValue(it.code).category == FixtureMoves.PREFERRED_CATEGORY }
+        val weeksWithMove = HashSet<LocalDate>()
+        val perWeekCount = HashMap<LocalDate, Int>()
+        for (d in 0 until 28) {
             val date = start.plusDays(d.toLong())
             val one = FixtureMoves.forDate(s, floor, date, SEED, 1)
-            check(one.size == 1) { "${s.slug} $date: ${one.size} moves at perDay=1 — every store moves every day" }
             val many = FixtureMoves.forDate(s, floor, date, SEED, 9)
-            check(many.size == minOf(FixtureMoves.MAX_PER_DAY, movable.size)) {
-                "${s.slug} $date: ${many.size} moves — the cap is ${FixtureMoves.MAX_PER_DAY}"
+            if (date.dayOfWeek != java.time.DayOfWeek.MONDAY) {
+                check(one.isEmpty() && many.isEmpty() && FixtureMoves.candidates(s, floor, date, SEED).isEmpty()) {
+                    "${s.slug} $date: a move planned on a non-period day"
+                }
+                continue
             }
-            check(many.map { it.code }.toSet().size == many.size) { "a fixture moved twice in a day" }
+            check(one.size == 1) { "${s.slug} $date: ${one.size} moves at perWeek=1" }
+            check(many.size == minOf(FixtureMoves.MAX_PER_WEEK, movable.size)) {
+                "${s.slug} $date: ${many.size} moves — the cap is ${FixtureMoves.MAX_PER_WEEK}"
+            }
+            check(many.map { it.code }.toSet().size == many.size) { "a fixture moved twice in a week" }
+            if (hasPromo) check(one.single().category == FixtureMoves.PREFERRED_CATEGORY) { "${s.slug} $date: a rack moved ahead of a promo unit" }
             (one + many).forEach { m ->
                 check(floor.fixtures.getValue(m.code).category in FixtureMoves.MOVABLE_CATEGORIES) {
                     "${m.code} is a ${floor.fixtures.getValue(m.code).category}"
@@ -171,7 +182,11 @@ private fun fixMoves(chain: Path, keys: ChainKeys) {
                 check(m.reason.startsWith("twin: ") && m.region == floor.fixtures.getValue(m.code).region) { "reason / region: $m" }
             }
             check(one == FixtureMoves.forDate(s, floor, date, SEED, 1)) { "not deterministic" }
+            weeksWithMove += date
+            perWeekCount[date] = many.size
         }
+        check(weeksWithMove.size >= 3) { "${s.slug} moved in only ${weeksWithMove.size} of 4 weeks" }
+        check(perWeekCount.values.all { it <= FixtureMoves.MAX_PER_WEEK }) { "${s.slug} over the weekly cap" }
     }
     println("      movable fixtures per store: $perStore")
     val ring = listOf(listOf(listOf(0.0, 0.0, 0.0), listOf(1000.0, 0.0, 0.0), listOf(1000.0, 500.0, 0.0), listOf(0.0, 0.0, 0.0)))
@@ -400,7 +415,7 @@ private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
     for (perDay in listOf(1, 2)) {
         for (s in keys.stores) {
             val floor = FixtureMoves.Floor.load(chain, s.slug)
-            for (d in 0 until 14) {
+            for (d in 0 until 28 step 7) {
                 val date = LocalDate.parse("2026-10-12").plusDays(d.toLong())
                 val cands = FixtureMoves.candidates(s, floor, date, SEED)
                 val others = floor.fixtures.mapValues { it.value.footprint.ring() }.toMutableMap()
@@ -429,9 +444,9 @@ private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
             }
         }
     }
-    check(short.none { it.endsWith("/1") }) { "a store went without its daily move: ${short.filter { it.endsWith("/1") }}" }
+    check(short.none { it.endsWith("/1") }) { "a store went without its weekly move: ${short.filter { it.endsWith("/1") }}" }
     println(
-        "      ${keys.stores.size} stores x 14 days at 1/day and 2/day: $total moves; short of the target: ${short.size} store-days ${short.take(
+        "      ${keys.stores.size} stores x 4 weeks at 1/week and 2/week: $total moves; short of the target: ${short.size} store-days ${short.take(
             6,
         )}; " +
             "shifts ${shifts.minOrNull()?.toLong()}-${shifts.maxOrNull()?.toLong()} mm (median ${shifts.sorted().getOrNull(
@@ -440,7 +455,7 @@ private fun fixMovesGeometry(chain: Path, keys: ChainKeys) {
     )
     // a region with no room left gives no destination
     val denver = FixtureMoves.Floor.load(chain, "dec-us-denver")
-    val m = FixtureMoves.forDate(keys.store("dec-us-denver"), denver, LocalDate.parse("2026-10-14"), SEED, 1).single()
+    val m = FixtureMoves.forDate(keys.store("dec-us-denver"), denver, LocalDate.parse("2026-10-12"), SEED, 1).single()
     val full = listOf(denver.regions.getValue(m.region).ring)
     check(FixtureMoves.destination(m, denver.fixtures.getValue(m.code).footprint, denver, full, null, SEED) == null) {
         "a full region still gave a slot"

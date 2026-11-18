@@ -16,8 +16,11 @@ import java.time.LocalDate
  * `@Audited zone_updated`), as the store's manager. The zone table's own trigger (`trg_zone_history`) writes the
  * `zone_history` row. Never psql; never the Hasura mutation.
  *
- * Every store, every store-local day: `M8TRX_FIXMOVES_PER_DAY` (1, at most 2) movable fixtures (a promotion table, a round
- * rack) moved to a free slot of their own region. A move is sent only on the store's own date, from 07:30 store-local; an
+ * Weekly, small units only (Bob, 2026-11-19): `M8TRX_FIXMOVES_PER_WEEK` (1, at most 2; `M8TRX_FIXMOVES_PER_DAY` is a deprecated
+ * alias for the same number) movable fixtures (a promotion table first, a round rack only when no promo unit has room) are
+ * moved to a free slot of their own region, only on the date that starts the store's planogram period (the Monday); any other
+ * date plans nothing. The ledger keys a move by the period start, so the hourly "yesterday" and "today" passes cannot move a
+ * store twice in one week. A move is sent only on the store's own date, from 07:30 store-local; an
  * earlier pass of that day HOLDS it, a later date is HELD as not yet the store's day, a past date is refused (the platform
  * stamps `zone_history.recorded_at` now()). The geometry is read from the platform first (Hasura `zone_by_pk`, READ only)
  * and kept as the fixture's ORIGIN the first time the twin touches it (`.twin-state/fixmoves/origin.json`); the room is
@@ -25,7 +28,7 @@ import java.time.LocalDate
  * The body carries `reason`. Circles go as `geometryType: circle` with `center`/`radii`/`rotation` and the zone's own `properties` with
  * `centerX/centerY` updated (every other key kept, so the fixture code is untouched); polygons as before.
  *
- * SAFE BY DEFAULT — dry run: lists the day's moves per store (movable types only) with the destination computed against the
+ * SAFE BY DEFAULT — dry run: lists the week's moves per store (movable types only) with the destination computed against the
  * committed layout, offline. `M8TRX_FIXMOVES_LIVE=true` sends. Ledger `.twin-state/fixmoves/applied.csv`
  * (`extId,zoneId,date,dx,dy`): an applied move is never re-sent.
  */
@@ -82,8 +85,21 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
         return null
     }
 
+    /** `M8TRX_FIXMOVES_PER_WEEK` (default 1, max 2); the old `M8TRX_FIXMOVES_PER_DAY` still counts, with a warning. */
+    private fun perWeekFromEnv(): Int {
+        val week = System.getenv("M8TRX_FIXMOVES_PER_WEEK")?.toIntOrNull()
+        val day = System.getenv("M8TRX_FIXMOVES_PER_DAY")?.toIntOrNull()
+        if (day != null) log.warn("M8TRX_FIXMOVES_PER_DAY is deprecated — moves are weekly now; use M8TRX_FIXMOVES_PER_WEEK")
+        return (week ?: day ?: 1).coerceIn(0, FixtureMoves.MAX_PER_WEEK)
+    }
+
     fun run(): Summary {
-        val perDay = (System.getenv("M8TRX_FIXMOVES_PER_DAY")?.toIntOrNull() ?: 1).coerceIn(0, FixtureMoves.MAX_PER_DAY)
+        val perWeek = perWeekFromEnv()
+        if (!FixtureMoves.isMoveDay(cfg.date)) {
+            log.info("  {} is not a planogram period start (Monday) — no store plans a move today", cfg.date)
+            log.info("SIM-RUN fixmoves date={} seed={} planned=0 sent_ok=0 skipped=0 held=0 sent_err=0", cfg.date, cfg.seed)
+            return Summary(0, 0, 0, 0, 0, emptyList())
+        }
         val applied = readApplied()
         val appliedIds = applied.map { it.extId }.toSet()
 
@@ -104,34 +120,34 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
                 log.info("  {} has no movable fixture ({}) — nothing to move", slug, FixtureMoves.MOVABLE_CATEGORIES)
                 continue
             }
-            planned += minOf(perDay, candidates.size)
+            planned += minOf(perWeek, candidates.size)
             // a store that fails (login, a refused read, a dropped connection) fails alone; the pass goes on to the next store
             try {
                 if (!cfg.live) {
                     // offline: the day's moves against the committed layout (the live run uses the platform's floor)
                     val others = floor.fixtures.mapValues { it.value.footprint.ring() }.toMutableMap()
-                    val day = FixtureMoves.planDay(candidates, perDay, {
+                    val day = FixtureMoves.planDay(candidates, perWeek, {
                         floor.fixtures.getValue(it.code).footprint
                     }, others, { it.code }, floor, null, cfg.seed)
                     day.forEach { (m, dx, dy) -> listing += dryLine(m, floor.fixtures.getValue(m.code).footprint, dx, dy) }
                     if (day.size <
-                        minOf(perDay, candidates.size)
+                        minOf(perWeek, candidates.size)
                     ) {
                         listing +=
-                            "$slug ${cfg.date}: only ${day.size} of ${minOf(perDay, candidates.size)} found a free slot"
+                            "$slug ${cfg.date}: only ${day.size} of ${minOf(perWeek, candidates.size)} found a free slot"
                     }
                     continue
                 }
                 val ymd = cfg.date.format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE)
                 var done = appliedIds.count { it.startsWith("FM2-$slug-$ymd-") }
-                if (done >= perDay) {
-                    log.info("  {} {}: {} move(s) already made today (ledger) — done", slug, cfg.date, done)
+                if (done >= perWeek) {
+                    log.info("  {} {}: {} move(s) already made this week (ledger) — done", slug, cfg.date, done)
                     continue
                 }
                 val hold = holdReason(slug)
                 if (hold != null) {
                     log.info("  {} {}: HELD — {}", slug, cfg.date, hold)
-                    held += perDay - done
+                    held += perWeek - done
                     continue
                 }
                 val email = cfg.actorEmail(slug)
@@ -144,8 +160,9 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
                 // the room as it is now: every fixture and the space boundary, read once, kept current as moves land
                 val g = readSpace(jwt, store.salesFloorSpaceId)
                 for (m in candidates) {
-                    if (done >= perDay) break
+                    if (done >= perWeek) break
                     if (m.extId in appliedIds) continue
+                    if (m.category != FixtureMoves.PREFERRED_CATEGORY && done > 0) break // a rack only when no promo unit moved
                     log.info("  [LIVE] {} {} ({}) in {} — {}", m.extId, m.code, m.category, m.region, m.reason)
                     val zone = ops.query(jwt, ZONE_GQL, mapOf("id" to m.zoneId)).path("zone_by_pk")
                     if (zone.isMissingNode || zone.isNull) {
@@ -204,7 +221,7 @@ class FixtureMoveDrive(private val cfg: OpsConfig, private val http: ConnectHttp
                         log.error("    PUT /zones/{} refused: {}", m.zoneId, ops.describe(r))
                     }
                 }
-                if (done < perDay) log.info("  {} {}: {} of {} move(s) made — no other candidate had a free slot", slug, cfg.date, done, perDay)
+                if (done < perWeek) log.info("  {} {}: {} of {} move(s) made — no other candidate had a free slot", slug, cfg.date, done, perWeek)
             } catch (e: Exception) {
                 err++
                 log.error("  {} FAILED — {}: {} (the pass goes on to the next store)", slug, e.javaClass.simpleName, e.message)

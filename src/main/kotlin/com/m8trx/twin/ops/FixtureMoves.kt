@@ -3,6 +3,7 @@ package com.m8trx.twin.ops
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.history.ChainKeys
 import com.m8trx.twin.history.HistoryCsv
+import com.m8trx.twin.storeday.PeriodPlans
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
@@ -14,20 +15,23 @@ import kotlin.random.Random
 
 /**
  * The `fixmoves` step's generator — the moves a store would actually make (Bob, 2026-10-14: "those are big huge gondolas,
- * usually one piece; it doesn't make sense what you're moving there").
+ * usually one piece; it doesn't make sense what you're moving there"; Bob, 2026-11-19: "Only small fixtures move and they
+ * should only happen once a week if they do. Weekly planograms are the norm.").
  *
  *  - **Only movable fixture types** ([MOVABLE_CATEGORIES]). Gondolas, wall bays, cases, the checkout and its queue line,
  *    benches and the treadmill never move.
- *  - **Every store, every day, on its own local day:** `perDay` (default 1, at most [MAX_PER_DAY]) moves per store per
- *    store-local date, made from [MOVE_AT] store-local (before opening, when a merchandiser re-flows the floor) — no store
- *    is skipped by the seed. A store with fewer movable fixtures than `perDay` moves what it has.
+ *  - **Weekly, on the planogram's day:** a store moves only on the store-local date that starts its planogram period, the
+ *    Monday ([isMoveDay], the same rule as `PeriodPlans.periodStart`, so the moves coincide with the weekly plan issue),
+ *    from [MOVE_AT] store-local (before opening). `perWeek` (default 1, at most [MAX_PER_WEEK]) moves per store per week; every
+ *    other date plans none. Promotion tables ([PREFERRED_CATEGORY]) are preferred; a round rack moves only when the store has
+ *    no promo unit with a free slot. A store with fewer movable fixtures than `perWeek` moves what it has.
  *  - **A destination that makes sense:** a free slot inside the fixture's OWN region zone (`in_area_zone` — the entrance,
  *    a department band), at least [MIN_SHIFT_MM] from where it stands, keeping [CLEARANCE_MM] of aisle from every other
  *    fixture and [GATE_CLEARANCE_MM] from an EAS gate line, inside the room. A region is a rectangle, so the straight path
  *    from the old spot to the new one stays inside it: no move crosses a wall.
  *  - **A reason** on every move ([reasonFor]), sent with the zone update and recorded in the run log.
  *
- * Pure and deterministic in (seed, store, date) and the geometry it is handed; the drive hands it the platform's geometry.
+ * Pure and deterministic in (seed, store, period start) and the geometry it is handed; the drive hands it the platform's geometry.
  */
 object FixtureMoves {
     /**
@@ -41,7 +45,13 @@ object FixtureMoves {
      */
     val MOVABLE_CATEGORIES: Set<String> = setOf("round_rack", "promo_island")
 
-    const val MAX_PER_DAY = 2
+    const val MAX_PER_WEEK = 2
+
+    /** The small unit a store re-flows first: the front/promo tables. A round rack is the fallback. */
+    const val PREFERRED_CATEGORY = "promo_island"
+
+    /** True when [date] starts a planogram period (the Monday): the only date a store moves anything. */
+    fun isMoveDay(date: LocalDate): Boolean = PeriodPlans.periodStart(date) == date
 
     /** A move a shopper would notice: 0.75 m or more. A smaller shuffle is not a re-flow. */
     const val MIN_SHIFT_MM = 750.0
@@ -178,30 +188,37 @@ object FixtureMoves {
     }
 
     /**
-     * The day's candidates for one store: every movable fixture, in an order drawn from (seed, store, date). The drive moves the
-     * first `perDay` of them that have a free slot, so a fixture boxed in by its neighbours does not cost the store its move.
+     * The week's candidates for one store: every movable fixture, promo units first, then round racks, each group in an order
+     * drawn from (seed, store, period start). Empty unless [date] is a period start (Monday). The drive moves the first
+     * `perWeek` of them that have a free slot, so a fixture boxed in by its neighbours does not cost the store its move. The
+     * extId carries the period start, so a re-run (or another pass) of the same week can never move a second time.
      */
     fun candidates(store: ChainKeys.Store, floor: Floor, date: LocalDate, seed: Long): List<Move> {
-        val rng = Random(HistoryCsv.derive(seed, store.slug, date, "fixmoves-v2"))
+        if (!isMoveDay(date)) return emptyList()
+        val rng = Random(HistoryCsv.derive(seed, store.slug, date, "fixmoves-v3"))
         val ymd = date.format(DateTimeFormatter.BASIC_ISO_DATE)
-        return movable(store, floor).shuffled(rng).map { z ->
+        val shuffled = movable(store, floor).shuffled(rng)
+        val ordered = shuffled.filter { floor.fixtures.getValue(it.code).category == PREFERRED_CATEGORY } +
+            shuffled.filter { floor.fixtures.getValue(it.code).category != PREFERRED_CATEGORY }
+        return ordered.map { z ->
             val f = floor.fixtures.getValue(z.code)
             val region = floor.regions[f.region]?.name ?: f.region!!
             Move("FM2-${store.slug}-$ymd-${z.code}", store.slug, z.code, z.zoneId, date, f.category, f.region!!, reasonFor(f.category, region))
         }
     }
 
-    /** The first `perDay` (capped at [MAX_PER_DAY]) candidates — the plan before geometry is consulted. */
-    fun forDate(store: ChainKeys.Store, floor: Floor, date: LocalDate, seed: Long, perDay: Int): List<Move> =
-        candidates(store, floor, date, seed).take(perDay.coerceIn(0, MAX_PER_DAY))
+    /** The first `perWeek` (capped at [MAX_PER_WEEK]) candidates, promo units first — the plan before geometry is consulted. */
+    fun forDate(store: ChainKeys.Store, floor: Floor, date: LocalDate, seed: Long, perWeek: Int): List<Move> =
+        candidates(store, floor, date, seed).take(perWeek.coerceIn(0, MAX_PER_WEEK))
 
     /**
-     * The day's moves against a floor: candidates in seed order, each placed in a free slot of its region against [others]
-     * (zone/code → footprint ring, updated as moves land), until `perDay` have a destination. Returns (move, dx, dy).
+     * The week's moves against a floor: candidates in order, each placed in a free slot of its region against [others]
+     * (zone/code -> footprint ring, updated as moves land), until `perWeek` have a destination. A round rack is tried only
+     * while nothing has moved yet (no promo unit had a free slot). Returns (move, dx, dy).
      */
     fun planDay(
         candidates: List<Move>,
-        perDay: Int,
+        perWeek: Int,
         footprintOf: (Move) -> Footprint?,
         others: MutableMap<String, List<PolyGeom.P>>,
         keyOf: (Move) -> String,
@@ -211,7 +228,8 @@ object FixtureMoves {
     ): List<Triple<Move, Double, Double>> {
         val out = ArrayList<Triple<Move, Double, Double>>()
         for (m in candidates) {
-            if (out.size >= perDay.coerceIn(0, MAX_PER_DAY)) break
+            if (out.size >= perWeek.coerceIn(0, MAX_PER_WEEK)) break
+            if (m.category != PREFERRED_CATEGORY && out.isNotEmpty()) break
             val cur = footprintOf(m) ?: continue
             val d = destination(m, cur, floor, others.filterKeys { it != keyOf(m) }.values, boundary, seed) ?: continue
             others[keyOf(m)] = cur.moved(d.first, d.second).ring()
