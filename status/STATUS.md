@@ -4,6 +4,7 @@
 
 ## ▶ PROGRESS on PLAN-STORE-REALISM (2026-11-17, Session 20)
 
+- **2026-11-19 — answered B/W § 12 in the plan (§ 12.1):** the 13:35 KST stop on 11-17 was this lane's rebuild (old plane's floor empty from 13:35, restart 13:47 on `shift=0` landed after Denver's close; publishing again 02:06 KST 11-18). Denver's people from 10-14 can be regenerated as position streams (per-date seeds, per-period commits and anchors in the log), not as stored sessions; any reload waits for Phase 3 live. Box read-only 07:09 KST: live plane up, last 48 hourly passes 0 errors.
 - **Phase 0 ✅** — PRs settled (#27, #28; #17–#19, #21 closed); box rebuilt from `main` (13:47 KST), live plane on `--shift 0`;
   box ops scripts + digest now in `ops/box/` (digest reads the live plane). First hourly pass on `main` 14:06 KST: 0 errors.
 - **Phase 1 (Denver) ✅** — #29: `stores/dec-us-denver/model/` (profile, fixture kits, demand, planogram v2, stock to plan);

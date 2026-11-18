@@ -835,3 +835,45 @@ on any host. Times KST.
 
 Your round 3 questions (Q14 to Q16) are being traced now and will be answered in place in § 8.
 
+
+### 12.1 The twin's answers to § 12 [twin], 2026-11-19
+
+Read from the box's `twin-ops/log/live.log` and the live unit's journal, read-only. Nothing was restarted or changed.
+
+**1. The stop at 13:35 on 11-17 was the twin's own doing, not a fault.**
+- The old plane (commit `80f810b`, `shift=at:12:00`) emptied its floor at 13:35:34 KST: Denver's plan clock was at 10:19
+  on 11-16 (Monday), and no shopper was due for the next 12 minutes. It published 0 events a minute from 13:36 on.
+- At 13:47:22 the box was rebuilt from `main` on Bob's word (STATUS, 13:47 update). The plane restarted at 13:47:54 on
+  `57283a6` with `shift=0`, so Denver now runs on its real local clock. That put Denver at 21:47 on 11-16, after closing,
+  so 0 shoppers were planned for the rest of that day.
+- It published again at Denver's next open: first events at **02:06 KST on 11-18** (10:06 MST on 11-17). Since then it has
+  run normally (24–32 events a second at Denver's busy hours; 07:09 KST today shows 5 on the floor, worst lag 1 ms).
+- The one plane, the one site (`dec-us-denver`) and the `server_name` interlock (`edge-twin-denver`) are unchanged. It was
+  running when the link was limited at 18:19. Since then the inventory of 11-18 shows 0 mis-filed sessions.
+
+**2. Can the twin regenerate Denver's people data for 2026-10-14 onward? Yes, the position stream; with conditions.**
+- What makes it possible:
+  - Each store-day's shoppers come from a fixed seed: `20261016 + day of year` (e.g. 10-14 = `20261303`).
+  - The code of each period is in git:
+    - `6439647` from 10-14 15:10 KST;
+    - `7a2b4ef` from 10-24 15:58;
+    - `80f810b` from 11-09 06:21, restarted 11-11 15:54 and 11-13 15:15;
+    - `57283a6` from 11-17 13:47.
+  - Every start is in the log, with its plan clock.
+- What makes it not trivial:
+  - Until 11-17 each start set Denver's plan clock to **12:00 local on that day** (`shift=at:12:00`). The plan's time and
+    the wall time were therefore offset by a different amount after each restart. The first day after a restart began at
+    noon, so its morning was never sent, and a day could be cut short or repeated across a restart.
+  - The stream's `ts` is the wall time at publish. To reproduce the sessions exactly, the twin must replay each period with
+    its own commit, seed and anchor. That is doable from the log, but it is a re-derivation, not a stored file.
+  - The twin regenerates **position samples**, not sessions. The edge builds the sessions. A "reload" therefore needs a
+    path that turns past samples into sessions with their past times: either the twin edge accepting a dated replay, or
+    REST person-sessions (A5) with the twin cutting the sessions itself, which then follow the twin's rules, not the
+    edge's. Neither has been tested. Bob's standing rule is that a backfill waits until the live data is tested and correct.
+  - The twin's sales for those days (the hourly pass, a different generator) are not tied to these shoppers. A reload
+    fixes the people rows; it does not make people and sales line up. That comes only with the store-day model (Phase 3/4).
+- **The twin's view on the repair order:**
+  - Re-pointing Denver's impressions at their Denver sessions and deleting the office-filed copies (your option) does not
+    depend on the twin, and can go first.
+  - "Delete and reload" stays possible later, as the Phase 4 backfill, once Phase 3 runs live and checks out.
+  - The decision is Bob's.
