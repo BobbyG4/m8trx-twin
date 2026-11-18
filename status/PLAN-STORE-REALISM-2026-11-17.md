@@ -946,3 +946,39 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
   `state in_stock`, and your server read shows the stockroom as its location.
 - If it passes, it is not a throwaway test: the reset is resumable by id, so the night starts from request 2.
 - Tell the twin when the fix is deployed; the twin runs this one request on Bob's go and posts the 50 reads here.
+
+### 12.4 [twin] Step 0 started (Bob's go, 2026-11-19 07:39 KST): one-target plan on Denver — first reads
+
+- **Sent:** one `planogram_directive`, `external_directive_id` **`twin-probe-plan-20261119`** (directive `45aea65b-…`).
+  - Target: Denver, zone "Gondola R5 Back U7" (GB-R5-U7), EAN `3608429702252` (Kiprun soft flask 500 ml), required 12.
+  - Dates: `effective_date 2026-11-18`, `expiry_date 2026-11-21` (bare days, Denver midnight).
+  - The fixture was chosen so the box's own hourly pass counts it: GB-R3-U3/GB-R5-U7/PW-01 at 2026-11-19 15:30Z, which is
+    00:30 KST 11-20. So no count is run from outside the box's ledger.
+- **Read back 5 s and 30 s after the push** (`/compliance/state`):
+  - status `active`, start `2026-11-18T07:00:00Z` (Denver midnight, correct);
+  - site `activation_status active`, `activated false`;
+  - target `mapping_status resolved`, `zone_name` "Gondola R5 Back U7";
+  - **`product_name null`**, `compliance_status pending`, `evaluated_targets 0`.
+- **The twin's own slip, for the record:** the first send carried the fixture CODE (`GB-R5-U7`) and sat in
+  `pending_zone_mapping`. A plan's `raw_fixture_code` resolves by the zone's NAME, which is what the Phase 2c period plans
+  already send (`StorePeriods.kt`). The re-send with the same id and the name resolved at once.
+- **The stop date is not in this read.** `/compliance/state` has `effective_date` but no `expiry_date` field, so the twin
+  cannot read back the stop it set until the plan expires.
+- **Still to read** (the twin re-reads and adds them here):
+  - after the next scheduler tick: does the product resolve without a count?
+  - after the 00:30 KST count: evaluated, with `actual_quantity`?
+  - after 11-21 07:00Z plus 15 min: status `expired`?
+- **For B/W:** if the product is still null after the count, that is A14's "a fresh pushed plan stays unresolved", which you
+  said is a core defect. A second ask: could `/compliance/state` return `expiry_date`, so a sender can check its stop?
+
+### 12.5 [twin] Bob's rulings and notes, 2026-11-19 (for the store model; nothing changes on dev from these)
+
+1. **Fixture moves.** Gondolas and other large fixtures do not move in a store like Decathlon. Dump bins, promo tables and
+   similar small units at the front do, at a realistic rate.
+   - The hourly pass's `fixmoves` step already moves only `round_rack` and `promo_island` (`ops/FixtureMoves.kt`, ruling of
+     2026-10-14). But it moves one per store every day (10 a day chain-wide), and that rate is not realistic.
+   - **Twin proposal:** small-unit re-flows happen at the weekly period change, with the new plan, a few per store, mostly the
+     entrance promo units. The store-day model gains this; the box's daily `fixmoves` changes only on Bob's word.
+2. **Aisles too narrow** (for the next store mock-ups, not now): `scripts/build_layout.py` sets 700 mm aisles between gondola
+   rows (`MIN_AISLE`, row pitch 1,900 mm). Big-box sports stores run about 1.5 to 2.4 m. That changes floor geometry and zone ids,
+   so it goes with the next layout version (TWIN-REQ-006 path), not in place.
