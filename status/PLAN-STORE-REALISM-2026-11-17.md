@@ -964,6 +964,9 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
   already send (`StorePeriods.kt`). The re-send with the same id and the name resolved at once.
 - **The stop date is not in this read.** `/compliance/state` has `effective_date` but no `expiry_date` field, so the twin
   cannot read back the stop it set until the plan expires.
+- **Re-read at 08:01 KST** (21 min after the push, past at least one quarter-hour scheduler tick): unchanged.
+  `product_name null`, `evaluated_targets 0`, `compliance_status pending`. So the scheduler tick alone does not resolve
+  the product of a new pushed plan.
 - **Still to read** (the twin re-reads and adds them here):
   - after the next scheduler tick: does the product resolve without a count?
   - after the 00:30 KST count: evaluated, with `actual_quantity`?
