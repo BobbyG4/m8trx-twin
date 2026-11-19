@@ -118,7 +118,16 @@ class ResetLiveRunner(
         monitor.start()
         threads.forEach { it.start() }
         threads.forEach { it.join() }
-        if (!stopped) guarded { tailLane() }
+        if (!stopped) {
+            if (params.holdDirectives) {
+                event(
+                    "directive steps HELD (M8TRX_RESET_HOLD_DIRECTIVES=true): ${tail.count { !ledger.isSent(it.extId) }} not sent " +
+                        "(${tail.joinToString { it.extId }}); the old plan stays in force",
+                )
+            } else {
+                guarded { tailLane() }
+            }
+        }
         val end = synchronized(lock) {
             when {
                 haltReason != null -> End.HALTED

@@ -154,6 +154,7 @@ object ResetLiveMain {
             healthPollMs = 5_000,
             idlePollMs = 1_000,
             midnightMs = forDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
+            holdDirectives = env("M8TRX_RESET_HOLD_DIRECTIVES")?.toBoolean() == true,
         )
         val result = ResetLiveRunner(
             items,
@@ -174,11 +175,11 @@ object ResetLiveMain {
         )
         return when (result.end) {
             ResetLiveRunner.End.DONE -> {
+                val directivesNote = if (params.holdDirectives) "held" else "sent"
                 ResetLivePlan.writeAtomic(
                     out.resolve("reset-complete.json"),
-                    "{\"slug\":\"$slug\",\"date\":\"$forDate\",\"finished\":\"${Instant.now()}\",\"post_state\":\"${out.resolve(
-                        "state/post-reset",
-                    )}\"}\n",
+                    "{\"slug\":\"$slug\",\"date\":\"$forDate\",\"finished\":\"${Instant.now()}\"," +
+                        "\"directives\":\"$directivesNote\",\"post_state\":\"${out.resolve("state/post-reset")}\"}\n",
                 )
                 event("DONE. The store-day continues from ${out.resolve("state/post-reset")} (M8TRX_STORE_OPS_STATE).")
                 0

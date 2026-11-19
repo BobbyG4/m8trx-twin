@@ -167,6 +167,7 @@ set -a; . /opt/m8trx/twin/.env; set +a
 export M8TRX_STREAM_SOLD_LOG=/opt/m8trx/twin/.twin-state/sold-epcs.txt
 export M8TRX_RESET_DATE=2026-11-19 M8TRX_RESET_OUT=/opt/m8trx/twin/out/reset
 export M8TRX_RESET_LIVE=true M8TRX_RESET_CONFIRM=dec-us-denver
+export M8TRX_RESET_HOLD_DIRECTIVES=true       # 2026-11-19: BOTH plan items stay out (webhook body cap 256 KiB; a 6,365-target plan is 1.13 MB; form is Bob's choice)
 export M8TRX_RESET_RECEIVE_LANES=1          # 1 (default) .. 4; tonight most likely 1 (a 50-tag receive holds one of the server's 4 event-loop threads ~50 s)
 # export M8TRX_RESET_SPOTCOUNT_ACK="..."    # only for the fallback described in the gates table
 nohup flock -w 600 /opt/m8trx/twin-ops/lock \
