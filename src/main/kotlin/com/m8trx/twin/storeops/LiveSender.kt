@@ -30,7 +30,8 @@ class LiveSender private constructor(
     private val placeholders: Placeholders,
     private val auth: WebhookClient.AuthMode,
     private val healthUrl: String,
-    private val http: ConnectHttp = ConnectHttp(),
+    /** Webhook sends (moves, directives) wait up to 60 s; a timeout is [Outcome.Unreachable] and backs off. */
+    private val http: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(WEBHOOK_TIMEOUT_S)),
     private val receiveHttp: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(RECEIVE_TIMEOUT_S)),
     private val healthHttp: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(10)),
 ) : OpsSender {
@@ -85,15 +86,15 @@ class LiveSender private constructor(
             } catch (e: IOException) {
                 return Outcome.ItemErrors(listOf(ItemError(null, "unparseable: receive answer is not the expected JSON: ${rawBody.take(200)}")))
             }
-            if (res.errors.isEmpty() && res.received < item.epcs.size) {
-                val why = "short: received ${res.received} of ${item.epcs.size} EPCs and no errors[] entry says why"
-                return Outcome.ItemErrors(listOf(ItemError(null, why)))
-            }
-            return Outcome.ReceiveAnswer(res.received, res.created, res.errors.map { ItemError(it.epc, it.reason) })
+            val answer = Outcome.ReceiveAnswer(res.received, res.created, res.errors.map { ItemError(it.epc, it.reason) })
+            // cross-check: received = tags sent - distinct error tags, and every error tag is one of the request's
+            ReceiveCheck.mismatch(item.epcs, answer)?.let { return Outcome.ItemErrors(listOf(ItemError(null, "mismatch: $it"))) }
+            return answer
         }
 
         /** Receive requests wait up to 150 s: above the 120 s front door, so a 504 is the front door's, never our own cut. */
         const val RECEIVE_TIMEOUT_S = 150L
+        const val WEBHOOK_TIMEOUT_S = 60L
 
         fun create(live: Boolean, slug: String, chainDir: Path, stateDir: Path, backroomZones: Map<String, String> = emptyMap()): LiveSender {
             require(live) { "LiveSender is built only on a live run (M8TRX_STORE_OPS_LIVE=true); a dry run never constructs it" }

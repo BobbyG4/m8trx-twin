@@ -24,7 +24,13 @@ object ResetLiveMain {
     fun run(slug: String, forDate: LocalDate, chainDir: Path, stateDir: Path, pacing: ResetPacing, oldFile: Path, out: Path): Int {
         val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
         val ownerFile = Path.of(env("M8TRX_STORE_OPS_OWNER_FILE") ?: "$ops/store-ops-owner.csv")
-        val holdFile = Path.of(env("M8TRX_LIVE_HOLD_FILE") ?: "$ops/HOLD")
+        // the reset's OWN hold file: $OPS/HOLD is shared with the hourly pass and the live plane (which ENDS on it), never used here
+        val holdFile = ResetGate.holdFile(::env)
+        val paceRefusals = ResetGate.paceRefusals(pacing.moveChunk, pacing.moveSpacingMs)
+        if (paceRefusals.isNotEmpty()) {
+            paceRefusals.forEach { log.error("REFUSING: {}", it) }
+            return 3
+        }
         val frozen = Files.exists(ResetLivePlan.markerFile(out))
         val fresh = if (frozen) null else StoreDayReset.build(slug, forDate, chainDir, stateDir, pacing, oldFile)
         val items = fresh?.second?.items ?: ResetLivePlan.load(out)
@@ -72,25 +78,45 @@ object ResetLiveMain {
         val spotNote: String
         if (fresh != null) {
             val ack = env("M8TRX_RESET_SPOTCOUNT_ACK")
-            spotNote = if (ack != null) {
-                "spot count: operator acknowledgment: $ack"
+            // With credentials the platform read ALWAYS runs; the acknowledgment applies only when the read cannot run (no password, or it errors).
+            val hasCreds = env("M8TRX_OPS_PASSWORD") != null || env("M8TRX_AUDIT_PASSWORD") != null
+            var readError: String? = null
+            val verdict = if (!hasCreds) {
+                null
             } else {
-                val ledger = fresh.first.ledger
-                val sample = SpotCount.sample(slug, ledger, HistoryCsv.derive(1L, slug, forDate))
-                val platform = try {
-                    StockDrive(OpsConfig.fromEnv("M8TRX_RESET")).platformStockFor(slug)
+                try {
+                    val ledger = fresh.first.ledger
+                    val sample = SpotCount.sample(slug, ledger, HistoryCsv.derive(1L, slug, forDate))
+                    SpotCount.evaluate(ledger, StockDrive(OpsConfig.fromEnv("M8TRX_RESET")).platformStockFor(slug), sample)
                 } catch (e: Exception) {
-                    log.error("REFUSING: the spot count's platform read failed: {}", e.message)
+                    readError = e.message ?: e.javaClass.simpleName
+                    null
+                }
+            }
+            if (verdict != null) {
+                verdict.perFixture.forEach { log.info("{}", it) }
+                log.info("spot count path: PLATFORM READ. {}", verdict.summary())
+                if (verdict.stop) {
+                    log.error("REFUSING: {}", verdict.summary())
                     return 3
                 }
-                val v = SpotCount.evaluate(ledger, platform, sample)
-                v.perFixture.forEach { log.info("{}", it) }
-                log.info("{}", v.summary())
-                if (v.stop) {
-                    log.error("REFUSING: {}", v.summary())
+            }
+            spotNote = when {
+                verdict != null -> "spot count: platform read. " + verdict.summary() + "\n" + verdict.perFixture.joinToString("\n")
+
+                ack != null -> {
+                    log.warn(
+                        "spot count path: OPERATOR ACKNOWLEDGMENT (platform read {}): {}",
+                        readError ?: "not available, no M8TRX_OPS_PASSWORD",
+                        ack,
+                    )
+                    "spot count: operator acknowledgment (platform read ${readError ?: "not available"}): $ack"
+                }
+
+                else -> {
+                    log.error("REFUSING: the spot count's platform read failed ({}) and there is no M8TRX_RESET_SPOTCOUNT_ACK", readError)
                     return 3
                 }
-                v.summary() + "\n" + v.perFixture.joinToString("\n")
             }
             StoreDayReset.write(out, slug, forDate, fresh.first, fresh.second, pacing)
             val zone = StoreDayReset.zoneOf(slug)
@@ -140,7 +166,7 @@ object ResetLiveMain {
             SystemResetClock,
             onEvent = ::event,
             onProgress = { p -> ResetLivePlan.writeAtomic(out.resolve("progress.json"), ResetLivePlan.progressJson(p)) },
-            lanesNow = { ResetLivePlan.lanesInForce(Path.of(ops).resolve("reset-lanes"), pacing.receiveLanes) },
+            lanesNow = LanesSource(Path.of(ops).resolve("reset-lanes"), pacing.receiveLanes)::current,
         ).run()
         event(
             "LIVE RUN end: ${result.end} accepted=${result.accepted} skipped=${result.skippedByLedger} alerts=${result.alerts.size} " +

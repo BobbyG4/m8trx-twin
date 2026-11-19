@@ -85,7 +85,7 @@ private fun policy() {
     check((p.decide(Outcome.Http(500), 1) as Decision.Wait).needHealth) { "other 5xx retried" }
     check((p.decide(Outcome.Http(401), 1) as Decision.Wait).dropToken) { "401 drops the token" }
     check(p.decide(Outcome.Http(400), 1) is Decision.Halt) { "400 halts the lane, it is not retried and not skipped" }
-    check(p.decide(Outcome.Http(403), 1) is Decision.Halt) { "403 halts" }
+    check(p.decide(Outcome.Http(403), 1) is Decision.Wait && p.decide(Outcome.Http(403), 2) is Decision.Halt) { "403 pauses once, then halts" }
     check(
         (1..8).map {
             p.backoff(it)

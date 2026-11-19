@@ -96,6 +96,7 @@ private class FakeSender(private val sched: Schedule, private val clock: Virtual
     val orderAtDirective = ConcurrentHashMap<String, Set<String>>()
     var script: (SendItem, Int) -> Outcome? = { _, _ -> null }
     var peakReceives = AtomicInteger()
+    var onReceiveStart: (Int) -> Unit = {}
     private val inFlight = AtomicInteger()
 
     override fun health(): Pair<Int, String?> = 200 to "{\"status\":\"ok\"}"
@@ -114,7 +115,9 @@ private class FakeSender(private val sched: Schedule, private val clock: Virtual
         }
         when (item.kind) {
             "receive" -> {
-                peakReceives.accumulateAndGet(inFlight.incrementAndGet()) { a, b -> maxOf(a, b) }
+                val now = inFlight.incrementAndGet()
+                peakReceives.accumulateAndGet(now) { a, b -> maxOf(a, b) }
+                onReceiveStart(now)
                 Thread.sleep(receiveMs)
                 acceptedEpcs += item.epcs
                 inFlight.decrementAndGet()
@@ -170,6 +173,8 @@ fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
     "reset live: a receive with errors[] stops the run, prints the entries, and is not marked accepted" to ::liveReceiveErrors,
     "reset live: internal_error tags are re-sent in a retry request (different body), moves wait for them; limits stop the night" to ::liveInternal,
     "reset live: a timeout / 504 on a receive waits 60 s before the same request is re-sent" to ::liveTimeout,
+    "reset live: lowering the lanes 4 -> 2 with 4 in flight starts nothing new until in flight is below 2 (claim under the lock)" to ::liveLanesDrop,
+    "reset live: each internal_error retry round sends a different body (rotated tags)" to ::liveRetryBodies,
     "reset live: the receive lane count can change during the run (file), is clamped to 4, logged; a status line is logged" to ::liveLanesStatus,
     "reset live: 429 honours Retry-After, 503 backs off and retries, 10 failures in a row halt" to ::liveRetries,
     "reset live: owner file, CONFIRM, probe, old directive, spot count, bearer and lane-count refusals; each is satisfiable" to ::liveGate,
@@ -370,6 +375,50 @@ private fun liveTimeout() {
     }
 }
 
+private fun liveLanesDrop() {
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c, receiveMs = 200)
+    val lanes = AtomicInteger(4)
+    val dropped = java.util.concurrent.atomic.AtomicBoolean(false)
+    val after = Collections.synchronizedList(ArrayList<Pair<Int, Int>>())
+    s.onReceiveStart = { inFlight ->
+        if (!dropped.get() && inFlight == 4) {
+            lanes.set(2)
+            dropped.set(true)
+        } else if (dropped.get()) {
+            after += inFlight to lanes.get()
+        }
+    }
+    val r = run(sched, s, c, 4, midnight = 0, lanesNow = { lanes.get() })
+    check(r.end == ResetLiveRunner.End.DONE && s.violations.isEmpty()) { "done: ${r.end} ${r.haltReason}" }
+    check(s.peakReceives.get() == 4) { "4 were in flight before the drop: ${s.peakReceives.get()}" }
+    check(after.isNotEmpty()) { "the remaining receives ran after the drop" }
+    check(after.all { (inFlight, limit) -> inFlight <= limit }) {
+        "no new claim started until in flight fell below 2, and in flight never exceeded the limit after the drop: $after"
+    }
+}
+
+private fun liveRetryBodies() {
+    // every retry round of the same tags rotates them, so the bodies differ (3 tags, rounds 1 and 2)
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val t = sched.items[0]
+    s.script = { it, n ->
+        when {
+            it.extId == t.extId && n == 1 -> Outcome.ReceiveAnswer(0, 0, t.epcs.map { e -> ItemError(e, "internal_error") })
+            it.extId == "${t.extId}-retry1" && n == 1 -> Outcome.ReceiveAnswer(0, 0, t.epcs.map { e -> ItemError(e, "internal_error") })
+            else -> null
+        }
+    }
+    val r = run(sched, s, c, 1, midnight = 0)
+    // 3 in a row is within the limit (5), so the night goes on through two retry rounds
+    check(r.end == ResetLiveRunner.End.DONE && r.retryRequests == 2) { "two retry rounds: ${r.end} ${r.haltReason} ${r.retryRequests}" }
+    check(s.bodies.size == 2 && s.bodies[0] != s.bodies[1]) { "the two failed bodies differ: ${s.bodies}" }
+    check(s.order.contains("${t.extId}-retry2")) { "round 2 was sent" }
+}
+
 private fun liveLanesStatus() {
     val sched = Schedule()
     val c = VirtualClock(0)
@@ -519,8 +568,8 @@ private fun liveParts() {
     check(LiveSender.receiveOutcome(item, "{\"received\":2,\"created\":0,\"errors\":[]}") == Outcome.ReceiveAnswer(2, 0, emptyList())) {
         "a repeat (created 0)"
     }
-    val e = LiveSender.receiveOutcome(item, "{\"received\":1,\"created\":1,\"errors\":[{\"epc\":\"E2\",\"reason\":\"not_admitted: x\"}]}")
-    check(e is Outcome.ReceiveAnswer && e.errors == listOf(ItemError("E2", "not_admitted: x")) && e.errors[0].code == "not_admitted") {
+    val e = LiveSender.receiveOutcome(item, "{\"received\":1,\"created\":1,\"errors\":[{\"epc\":\"${epc(2)}\",\"reason\":\"not_admitted: x\"}]}")
+    check(e is Outcome.ReceiveAnswer && e.errors == listOf(ItemError(epc(2), "not_admitted: x")) && e.errors[0].code == "not_admitted") {
         "errors[] entries surface with their code: $e"
     }
     check(LiveSender.receiveOutcome(item, "{\"received\":1,\"created\":1,\"errors\":[]}") is Outcome.ItemErrors) {
@@ -535,14 +584,67 @@ private fun liveParts() {
     }
     val lf = RT.resolve("reset-lanes")
     Files.deleteIfExists(lf)
-    check(ResetLivePlan.lanesInForce(lf, 2) == 2) { "no file: the env value" }
-    Files.writeString(lf, "4\n")
-    check(ResetLivePlan.lanesInForce(lf, 2) == 4) { "file overrides" }
+    val ls = LanesSource(lf, 2)
+    check(ls.current() == 2) { "no file: the env value" }
+    Files.writeString(lf, "3\n")
+    check(ls.current() == 3) { "file overrides" }
     Files.writeString(lf, "9\n")
-    check(ResetLivePlan.lanesInForce(lf, 2) == 4) { "clamped to 4" }
+    check(ls.current() == 4) { "clamped to 4" }
     Files.writeString(lf, "junk\n")
-    check(ResetLivePlan.lanesInForce(lf, 3) == 3) { "unreadable file: the env value" }
+    check(ls.current() == 4) { "a garbled file keeps the last valid value (4), not the env default" }
+    Files.writeString(lf, "")
+    check(ls.current() == 4) { "an empty / half-written file keeps the last valid value" }
     Files.deleteIfExists(lf)
+    check(ls.current() == 2) { "file removed: back to the env value" }
+
+    // the reset's hold file is its own, never the shared $OPS/HOLD
+    val hf = ResetGate.holdFile { null }
+    check(hf.toString() == "/opt/m8trx/twin-ops/reset-HOLD" && hf.fileName.toString() != "HOLD") { "default reset hold file: $hf" }
+    check(ResetGate.holdFile { if (it == "M8TRX_OPS_DIR") "/x" else null }.toString() == "/x/reset-HOLD") { "under M8TRX_OPS_DIR" }
+    check(ResetGate.holdFile { if (it == "M8TRX_RESET_HOLD_FILE") "/y/h" else null }.toString() == "/y/h") { "overridable" }
+    check(ResetGate.paceRefusals(25, 3_750).isEmpty() && ResetGate.paceRefusals(26, 3_750).size == 1 && ResetGate.paceRefusals(25, 3_000).size == 1) {
+        "move chunk over 25 and spacing under 3.5 s are refused"
+    }
+
+    // receive answer cross-check: error tags must be in the request (case-insensitive), received = sent - distinct error tags
+    val four = listOf("aa", "bb", "cc", "dd")
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("BB", "internal_error")))) == null) { "case-insensitive match" }
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("zz", "internal_error")))) != null) { "foreign error tag" }
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(4, 4, listOf(ItemError("bb", "internal_error")))) != null) { "counts disagree" }
+    check(
+        ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("bb", "x"), ItemError("BB", "y")))) == null &&
+            ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(2, 2, listOf(ItemError("bb", "x"), ItemError("BB", "y")))) != null,
+    ) {
+        "duplicate error tag counts once"
+    }
+    check(
+        LiveSender.receiveOutcome(
+            item,
+            "{\"received\":2,\"created\":2,\"errors\":[{\"epc\":\"NOPE\",\"reason\":\"internal_error\"}]}",
+        ) is Outcome.ItemErrors,
+    ) {
+        "LiveSender refuses a mismatching answer"
+    }
+
+    // 401 / 403 never loop: one pause of >= 10 s, then halt; 429 halts after 30 in a row
+    val pol = RetryPolicy()
+    listOf(401, 403).forEach { st ->
+        val w = pol.decide(Outcome.Http(st), 1)
+        check(w is Decision.Wait && w.ms >= 10_000) { "$st first attempt waits >= 10 s: $w" }
+        check(pol.decide(Outcome.Http(st), 2) is Decision.Halt) { "$st halts at the second attempt" }
+    }
+    check(pol.decide(Outcome.Http(429), 29) is Decision.Wait && pol.decide(Outcome.Http(429), 30) is Decision.Halt) { "429: halt after 30 in a row" }
+
+    // health: the TOP-LEVEL status must be "ok"
+    check(Health.isReady(200, "{\"status\":\"ok\"}") && !Health.isReady(200, "{\"status\":\"degraded\",\"detail\":{\"status\":\"ok\"}}")) {
+        "top-level status"
+    }
+    check(
+        !Health.isReady(200, "{\"msg\":\"\\\"status\\\":\\\"ok\\\"\"}") && !Health.isReady(200, "[{\"status\":\"ok\"}]") &&
+            !Health.isReady(200, "not json \"status\":\"ok\""),
+    ) {
+        "a status found elsewhere in the body does not count"
+    }
 
     val resp = ConnectMappers.camel.readValue(
         "{\"sites\":[{\"site_id\":\"S\",\"spaces\":[{\"space_id\":\"SP\",\"zones\":[" +

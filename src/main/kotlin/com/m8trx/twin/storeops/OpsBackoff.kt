@@ -15,9 +15,18 @@ package com.m8trx.twin.storeops
  */
 object Health {
     const val URL = "https://dev.m8trx.com/server/api/health"
-    private val OK = Regex("\"status\"\\s*:\\s*\"ok\"")
+    private val json = com.fasterxml.jackson.databind.ObjectMapper()
 
-    fun isReady(status: Int, body: String?): Boolean = status == 200 && body != null && OK.containsMatchIn(body)
+    /** Ready = HTTP 200 and the TOP-LEVEL `status` of a JSON object body is `"ok"` (a nested or quoted "status":"ok" does not count). */
+    fun isReady(status: Int, body: String?): Boolean {
+        if (status != 200 || body == null) return false
+        val n = try {
+            json.readTree(body)
+        } catch (e: java.io.IOException) {
+            return false
+        }
+        return n != null && n.isObject && n.path("status").asText("") == "ok"
+    }
 }
 
 /** What one attempt came to. */
@@ -76,6 +85,11 @@ class RetryPolicy(
     val stuckAfter: Int = 5,
     /** A16: stop on pool or health trouble. This many failures in a row on one event (5xx / no answer) halts the lane; the event stays due. */
     val haltAfter: Int = 10,
+    /** 429s in a row on one event before the lane halts. */
+    val rateLimitHaltAfter: Int = 30,
+    /** 401 / 403: this many attempts, [authWaitMs] apart, then halt. */
+    val authHaltAfter: Int = 2,
+    val authWaitMs: Long = 10_000,
 ) {
     /** [attempt] is 1 for the first try of an event, 2 for its first retry, and so on. */
     fun decide(o: Outcome, attempt: Int): Decision {
@@ -105,13 +119,26 @@ class RetryPolicy(
             )
 
             is Outcome.Http -> when {
+                o.status == 429 && attempt >= rateLimitHaltAfter ->
+                    Decision.Halt("$attempt 429s in a row on one event: the limit is not clearing; lane stopped, the event stays due")
+
                 o.status == 429 -> Decision.Wait(
                     maxOf(rateLimitWaitMs, (o.retryAfterS ?: 0L) * 1000L),
                     "429: wait ${rateLimitWaitMs / 1000} s, honouring Retry-After=${o.retryAfterS ?: "none"}",
                     alert = stuck,
                 )
 
-                o.status == 401 -> Decision.Wait(0, "401: token not accepted, drop it and log in again", dropToken = true, alert = stuck)
+                (o.status == 401 || o.status == 403) && attempt >= authHaltAfter ->
+                    Decision.Halt("${o.status} after $attempt attempts: the key or login is not accepted; lane stopped, the event stays due")
+
+                // one more try after a pause (a stale token is dropped first), never a tight loop
+                o.status == 401 || o.status == 403 ->
+                    Decision.Wait(
+                        authWaitMs,
+                        "${o.status}: not accepted, try once more after ${authWaitMs / 1000} s",
+                        dropToken = o.status == 401,
+                        alert = stuck,
+                    )
 
                 o.status == 502 || o.status == 503 || o.status == 504 ->
                     Decision.Wait(backoff(attempt), "${o.status}: restart or overload, wait for health ok", needHealth = true, alert = stuck)

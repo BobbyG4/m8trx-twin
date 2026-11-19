@@ -37,7 +37,7 @@ import kotlin.system.exitProcess
  * [ResetGate]): no CONFIRM; the owner file does not list the slug `storeday`; no passing receive-probe result file
  * (`<state>/reset/probe-result-<slug>.json`, [ReceiveProbe]); no old directive to end (`<state>/reset/old-directive-<slug>.json`, made by
  * `./gradlew storeDayResetOldDirective`); no `M8TRX_RESET_SPOTCOUNT_ACK`; no `M8TRX_TWIN_SERVICE_BEARER`; a stockroom rack without a zone id.
- * HOLD file set: exit 6. A receive that answers any `errors[]` entry stops the run (entries printed). The plan is FROZEN on the first live
+ * The reset HOLD file set: exit 6. A receive that answers any `errors[]` entry stops the run (entries printed). The plan is FROZEN on the first live
  * start (`<out>/live-started.json`, `schedule.jsonl`): a rerun with the same `M8TRX_RESET_OUT` resumes that plan and skips what
  * `<out>/sent-ledger.tsv` holds. As each item is accepted the box ledger is appended in the other steps' formats ([ResetBooks]):
  * `receive/received-stock.csv`, `moves/placements.csv`, so after the run the hourly pass and store-day sim see the new stock and
@@ -58,7 +58,7 @@ import kotlin.system.exitProcess
  * dir) · `M8TRX_CHAIN_DIR` · pace (A16): `M8TRX_RESET_RECEIVE_EST_S` (50: one 50-EPC request, measured 1.0 s an EPC) ·
  * `M8TRX_RESET_RECEIVE_CHUNK` (50) · `M8TRX_RESET_MOVE_EVERY_S` (2) · `M8TRX_RESET_MOVE_CHUNK` (25) · `M8TRX_RESET_RECEIVE_LANES` (1, max 4) ·
  * live: `M8TRX_RESET_LIVE` (false) · `M8TRX_RESET_CONFIRM` (= slug) · `M8TRX_RESET_SPOTCOUNT_ACK` · `M8TRX_STORE_OPS_OWNER_FILE` /
- * `M8TRX_OPS_DIR` (/opt/m8trx/twin-ops) · `M8TRX_LIVE_HOLD_FILE` ($OPS/HOLD) · `M8TRX_TWIN_SERVICE_BEARER` · `M8TRX_TWIN_BEARER` (read key,
+ * `M8TRX_OPS_DIR` (/opt/m8trx/twin-ops) · `M8TRX_RESET_HOLD_FILE` ($OPS/reset-HOLD, never the shared $OPS/HOLD) · `M8TRX_TWIN_SERVICE_BEARER` · `M8TRX_TWIN_BEARER` (read key,
  * for the one `/spatial/identity` read) · the webhook env of [LiveSender].
  */
 private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.StoreDayReset")

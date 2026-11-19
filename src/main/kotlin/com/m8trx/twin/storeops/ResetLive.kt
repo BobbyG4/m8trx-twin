@@ -119,6 +119,20 @@ class ResetBooks(private val stateDir: Path, private val slug: String, private v
 object ResetGate {
     const val MAX_LANES = 4
 
+    /** The reset's own hold file: `M8TRX_RESET_HOLD_FILE`, default `$M8TRX_OPS_DIR/reset-HOLD`. Never `$OPS/HOLD`: the hourly pass and the live plane share that one. */
+    fun holdFile(env: (String) -> String?): Path =
+        Path.of(env("M8TRX_RESET_HOLD_FILE") ?: "${env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"}/reset-HOLD")
+
+    /** A live run refuses a move chunk over 25 or a move spacing under 3.5 s (the server answers a move batch before it processes it). */
+    fun paceRefusals(moveChunk: Int, moveSpacingMs: Long): List<String> = buildList {
+        if (moveChunk > 25) add("a live move batch carries at most 25 tags, got $moveChunk (M8TRX_RESET_MOVE_CHUNK)")
+        if (moveSpacingMs <
+            3_500
+        ) {
+            add("a live move batch goes no faster than every 3.5 s, got ${moveSpacingMs / 1000.0} s (M8TRX_RESET_MOVE_EVERY_S)")
+        }
+    }
+
     /** At most 50 tags a receive request: a 200-tag request got a 504. */
     const val MAX_RECEIVE_TAGS = 50
 
@@ -216,21 +230,35 @@ object BackroomZones {
         items.filter { it.kind == "move" }.map { ResetBooks.destOf(it.payload) }.filter { it.startsWith("BR-") && it !in zones }.distinct().sorted()
 }
 
+/**
+ * The receive-lane count in force, re-read on every call: the number in [file] (`reset-lanes`) when present and valid; no file means
+ * [default] (the env value). A file that is garbled, empty or half-written keeps the LAST VALID value, never the default. Clamped to 1..4.
+ */
+class LanesSource(private val file: Path, default: Int) {
+    private val envDefault = default.coerceIn(1, ResetGate.MAX_LANES)
+
+    @Volatile
+    private var last = envDefault
+
+    fun current(): Int {
+        try {
+            if (!Files.exists(file)) {
+                last = envDefault
+            } else {
+                Files.readString(file).trim().lineSequence().firstOrNull()?.trim()?.toIntOrNull()?.let { last = it.coerceIn(1, ResetGate.MAX_LANES) }
+            }
+        } catch (e: java.io.IOException) {
+            // unreadable right now: keep the last valid value
+        }
+        return last
+    }
+}
+
 /** The frozen plan of a live run: once a live run has started, resumes read THIS, never re-plan from the (now changing) ledger. */
 object ResetLivePlan {
     fun markerFile(out: Path): Path = out.resolve("live-started.json")
 
     fun sentLedgerFile(out: Path): Path = out.resolve("sent-ledger.tsv")
-
-    /** The receive-lane count in force: the first number in [file] (`reset-lanes`) when present and valid, else [default]; clamped to 1..4. */
-    fun lanesInForce(file: Path, default: Int): Int {
-        val fromFile = try {
-            if (Files.exists(file)) Files.readString(file).trim().lineSequence().firstOrNull()?.trim()?.toIntOrNull() else null
-        } catch (e: java.io.IOException) {
-            null
-        }
-        return (fromFile ?: default).coerceIn(1, ResetGate.MAX_LANES)
-    }
 
     fun rankOf(kind: String): Int = when (kind) {
         "receive" -> 0

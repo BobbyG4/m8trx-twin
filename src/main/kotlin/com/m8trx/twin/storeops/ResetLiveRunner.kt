@@ -112,7 +112,7 @@ class ResetLiveRunner(
                 "$skipped already accepted (skipped); receive lanes ${lanes()} (max ${ResetGate.MAX_LANES}, changeable in the run)",
         )
         val threads = ArrayList<Thread>()
-        repeat(ResetGate.MAX_LANES) { i -> threads += Thread({ guarded { receiveLane(i) } }, "reset-receive-$i") }
+        repeat(ResetGate.MAX_LANES) { i -> threads += Thread({ guarded { receiveLane() } }, "reset-receive-$i") }
         threads += Thread({ guarded { moveLane() } }, "reset-move")
         val monitor = Thread({ monitor() }, "reset-status").also { it.isDaemon = true }
         monitor.start()
@@ -191,19 +191,25 @@ class ResetLiveRunner(
 
     private fun receiveWorkLeft(): Boolean = receives.isNotEmpty() || retries.isNotEmpty() || activeReceives > 0
 
-    private fun receiveLane(index: Int) {
+    /**
+     * The receive lanes are interchangeable workers: a worker CLAIMS a request only while the requests in flight are fewer than the
+     * lane count in force, checked under the lock, so lowering the count (4 to 2 with 4 in flight) starts nothing new until the
+     * in-flight requests have dropped below the new limit, and in flight never exceeds the limit that was in force at the claim.
+     */
+    private fun receiveLane() {
         while (true) {
             if (checkStop()) return
-            if (index >= lanes()) {
-                // this lane is not in use at the moment (the count may be raised again); it ends only when the work is over
-                if (!synchronized(lock) { receiveWorkLeft() }) return
-                nap(params.idlePollMs)
-                continue
-            }
+            val cap = lanes()
             var left = false
             val next = synchronized(lock) {
-                val r = receives.removeFirstOrNull()?.let { Retry(it, it, 0, 0) }
-                    ?: retries.firstOrNull { it.notBeforeMs <= clock.now() }?.also { retries.remove(it) }
+                val r = if (activeReceives < cap) {
+                    (
+                        receives.removeFirstOrNull()?.let { Retry(it, it, 0, 0) }
+                            ?: retries.firstOrNull { it.notBeforeMs <= clock.now() }?.also { retries.remove(it) }
+                        )
+                } else {
+                    null
+                }
                 if (r != null) activeReceives++
                 left = receiveWorkLeft()
                 r
@@ -373,7 +379,13 @@ class ResetLiveRunner(
 
     private fun settle(r: Retry, a: Outcome.ReceiveAnswer): Boolean {
         val item = r.item
-        val bad = a.errors.mapNotNull { it.epc }.toSet()
+        ReceiveCheck.mismatch(item.epcs, a)?.let { why ->
+            event("${item.extId} ANSWER DOES NOT MATCH THE REQUEST: $why")
+            a.errors.forEach { event("  $it") }
+            halt("${item.extId}: $why")
+            return false
+        }
+        val bad = a.errors.mapNotNull { it.epc?.uppercase() }.toSet()
         val stopErrors = a.errors.filter { it.code != "internal_error" || it.epc == null }
         if (stopErrors.isNotEmpty()) {
             event("${item.extId} REFUSED ${a.errors.size} tag(s) (received ${a.received}, created ${a.created}):")
@@ -382,7 +394,7 @@ class ResetLiveRunner(
             return false
         }
         if (a.errors.isNotEmpty()) {
-            val run = longestRun(item.epcs, bad)
+            val run = longestRun(item.epcs.map { it.uppercase() }, bad)
             event("${item.extId}: ${a.errors.size} internal_error tag(s) (longest run $run); the pool was briefly short, they are re-sent later")
             if (a.errors.size > MAX_INTERNAL_IN_REQUEST || run > MAX_INTERNAL_IN_A_ROW) {
                 a.errors.forEach { event("  $it") }
@@ -396,7 +408,7 @@ class ResetLiveRunner(
                 return false
             }
         }
-        val counted = item.epcs.filter { it !in bad }
+        val counted = item.epcs.filter { it.uppercase() !in bad }
         synchronized(lock) {
             // the counted tags are booked and unblock their moves
             if (counted.isNotEmpty()) {
@@ -411,10 +423,12 @@ class ResetLiveRunner(
                 retryRequests++
                 val n = r.depth + 1
                 val id = "${r.root.extId}-retry$n"
+                // each retry round rotates the tags by one place, so a round never sends a body byte-identical to the round before it (a lone tag cannot differ)
+                val failed = item.epcs.filter { it.uppercase() in bad }.let { l -> if (l.size > 1) l.drop(1) + l.take(1) else l }
                 val payload = ConnectMappers.camel.valueToTree<com.fasterxml.jackson.databind.JsonNode>(
-                    ItemReceiveRequest("@site", "@backroom_space", item.epcs.filter { it in bad }.map { ReceiveItem(it) }),
+                    ItemReceiveRequest("@site", "@backroom_space", failed.map { ReceiveItem(it) }),
                 )
-                val retryItem = SendItem(item.seq, item.dueMs, item.rank, "receive", id, payload, item.epcs.filter { it in bad })
+                val retryItem = SendItem(item.seq, item.dueMs, item.rank, "receive", id, payload, failed)
                 retries += Retry(retryItem, r.root, n, clock.now() + params.retryDelayMs)
             }
             if (left != null && left.isEmpty()) {
@@ -515,5 +529,22 @@ class ResetLiveRunner(
         const val MAX_INTERNAL_IN_A_ROW = 5
         const val MAX_INTERNAL_IN_REQUEST = 10
         const val MAX_RETRY_DEPTH = 5
+    }
+}
+
+/** Cross-check of a receive answer against its request: every error tag is in the request, and received = tags sent - distinct error tags. */
+object ReceiveCheck {
+    fun mismatch(requested: List<String>, a: Outcome.ReceiveAnswer): String? {
+        val sent = requested.map { it.uppercase() }.toSet()
+        val errs = a.errors.mapNotNull { it.epc?.uppercase() }.toSet()
+        val foreign = errs - sent
+        if (foreign.isNotEmpty()) return "errors[] names ${foreign.size} tag(s) that are not in the request (${foreign.take(3)})"
+        val expected = sent.size - errs.size
+        if (a.received !=
+            expected
+        ) {
+            return "received ${a.received} but the request had ${sent.size} tags and ${errs.size} distinct error tag(s), expected $expected"
+        }
+        return null
     }
 }
