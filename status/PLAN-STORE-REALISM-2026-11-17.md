@@ -1165,3 +1165,37 @@ F-9 (receive) and the three Connect fixes from your Q19 and § 12.4 (a pushed pl
 **Proven how:** unit and Postgres-backed tests on the merged head (2,903 tests, 0 failed; the receive class 17 of 17), CI green, and the deploy check above. No request has been sent to the live routes by Backend/Web; your first receive request and the plan re-send are the first live use.
 
 **Still open on the Backend/Web side:** the re-run of Denver's projections since 10-14 (§ 12.7) waits on Bob's word.
+
+### 12.9 [twin] Step 3's first receive passed; the plan re-send did not fill the product — 2026-11-19 18:13 KST
+
+Run from the MacBook. Bob relayed § 12.8 (tonight is free) in this session. Nothing else was sent: no reset, no live-plane restart, no box change.
+
+**1. Receive — PASS from the twin's side.** Request seq 0 of the reset (`rst-dec-us-denver-20261120-r-a39ac9b48b`), exactly as in
+§ 12.3: Denver, space `e19e1502-…` (Back Room), 50 EPCs. All 50 were unknown just before (details: `itemId null`).
+- `POST /inventory/items/receive` at 18:13:05 KST → **HTTP 200 `{"received":50,"created":50,"errors":[]}`, 50.0 s** (about 1 EPC a
+  second, matching A16).
+- `/inventory/items/details` read 3 s later: **50 of 50 `in_stock` with an item id and the catalog's sku**:
+
+  | EPC prefix | EAN | sku | units | product (twin catalog) |
+  |---|---|---|---:|---|
+  | `3038D13702F8BE06FC23AC00`–`07` | 2142367790007 | 4236779 | 8 | Quechua Men's MH500 Waterproof Hiking Shoes, 6.5 |
+  | `30395DFA800A2B06FC23AC08`–`31` | 3583780104122 | 827034 | 42 | Forclaz Hiking Backpack Chest Strap |
+
+- Note: the request held two EANs, not one. § 12.8's pre-check covered the first; the second resolved too.
+- Location is not visible through Connect. **Backend/Web: please do the server read (all 50 in the Back Room) and write it below.**
+- The twin's slip, for the record: the first run (18:12:49) stopped before sending, because its "already exists" check
+  misread the details rows for unknown EPCs (they come back with `itemId null`, not as an empty list).
+- The box's ledger does not know these 50 yet. When the reset runs, it re-sends seq 0, which § 12.8 says is a no-op
+  (`received`, not `created`).
+
+**2. Plan re-send — the product is still null (§ 12.8 item 2 not proven live).** The same `external_directive_id`
+`twin-probe-plan-20261119` and the same body (zone "Gondola R5 Back U7", identifier `3608429702252`, 12 units) were re-sent at
+18:14:08 KST → 200 accepted. `/compliance/state` at +5 s and +30 s: `mapping_status resolved`, **`product_name null`**,
+`total_targets 1`, `resolved_targets 1`, `compliance_status pending`. The twin will not re-send again.
+**Backend/Web: is the server row for this target still null after the re-send, or does the read take `product_name` from a
+different place than the match writes?** (Your 18:06 read showed two target rows for this directive; the read shows one.)
+
+**3. `expiry_date` in `/compliance/state` — PASS.** It returns `"expiry_date":"2026-11-21T07:00:00Z"` beside `effective_date`.
+
+**Next on the twin's side:** the Denver reset night (step 4) still waits on Bob's word, and also on Backend/Web's location read
+of these 50. The step-0 re-reads still stand: after the box's 00:30 KST count, and after the 11-21 stop.
