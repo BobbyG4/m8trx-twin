@@ -638,7 +638,12 @@ fun storeOpsTask(name: String, main: String, desc: String) = tasks.register<Java
 storeOpsTask(
     "storeDayReset",
     "com.m8trx.twin.storeops.StoreDayResetKt",
-    "Dry run: map Denver's (or M8TRX_RESET_SITE's) ledger to the period plan; write the paced receive/move/directive schedule, post-reset state and report under out/reset/. Sends nothing.",
+    "Denver reset: DRY RUN by default (maps the ledger to the period plan; writes schedule, post-reset state and report under out/reset/; sends nothing). LIVE only with M8TRX_RESET_LIVE=true AND M8TRX_RESET_CONFIRM=<slug>: runs the frozen schedule (1-4 receive lanes M8TRX_RESET_RECEIVE_LANES + a move lane, directives last after local midnight), resumable, HOLD file stops it; refuses (exit 3) without owner=storeday, a passing receive-probe result, the old directive, the spot count and the keys. Run-card: ops/INSTALL.md.",
+)
+storeOpsTask(
+    "storeDayResetOldDirective",
+    "com.m8trx.twin.storeops.ResetLiveMainKt",
+    "Offline file converter: M8TRX_RESET_COMPLIANCE_JSON (the store's /compliance/state JSON) to <state>/reset/old-directive-<slug>.json, the file storeDayReset reads to end the old directive. Sends nothing.",
 )
 storeOpsTask(
     "storeOpsLiveDryRun",

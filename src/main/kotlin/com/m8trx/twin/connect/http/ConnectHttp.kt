@@ -16,7 +16,12 @@ import java.net.http.HttpResponse
  * error model is mapped to [ConnectResponse.Err] (parsing `{error, message}` + `Retry-After`);
  * 2xx → [ConnectResponse.Ok]. Nothing here throws on non-2xx — failure is data.
  */
-class ConnectHttp(private val errorMapper: ObjectMapper = jacksonObjectMapper(), private val http: HttpClient = HttpClient.newHttpClient()) {
+class ConnectHttp(
+    private val errorMapper: ObjectMapper = jacksonObjectMapper(),
+    private val http: HttpClient = HttpClient.newHttpClient(),
+    /** Per-request timeout (null = none, the old behaviour). A timeout surfaces as an IOException (HttpTimeoutException). */
+    private val requestTimeout: java.time.Duration? = null,
+) {
     private val log = LoggerFactory.getLogger(ConnectHttp::class.java)
 
     fun send(method: String, url: String, headers: Map<String, String> = emptyMap(), body: ByteArray? = null): ConnectResponse {
@@ -29,6 +34,7 @@ class ConnectHttp(private val errorMapper: ObjectMapper = jacksonObjectMapper(),
                 HttpRequest.BodyPublishers.noBody()
             }
         builder.method(method, publisher)
+        requestTimeout?.let { builder.timeout(it) }
 
         val resp = http.send(builder.build(), HttpResponse.BodyHandlers.ofString())
         log.debug("{} {} → {}", method, url, resp.statusCode())

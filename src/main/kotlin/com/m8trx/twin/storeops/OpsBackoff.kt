@@ -30,6 +30,28 @@ sealed interface Outcome {
 
     /** No answer at all (connection refused, reset, timeout). */
     data class Unreachable(val message: String = "") : Outcome
+
+    /**
+     * A 2xx whose body says some items were NOT taken (a receive's `errors[] {epc, reason}`, reason prefixed by a code such as
+     * `not_admitted`, `invalid_space`, `undecodable_tag`, `unknown_product`). Never retried blindly: the policy halts and the
+     * entries are printed, because the same request would be refused the same way.
+     */
+    data class ItemErrors(val errors: List<ItemError>) : Outcome {
+        val entries: List<String> get() = errors.map { it.toString() }
+    }
+
+    /**
+     * A parsed 2xx receive answer (`received`, `created`, `errors[]`). Tags NOT in [errors] were counted; the reset decides per error code
+     * what to do with the rest ([ResetLiveRunner]). The policy treats a non-empty [errors] as a halt, so the live ops Pump stops on it.
+     */
+    data class ReceiveAnswer(val received: Int, val created: Int, val errors: List<ItemError>) : Outcome
+}
+
+/** One `errors[]` entry of a receive: [reason] starts with a code (`internal_error`, `not_admitted`, `unknown_product`, ...). */
+data class ItemError(val epc: String?, val reason: String?) {
+    val code: String get() = reason?.substringBefore(':')?.trim()?.lowercase().orEmpty()
+
+    override fun toString() = "$epc: $reason"
 }
 
 /** What to do next with the event that just had [Outcome]. */
@@ -62,6 +84,18 @@ class RetryPolicy(
         if (trouble) return Decision.Halt("$attempt failures in a row ($o): pool or health trouble, lane stopped, the event stays due")
         return when (o) {
             Outcome.Accepted -> Decision.Done
+
+            is Outcome.ReceiveAnswer -> if (o.errors.isEmpty()) {
+                Decision.Done
+            } else {
+                Decision.Halt("the platform answered 2xx but refused ${o.errors.size} tag(s): ${o.errors.take(5).joinToString("; ")}")
+            }
+
+            is Outcome.ItemErrors -> Decision.Halt(
+                "the platform answered 2xx but refused ${o.entries.size} item(s): ${o.entries.take(
+                    5,
+                ).joinToString("; ")}; lane stopped, the event stays due",
+            )
 
             is Outcome.Unreachable -> Decision.Wait(
                 backoff(attempt),
