@@ -1266,3 +1266,31 @@ The two lanes now also talk directly (session to session, on Bob's ask). This se
 **4. The spot count read** is the twin's own Hasura read with its store-manager sign-in (`StoreStock.fromPlatform`); it does not depend on the Connect key. Backend/Web does a server read on request (20 fixture codes and ledger counts).
 
 **Timing.** Live code: about 10.5 h in all (a 21:30 start ends about 08:00). With the receive lane: receives about 2.6 h, moves about 5 to 5.7 h, ending about 03:00 to 03:30.
+
+### 12.13 [twin] The Denver reset night is running — 2026-11-19 23:13 KST (Bob's go)
+
+**Built for it tonight:** #39 (live path: lanes 1..4 changeable in the run, gates, own `reset-HOLD`, frozen plan + sent-ledger
+resume, the server lane's four receive rules), #40 (`M8TRX_RESET_HOLD_DIRECTIVES`), #41 (every move by `to_zone_id`, move-all,
+existence pre-check, location post-check). Reviewed by a separate agent before the first live start; its blocking finding (lane
+lowering could overshoot the cap) and the two high ones (401 tight loop, no webhook timeout) were fixed in #39.
+
+**Start 1, 22:07 KST: stopped at its own gate, nothing sent.** The location spot count found 793 of 1,513 sampled units off
+(52 %). Cause (server lane's read + the twin's ledger): the 3,092 Denver units of the 10-12 receive sit on the Back Room BR racks
+where migration 264 put them; the twin booked their October put-aways in `placements.csv` but never sent them (past dates are held by
+the hourly pass, whose move step also runs `--moves 0` and restocked 0). Nothing on the platform is corrupt.
+
+**Two server facts that changed the build (server lane, 2026-11-19 evening):**
+- `to_fixture_code` resolves only by exact zone NAME among live fixtures, then a per-site `fixture_code_mapping`. Denver: 124
+  fixtures, 1 mapping (GB-R3-U1), 123 codes resolve to nothing; other stores 19 to 84 unresolved. A refused move still answers
+  "accepted". **Every twin move must send `to_zone_id`.** The same resolver serves plan targets, so a Denver plan sent today would
+  leave nearly every target unresolved (part of the held-plan question for Bob).
+- The webhook route refuses bodies over 256 KiB (`CONTENT_TOO_LARGE`), and a second delivery under one `external_directive_id`
+  REPLACES the targets. The 6,365-target plan (1.13 MB) cannot go as one body. **Both plan items (old end, new plan) are held;
+  the old plan stays in force.** The form (6 plans of 1,200 or fewer, or a server change) is Bob's choice.
+
+**Start 2, 23:13:35 KST (twin 0e7fb50).** Gates: every floor zone id matches `/spatial/identity`, all 8 BR racks resolved;
+existence 0 of 1,513 sampled units not `in_stock` (ok). Plan: 739 receives (36,910 EPCs, the first one a no-op repeat of the
+18:13 hand send: received 50, created 0) and 5,346 move batches (28,061 units, every unit on hand included), plans held.
+Ramp: 1 lane to 23:17:23, 2 lanes to 23:21:33 (server lane: p50 47 to 49 s, p95 50 to 56 s a request, 0 queued, 0 refused,
+642 items moved, 0 refused), then **4 lanes** with the server lane's OK. All hourly passes are skipped while it holds the lock.
+The location post-check runs 120 s after the last move; results go in `reset-complete.json` and here.
