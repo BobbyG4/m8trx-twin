@@ -61,6 +61,8 @@ object ResetPlanner {
         reserved: Set<String>,
         defaultRack: String = "BR-01",
         chunk: Int = 25,
+        /** `M8TRX_RESET_MOVE_ALL` (default true): units already in place also get an explicit move to their own cell or rack, so each on-hand unit has one. */
+        moveAll: Boolean = true,
     ): Result {
         // ── the ledger as units, EAN decoded from the EPC itself ─────────────────────────────────────────
         val units = ArrayList<LedgerUnit>()
@@ -112,6 +114,7 @@ object ResetPlanner {
                     fl.remove(it)
                     finals += Final(it.epc, ean, UnitState.ON_FLOOR, slot.fixture, homeLevel[slot] ?: 1)
                     stayedFloor++
+                    if (moveAll) cellMoves.getOrPut(slot.fixture to ean) { ArrayList() } += it.epc
                 }
                 need[slot] = q - mine.size
             }
@@ -132,6 +135,7 @@ object ResetPlanner {
             for (u in br) {
                 finals += Final(u.epc, ean, UnitState.BACKROOM, u.at, 0)
                 stayedBack++
+                if (moveAll) backMoves.getOrPut(u.at to ean) { ArrayList() } += u.epc
             }
             val leftover = fl.size + br.size
             // 4. what is still missing is received into the stockroom; the part that fills cells is moved there

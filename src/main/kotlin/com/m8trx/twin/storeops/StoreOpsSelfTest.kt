@@ -261,7 +261,13 @@ private fun resetSynthetic() {
     check(r.received.none { it in reserved } && r.received.toSet().size == r.received.size) { "no collision" }
     check(r.received.all { Sgtin96.serial(it) in StoreState.deliveryBase(DENVER) until StoreState.deliveryEnd(DENVER) }) { "delivery block" }
     // the unit already on its own fixture did not move
-    check(r.moves.none { epc(1, e0) in it.epcs }) { "a unit on its own cell stays" }
+    // (with move-all, the default, it still gets an explicit move to its own cell; without it, none)
+    check(r.moves.any { epc(1, e0) in it.epcs && it.dest == s0.fixture }) { "move-all: a unit on its own cell gets a move to that cell" }
+    val rNo = ResetPlanner.plan(
+        DENVER, ledger, period.required, period.homeLevel, m.backroomTarget, m.homeRack, m.demand.keys, reserved, moveAll = false,
+    )
+    check(rNo.moves.none { epc(1, e0) in it.epcs }) { "move-all off: a unit on its own cell stays" }
+    check(r.moves.sumOf { it.epcs.size } >= rNo.moves.sumOf { it.epcs.size }) { "move-all only adds moves" }
     // an off-catalog EPC is unplaceable
     val foreign = Sgtin96.encode("4006381333931", 77) // not a Decathlon EAN in the model
     if ("4006381333931" !in m.demand.keys) {

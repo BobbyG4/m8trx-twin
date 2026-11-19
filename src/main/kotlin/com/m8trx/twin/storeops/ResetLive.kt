@@ -8,6 +8,8 @@ import com.m8trx.twin.connect.RestockMoves
 import com.m8trx.twin.connect.Sgtin96
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.ItemDetail
+import com.m8trx.twin.connect.model.bearer.ItemDetailsRequest
 import com.m8trx.twin.connect.model.bearer.ReadCaps
 import com.m8trx.twin.connect.model.bearer.SpatialIdentityRequest
 import com.m8trx.twin.connect.model.bearer.SpatialIdentityResponse
@@ -94,7 +96,14 @@ class ResetProgress(
  *    back room), which [com.m8trx.twin.ops.StoreStock.load] reads as overriding the unit's fixture.
  * After the run, StoreStock.load(chain, state, slug) therefore equals the plan's post-reset placement of every unit.
  */
-class ResetBooks(private val stateDir: Path, private val slug: String, private val date: LocalDate, private val rackOf: (String) -> String) {
+class ResetBooks(
+    private val stateDir: Path,
+    private val slug: String,
+    private val date: LocalDate,
+    /** Zone id to fixture code (the keys export's floor zones), to book a `to_zone_id` move at its fixture code. */
+    private val zoneCode: Map<String, String> = emptyMap(),
+    private val rackOf: (String) -> String,
+) {
     private val stockFile = ReceiveStock.stockFile(stateDir.resolve("receive"))
     private val epcLedger = stateDir.resolve("receive/receive-reset-${date.toString().replace("-", "")}.sent")
     private val placementsFile = stateDir.resolve("moves/placements.csv")
@@ -110,15 +119,22 @@ class ResetBooks(private val stateDir: Path, private val slug: String, private v
                 if (rows.isNotEmpty()) ReceiveStock.appendStock(stockFile, epcLedger, rows)
             }
 
-            "move" -> RestockMoves.appendPlacements(placementsFile, item.epcs, destOf(item.payload), date)
+            "move" -> RestockMoves.appendPlacements(placementsFile, item.epcs, destOf(item.payload, zoneCode), date)
         }
     }
 
     companion object {
-        /** A move's destination as a ledger fixture: the fixture code, or the rack of a `@backroom_zone:BR-nn` zone. */
-        fun destOf(payload: JsonNode): String = payload.path("to_fixture_code").asText("").ifBlank { null }
-            ?: payload.path("to_zone_id").asText("").removePrefix(Placeholders.ZONE_PREFIX).ifBlank { null }
-            ?: error("a move with no destination: $payload")
+        /** A move's destination as a ledger fixture: the rack of a `@backroom_zone:BR-nn` zone, a floor zone id through [zoneCode], or a fixture code. */
+        fun destOf(payload: JsonNode, zoneCode: Map<String, String> = emptyMap()): String {
+            payload.path("to_fixture_code").asText("").ifBlank { null }?.let { return it }
+            val z = payload.path("to_zone_id").asText("").ifBlank { null } ?: error("a move with no destination: $payload")
+            return if (z.startsWith(Placeholders.ZONE_PREFIX)) {
+                z.removePrefix(Placeholders.ZONE_PREFIX)
+            } else {
+                zoneCode[z]
+                    ?: error("a move to unknown zone $z")
+            }
+        }
     }
 }
 
@@ -157,7 +173,7 @@ object ResetGate {
      *  - the owner file lists the slug as `storeday` ([StoreOwnership]): the hourly pass is not writing the store;
      *  - the receive-probe result file records a pass ([ReceiveProbe.refusal]);
      *  - the schedule ends the old directive (A14): [endSteps] > 0;
-     *  - the spot count: `M8TRX_RESET_SPOTCOUNT_ACK` holds the operator's note (the platform read is not wired, see [StoreDayReset]);
+     *  - (the existence PRE-check [ExistenceCheck] is run by [ResetLiveMain] after these, from the bearer read; it is not an env gate);
      *  - the receive bearer `M8TRX_TWIN_SERVICE_BEARER` is set, and the lane count is 1..4.
      */
     fun check(slug: String, env: (String) -> String?, stateDir: Path, ownerFile: Path, endSteps: Int): Verdict {
@@ -172,12 +188,6 @@ object ResetGate {
         if (endSteps == 0) {
             r += "no old directive: the schedule has no end step (A14). Produce ${StoreDayReset.defaultOldFile(stateDir, slug)} " +
                 "(./gradlew storeDayResetOldDirective) and plan again"
-        }
-        if (env("M8TRX_RESET_SPOTCOUNT_ACK").isNullOrBlank() && env("M8TRX_OPS_PASSWORD").isNullOrBlank() &&
-            env("M8TRX_AUDIT_PASSWORD").isNullOrBlank()
-        ) {
-            r += "the spot count needs the store-manager login for its platform read (M8TRX_OPS_PASSWORD), or, as the fallback, " +
-                "M8TRX_RESET_SPOTCOUNT_ACK=\"<who counted by hand, which fixtures, how many disagreed>\""
         }
         if (env("M8TRX_TWIN_SERVICE_BEARER").isNullOrBlank()) r += "M8TRX_TWIN_SERVICE_BEARER is not set (the receive key, inventory:create)"
         val lanes = env("M8TRX_RESET_RECEIVE_LANES")?.toIntOrNull()
@@ -217,24 +227,128 @@ object BackroomZones {
         }
     }
 
-    /** One READ (`POST /spatial/identity`, inventory:read, key M8TRX_TWIN_BEARER) for the stockroom space; the override file wins. */
-    fun resolve(slug: String, spaceId: String, stateDir: Path): Map<String, String> {
-        val override = readOverride(overrideFile(stateDir, slug))
+    /** One READ (`POST /spatial/identity`, inventory:read, key M8TRX_TWIN_BEARER) of the whole site, every space with its zones; null when it fails. */
+    fun fetchIdentity(slug: String): SpatialIdentityResponse? {
         val client = ConnectClient(ConnectConfig.fromEnv())
-        val read = when (
-            val r = client.spatialIdentity(
-                SpatialIdentityRequest(siteRef = slug, spaceRef = spaceId, includeZones = true, limit = ReadCaps.ZONES_MAX),
-            )
-        ) {
-            is ConnectResponse.Ok -> fromIdentity(client.mapper.readValue(r.rawBody, SpatialIdentityResponse::class.java), spaceId)
-            is ConnectResponse.Err -> emptyMap()
+        return when (val r = client.spatialIdentity(SpatialIdentityRequest(siteRef = slug, includeZones = true, limit = ReadCaps.ZONES_MAX))) {
+            is ConnectResponse.Ok -> client.mapper.readValue(r.rawBody, SpatialIdentityResponse::class.java)
+            is ConnectResponse.Err -> null
         }
-        return read + override
     }
+
+    /** The rack code to zone id map: the identity read for the stockroom space, with the operator's override file winning. */
+    fun resolve(identity: SpatialIdentityResponse?, spaceId: String, override: Map<String, String>): Map<String, String> =
+        (identity?.let { fromIdentity(it, spaceId) } ?: emptyMap()) + override
+
+    /** The back-room racks a move batch names (`@backroom_zone:BR-nn`); floor moves carry a plain zone id. */
+    fun rackOf(payload: JsonNode): String? = payload.path("to_zone_id").asText("").takeIf { it.startsWith(Placeholders.ZONE_PREFIX) }
+        ?.removePrefix(Placeholders.ZONE_PREFIX)
 
     /** The racks the schedule's back-room moves name that have no zone id; empty means every move can resolve. */
     fun missing(items: List<SendItem>, zones: Map<String, String>): List<String> =
-        items.filter { it.kind == "move" }.map { ResetBooks.destOf(it.payload) }.filter { it.startsWith("BR-") && it !in zones }.distinct().sorted()
+        items.filter { it.kind == "move" }.mapNotNull { rackOf(it.payload) }.filter { it !in zones }.distinct().sorted()
+}
+
+/**
+ * The sales-floor fixture zone ids of the schedule's moves. Every move goes by `to_zone_id` (the server resolves a fixture CODE only by an exact
+ * zone name or a per-site mapping, so a code-addressed move is refused `destination_unresolved` while still answered 200). The ids come from the
+ * keys export (the dry run's truth); a live run cross-checks each one against `/spatial/identity` (zone `code`, else name) and REFUSES, naming
+ * the code, when a fixture is missing on the platform or the two ids disagree.
+ */
+object FixtureZones {
+    class Keyed(val zoneId: String, val name: String)
+
+    /** Zone ids named by the floor moves of [items] (not the `@backroom_zone:` racks), back to their codes via [keys]: code to (id, name). */
+    fun needed(items: List<SendItem>, keys: Map<String, Keyed>): Map<String, Keyed> {
+        val byId = keys.entries.associate { it.value.zoneId to it.key }
+        val ids = items.filter { it.kind == "move" }.map { it.payload.path("to_zone_id").asText("") }.filter {
+            it.isNotBlank() &&
+                !it.startsWith(Placeholders.ZONE_PREFIX)
+        }
+        return ids.distinct().sorted().associate { id -> (byId[id] ?: "?$id") to (keys[byId[id]] ?: Keyed(id, "")) }
+    }
+
+    fun problems(identity: SpatialIdentityResponse?, floorSpaceId: String, needed: Map<String, Keyed>): List<String> {
+        if (identity == null) return listOf("could not read /spatial/identity to cross-check the fixture zone ids")
+        if (identity.truncated) return listOf("/spatial/identity answered truncated: the fixture zone ids cannot be cross-checked")
+        val spaces = identity.sites.flatMap { it.spaces }
+        val zones = spaces.filter { it.spaceId == floorSpaceId }.ifEmpty { spaces }.flatMap { it.zones }
+        val byCode = zones.filter { !it.code.isNullOrBlank() }.associateBy { it.code!! }
+        val byName = zones.filter { !it.name.isNullOrBlank() }.associateBy { it.name!! }
+        return needed.entries.sortedBy { it.key }.mapNotNull { (code, k) ->
+            val z = byCode[code] ?: byName[k.name]
+            when {
+                code.startsWith("?") -> "a move names zone ${k.zoneId} which the keys export does not have"
+                z == null -> "fixture $code (keys zone ${k.zoneId}, \"${k.name}\") is not on the platform by code or name"
+                z.zoneId != k.zoneId -> "fixture $code: the keys export says zone ${k.zoneId}, the platform says ${z.zoneId}"
+                else -> null
+            }
+        }
+    }
+}
+
+/**
+ * PRE-check, gating: do the sampled ledger units exist on the platform? The 20 spot-count fixtures' ledger EPCs (at most [MAX_EPCS], a stable
+ * subsample), read through `POST /inventory/items/details` in chunks of at most [CHUNK]; a unit counts as missing unless its row has an itemId
+ * and state `in_stock` (unknown EPCs come back as rows of nulls). MORE than [LIMIT] missing STOPS the run before any send. The location
+ * comparison is NOT a gate any more: it is the [SpotCount] post-check after the moves.
+ */
+object ExistenceCheck {
+    const val LIMIT = 0.02
+    const val MAX_EPCS = 2_000
+    const val CHUNK = 200
+
+    class Verdict(val sampled: Int, val missing: Int, val examples: List<String>) {
+        val rate: Double get() = missing.toDouble() / maxOf(1, sampled)
+        val stop: Boolean get() = rate > LIMIT
+
+        fun summary(): String = "existence check: $missing of $sampled sampled ledger units are not in_stock with an itemId on the platform " +
+            "(${"%.2f".format(rate * 100)} %, limit ${"%.0f".format(LIMIT * 100)} %) -> ${if (stop) "STOP" else "ok"}"
+    }
+
+    fun sample(ledger: com.m8trx.twin.ops.StoreStock, fixtures: List<String>, seed: Long, slug: String): List<String> {
+        val epcs = fixtures.flatMap { ledger.byFixture[it].orEmpty() }.distinct()
+        return if (epcs.size <=
+            MAX_EPCS
+        ) {
+            epcs
+        } else {
+            epcs.sortedBy { com.m8trx.twin.history.HistoryCsv.derive(seed, slug, "exists", it) }.take(MAX_EPCS)
+        }
+    }
+
+    /** [details] answers one chunk (null or an exception means the read failed, which refuses the run). */
+    fun evaluate(epcs: List<String>, details: (List<String>) -> List<ItemDetail>?): Verdict {
+        var missing = 0
+        val examples = ArrayList<String>()
+        epcs.chunked(CHUNK).forEach { chunk ->
+            val rows = details(chunk) ?: error("the items/details read failed")
+            val byEpc = rows.associateBy { it.epc.uppercase() }
+            chunk.forEach { e ->
+                val d = byEpc[e.uppercase()]
+                if (d == null || d.itemId == null || d.state != "in_stock") {
+                    missing++
+                    if (examples.size < 10) examples += "$e: ${if (d == null) "no row" else "itemId=${d.itemId} state=${d.state}"}"
+                }
+            }
+        }
+        return Verdict(epcs.size, missing, examples)
+    }
+
+    /** The real read: the bearer `inventory:read` key (`M8TRX_TWIN_BEARER`, else the service bearer). */
+    fun liveDetails(): (List<String>) -> List<ItemDetail>? {
+        val client = ConnectClient(ConnectConfig.fromEnv())
+        return { chunk ->
+            when (val r = client.itemDetails(ItemDetailsRequest(chunk))) {
+                is ConnectResponse.Ok -> client.mapper.readValue(
+                    r.rawBody,
+                    client.mapper.typeFactory.constructCollectionType(List::class.java, ItemDetail::class.java),
+                )
+
+                is ConnectResponse.Err -> null
+            }
+        }
+    }
 }
 
 /**

@@ -36,17 +36,21 @@ import kotlin.system.exitProcess
  * receive lanes (`M8TRX_RESET_RECEIVE_LANES`) and one move lane at the same time, then the directives last. Refusals (exit 3, nothing sent;
  * [ResetGate]): no CONFIRM; the owner file does not list the slug `storeday`; no passing receive-probe result file
  * (`<state>/reset/probe-result-<slug>.json`, [ReceiveProbe]); no old directive to end (`<state>/reset/old-directive-<slug>.json`, made by
- * `./gradlew storeDayResetOldDirective`); no `M8TRX_RESET_SPOTCOUNT_ACK`; no `M8TRX_TWIN_SERVICE_BEARER`; a stockroom rack without a zone id.
+ * `./gradlew storeDayResetOldDirective`); no `M8TRX_TWIN_SERVICE_BEARER`; a stockroom rack or a floor fixture zone id missing or differing on the platform; the existence pre-check over 2%.
  * The reset HOLD file set: exit 6. A receive that answers any `errors[]` entry stops the run (entries printed). The plan is FROZEN on the first live
  * start (`<out>/live-started.json`, `schedule.jsonl`): a rerun with the same `M8TRX_RESET_OUT` resumes that plan and skips what
  * `<out>/sent-ledger.tsv` holds. As each item is accepted the box ledger is appended in the other steps' formats ([ResetBooks]):
  * `receive/received-stock.csv`, `moves/placements.csv`, so after the run the hourly pass and store-day sim see the new stock and
  * positions; the store-day continues from `<out>/state/post-reset`. Progress: `<out>/progress.json`, `<out>/live-run.log`.
  *
- * The spot count (brief § 1 step 1, platform half) is NOT automated: `StoreStock.fromPlatform` is fed by a private store-manager-JWT
- * Hasura read inside the stock drive that needs its own login and was never run standalone, so wiring it here untested, on the night,
- * is the riskier choice. The gate is an explicit operator acknowledgment (`M8TRX_RESET_SPOTCOUNT_ACK`, recorded in the report and the run
- * log); the more-than-2%-disagreement rule is the operator's, and the report lists the 20 fixtures to count.
+ * EVERY move goes by `to_zone_id` (never `to_fixture_code`, which the server resolves only by an exact zone NAME): floor zone ids come from the
+ * keys export (the dry run's truth), a live run cross-checks each against `/spatial/identity` and refuses, naming the code, on a missing or
+ * differing one; back-room racks resolve from `/spatial/identity` at run time. `M8TRX_RESET_MOVE_ALL` (default true) gives every on-hand unit an
+ * explicit move, also the ones already in place.
+ *
+ * The spot count is split: a PRE-check that GATES (the sampled ledger EPCs must exist: more than 2% not `in_stock` with an itemId on
+ * `POST /inventory/items/details` stops the run before any send, [ExistenceCheck]) and a POST-check that only REPORTS (120 s after the last
+ * move, the platform location of the same fixtures against the ledger, [SpotCount], into `reset-complete.json`).
  *
  * What it needs from the box for a real night: the state directory's `sold-epcs.txt`, `receive/received-stock.csv`,
  * `moves/placements.csv` and `stock/missing-epcs.txt` (copied from `/opt/m8trx/twin/.twin-state/` right before the run: the hourly
@@ -56,8 +60,8 @@ import kotlin.system.exitProcess
  * Env: `M8TRX_RESET_SITE` (dec-us-denver) · `M8TRX_RESET_DATE` (the first live store-day; default store-local today) ·
  * `M8TRX_RESET_OUT` (out/reset) · `M8TRX_RESET_OLD_DIRECTIVES` (the store's old directive export) · `M8TRX_STREAM_SOLD_LOG` (.twin-state/sold-epcs.txt, as the other ops steps; its parent is the state
  * dir) · `M8TRX_CHAIN_DIR` · pace (A16): `M8TRX_RESET_RECEIVE_EST_S` (50: one 50-EPC request, measured 1.0 s an EPC) ·
- * `M8TRX_RESET_RECEIVE_CHUNK` (50) · `M8TRX_RESET_MOVE_EVERY_S` (2) · `M8TRX_RESET_MOVE_CHUNK` (25) · `M8TRX_RESET_RECEIVE_LANES` (1, max 4) ·
- * live: `M8TRX_RESET_LIVE` (false) · `M8TRX_RESET_CONFIRM` (= slug) · `M8TRX_RESET_SPOTCOUNT_ACK` · `M8TRX_STORE_OPS_OWNER_FILE` /
+ * `M8TRX_RESET_RECEIVE_CHUNK` (50) · `M8TRX_RESET_MOVE_EVERY_S` (3.75) · `M8TRX_RESET_MOVE_CHUNK` (25) · `M8TRX_RESET_RECEIVE_LANES` (1, max 4) ·
+ * live: `M8TRX_RESET_LIVE` (false) · `M8TRX_RESET_CONFIRM` (= slug) · `M8TRX_RESET_MOVE_ALL` (true) · `M8TRX_STORE_OPS_OWNER_FILE` /
  * `M8TRX_OPS_DIR` (/opt/m8trx/twin-ops) · `M8TRX_RESET_HOLD_FILE` ($OPS/reset-HOLD, never the shared $OPS/HOLD) · `M8TRX_TWIN_SERVICE_BEARER` · `M8TRX_TWIN_BEARER` (read key,
  * for the one `/spatial/identity` read) · the webhook env of [LiveSender].
  */
@@ -68,6 +72,8 @@ data class ResetPacing(
     val receiveEstMs: Long = 50_000,
     /** Concurrent receive requests of a live run (1..4); the dry-run report's estimate uses it. */
     val receiveLanes: Int = 1,
+    /** `M8TRX_RESET_MOVE_ALL` (default true): units already in place also get an explicit move to their own cell or rack. */
+    val moveAll: Boolean = true,
     /** One movement batch every 3.75 s (server lane: the answer comes before the processing, 25 tags in 3.5 to 4 s keeps it under water). */
     val moveEveryMs: Long = 3_750,
     val receiveChunk: Int = 50,
@@ -176,6 +182,8 @@ object StoreDayReset {
         directive: JsonNode,
         pacing: ResetPacing,
         oldDirectives: List<PlanogramDirective> = emptyList(),
+        /** Sales-floor fixture code to zone id, from the keys export (the dry run's truth; a live run cross-checks it against /spatial/identity). */
+        zoneIds: Map<String, String> = emptyMap(),
     ): List<SendItem> {
         val day = forDate.toString().replace("-", "")
         val items = ArrayList<SendItem>()
@@ -190,10 +198,17 @@ object StoreDayReset {
             val id = "rst-$slug-$day-m-${SendItem.hash(m.dest, m.ean, m.epcs.joinToString(","))}"
             val mv = InventoryMovement(
                 externalMovementId = id,
-                toFixtureCode = if (m.toBack) null else m.dest,
-                // A15: a back-room destination is a fixture ZONE of the stockroom space, by to_zone_id (resolved from /spatial/identity at run
-                // time), never the space and never a fixture code
-                toZoneId = if (m.toBack) "${Placeholders.ZONE_PREFIX}${m.dest}" else null,
+                // EVERY move goes by to_zone_id, never to_fixture_code: the server resolves a fixture code only by an exact zone NAME (or a
+                // per-site mapping that Denver has one row of), so a code-addressed move is refused destination_unresolved while the webhook
+                // still answers 200. A floor fixture: its zone id from the keys export (a live run cross-checks it against /spatial/identity);
+                // a back-room rack: a placeholder resolved at run time (the keys export does not list the stockroom's racks). No occurred_at.
+                toFixtureCode = null,
+                toZoneId = if (m.toBack) {
+                    "${Placeholders.ZONE_PREFIX}${m.dest}"
+                } else {
+                    zoneIds[m.dest]
+                        ?: error("no zone id for fixture ${m.dest} in the keys export")
+                },
                 items = m.epcs.map { MovementItem(epc = it) },
             )
             items += SendItem(seq++, t, 1, "move", id, ConnectMappers.snake.valueToTree(mv), m.epcs)
@@ -269,12 +284,16 @@ object StoreDayReset {
         val floor = ledger.wall.filterValues { it.isNotEmpty() }.keys.sorted()
         val pick = floor.sortedBy { HistoryCsv.derive(seed, slug, "spot-count", it) }.take(k).sorted()
         return buildList {
-            add("OPERATOR STEP (not automated; the live run needs M8TRX_RESET_SPOTCOUNT_ACK recording that it was done):")
             add(
-                "count these ${pick.size} fixtures on the platform (read-only: the platform's stock per fixture, e.g. the thing_location read the stock drive makes), compared with the ledger:",
+                "PRE-check (live run, GATING): the ledger EPCs of these ${pick.size} fixtures (at most ${ExistenceCheck.MAX_EPCS} EPCs) " +
+                    "are read through POST /inventory/items/details in chunks of ${ExistenceCheck.CHUNK}; " +
+                    "MORE than 2% not in_stock with an itemId STOPS the run before any send " +
+                    "(a location mismatch is NOT a gate: the October put-aways were booked in placements.csv but never sent, and the reset's moves place the units).",
+            )
+            add(
+                "POST-check (live run, REPORT ONLY): 120 s after the last move the platform's location of the same fixtures is compared with the ledger (written into reset-complete.json):",
             )
             pick.forEach { add("  - $it: ledger ${ledger.byFixture[it]?.size ?: 0} units") }
-            add("rule: more than 2% of the sampled units disagreeing means do NOT run the night; the acknowledgment must say how many disagreed")
         }
     }
 
@@ -351,6 +370,9 @@ object StoreDayReset {
             "- placed on the floor (kept in place ${plan.stayedFloor}, moved to a cell ${plan.placedFloor - plan.stayedFloor}): ${plan.placedFloor}",
         )
         appendLine("- to the back room (already there ${plan.stayedBackroom}, moved ${plan.toBackroom - plan.stayedBackroom}): ${plan.toBackroom}")
+        appendLine(
+            "- move-all (M8TRX_RESET_MOVE_ALL, ${if (pacing.moveAll) "ON" else "off"}): ${if (pacing.moveAll) "every on-hand unit has one explicit move (units already in place move to their own cell or rack)" else "units already in place get no move"}",
+        )
         appendLine("- unplaceable (EAN not in the store's catalog, or EPC does not decode; left alone): ${plan.unplaceable.size}")
         val sum = plan.placedFloor + plan.toBackroom + plan.unplaceable.size
         appendLine("- conservation: ${plan.ledgerUnits} = ${plan.placedFloor} + ${plan.toBackroom} + ${plan.unplaceable.size} -> $sum")
@@ -410,9 +432,16 @@ object StoreDayReset {
         )
         appendLine("- first item: ${items.first().let { "${it.kind} ${it.extId} at +${it.dueMs / 1000.0} s, ${it.epcs.size} units" }}")
         appendLine("- last item: ${items.last().let { "${it.kind} ${it.extId} at +${it.dueMs / 1000.0} s" }}")
-        val start = Instant.ofEpochMilli(earliestStartMs(items, midnightMs)).atZone(zone)
+        val midnight = Instant.ofEpochMilli(midnightMs).atZone(zone)
+        val passed = if (Instant.now().toEpochMilli() >=
+            midnightMs
+        ) {
+            "has already passed"
+        } else {
+            "has NOT passed yet: the run waits for it after the last move"
+        }
         appendLine(
-            "- ordering (A14): old directive end(s) and then the new plan are gated to AFTER $slug's local midnight of $forDate; for a single night the run starts no earlier than $start so those items fall after it",
+            "- ordering (A14): the old directive end(s) and then the new plan go LAST, after every receive and move, and not before $slug's local midnight of $forDate ($midnight), which $passed; the run itself may start at any time",
         )
         appendLine(
             "- idempotent ids: receive `rst-<slug>-<yyyymmdd>-r-<hash of its EPCs>`, move `...-m-<hash of dest, ean, EPCs>`, old end `...-end-<old id>`, new plan `${items.last().extId}`; stable across reruns",
@@ -448,7 +477,13 @@ object StoreDayReset {
             "- A3/A14: a new pushed plan's targets may stay without a product until the directive is evaluated: prove on one fixture first (push a one-target plan, read the product back, run a count)",
         )
         appendLine(
-            "- A15: back-room moves go by `to_zone_id` to the rack's fixture zone (Backroom Fixture 1 to 8, Receiving Dock), resolved from /spatial/identity at run time; never a space id, never a fixture code",
+            "- EVERY move goes by `to_zone_id`, never `to_fixture_code` (the server resolves a fixture code only by an exact zone NAME or a " +
+                "per-site mapping, Denver has one row: almost every code-addressed move is refused destination_unresolved while the webhook " +
+                "still answers 200); no occurred_at. " +
+                "Floor fixtures: the zone ids in this schedule come from the KEYS EXPORT (this dry run reads no network); a live run " +
+                "cross-checks every one against /spatial/identity (zone code, else name) and refuses, naming the code, " +
+                "if one is missing or differs. " +
+                "Back-room racks (A15): `@backroom_zone:BR-nn` placeholders, resolved from /spatial/identity at run time (the keys export does not list them); never a space id",
         )
         appendLine(
             "- A16: the night is not before the link limit (§ 12) and the own-site fix are deployed; announced to the Backend/Web and Android lanes with a start time; B/W reads the server in the first hour",
@@ -457,10 +492,10 @@ object StoreDayReset {
             "- A4: receiving uses `M8TRX_TWIN_SERVICE_BEARER` (inventory:create, 300 requests a minute); `M8TRX_TWIN_BEARER` is the Denver read key and gets 403",
         )
         appendLine(
-            "- the hourly pass must stop sending $slug before the first live day (ownership file, see ops/INSTALL.md); two writers must never run together",
+            "- two writers must never run together: the box's hourly pass ignores the owner file, so the live run is started UNDER its flock (/opt/m8trx/twin-ops/lock); the owner file must say `$slug,storeday` for the run and `$slug,hourly` after reset-complete.json (ops/INSTALL.md)",
         )
         appendLine()
-        appendLine("## Spot count (platform half of step 1)")
+        appendLine("## Spot count: existence PRE-check (gating) and location POST-check (report)")
         spotCountDesign(slug, inputs.ledger, HistoryCsv.derive(1L, slug, forDate)).forEach { appendLine(it) }
         appendLine()
         if (plan.unplaceable.isNotEmpty()) {
@@ -494,11 +529,12 @@ object StoreDayReset {
         val rackDefault = model.stockPlan.filter { it.kind == "backroom" }.minOfOrNull { it.zone } ?: "BR-01"
         val plan = ResetPlanner.plan(
             slug, inputs.ledger.byFixture, period.required, period.homeLevel, model.backroomTarget, model.homeRack,
-            model.demand.keys, inputs.reserved, rackDefault, pacing.moveChunk,
+            model.demand.keys, inputs.reserved, rackDefault, pacing.moveChunk, pacing.moveAll,
         )
+        val zoneIds = keys.store(slug).zones.associate { it.code to it.zoneId }
         val directive = sim.periods.directiveJson(period)
         val old = loadOldDirectives(oldFile)
-        val items = schedule(slug, forDate, plan, directive, pacing, old)
+        val items = schedule(slug, forDate, plan, directive, pacing, old, zoneIds)
         return Triple(
             inputs,
             Built(
@@ -560,6 +596,7 @@ fun main() {
         moveEveryMs = env("M8TRX_RESET_MOVE_EVERY_S")?.let { (it.toDouble() * 1000).toLong() } ?: d.moveEveryMs,
         receiveChunk = env("M8TRX_RESET_RECEIVE_CHUNK")?.toInt() ?: d.receiveChunk,
         moveChunk = env("M8TRX_RESET_MOVE_CHUNK")?.toInt() ?: d.moveChunk,
+        moveAll = env("M8TRX_RESET_MOVE_ALL")?.toBooleanStrictOrNull() ?: d.moveAll,
         receiveLanes = env("M8TRX_RESET_RECEIVE_LANES")?.toIntOrNull() ?: if (env("M8TRX_RESET_RECEIVE_LANES") == null) {
             d.receiveLanes
         } else {

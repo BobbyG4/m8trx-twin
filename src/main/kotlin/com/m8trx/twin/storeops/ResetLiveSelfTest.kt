@@ -4,6 +4,7 @@ import com.m8trx.twin.connect.ReceiveStock
 import com.m8trx.twin.connect.RestockMoves
 import com.m8trx.twin.connect.Sgtin96
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.ItemDetail
 import com.m8trx.twin.connect.model.bearer.SpatialIdentityResponse
 import com.m8trx.twin.ops.StoreStock
 import java.nio.file.Files
@@ -174,6 +175,11 @@ fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
     "reset live: a receive with errors[] stops the run, prints the entries, and is not marked accepted" to ::liveReceiveErrors,
     "reset live: internal_error tags are re-sent in a retry request (different body), moves wait for them; limits stop the night" to ::liveInternal,
     "reset live: a timeout / 504 on a receive waits 60 s before the same request is re-sent" to ::liveTimeout,
+    "reset live: every move body is to_zone_id (none to_fixture_code), move-all gives every on-hand unit a move, zone ids cross-checked" to
+        ::liveZoneMoves,
+    "reset live: existence pre-check (items/details chunks <= 200, > 2% not in_stock stops, <= 2000 EPCs)" to ::liveExistence,
+    "reset live: the post-check runs once, after every receive and move and 120 s after the last move, before the directives; it never gates" to
+        ::livePostCheck,
     "reset live: lowering the lanes 4 -> 2 with 4 in flight starts nothing new until in flight is below 2 (claim under the lock)" to ::liveLanesDrop,
     "reset live: each internal_error retry round sends a different body (rotated tags)" to ::liveRetryBodies,
     "reset live: the receive lane count can change during the run (file), is clamped to 4, logged; a status line is logged" to ::liveLanesStatus,
@@ -443,6 +449,147 @@ private fun liveRetryBodies() {
     check(s.order.contains("${t.extId}-retry2")) { "round 2 was sent" }
 }
 
+private fun liveZoneMoves() {
+    val chain = Path.of("reference/data/chain")
+    val state = RT.resolve("zone-moves-state")
+    Files.createDirectories(state)
+    val day = LocalDate.parse("2026-11-23")
+    val (inputs, b, _) = StoreDayReset.build(SLUG, day, chain, state, ResetPacing())
+    val moves = b.items.filter { it.kind == "move" }
+    check(moves.isNotEmpty() && moves.all { it.payload.has("to_zone_id") && !it.payload.has("to_fixture_code") && !it.payload.has("occurred_at") }) {
+        "every move body has to_zone_id, none has to_fixture_code or occurred_at"
+    }
+    check(
+        moves.map {
+            it.payload.toString()
+        }.toSet().size == moves.size && moves.map { it.extId }.toSet().size == moves.size,
+    ) { "bodies are distinct" }
+    val keys = com.m8trx.twin.history.ChainKeys.load(chain.resolve(com.m8trx.twin.history.ChainKeys.DEFAULT_PATH.fileName)).store(SLUG)
+    val zoneIds = keys.zones.map { it.zoneId }.toSet()
+    val floor = moves.map { it.payload.path("to_zone_id").asText() }.filter { !it.startsWith(Placeholders.ZONE_PREFIX) }
+    check(floor.isNotEmpty() && floor.all { it in zoneIds }) { "floor to_zone_id values are the keys export's zone ids" }
+    check(
+        moves.map {
+            it.payload.path("to_zone_id").asText()
+        }.any { it.startsWith(Placeholders.ZONE_PREFIX) },
+    ) { "back-room racks stay placeholders for the live resolve" }
+    // move-all: every on-hand unit has an explicit move
+    val onHand = inputs.ledger.byFixture.values.flatten().toSet()
+    val moved = moves.flatMap { it.epcs }.toSet()
+    check(onHand.all { it in moved }) { "every on-hand unit has a move: ${onHand.count { it !in moved }} without" }
+    val (_, bNo, _) = StoreDayReset.build(SLUG, day, chain, state, ResetPacing(moveAll = false))
+    val noMoves = bNo.items.count { it.kind == "move" }
+    check(moves.size > noMoves) { "move-all adds batches: ${moves.size} vs $noMoves without" }
+    // the ledger books a floor move at its fixture code
+    val code = keys.zones.associate { it.zoneId to it.code }
+    val sample = moves.first { !it.payload.path("to_zone_id").asText().startsWith(Placeholders.ZONE_PREFIX) }
+    check(ResetBooks.destOf(sample.payload, code) == code.getValue(sample.payload.path("to_zone_id").asText())) { "placements book the fixture code" }
+    // the cross-check against /spatial/identity: missing code, differing id, truncated, no read
+    val needed = FixtureZones.needed(moves, keys.zones.associate { it.code to FixtureZones.Keyed(it.zoneId, it.name) })
+    fun identity(zones: List<Pair<String, String>>, truncated: Boolean = false): SpatialIdentityResponse = ConnectMappers.camel.readValue(
+        "{\"truncated\":$truncated,\"sites\":[{\"site_id\":\"S\",\"spaces\":[{\"space_id\":\"${keys.salesFloorSpaceId}\",\"zones\":[" +
+            zones.joinToString(",") { "{\"zone_id\":\"${it.first}\",\"code\":\"${it.second}\"}" } + "]}]}]}",
+        SpatialIdentityResponse::class.java,
+    )
+    val good = needed.map { (c, k) -> k.zoneId to c }
+    check(FixtureZones.problems(identity(good), keys.salesFloorSpaceId, needed).isEmpty()) { "every id matches: no problem" }
+    val dropped = good.drop(1)
+    check(FixtureZones.problems(identity(dropped), keys.salesFloorSpaceId, needed).single().contains(good[0].second)) { "a missing code is named" }
+    val swapped = listOf("other-id" to good[0].second) + good.drop(1)
+    check(
+        FixtureZones.problems(identity(swapped), keys.salesFloorSpaceId, needed).single().let {
+            it.contains(good[0].second) &&
+                it.contains("other-id")
+        },
+    ) {
+        "a differing id is named with the code"
+    }
+    check(
+        FixtureZones.problems(identity(good, truncated = true), keys.salesFloorSpaceId, needed).isNotEmpty() &&
+            FixtureZones.problems(null, "", needed).isNotEmpty(),
+    ) {
+        "truncated or unreadable identity refuses"
+    }
+}
+
+private fun liveExistence() {
+    val ledger = StoreStock(SLUG, mapOf("A" to (1..300).map { "a$it" }, "B" to (1..300).map { "b$it" }))
+    val chunks = ArrayList<Int>()
+    fun reader(missing: Set<String>, nulls: Boolean): (List<String>) -> List<ItemDetail>? = { chunk ->
+        chunks += chunk.size
+        chunk.map { e ->
+            if (e in missing) {
+                if (nulls) ItemDetail(e) else ItemDetail(e, "id", "sku", "sold")
+            } else {
+                ItemDetail(e, "id-$e", "sku", "in_stock")
+            }
+        }
+    }
+    val epcs = ExistenceCheck.sample(ledger, listOf("A", "B"), 1L, SLUG)
+    check(epcs.size == 600) { "all 600 sampled" }
+    val ok = ExistenceCheck.evaluate(epcs, reader((1..12).map { "a$it" }.toSet(), true))
+    check(
+        !ok.stop && ok.missing == 12 && chunks.all {
+            it <= 200
+        } && chunks.size == 3,
+    ) { "2% exactly is ok, chunks of <= 200: ${ok.summary()} $chunks" }
+    val bad = ExistenceCheck.evaluate(epcs, reader((1..13).map { "a$it" }.toSet(), true))
+    check(bad.stop && bad.examples.isNotEmpty()) { "13 of 600 (> 2%) STOPS: ${bad.summary()}" }
+    check(ExistenceCheck.evaluate(epcs, reader((1..13).map { "b$it" }.toSet(), false)).stop) { "a unit that is not in_stock counts as missing" }
+    check(ExistenceCheck.evaluate(listOf("x"), { emptyList() }).missing == 1) { "a unit with no row at all counts as missing" }
+    check(runCatching { ExistenceCheck.evaluate(epcs) { null } }.isFailure) { "a failed read is an error (the run refuses)" }
+    val big = StoreStock(SLUG, mapOf("A" to (1..5000).map { "a$it" }))
+    check(ExistenceCheck.sample(big, listOf("A"), 1L, SLUG).size == 2000) { "at most 2000 EPCs" }
+}
+
+private fun livePostCheck() {
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val calls = ArrayList<Pair<Int, Long>>()
+    val check = object : PostMovesCheck {
+        override val waitMs = 120_000L
+
+        override fun run(): String {
+            calls += s.order.size to c.now()
+            s.order += "POSTCHECK"
+            return "ok"
+        }
+    }
+    val lastMove = AtomicLong(0)
+    val r = ResetLiveRunner(
+        sched.items,
+        object : OpsSender by s {
+            override fun send(item: SendItem): Outcome = s.send(item).also { if (item.kind == "move") lastMove.set(c.now()) }
+        },
+        RetryPolicy(),
+        SentLedger(null),
+        null,
+        params(2, 0),
+        { false },
+        c,
+        postMovesCheck = check,
+    ).run()
+    check(r.end == ResetLiveRunner.End.DONE && calls.size == 1) { "done, post-check once: ${r.end} ${calls.size}" }
+    val moveAndReceive = sched.items.filter { it.kind != "planogram" }.map { it.extId }.toSet()
+    val at = s.order.indexOf("POSTCHECK")
+    check(s.order.take(at).containsAll(moveAndReceive)) { "after every receive and move" }
+    check(s.order.drop(at + 1).toSet() == setOf("rst-t-end-OLD", "PLNW-t")) { "before the directives" }
+    check(calls[0].second - lastMove.get() >= 120_000) { "120 s after the last move: ${calls[0].second - lastMove.get()} ms" }
+    // a post-check that throws is only reported
+    val s2 = FakeSender(sched, VirtualClock(0))
+    val c2 = VirtualClock(0)
+    val r2 = ResetLiveRunner(
+        sched.items, FakeSender(sched, c2), RetryPolicy(), SentLedger(null), null, params(1, 0), { false }, c2,
+        postMovesCheck = object : PostMovesCheck {
+            override val waitMs = 0L
+
+            override fun run(): String = error("platform read failed")
+        },
+    ).run()
+    check(r2.end == ResetLiveRunner.End.DONE && s2.violations.isEmpty()) { "a failing post-check never gates the run: ${r2.end}" }
+}
+
 private fun liveLanesStatus() {
     val sched = Schedule()
     val c = VirtualClock(0)
@@ -518,7 +665,6 @@ private fun liveGate() {
     )
     val ok = mapOf(
         "M8TRX_RESET_CONFIRM" to SLUG,
-        "M8TRX_RESET_SPOTCOUNT_ACK" to "counted 20 fixtures, 0 disagree",
         "M8TRX_TWIN_SERVICE_BEARER" to "x",
         "M8TRX_RESET_RECEIVE_LANES" to "4",
     )
@@ -531,10 +677,6 @@ private fun liveGate() {
     check(v(ok, ownerFile = hourly).reasons.any { it.contains("hourly pass") }) { "owner hourly refused" }
     check(v(ok, ownerFile = d.resolve("nope.csv")).refused) { "no owner file refused" }
     check(v(ok, ends = 0).reasons.any { it.contains("old directive") }) { "no old directive refused" }
-    check(v(ok - "M8TRX_RESET_SPOTCOUNT_ACK").reasons.any { it.contains("spot count") }) { "no spot count path refused" }
-    check(!v(ok - "M8TRX_RESET_SPOTCOUNT_ACK" + ("M8TRX_OPS_PASSWORD" to "p")).refused) {
-        "the login for the platform read satisfies the spot count gate"
-    }
     check(v(ok - "M8TRX_TWIN_SERVICE_BEARER").refused) { "no receive bearer refused" }
     check(v(ok + ("M8TRX_RESET_RECEIVE_LANES" to "5")).refused && !v(ok + ("M8TRX_RESET_RECEIVE_LANES" to "1")).refused) { "lanes 1..4" }
     Files.writeString(probe, "{\"passed\":false}")

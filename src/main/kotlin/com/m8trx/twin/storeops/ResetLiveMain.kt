@@ -3,6 +3,7 @@ package com.m8trx.twin.storeops
 import com.fasterxml.jackson.databind.JsonNode
 import com.m8trx.twin.connect.ReceiveStock
 import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.history.ChainKeys
 import com.m8trx.twin.history.HistoryCsv
 import com.m8trx.twin.ops.OpsConfig
 import com.m8trx.twin.ops.StockDrive
@@ -63,7 +64,9 @@ object ResetLiveMain {
             log.error("REFUSING: no stockroom space id for {} in {}", slug, stateDir.resolve("receive/stockroom-spaces.csv"))
             return 3
         }
-        val zones = BackroomZones.resolve(slug, space, stateDir)
+        // ONE read of /spatial/identity serves both: the back-room rack zone ids and the cross-check of the floor fixture zone ids
+        val identity = BackroomZones.fetchIdentity(slug)
+        val zones = BackroomZones.resolve(identity, space, BackroomZones.readOverride(BackroomZones.overrideFile(stateDir, slug)))
         val missing = BackroomZones.missing(items, zones)
         if (missing.isNotEmpty()) {
             log.error(
@@ -74,57 +77,51 @@ object ResetLiveMain {
             )
             return 3
         }
+        val keyStore = ChainKeys.load(chainDir.resolve(ChainKeys.DEFAULT_PATH.fileName)).store(slug)
+        val keyed = keyStore.zones.associate { it.code to FixtureZones.Keyed(it.zoneId, it.name) }
+        val zoneCode = keyStore.zones.associate { it.zoneId to it.code }
+        val zoneProblems = FixtureZones.problems(identity, keyStore.salesFloorSpaceId, FixtureZones.needed(items, keyed))
+        if (zoneProblems.isNotEmpty()) {
+            zoneProblems.forEach { log.error("REFUSING: {}", it) }
+            return 3
+        }
+        log.info(
+            "fixture zone ids: every floor move's to_zone_id matches /spatial/identity (code or name); back-room racks resolved: {}",
+            zones.keys.sorted(),
+        )
 
         val spotNote: String
         if (fresh != null) {
-            val ack = env("M8TRX_RESET_SPOTCOUNT_ACK")
-            // With credentials the platform read ALWAYS runs; the acknowledgment applies only when the read cannot run (no password, or it errors).
-            val hasCreds = env("M8TRX_OPS_PASSWORD") != null || env("M8TRX_AUDIT_PASSWORD") != null
-            var readError: String? = null
-            val verdict = if (!hasCreds) {
-                null
-            } else {
-                try {
-                    val ledger = fresh.first.ledger
-                    val sample = SpotCount.sample(slug, ledger, HistoryCsv.derive(1L, slug, forDate))
-                    SpotCount.evaluate(ledger, StockDrive(OpsConfig.fromEnv("M8TRX_RESET")).platformStockFor(slug), sample)
-                } catch (e: Exception) {
-                    readError = e.message ?: e.javaClass.simpleName
-                    null
-                }
+            // PRE-check, gating: do the sampled ledger units exist (in_stock with an itemId) on the platform? Not a location comparison.
+            val ledger = fresh.first.ledger
+            val fixtures = SpotCount.sample(slug, ledger, HistoryCsv.derive(1L, slug, forDate))
+            Files.createDirectories(out)
+            Files.writeString(out.resolve("spot-fixtures.txt"), fixtures.joinToString("\n") + "\n")
+            val epcs = ExistenceCheck.sample(ledger, fixtures, HistoryCsv.derive(1L, slug, forDate), slug)
+            val verdict = try {
+                ExistenceCheck.evaluate(epcs, ExistenceCheck.liveDetails())
+            } catch (e: Exception) {
+                log.error("REFUSING: the existence pre-check's items/details read failed: {}", e.message)
+                return 3
             }
-            if (verdict != null) {
-                verdict.perFixture.forEach { log.info("{}", it) }
-                log.info("spot count path: PLATFORM READ. {}", verdict.summary())
-                if (verdict.stop) {
-                    log.error("REFUSING: {}", verdict.summary())
-                    return 3
-                }
+            log.info("{} ({} fixtures)", verdict.summary(), fixtures.size)
+            verdict.examples.forEach { log.info("  not found: {}", it) }
+            if (verdict.stop) {
+                log.error("REFUSING: {}", verdict.summary())
+                return 3
             }
-            spotNote = when {
-                verdict != null -> "spot count: platform read. " + verdict.summary() + "\n" + verdict.perFixture.joinToString("\n")
-
-                ack != null -> {
-                    log.warn(
-                        "spot count path: OPERATOR ACKNOWLEDGMENT (platform read {}): {}",
-                        readError ?: "not available, no M8TRX_OPS_PASSWORD",
-                        ack,
-                    )
-                    "spot count: operator acknowledgment (platform read ${readError ?: "not available"}): $ack"
-                }
-
-                else -> {
-                    log.error("REFUSING: the spot count's platform read failed ({}) and there is no M8TRX_RESET_SPOTCOUNT_ACK", readError)
-                    return 3
-                }
-            }
+            spotNote = verdict.summary()
             StoreDayReset.write(out, slug, forDate, fresh.first, fresh.second, pacing)
             val zone = StoreDayReset.zoneOf(slug)
             Files.writeString(
                 out.resolve("report.md"),
                 "\n## LIVE RUN (started ${Instant.now()})\n" +
-                    "- receive lanes: ${pacing.receiveLanes}; move pace ${pacing.moveSpacingMs / 1000.0} s a batch\n" +
-                    "- $spotNote\n- the directive steps wait for ${forDate.atStartOfDay(zone).toInstant()} (local midnight of $forDate)\n",
+                    "- receive lanes: ${pacing.receiveLanes}; move pace ${pacing.moveSpacingMs / 1000.0} s a batch; every move by to_zone_id, " +
+                    "floor zone ids cross-checked against /spatial/identity, racks resolved from it\n" +
+                    "- PRE-check (gating): $spotNote\n" +
+                    "- the directive steps go after every move (store local midnight of $forDate: ${forDate.atStartOfDay(
+                        zone,
+                    ).toInstant()})\n",
                 StandardOpenOption.APPEND,
             )
             ResetLivePlan.writeAtomic(
@@ -132,7 +129,7 @@ object ResetLiveMain {
                 "{\"slug\":\"$slug\",\"date\":\"$forDate\",\"started\":\"${Instant.now()}\",\"items\":${items.size}}\n",
             )
         } else {
-            spotNote = "resumed: spot count not repeated"
+            spotNote = "resumed: existence pre-check not repeated"
         }
         val runLog = out.resolve("live-run.log")
         fun event(s: String) {
@@ -156,18 +153,42 @@ object ResetLiveMain {
             midnightMs = forDate.atStartOfDay(zoneId).toInstant().toEpochMilli(),
             holdDirectives = env("M8TRX_RESET_HOLD_DIRECTIVES")?.toBoolean() == true,
         )
+        // POST-check, report only: after the last move (+ 120 s: moves are processed after the answer) compare the platform's location of the
+        // same sampled fixtures with the ledger the reset just wrote; the lines and the verdict go to the log and into reset-complete.json
+        val postLines = java.util.concurrent.atomic.AtomicReference<List<String>>(emptyList())
+        val fixturesFile = out.resolve("spot-fixtures.txt")
+        val post = object : PostMovesCheck {
+            override val waitMs: Long = 120_000
+
+            override fun run(): String {
+                if (env("M8TRX_OPS_PASSWORD") == null && env("M8TRX_AUDIT_PASSWORD") == null) {
+                    return "skipped: no M8TRX_OPS_PASSWORD for the store-manager read".also { postLines.set(listOf(it)) }
+                }
+                val ledgerNow = com.m8trx.twin.ops.StoreStock.load(chainDir, stateDir, slug)
+                val fixtures = if (Files.exists(fixturesFile)) {
+                    Files.readAllLines(fixturesFile).filter { it.isNotBlank() }
+                } else {
+                    SpotCount.sample(slug, ledgerNow, HistoryCsv.derive(1L, slug, forDate))
+                }
+                val v = SpotCount.evaluate(ledgerNow, StockDrive(OpsConfig.fromEnv("M8TRX_RESET")).platformStockFor(slug), fixtures)
+                v.perFixture.forEach { event(it) }
+                postLines.set(listOf(v.summary()) + v.perFixture)
+                return v.summary()
+            }
+        }
         val result = ResetLiveRunner(
             items,
             LiveSender.create(true, slug, chainDir, stateDir, zones),
             RetryPolicy(),
             SentLedger(ResetLivePlan.sentLedgerFile(out)),
-            ResetBooks(stateDir, slug, forDate) { ean -> model.homeRack[ean] ?: rackDefault },
+            ResetBooks(stateDir, slug, forDate, zoneCode) { ean -> model.homeRack[ean] ?: rackDefault },
             params,
             { Files.exists(holdFile) },
             SystemResetClock,
             onEvent = ::event,
             onProgress = { p -> ResetLivePlan.writeAtomic(out.resolve("progress.json"), ResetLivePlan.progressJson(p)) },
             lanesNow = LanesSource(Path.of(ops).resolve("reset-lanes"), pacing.receiveLanes)::current,
+            postMovesCheck = post,
         ).run()
         event(
             "LIVE RUN end: ${result.end} accepted=${result.accepted} skipped=${result.skippedByLedger} alerts=${result.alerts.size} " +
@@ -176,10 +197,19 @@ object ResetLiveMain {
         return when (result.end) {
             ResetLiveRunner.End.DONE -> {
                 val directivesNote = if (params.holdDirectives) "held" else "sent"
+                val done = ConnectMappers.snake.createObjectNode()
+                done.put("slug", slug)
+                done.put("date", forDate.toString())
+                done.put("finished", Instant.now().toString())
+                done.put("directives", directivesNote)
+                done.put("post_state", out.resolve("state/post-reset").toString())
+                done.put("pre_check", spotNote)
+                val pl = postLines.get()
+                done.put("post_check", pl.firstOrNull() ?: "not run")
+                done.putArray("post_check_fixtures").also { a -> pl.drop(1).forEach { a.add(it) } }
                 ResetLivePlan.writeAtomic(
                     out.resolve("reset-complete.json"),
-                    "{\"slug\":\"$slug\",\"date\":\"$forDate\",\"finished\":\"${Instant.now()}\"," +
-                        "\"directives\":\"$directivesNote\",\"post_state\":\"${out.resolve("state/post-reset")}\"}\n",
+                    ConnectMappers.snake.writerWithDefaultPrettyPrinter().writeValueAsString(done) + "\n",
                 )
                 event("DONE. The store-day continues from ${out.resolve("state/post-reset")} (M8TRX_STORE_OPS_STATE).")
                 0

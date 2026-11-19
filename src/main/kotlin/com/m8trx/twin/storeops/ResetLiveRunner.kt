@@ -44,6 +44,8 @@ class ResetLiveRunner(
     private val onEvent: (String) -> Unit = {},
     private val onProgress: (ResetProgress) -> Unit = {},
     private val lanesNow: () -> Int = { params.receiveLanes },
+    /** Run once, after every receive and move is accepted and [PostMovesCheck.waitMs] after the last move, before the directive steps. Report only. */
+    private val postMovesCheck: PostMovesCheck? = null,
 ) {
     enum class End { DONE, HOLD, HALTED }
 
@@ -78,6 +80,9 @@ class ResetLiveRunner(
     private var healthChecks = 0
     private var retryRequests = 0
     private var movesAcceptedNow = 0
+
+    @Volatile
+    private var lastMoveAt = clock.now()
     private var tagsCounted = 0
     private var tagsCreated = 0
     private var lastProgressAt = Long.MIN_VALUE / 2
@@ -118,6 +123,17 @@ class ResetLiveRunner(
         monitor.start()
         threads.forEach { it.start() }
         threads.forEach { it.join() }
+        if (!stopped && postMovesCheck != null) {
+            // moves are processed after the server answers them: wait before reading the platform; the check is a REPORT, never a gate
+            nap(postMovesCheck.waitMs - (clock.now() - lastMoveAt))
+            if (!stopped) {
+                try {
+                    event("post-check after the moves: ${postMovesCheck.run()}")
+                } catch (e: Exception) {
+                    event("post-check after the moves FAILED (report only, the run goes on): ${e.javaClass.simpleName}: ${e.message}")
+                }
+            }
+        }
         if (!stopped) {
             if (params.holdDirectives) {
                 event(
@@ -459,7 +475,10 @@ class ResetLiveRunner(
 
     private fun accept(item: SendItem) {
         synchronized(lock) {
-            if (item.kind == "move") movesAcceptedNow++
+            if (item.kind == "move") {
+                movesAcceptedNow++
+                lastMoveAt = clock.now()
+            }
             books?.record(item)
             ledger.markSent(item)
             accepted++
@@ -539,6 +558,14 @@ class ResetLiveRunner(
         const val MAX_INTERNAL_IN_REQUEST = 10
         const val MAX_RETRY_DEPTH = 5
     }
+}
+
+/** The platform location comparison after the moves ([ResetLiveRunner.run]): [run] returns the summary line; it never gates. */
+interface PostMovesCheck {
+    /** How long after the last move before [run] reads the platform (moves are processed after the answer). */
+    val waitMs: Long
+
+    fun run(): String
 }
 
 /** Cross-check of a receive answer against its request: every error tag is in the request, and received = tags sent - distinct error tags. */
