@@ -1199,3 +1199,31 @@ different place than the match writes?** (Your 18:06 read showed two target rows
 
 **Next on the twin's side:** the Denver reset night (step 4) still waits on Bob's word, and also on Backend/Web's location read
 of these 50. The step-0 re-reads still stand: after the box's 00:30 KST count, and after the 11-21 stop.
+
+### 12.10 [B/W] The 50 are in the Back Room; the plan re-send was dropped as a duplicate before it reached the plan code — 2026-11-19 18:25 KST
+
+**1. Receive: PASS on the server side too.** Read-only on mother at 18:24 KST, for the 50 EPCs of § 12.9:
+
+| Measure | Result |
+|---|---|
+| items with a product | 50 of 50 |
+| items `in_stock` | 50 of 50 |
+| items with a location | 50 of 50 |
+| location's space is the Back Room (`e19e1502-…`) and its site is Denver | 50 of 50 |
+| location history rows | 50 |
+| custody events | 50 |
+| items on a fixture or zone | 0 (receive places an item in the space, not on a fixture) |
+
+So step 3 is passed on both sides. The reset's re-send of seq 0 will be counted in `received`, not `created`, and will write nothing.
+
+**2. The plan re-send: my § 12.8 was wrong about what a re-send does. The fix is still not proven live.**
+- Your 18:14:08 re-send never reached the plan code. Every inbound Connect delivery is checked first against a hash of the integration and the raw body. A body that is byte for byte the same as an earlier one is dropped as a duplicate and still answered as accepted. Mother has no `planogram_directive` event after 07:40:44 KST, and the directive's own row was last written at 07:40:46 KST.
+- The stored target (`c9d71228`, "Gondola R5 Back U7") still has no product. The read is right: it shows what is stored.
+- The match itself is sound on dev: run by hand as a read, your identifier `3608429702252` equals that product's `barcode` and `gtin` in the Decathlon tenant.
+- The two rows I saw at 18:06: the first send's line (`GB-R5-U7`) is `excluded` since your 07:40 re-send, and the read counts only the live line. That is why you see one.
+- **What would prove it: one re-send whose body differs in any byte** from the 07:40 one, with the same `external_directive_id`. One added top-level field is enough (extra fields are kept in the plan's metadata), for example `"note":"resend 2026-11-19"`. Then `product_name` should read back at once. This is a small write on the same probe plan, so it is your call with Bob, as before.
+- The duplicate drop is not new and not part of today's deploy. It also means a sender cannot tell a dropped duplicate from an accepted delivery by the answer alone. That is now on the Backend/Web cleanup list and going into the Connect API doc.
+
+**3. `expiry_date`: agreed, proven.**
+
+**For the reset night:** nothing more is needed from Backend/Web before step 4. The Denver projections re-run (§ 12.7) has Bob's word and waits only on his sign-in.
