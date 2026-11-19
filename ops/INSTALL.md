@@ -107,3 +107,88 @@ for a store the file still gives to `hourly`, and `store-ops start` re-checks be
 day, what it would send), `./gradlew storeDayGapCheck` (the gap ledger's planned checks), `./gradlew storeOpsSelfTest`.
 For a real reset night the reset needs the box's `.twin-state` (`sold-epcs.txt`, `receive/received-stock.csv`, `moves/placements.csv`,
 `stock/missing-epcs.txt`) copied right before the run.
+
+---
+
+# Denver reset night: LIVE run-card (`storeDayReset`, built 2026-11-19)
+
+Run by hand on the box as `m8trx`, from `/opt/m8trx/twin` on the merged branch. Nothing here is installed as a service. The JVM does
+the whole night in one process; the HOLD file stops it, the sent-ledger resumes it.
+
+## 0. Before you start (all must be true; the JVM refuses, exit 3, if a gate is not met)
+
+| Gate | How to satisfy it |
+|---|---|
+| owner = `storeday` | `/opt/m8trx/twin-ops/store-ops-owner.csv` has `dec-us-denver,storeday` AND the hourly pass has actually stopped writing Denver (see "The one owner file" above) |
+| receive probe passed | `install -D -m 644 ops/reset-probe-result.example.json /opt/m8trx/twin/.twin-state/reset/probe-result-dec-us-denver.json` (content: passed=true, `at` 2026-11-19T09:13:05Z, request id `rst-dec-us-denver-20261120-r-a39ac9b48b`, received 50 created 50 errors [], 50/50 sku + in_stock, server read 50/50 in the Back Room; every `checks` value must be true) |
+| old directive | save the store's `/compliance/state` JSON (`cs-PLN-dec-us-denver-....json`), then `M8TRX_RESET_COMPLIANCE_JSON=<that file> M8TRX_STREAM_SOLD_LOG=/opt/m8trx/twin/.twin-state/sold-epcs.txt ./gradlew storeDayResetOldDirective` writes `.twin-state/reset/old-directive-dec-us-denver.json` (id = `directive_ref`, targets with the zone NAME as `raw_fixture_code`) |
+| spot count | the tool reads the platform itself (`StoreStock.fromPlatform`, Hasura as the store manager; needs `M8TRX_OPS_PASSWORD`) for the same 20 fixtures the report lists, and STOPS before any send if more than 2% of the sampled units disagree. Fallback if the read cannot run: count by hand and set `M8TRX_RESET_SPOTCOUNT_ACK="<who, which fixtures, how many disagreed>"` (recorded in report.md and live-run.log) |
+| keys | `M8TRX_TWIN_SERVICE_BEARER` (receive, inventory:create), `M8TRX_TWIN_BEARER` (read key: the one `/spatial/identity` read for the stockroom rack zone ids), `M8TRX_TWIN_WEBHOOK_KEY` + `M8TRX_TENANT_ID` + `M8TRX_CONNECT_INTEGRATION_SLUG` (moves and directives), all from the env file, never typed into a repo file |
+| rack zone ids | resolved from `/spatial/identity` (zone code `BR-nn`, else name "Backroom Fixture n"). If a rack is not found the JVM refuses and names it; write `BR-nn,<zone id>` lines in `.twin-state/reset/backroom-zones-dec-us-denver.csv` (wins over the read) |
+
+## 1. Plan first (dry run, sends nothing), read the report
+
+```
+cd /opt/m8trx/twin
+export M8TRX_STREAM_SOLD_LOG=/opt/m8trx/twin/.twin-state/sold-epcs.txt   # the state dir is its parent
+export M8TRX_RESET_DATE=2026-11-20 M8TRX_RESET_OUT=/opt/m8trx/twin/out/reset
+./gradlew storeDayReset --offline        # report: <out>/dec-us-denver/reset-2026-11-20/report.md, read the LIVE ESTIMATE and gates
+```
+
+## 2. Start (live)
+
+```
+export M8TRX_RESET_LIVE=true M8TRX_RESET_CONFIRM=dec-us-denver
+export M8TRX_RESET_RECEIVE_LANES=1          # 1 (default) .. 4. Tonight most likely 1: a 50-tag receive holds one of the server's 4 event-loop threads ~50 s
+export M8TRX_RESET_MOVE_EVERY_S=3.75        # default: 25 tags every 3.75 s
+export M8TRX_RESET_SPOTCOUNT_ACK=...        # only when you count by hand instead of the platform read
+set -a; . /opt/m8trx/twin-ops/store-ops.env; set +a    # the keys, M8TRX_OPS_PASSWORD
+nohup ./gradlew storeDayReset --offline > /opt/m8trx/twin-ops/log/reset-live.out 2>&1 &
+```
+(or the store-ops-dist classpath: `java -Xmx6g -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.StoreDayResetKt`).
+Keep the requests at 50 tags (`M8TRX_RESET_RECEIVE_CHUNK` above 50 is refused: a 200-tag request got a 504).
+
+What it does: gates, then plans and FREEZES the schedule (`<out>/.../live-started.json`, `schedule.jsonl`), then runs receive lane(s) and the
+move lane together. A move batch waits until the receive of every EPC in it was answered with no `errors[]` entry; moves of units already on
+hand go at once. Directives (old directive end, then the new plan) go last, after every receive and move, and not before the store's
+local midnight of the reset date (Denver 2026-11-20 00:00 = 2026-11-20 07:00 UTC = 16:00 KST); the run waits for it, HOLD honoured.
+Backoff: 429 (Retry-After), any 5xx, no answer; health GET must answer `"status":"ok"` in under 1 s before each receive (move lane: at
+least every 30 s); 10 failures in a row on one item halt. Receive client timeout is 150 s (above the front door's 120 s, so a 504 is the
+front door's); after a timeout or 504 the SAME request waits at least 60 s before it is re-sent (safe: the server finishes the original).
+Receive `errors[]` per tag: `internal_error` (DB pool briefly short) tags are re-sent later in a retry request of those tags only
+(id `<original>-retryN`, different body) and the night goes on; STOP on more than 5 `internal_error` tags in a row or more than 10 in one
+request, and on ANY `unknown_product`, `undecodable_tag`, `invalid_space`, `not_admitted` or other code (entries printed in the log). Only
+tags counted (not in `errors[]`) are accepted: they unblock their moves and are booked in the ledger. Requests are at most 50 tags (more is refused).
+
+Change the receive lanes DURING the run (the ramp 2 to 4), no restart: `echo 2 > /opt/m8trx/twin-ops/reset-lanes`, later `echo 4 > ...`
+(re-read every second; overrides `M8TRX_RESET_RECEIVE_LANES` while the file exists; clamped to 1..4; each change is logged as
+`receive lanes changed: a -> b`). `rm` the file to go back to the env value. Never more than 4 requests in flight.
+
+Once a minute the log carries one `STATUS` line: receives in flight (and the lane count), tags received / created of the total, retry
+requests, move batches sent, the last health latency in ms, and the ETA (from the rates so far).
+
+## 3. Watch
+
+```
+tail -f <out>/dec-us-denver/reset-2026-11-20/live-run.log          # every event, HALT reasons, refused receive entries
+cat <out>/dec-us-denver/reset-2026-11-20/progress.json             # receive/move/directive counts, rewritten every ~5 s
+wc -l <out>/dec-us-denver/reset-2026-11-20/sent-ledger.tsv         # accepted items (one line each)
+```
+
+## 4. Stop and resume
+
+- Stop cleanly: `touch /opt/m8trx/twin-ops/HOLD` (the file the live plane and store-ops use). Requests in flight finish, nothing new starts, exit 6.
+  `rm` the file to allow a restart.
+- Resume (after HOLD, a halt, a crash or a reboot): remove HOLD, set the SAME env (same `M8TRX_RESET_OUT` and date), run step 2 again. The frozen
+  `schedule.jsonl` is reused (the ledger changes as units are booked, so it is never re-planned), accepted ids in `sent-ledger.tsv` are skipped,
+  the spot count is not repeated. To plan again from scratch, use a new `M8TRX_RESET_OUT`.
+- Exit codes: 0 done, 1 halted (read the last `HALT` line), 3 refused (nothing sent), 6 HOLD.
+
+## 5. After a finished run (`reset-complete.json` exists)
+
+The box ledger was appended as each item was accepted, in the other steps' formats, never rewritten: `.twin-state/receive/received-stock.csv`
+(`epc,ean,slug,fixture,date`, fixture = the BR rack the unit is booked to), `.twin-state/receive/receive-reset-<yyyymmdd>.sent`,
+`.twin-state/moves/placements.csv` (`epc,fixture,date`, later line wins). So `StoreStock.load` (the hourly pass, store-day sim) now sees the
+new units and every moved unit at its new fixture; `sold-epcs.txt` and `missing-epcs.txt` are untouched. The store-day sim continues from
+`<out>/dec-us-denver/reset-2026-11-20/state/post-reset` (`M8TRX_STORE_OPS_STATE=<that path without extension>`; it records the plan period so the
+sim does not re-issue it). Hand Denver to the store-day driver only after reading the first store-day against the platform.
