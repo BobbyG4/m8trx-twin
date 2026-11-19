@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "at": "2026-11-19T09:13:05Z",
+  "request_id": "rst-dec-us-denver-20261120-r-a39ac9b48b",
+  "epc_count": 50,
+  "received": 50,
+  "created": 50,
+  "errors": [],
+  "checks": {
+    "receive_200_created_50_no_errors": true,
+    "details_50_of_50_sku_and_in_stock": true,
+    "server_read_50_of_50_in_back_room": true
+  },
+  "note": "dev, 2026-11-19: 50 EPCs in one receive request, 50.0 s. Install as <state>/reset/probe-result-dec-us-denver.json (ReceiveProbe.refusal: passed=true and every checks value true)."
+}

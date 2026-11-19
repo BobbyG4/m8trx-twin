@@ -1,0 +1,705 @@
+package com.m8trx.twin.storeops
+
+import com.m8trx.twin.connect.ReceiveStock
+import com.m8trx.twin.connect.RestockMoves
+import com.m8trx.twin.connect.Sgtin96
+import com.m8trx.twin.connect.model.ConnectMappers
+import com.m8trx.twin.connect.model.bearer.SpatialIdentityResponse
+import com.m8trx.twin.ops.StoreStock
+import java.nio.file.Files
+import java.nio.file.Path
+import java.time.LocalDate
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+
+/**
+ * Offline tests of the live reset path ([ResetLiveRunner], [ResetGate], [ResetBooks], [SpotCount], [BackroomZones], [OldDirectiveExport],
+ * [LiveSender.receiveOutcome]) with a FAKE [OpsSender] and a virtual clock. Called from `storeOpsSelfTest`; nothing here touches a network.
+ */
+private val RT: Path = Path.of("build/storeops-selftest/reset-live")
+private const val EAN = "3583780104122"
+private const val SLUG = "dec-us-denver"
+
+private fun epc(i: Int) = Sgtin96.encode(EAN, 40_000_000_000L + i)
+
+private fun receiveItem(seq: Int, epcs: List<String>): SendItem {
+    val payload = ConnectMappers.camel.valueToTree<com.fasterxml.jackson.databind.JsonNode>(
+        com.m8trx.twin.connect.model.bearer.ItemReceiveRequest(
+            "@site",
+            "@backroom_space",
+            epcs.map {
+                com.m8trx.twin.connect.model.bearer.ReceiveItem(it)
+            },
+        ),
+    )
+    return SendItem(seq, 0, 0, "receive", "rst-t-r-$seq", payload, epcs)
+}
+
+private fun moveItem(seq: Int, dest: String, epcs: List<String>): SendItem {
+    val n = ConnectMappers.snake.createObjectNode()
+    n.put("external_movement_id", "rst-t-m-$seq")
+    if (dest.startsWith("BR-")) n.put("to_zone_id", "${Placeholders.ZONE_PREFIX}$dest") else n.put("to_fixture_code", dest)
+    val a = n.putArray("items")
+    epcs.forEach { a.addObject().put("epc", it) }
+    return SendItem(seq, 0, 1, "move", "rst-t-m-$seq", n, epcs)
+}
+
+private fun directive(seq: Int, id: String): SendItem {
+    val n = ConnectMappers.snake.createObjectNode()
+    n.put("external_directive_id", id)
+    return SendItem(seq, 0, 2, "planogram", id, n, emptyList(), afterLocalMidnight = true)
+}
+
+/** 6 receives of 3 EPCs, 3 moves of units already on hand, 7 moves of received units (one spans two receives), end + new directive. */
+private class Schedule(tags: Int = 3) {
+    val received = (0 until 6).map { r -> (0 until tags).map { epc(r * tags + it) } }
+    val onHand = (0 until 9).map { epc(1000 + it) }
+    val items: List<SendItem>
+
+    init {
+        val l = ArrayList<SendItem>()
+        var s = 0
+        received.forEach { l += receiveItem(s++, it) }
+        onHand.chunked(3).forEach { l += moveItem(s++, "F-H", it) }
+        received.forEachIndexed { i, r -> l += moveItem(s++, "F-$i", r) }
+        l += moveItem(s++, "BR-02", listOf(received[0][0], received[5][2]))
+        l += directive(s++, "rst-t-end-OLD")
+        l += directive(s++, "PLNW-t")
+        items = l
+    }
+
+    val inRun: Set<String> = received.flatten().toSet()
+    val body: Set<String> get() = items.filter { it.kind != "planogram" }.map { it.extId }.toSet()
+}
+
+private class VirtualClock(start: Long) : ResetClock {
+    val t = AtomicLong(start)
+
+    override fun now(): Long = t.get()
+
+    override fun sleep(ms: Long) {
+        t.addAndGet(ms)
+        Thread.sleep(1)
+    }
+}
+
+private class FakeSender(private val sched: Schedule, private val clock: VirtualClock, private val receiveMs: Long = 4) : OpsSender {
+    val order: MutableList<String> = Collections.synchronizedList(ArrayList())
+    val acceptedEpcs: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    val violations: MutableList<String> = Collections.synchronizedList(ArrayList())
+    val attempts = ConcurrentHashMap<String, AtomicInteger>()
+    val sends = AtomicInteger()
+    val bodies: MutableList<String> = Collections.synchronizedList(ArrayList())
+    val directiveAt = ConcurrentHashMap<String, Long>()
+    val orderAtDirective = ConcurrentHashMap<String, Set<String>>()
+    var script: (SendItem, Int) -> Outcome? = { _, _ -> null }
+    var peakReceives = AtomicInteger()
+    var onReceiveStart: (Int) -> Unit = {}
+    private val inFlight = AtomicInteger()
+
+    override fun health(): Pair<Int, String?> = 200 to "{\"status\":\"ok\"}"
+
+    override fun send(item: SendItem): Outcome {
+        sends.incrementAndGet()
+        val n = attempts.computeIfAbsent(item.extId) { AtomicInteger() }.incrementAndGet()
+        script(item, n)?.let { o ->
+            if (o is Outcome.ReceiveAnswer) {
+                Thread.sleep(receiveMs)
+                acceptedEpcs += item.epcs - o.errors.mapNotNull { it.epc }.toSet()
+                bodies += item.payload.toString()
+                if (o.errors.isEmpty()) order += item.extId
+            }
+            return o
+        }
+        when (item.kind) {
+            "receive" -> {
+                val now = inFlight.incrementAndGet()
+                peakReceives.accumulateAndGet(now) { a, b -> maxOf(a, b) }
+                onReceiveStart(now)
+                Thread.sleep(receiveMs)
+                acceptedEpcs += item.epcs
+                inFlight.decrementAndGet()
+            }
+
+            "move" -> item.epcs.filter { it in sched.inRun && it !in acceptedEpcs }.takeIf { it.isNotEmpty() }
+                ?.let { violations += "${item.extId} sent before the receive of $it was accepted" }
+
+            "planogram" -> {
+                directiveAt[item.extId] = clock.now()
+                orderAtDirective[item.extId] = order.toSet()
+            }
+        }
+        order += item.extId
+        return Outcome.Accepted
+    }
+}
+
+private fun params(lanes: Int, midnight: Long, statusEveryMs: Long = Long.MAX_VALUE / 4) = ResetLiveParams(
+    receiveLanes = lanes,
+    moveSpacingMs = 10,
+    directiveSpacingMs = 10,
+    healthPollMs = 10,
+    idlePollMs = 5,
+    midnightMs = midnight,
+    progressEveryMs = 1,
+    retryDelayMs = 5,
+    statusEveryMs = statusEveryMs,
+)
+
+private fun run(
+    sched: Schedule,
+    sender: FakeSender,
+    clock: VirtualClock,
+    lanes: Int,
+    ledger: SentLedger = SentLedger(null),
+    policy: RetryPolicy = RetryPolicy(),
+    midnight: Long = 1_000_000,
+    books: ResetBooks? = null,
+    hold: () -> Boolean = { false },
+    lanesNow: (() -> Int)? = null,
+    onEvent: (String) -> Unit = {},
+    statusEveryMs: Long = Long.MAX_VALUE / 4,
+): ResetLiveRunner.Result = ResetLiveRunner(
+    sched.items, sender, policy, ledger, books, params(lanes, midnight, statusEveryMs), hold, clock, onEvent = onEvent,
+    lanesNow = lanesNow ?: { lanes },
+).run()
+
+fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
+    "reset live: 3 receive lanes run at once; a move waits for its receives, on-hand moves do not; every item sent once" to ::liveDependency,
+    "reset live: the directives go last, after every receive and move, and not before the store's local midnight" to ::liveDirectiveLast,
+    "reset live: resume skips accepted ids; HOLD stops cleanly (no new request) and a rerun finishes the rest without resending" to ::liveResumeHold,
+    "reset live: a receive with errors[] stops the run, prints the entries, and is not marked accepted" to ::liveReceiveErrors,
+    "reset live: internal_error tags are re-sent in a retry request (different body), moves wait for them; limits stop the night" to ::liveInternal,
+    "reset live: a timeout / 504 on a receive waits 60 s before the same request is re-sent" to ::liveTimeout,
+    "reset live: lowering the lanes 4 -> 2 with 4 in flight starts nothing new until in flight is below 2 (claim under the lock)" to ::liveLanesDrop,
+    "reset live: each internal_error retry round sends a different body (rotated tags)" to ::liveRetryBodies,
+    "reset live: the receive lane count can change during the run (file), is clamped to 4, logged; a status line is logged" to ::liveLanesStatus,
+    "reset live: 429 honours Retry-After, 503 backs off and retries, 10 failures in a row halt" to ::liveRetries,
+    "reset live: owner file, CONFIRM, probe, old directive, spot count, bearer and lane-count refusals; each is satisfiable" to ::liveGate,
+    "reset live: box ledger appended in the other steps' formats (received-stock.csv, placements.csv), never rewritten" to ::liveBooks,
+    "reset live: receive answer parsing, back-room zone map, old-directive converter, spot count rule, distinct move bodies, no live client" to
+        ::liveParts,
+)
+
+private fun liveDependency() {
+    val sched = Schedule()
+    val clock = VirtualClock(0)
+    val sender = FakeSender(sched, clock)
+    val res = run(sched, sender, clock, 3)
+    check(res.end == ResetLiveRunner.End.DONE) { "run did not finish: ${res.end} ${res.haltReason}" }
+    check(sender.violations.isEmpty()) { "dependency broken: ${sender.violations}" }
+    check(sender.order.toSet() == sched.items.map { it.extId }.toSet() && sender.order.size == sched.items.size) { "every item sent exactly once" }
+    check(sender.peakReceives.get() >= 2) { "with 3 lanes receives overlap, peak was ${sender.peakReceives.get()}" }
+    val lastReceive = sched.items.filter { it.kind == "receive" }.maxOf { sender.order.indexOf(it.extId) }
+    val firstOnHand = sched.items.filter { it.kind == "move" && it.epcs.all { e -> e !in sched.inRun } }.minOf { sender.order.indexOf(it.extId) }
+    check(firstOnHand < lastReceive) { "on-hand moves start before the receives are done (own lane): $firstOnHand vs $lastReceive" }
+    val one = FakeSender(sched, VirtualClock(0)).also { run(sched, it, VirtualClock(0), 1) }
+    check(one.violations.isEmpty() && one.peakReceives.get() == 1) { "one lane: one request at a time, peak ${one.peakReceives.get()}" }
+    check(runCatching { ResetLiveParams(5, 1, 1, 1, 1, 0) }.isFailure && runCatching { ResetLiveParams(0, 1, 1, 1, 1, 0) }.isFailure) {
+        "lanes beyond 1..4 refused"
+    }
+}
+
+private fun liveDirectiveLast() {
+    val sched = Schedule()
+    val clock = VirtualClock(0)
+    val sender = FakeSender(sched, clock)
+    val midnight = 5_000_000L
+    val res = run(sched, sender, clock, 3, midnight = midnight)
+    check(res.end == ResetLiveRunner.End.DONE) { "done" }
+    check(sender.order.takeLast(2) == listOf("rst-t-end-OLD", "PLNW-t")) { "old end, then the new plan, last: ${sender.order.takeLast(3)}" }
+    check(sender.directiveAt.values.all { it >= midnight }) { "gated to after midnight: ${sender.directiveAt} vs $midnight" }
+    check(sender.orderAtDirective.getValue("rst-t-end-OLD").containsAll(sched.body)) {
+        "every receive and move was accepted before the first directive"
+    }
+    // before the midnight the tail waits (HOLD still honoured): hold stops it while it waits
+    val c2 = VirtualClock(0)
+    val s2 = FakeSender(sched, c2)
+    var holdAfterBody = false
+    val r2 = run(sched, s2, c2, 2, midnight = 900_000_000L, hold = { holdAfterBody || s2.order.containsAll(sched.body).also { holdAfterBody = it } })
+    check(r2.end == ResetLiveRunner.End.HOLD && s2.directiveAt.isEmpty()) {
+        "HOLD while waiting for midnight: ${r2.end}, directives ${s2.directiveAt}"
+    }
+}
+
+private fun liveResumeHold() {
+    val sched = Schedule()
+    val file = RT.resolve("resume-sent.tsv")
+    Files.createDirectories(RT)
+    Files.deleteIfExists(file)
+    // resume: two receives and the move that needs them are already in the ledger
+    val led0 = SentLedger(file)
+    listOf(sched.items[0], sched.items[1], sched.items.first { it.extId == "rst-t-m-${6 + 3}" }).forEach { led0.markSent(it) }
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    s.acceptedEpcs += sched.items[0].epcs + sched.items[1].epcs
+    val r = run(sched, s, c, 2, SentLedger(file))
+    check(r.end == ResetLiveRunner.End.DONE && r.skippedByLedger == 3) { "resume skipped 3, got ${r.skippedByLedger} ${r.end}" }
+    check(
+        s.order.none {
+            it == sched.items[0].extId || it == sched.items[1].extId
+        } && s.order.size == sched.items.size - 3,
+    ) { "accepted ids never re-sent" }
+    // HOLD after 5 sends: nothing new starts, the run says HOLD; a rerun does the rest without resending anything accepted
+    val f2 = RT.resolve("hold-sent.tsv")
+    Files.deleteIfExists(f2)
+    val c1 = VirtualClock(0)
+    val s1 = FakeSender(sched, c1)
+    val r1 = run(sched, s1, c1, 1, SentLedger(f2), hold = { s1.sends.get() >= 5 })
+    check(r1.end == ResetLiveRunner.End.HOLD && s1.order.size in 5..6 && s1.directiveAt.isEmpty()) {
+        "HOLD stopped it: ${r1.end}, ${s1.order.size} sent, directives ${s1.directiveAt}"
+    }
+    val c2 = VirtualClock(0)
+    val s2 = FakeSender(sched, c2)
+    s2.acceptedEpcs += s1.acceptedEpcs
+    val r2 = run(sched, s2, c2, 2, SentLedger(f2))
+    check(r2.end == ResetLiveRunner.End.DONE && s2.violations.isEmpty()) { "rerun finished: ${r2.end} ${r2.haltReason} ${s2.violations}" }
+    check(s1.order.intersect(s2.order.toSet()).isEmpty() && (s1.order + s2.order).toSet().size == sched.items.size) {
+        "together exactly the schedule, nothing twice"
+    }
+}
+
+private fun liveReceiveErrors() {
+    val sched = Schedule()
+    val f = RT.resolve("errors-sent.tsv")
+    Files.deleteIfExists(f)
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val bad = sched.items[2]
+    s.script = { it, _ ->
+        if (it.extId ==
+            bad.extId
+        ) {
+            Outcome.ReceiveAnswer(
+                1,
+                1,
+                listOf(ItemError(bad.epcs[1], "unknown_product: no product for the EAN"), ItemError(bad.epcs[2], "not_admitted")),
+            )
+        } else {
+            null
+        }
+    }
+    val events = ArrayList<String>()
+    val led = SentLedger(f)
+    val r = ResetLiveRunner(sched.items, s, RetryPolicy(), led, null, params(3, 1), {
+        false
+    }, c, onEvent = { e -> synchronized(events) { events.add(e) } }).run()
+    check(r.end == ResetLiveRunner.End.HALTED && r.haltReason!!.contains(bad.extId) && r.haltReason!!.contains("unknown_product")) {
+        "halted: ${r.haltReason}"
+    }
+    check(events.any { it.contains("unknown_product") } && events.any { it.contains("not_admitted") }) { "the entries are printed: $events" }
+    check(!led.isSent(bad.extId) && !SentLedger(f).isSent(bad.extId)) { "the refused request is not marked accepted" }
+    check(s.directiveAt.isEmpty() && "rst-t-end-OLD" !in s.order) { "nothing goes past it: no directive" }
+    check(sched.items.filter { it.kind == "move" && bad.epcs.any { e -> e in it.epcs } }.none { it.extId in s.order }) {
+        "no move of an EPC in the refused receive"
+    }
+}
+
+private fun liveInternal() {
+    val f = RT.resolve("internal-sent.tsv")
+    Files.deleteIfExists(f)
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val target = sched.items[2]
+    s.script = { it, n ->
+        if (it.extId == target.extId &&
+            n == 1
+        ) {
+            Outcome.ReceiveAnswer(2, 2, listOf(ItemError(target.epcs[1], "internal_error: pool is short")))
+        } else {
+            null
+        }
+    }
+    val r = run(sched, s, c, 2, SentLedger(f), midnight = 0)
+    check(r.end == ResetLiveRunner.End.DONE && r.retryRequests == 1) { "the night goes on past a handful: ${r.end} ${r.haltReason}" }
+    check(s.violations.isEmpty()) { "no move before its tag was counted: ${s.violations}" }
+    check("${target.extId}-retry1" in s.order) { "the retry request was sent" }
+    check(s.bodies.size == 1 && s.bodies[0] == target.payload.toString()) { "the original body went once" }
+    check(
+        sched.items.filter { it.kind == "move" && target.epcs[1] in it.epcs }.all {
+            s.order.indexOf(it.extId) >
+                s.order.indexOf("${target.extId}-retry1")
+        },
+    ) {
+        "a move holding the failed tag goes only after the retry counted it"
+    }
+    check(SentLedger(f).isSent(target.extId)) { "the original is marked accepted once its last tag is counted" }
+    // limits: more than 10 in one request, or more than 5 in a row, stop; 5 in a row does not
+    val big = Schedule(12)
+    fun runWith(bad: List<Int>): ResetLiveRunner.Result {
+        val c2 = VirtualClock(0)
+        val s2 = FakeSender(big, c2)
+        val t = big.items[1]
+        s2.script = { it, n ->
+            if (it.extId == t.extId &&
+                n == 1
+            ) {
+                Outcome.ReceiveAnswer(12 - bad.size, 0, bad.map { i -> ItemError(t.epcs[i], "internal_error") })
+            } else {
+                null
+            }
+        }
+        return run(big, s2, c2, 1, midnight = 0)
+    }
+    check(runWith(listOf(0, 1, 2, 3, 4)).end == ResetLiveRunner.End.DONE) { "5 in a row is ok" }
+    check(runWith(listOf(0, 1, 2, 3, 4, 5)).end == ResetLiveRunner.End.HALTED) { "6 in a row stops" }
+    check(runWith(listOf(0, 2, 4, 6, 8, 10, 1, 3, 5, 7, 9)).end == ResetLiveRunner.End.HALTED) { "11 in one request stops" }
+    // any other code stops
+    listOf("unknown_product", "undecodable_tag", "invalid_space", "not_admitted", "something_new").forEach { code ->
+        val c3 = VirtualClock(0)
+        val s3 = FakeSender(sched, c3)
+        s3.script = { it, _ ->
+            if (it.extId == target.extId) Outcome.ReceiveAnswer(2, 2, listOf(ItemError(target.epcs[0], "$code: x"))) else null
+        }
+        val r3 = run(sched, s3, c3, 2, midnight = 0)
+        check(r3.end == ResetLiveRunner.End.HALTED && r3.haltReason!!.contains(code)) { "$code stops the run: ${r3.end} ${r3.haltReason}" }
+    }
+}
+
+private fun liveTimeout() {
+    val sched = Schedule()
+    val c0 = VirtualClock(0)
+    check(run(sched, FakeSender(sched, c0), c0, 1, midnight = 0).end == ResetLiveRunner.End.DONE && c0.now() < 60_000) {
+        "control run is quick: ${c0.now()}"
+    }
+    listOf(Outcome.Unreachable("request timed out"), Outcome.Http(504)).forEach { o ->
+        val c = VirtualClock(0)
+        val s = FakeSender(sched, c)
+        s.script = { it, n -> if (it.extId == sched.items[0].extId && n == 1) o else null }
+        val r = run(sched, s, c, 1, midnight = 0)
+        check(r.end == ResetLiveRunner.End.DONE && s.attempts.getValue(sched.items[0].extId).get() == 2) { "re-sent once: $o ${r.end}" }
+        check(c.now() >= 60_000) { "$o: the same request waited at least 60 s, the clock reached ${c.now()}" }
+    }
+}
+
+private fun liveLanesDrop() {
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c, receiveMs = 200)
+    val lanes = AtomicInteger(4)
+    val dropped = java.util.concurrent.atomic.AtomicBoolean(false)
+    val after = Collections.synchronizedList(ArrayList<Pair<Int, Int>>())
+    s.onReceiveStart = { inFlight ->
+        if (!dropped.get() && inFlight == 4) {
+            lanes.set(2)
+            dropped.set(true)
+        } else if (dropped.get()) {
+            after += inFlight to lanes.get()
+        }
+    }
+    val r = run(sched, s, c, 4, midnight = 0, lanesNow = { lanes.get() })
+    check(r.end == ResetLiveRunner.End.DONE && s.violations.isEmpty()) { "done: ${r.end} ${r.haltReason}" }
+    check(s.peakReceives.get() == 4) { "4 were in flight before the drop: ${s.peakReceives.get()}" }
+    check(after.isNotEmpty()) { "the remaining receives ran after the drop" }
+    check(after.all { (inFlight, limit) -> inFlight <= limit }) {
+        "no new claim started until in flight fell below 2, and in flight never exceeded the limit after the drop: $after"
+    }
+}
+
+private fun liveRetryBodies() {
+    // every retry round of the same tags rotates them, so the bodies differ (3 tags, rounds 1 and 2)
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val t = sched.items[0]
+    s.script = { it, n ->
+        when {
+            it.extId == t.extId && n == 1 -> Outcome.ReceiveAnswer(0, 0, t.epcs.map { e -> ItemError(e, "internal_error") })
+            it.extId == "${t.extId}-retry1" && n == 1 -> Outcome.ReceiveAnswer(0, 0, t.epcs.map { e -> ItemError(e, "internal_error") })
+            else -> null
+        }
+    }
+    val r = run(sched, s, c, 1, midnight = 0)
+    // 3 in a row is within the limit (5), so the night goes on through two retry rounds
+    check(r.end == ResetLiveRunner.End.DONE && r.retryRequests == 2) { "two retry rounds: ${r.end} ${r.haltReason} ${r.retryRequests}" }
+    check(s.bodies.size == 2 && s.bodies[0] != s.bodies[1]) { "the two failed bodies differ: ${s.bodies}" }
+    check(s.order.contains("${t.extId}-retry2")) { "round 2 was sent" }
+}
+
+private fun liveLanesStatus() {
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c, receiveMs = 30)
+    val lanes = AtomicInteger(1)
+    s.script = { _, _ ->
+        lanes.set(9)
+        null
+    }
+    val events = Collections.synchronizedList(ArrayList<String>())
+    val r = run(sched, s, c, 1, midnight = 0, lanesNow = { lanes.get() }, onEvent = { events += it }, statusEveryMs = 50)
+    check(r.end == ResetLiveRunner.End.DONE && s.violations.isEmpty()) { "done ${r.end}" }
+    check(
+        events.any {
+            it.contains("receive lanes changed: 1 -> 4")
+        },
+    ) { "the change is logged and clamped to 4: ${events.filter { it.contains("lanes") }}" }
+    check(s.peakReceives.get() in 2..4) { "after the raise requests overlap, never more than 4: ${s.peakReceives.get()}" }
+    val st = events.firstOrNull { it.startsWith("STATUS") }
+    check(
+        st != null && st.contains(
+            "receives in flight",
+        ) && st.contains("tags received") && st.contains("created") && st.contains("move batches sent") &&
+            st.contains("health") && st.contains("ETA"),
+    ) { "status line carries in flight, tags received/created, move batches, health, ETA: $st" }
+}
+
+private fun liveRetries() {
+    val sched = Schedule()
+    // 429 with Retry-After 120: waits at least 120 s (virtual), then goes; 503 twice then ok
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    s.script = { it, n ->
+        when {
+            it.extId == sched.items[0].extId && n == 1 -> Outcome.Http(429, 120)
+            it.extId == sched.items[1].extId && n <= 2 -> Outcome.Http(503)
+            it.extId == sched.items[2].extId && n == 1 -> Outcome.Unreachable("reset")
+            else -> null
+        }
+    }
+    val r = run(sched, s, c, 1, policy = RetryPolicy(), midnight = 0)
+    check(r.end == ResetLiveRunner.End.DONE && s.violations.isEmpty()) { "recovered: ${r.end} ${r.haltReason}" }
+    check(c.now() >= 120_000) { "Retry-After 120 s honoured, the clock only reached ${c.now()}" }
+    check(s.attempts.getValue(sched.items[1].extId).get() == 3 && s.attempts.getValue(sched.items[0].extId).get() == 2) { "retried the same item" }
+    // 10 failures in a row on one item halt the run
+    val c2 = VirtualClock(0)
+    val s2 = FakeSender(sched, c2)
+    s2.script = { it, _ -> if (it.extId == sched.items[0].extId) Outcome.Http(503) else null }
+    val r2 = run(sched, s2, c2, 2, policy = RetryPolicy())
+    check(r2.end == ResetLiveRunner.End.HALTED && r2.haltReason!!.contains("10 failures") && s2.attempts.getValue(sched.items[0].extId).get() == 10) {
+        "halted after 10: ${r2.haltReason}, ${s2.attempts[sched.items[0].extId]}"
+    }
+    // a 400 is the platform refusing: halt at once
+    val c3 = VirtualClock(0)
+    val s3 = FakeSender(sched, c3)
+    s3.script = { it, _ -> if (it.extId == sched.items[0].extId) Outcome.Http(400) else null }
+    check(run(sched, s3, c3, 1).end == ResetLiveRunner.End.HALTED) { "400 halts" }
+}
+
+private fun liveGate() {
+    val d = RT.resolve("gate")
+    Files.createDirectories(d)
+    val owner = d.resolve("owner.csv")
+    val probe = ReceiveProbe.resultFile(d, SLUG)
+    Files.createDirectories(probe.parent)
+    Files.writeString(owner, "slug,owner\n$SLUG,storeday\n")
+    // the content the operator writes for the 2026-11-19 receive proof (documented in ops/INSTALL.md and ops/reset-probe-result.example.json)
+    Files.writeString(
+        probe,
+        "{\"passed\":true,\"at\":\"2026-11-19T09:13:05Z\",\"request_id\":\"r-a39ac9b48b\",\"received\":50,\"created\":50," +
+            "\"errors\":[],\"checks\":{\"receive_200_created_50_no_errors\":true,\"details_50_of_50_sku_and_in_stock\":true," +
+            "\"server_read_50_of_50_in_back_room\":true}}",
+    )
+    val ok = mapOf(
+        "M8TRX_RESET_CONFIRM" to SLUG,
+        "M8TRX_RESET_SPOTCOUNT_ACK" to "counted 20 fixtures, 0 disagree",
+        "M8TRX_TWIN_SERVICE_BEARER" to "x",
+        "M8TRX_RESET_RECEIVE_LANES" to "4",
+    )
+
+    fun v(env: Map<String, String>, ends: Int = 1, ownerFile: Path = owner) = ResetGate.check(SLUG, { env[it] }, d, ownerFile, ends)
+    check(!v(ok).refused) { "all gates met: ${v(ok).reasons}" }
+    check(v(ok - "M8TRX_RESET_CONFIRM").reasons.any { it.contains("M8TRX_RESET_CONFIRM") }) { "no second key" }
+    val hourly = d.resolve("owner-hourly.csv")
+    Files.writeString(hourly, "slug,owner\n$SLUG,hourly\n")
+    check(v(ok, ownerFile = hourly).reasons.any { it.contains("hourly pass") }) { "owner hourly refused" }
+    check(v(ok, ownerFile = d.resolve("nope.csv")).refused) { "no owner file refused" }
+    check(v(ok, ends = 0).reasons.any { it.contains("old directive") }) { "no old directive refused" }
+    check(v(ok - "M8TRX_RESET_SPOTCOUNT_ACK").reasons.any { it.contains("spot count") }) { "no spot count path refused" }
+    check(!v(ok - "M8TRX_RESET_SPOTCOUNT_ACK" + ("M8TRX_OPS_PASSWORD" to "p")).refused) {
+        "the login for the platform read satisfies the spot count gate"
+    }
+    check(v(ok - "M8TRX_TWIN_SERVICE_BEARER").refused) { "no receive bearer refused" }
+    check(v(ok + ("M8TRX_RESET_RECEIVE_LANES" to "5")).refused && !v(ok + ("M8TRX_RESET_RECEIVE_LANES" to "1")).refused) { "lanes 1..4" }
+    Files.writeString(probe, "{\"passed\":false}")
+    check(v(ok).reasons.any { it.contains("probe") }) { "failed probe refused" }
+    Files.deleteIfExists(probe)
+    check(v(ok).reasons.any { it.contains("probe") }) { "no probe result refused" }
+    check(ResetGate.MAX_LANES == 4) { "max lanes 4" }
+}
+
+private fun liveBooks() {
+    val st = RT.resolve("books-state")
+    st.toFile().deleteRecursively()
+    val date = LocalDate.parse("2026-11-20")
+    val b = ResetBooks(st, SLUG, date) { "BR-03" }
+    val rc = listOf(epc(1), epc(2))
+    b.record(receiveItem(0, rc))
+    b.record(receiveItem(0, rc)) // a re-send after a crash: no second row
+    b.record(moveItem(1, "F-9", rc))
+    b.record(moveItem(2, "BR-05", listOf(epc(1))))
+    val rows = ReceiveStock.readStock(ReceiveStock.stockFile(st.resolve("receive")))
+    check(
+        rows.size == 2 && rows.all {
+            it.slug == SLUG && it.fixture == "BR-03" && it.ean == EAN && it.date == date
+        },
+    ) { "received-stock rows: $rows" }
+    check(Files.readAllLines(ReceiveStock.stockFile(st.resolve("receive")))[0] == "epc,ean,slug,fixture,date") { "same header" }
+    val pl = RestockMoves.readPlacements(st.resolve("moves/placements.csv"))
+    check(pl[epc(1)] == "BR-05" && pl[epc(2)] == "F-9") { "placements, the later line wins: $pl" }
+    check(Files.readAllLines(st.resolve("moves/placements.csv"))[0] == "epc,fixture,date") { "placements header" }
+    // appended, never rewritten: a second writer adds to what is there
+    ResetBooks(st, SLUG, date) { "BR-03" }.record(receiveItem(3, listOf(epc(3), epc(1))))
+    check(ReceiveStock.readStock(ReceiveStock.stockFile(st.resolve("receive"))).size == 3) {
+        "an EPC already in the file is not added again, the new one is"
+    }
+    // through the runner: the files follow the accepted items
+    val sched = Schedule()
+    val st2 = RT.resolve("books-state2")
+    st2.toFile().deleteRecursively()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    val res = run(sched, s, c, 3, books = ResetBooks(st2, SLUG, date) { "BR-01" })
+    check(res.end == ResetLiveRunner.End.DONE) { "done" }
+    check(ReceiveStock.readStock(ReceiveStock.stockFile(st2.resolve("receive"))).size == 18) { "18 received EPCs booked" }
+    val p2 = RestockMoves.readPlacements(st2.resolve("moves/placements.csv"))
+    check(p2[sched.received[1][0]] == "F-1" && p2[sched.onHand[0]] == "F-H" && p2[sched.received[0][0]] == "BR-02") {
+        "placements follow the moves: ${p2.size}"
+    }
+}
+
+private fun liveParts() {
+    val item = receiveItem(0, listOf(epc(1), epc(2)))
+    check(LiveSender.receiveOutcome(item, "{\"received\":2,\"created\":2,\"errors\":[]}") == Outcome.ReceiveAnswer(2, 2, emptyList())) {
+        "clean answer"
+    }
+    check(LiveSender.receiveOutcome(item, "{\"received\":2,\"created\":0,\"errors\":[]}") == Outcome.ReceiveAnswer(2, 0, emptyList())) {
+        "a repeat (created 0)"
+    }
+    val e = LiveSender.receiveOutcome(item, "{\"received\":1,\"created\":1,\"errors\":[{\"epc\":\"${epc(2)}\",\"reason\":\"not_admitted: x\"}]}")
+    check(e is Outcome.ReceiveAnswer && e.errors == listOf(ItemError(epc(2), "not_admitted: x")) && e.errors[0].code == "not_admitted") {
+        "errors[] entries surface with their code: $e"
+    }
+    check(LiveSender.receiveOutcome(item, "{\"received\":1,\"created\":1,\"errors\":[]}") is Outcome.ItemErrors) {
+        "fewer received than sent and no entry"
+    }
+    check(LiveSender.receiveOutcome(item, "<html>") is Outcome.ItemErrors) { "an unparseable answer is not accepted" }
+    check(RetryPolicy().decide(e, 1) is Decision.Halt && RetryPolicy().decide(Outcome.ReceiveAnswer(1, 1, emptyList()), 1) == Decision.Done) {
+        "policy: errors halt, a clean answer is done"
+    }
+    check(ResetGate.oversizeReceives(listOf(receiveItem(0, (0 until 51).map { epc(it) }), receiveItem(1, listOf(epc(1))))) == listOf("rst-t-r-0")) {
+        "a receive over 50 tags is reported (the run refuses)"
+    }
+    val lf = RT.resolve("reset-lanes")
+    Files.deleteIfExists(lf)
+    val ls = LanesSource(lf, 2)
+    check(ls.current() == 2) { "no file: the env value" }
+    Files.writeString(lf, "3\n")
+    check(ls.current() == 3) { "file overrides" }
+    Files.writeString(lf, "9\n")
+    check(ls.current() == 4) { "clamped to 4" }
+    Files.writeString(lf, "junk\n")
+    check(ls.current() == 4) { "a garbled file keeps the last valid value (4), not the env default" }
+    Files.writeString(lf, "")
+    check(ls.current() == 4) { "an empty / half-written file keeps the last valid value" }
+    Files.deleteIfExists(lf)
+    check(ls.current() == 2) { "file removed: back to the env value" }
+
+    // the reset's hold file is its own, never the shared $OPS/HOLD
+    val hf = ResetGate.holdFile { null }
+    check(hf.toString() == "/opt/m8trx/twin-ops/reset-HOLD" && hf.fileName.toString() != "HOLD") { "default reset hold file: $hf" }
+    check(ResetGate.holdFile { if (it == "M8TRX_OPS_DIR") "/x" else null }.toString() == "/x/reset-HOLD") { "under M8TRX_OPS_DIR" }
+    check(ResetGate.holdFile { if (it == "M8TRX_RESET_HOLD_FILE") "/y/h" else null }.toString() == "/y/h") { "overridable" }
+    check(ResetGate.paceRefusals(25, 3_750).isEmpty() && ResetGate.paceRefusals(26, 3_750).size == 1 && ResetGate.paceRefusals(25, 3_000).size == 1) {
+        "move chunk over 25 and spacing under 3.5 s are refused"
+    }
+
+    // receive answer cross-check: error tags must be in the request (case-insensitive), received = sent - distinct error tags
+    val four = listOf("aa", "bb", "cc", "dd")
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("BB", "internal_error")))) == null) { "case-insensitive match" }
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("zz", "internal_error")))) != null) { "foreign error tag" }
+    check(ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(4, 4, listOf(ItemError("bb", "internal_error")))) != null) { "counts disagree" }
+    check(
+        ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(3, 3, listOf(ItemError("bb", "x"), ItemError("BB", "y")))) == null &&
+            ReceiveCheck.mismatch(four, Outcome.ReceiveAnswer(2, 2, listOf(ItemError("bb", "x"), ItemError("BB", "y")))) != null,
+    ) {
+        "duplicate error tag counts once"
+    }
+    check(
+        LiveSender.receiveOutcome(
+            item,
+            "{\"received\":2,\"created\":2,\"errors\":[{\"epc\":\"NOPE\",\"reason\":\"internal_error\"}]}",
+        ) is Outcome.ItemErrors,
+    ) {
+        "LiveSender refuses a mismatching answer"
+    }
+
+    // 401 / 403 never loop: one pause of >= 10 s, then halt; 429 halts after 30 in a row
+    val pol = RetryPolicy()
+    listOf(401, 403).forEach { st ->
+        val w = pol.decide(Outcome.Http(st), 1)
+        check(w is Decision.Wait && w.ms >= 10_000) { "$st first attempt waits >= 10 s: $w" }
+        check(pol.decide(Outcome.Http(st), 2) is Decision.Halt) { "$st halts at the second attempt" }
+    }
+    check(pol.decide(Outcome.Http(429), 29) is Decision.Wait && pol.decide(Outcome.Http(429), 30) is Decision.Halt) { "429: halt after 30 in a row" }
+
+    // health: the TOP-LEVEL status must be "ok"
+    check(Health.isReady(200, "{\"status\":\"ok\"}") && !Health.isReady(200, "{\"status\":\"degraded\",\"detail\":{\"status\":\"ok\"}}")) {
+        "top-level status"
+    }
+    check(
+        !Health.isReady(200, "{\"msg\":\"\\\"status\\\":\\\"ok\\\"\"}") && !Health.isReady(200, "[{\"status\":\"ok\"}]") &&
+            !Health.isReady(200, "not json \"status\":\"ok\""),
+    ) {
+        "a status found elsewhere in the body does not count"
+    }
+
+    val resp = ConnectMappers.camel.readValue(
+        "{\"sites\":[{\"site_id\":\"S\",\"spaces\":[{\"space_id\":\"SP\",\"zones\":[" +
+            "{\"zone_id\":\"z1\",\"name\":\"Backroom Fixture 1\"},{\"zone_id\":\"z2\",\"code\":\"BR-02\",\"name\":\"x\"}," +
+            "{\"zone_id\":\"z9\",\"name\":\"Receiving Dock\"}]},{\"space_id\":\"OTHER\",\"zones\":[{\"zone_id\":\"zz\",\"code\":\"BR-03\"}]}]}]}",
+        SpatialIdentityResponse::class.java,
+    )
+    val zm = BackroomZones.fromIdentity(resp, "SP")
+    check(zm == mapOf("BR-01" to "z1", "BR-02" to "z2")) { "zones by code or name, only the stockroom space: $zm" }
+    val mv = listOf(moveItem(0, "BR-01", listOf("a")), moveItem(1, "BR-07", listOf("b")), moveItem(2, "F-1", listOf("c")))
+    check(BackroomZones.missing(mv, zm) == listOf("BR-07")) { "a rack without a zone id is reported" }
+
+    val old = OldDirectiveExport.convert(
+        ConnectMappers.snake.readTree(
+            "{\"directive_ref\":\"PLN-x\",\"name\":\"Twin planogram\",\"targets\":[{\"position\":1,\"site_id\":\"S\",\"item_identifier\":\"$EAN\"," +
+                "\"zone_name\":\"Gondola R3 Back U1\",\"required_quantity\":4,\"actual_quantity\":4}]}",
+        ),
+    )
+    check(old.path("external_directive_id").asText() == "PLN-x" && old.path("targets")[0].path("raw_fixture_code").asText() == "Gondola R3 Back U1") {
+        "converter: $old"
+    }
+    val pd = ConnectMappers.snake.treeToValue(old, com.m8trx.twin.connect.model.webhook.PlanogramDirective::class.java)
+    check(pd.targets.single().requiredQuantity == 4 && pd.targets.single().rawItemIdentifier == EAN) {
+        "the converted file loads as the reset's PlanogramDirective"
+    }
+
+    val ledger = StoreStock(SLUG, mapOf("A" to (1..100).map { "a$it" }, "B" to (1..100).map { "b$it" }))
+    val same = SpotCount.evaluate(ledger, StoreStock(SLUG, ledger.byFixture), listOf("A", "B"))
+    check(!same.stop && same.disagreeing == 0) { "no disagreement" }
+    val two = SpotCount.evaluate(
+        ledger,
+        StoreStock(
+            SLUG,
+            mapOf(
+                "A" to (1..100).map {
+                    "a$it"
+                }.drop(2),
+                "B" to ledger.byFixture.getValue("B"),
+            ),
+        ),
+        listOf("A", "B"),
+    )
+    check(!two.stop && two.disagreeing == 2) { "2 of 200 is 1 %, ok: ${two.summary()}" }
+    val many = SpotCount.evaluate(
+        ledger,
+        StoreStock(
+            SLUG,
+            mapOf(
+                "A" to (1..100).map {
+                    "a$it"
+                }.drop(5),
+                "B" to ledger.byFixture.getValue("B"),
+            ),
+        ),
+        listOf("A", "B"),
+    )
+    check(many.stop) { "5 of 200 is 2.5 %, more than 2 %: ${many.summary()}" }
+}

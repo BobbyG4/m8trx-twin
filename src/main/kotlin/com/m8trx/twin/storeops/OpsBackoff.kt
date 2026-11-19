@@ -15,9 +15,18 @@ package com.m8trx.twin.storeops
  */
 object Health {
     const val URL = "https://dev.m8trx.com/server/api/health"
-    private val OK = Regex("\"status\"\\s*:\\s*\"ok\"")
+    private val json = com.fasterxml.jackson.databind.ObjectMapper()
 
-    fun isReady(status: Int, body: String?): Boolean = status == 200 && body != null && OK.containsMatchIn(body)
+    /** Ready = HTTP 200 and the TOP-LEVEL `status` of a JSON object body is `"ok"` (a nested or quoted "status":"ok" does not count). */
+    fun isReady(status: Int, body: String?): Boolean {
+        if (status != 200 || body == null) return false
+        val n = try {
+            json.readTree(body)
+        } catch (e: java.io.IOException) {
+            return false
+        }
+        return n != null && n.isObject && n.path("status").asText("") == "ok"
+    }
 }
 
 /** What one attempt came to. */
@@ -30,6 +39,28 @@ sealed interface Outcome {
 
     /** No answer at all (connection refused, reset, timeout). */
     data class Unreachable(val message: String = "") : Outcome
+
+    /**
+     * A 2xx whose body says some items were NOT taken (a receive's `errors[] {epc, reason}`, reason prefixed by a code such as
+     * `not_admitted`, `invalid_space`, `undecodable_tag`, `unknown_product`). Never retried blindly: the policy halts and the
+     * entries are printed, because the same request would be refused the same way.
+     */
+    data class ItemErrors(val errors: List<ItemError>) : Outcome {
+        val entries: List<String> get() = errors.map { it.toString() }
+    }
+
+    /**
+     * A parsed 2xx receive answer (`received`, `created`, `errors[]`). Tags NOT in [errors] were counted; the reset decides per error code
+     * what to do with the rest ([ResetLiveRunner]). The policy treats a non-empty [errors] as a halt, so the live ops Pump stops on it.
+     */
+    data class ReceiveAnswer(val received: Int, val created: Int, val errors: List<ItemError>) : Outcome
+}
+
+/** One `errors[]` entry of a receive: [reason] starts with a code (`internal_error`, `not_admitted`, `unknown_product`, ...). */
+data class ItemError(val epc: String?, val reason: String?) {
+    val code: String get() = reason?.substringBefore(':')?.trim()?.lowercase().orEmpty()
+
+    override fun toString() = "$epc: $reason"
 }
 
 /** What to do next with the event that just had [Outcome]. */
@@ -54,6 +85,11 @@ class RetryPolicy(
     val stuckAfter: Int = 5,
     /** A16: stop on pool or health trouble. This many failures in a row on one event (5xx / no answer) halts the lane; the event stays due. */
     val haltAfter: Int = 10,
+    /** 429s in a row on one event before the lane halts. */
+    val rateLimitHaltAfter: Int = 30,
+    /** 401 / 403: this many attempts, [authWaitMs] apart, then halt. */
+    val authHaltAfter: Int = 2,
+    val authWaitMs: Long = 10_000,
 ) {
     /** [attempt] is 1 for the first try of an event, 2 for its first retry, and so on. */
     fun decide(o: Outcome, attempt: Int): Decision {
@@ -63,6 +99,18 @@ class RetryPolicy(
         return when (o) {
             Outcome.Accepted -> Decision.Done
 
+            is Outcome.ReceiveAnswer -> if (o.errors.isEmpty()) {
+                Decision.Done
+            } else {
+                Decision.Halt("the platform answered 2xx but refused ${o.errors.size} tag(s): ${o.errors.take(5).joinToString("; ")}")
+            }
+
+            is Outcome.ItemErrors -> Decision.Halt(
+                "the platform answered 2xx but refused ${o.entries.size} item(s): ${o.entries.take(
+                    5,
+                ).joinToString("; ")}; lane stopped, the event stays due",
+            )
+
             is Outcome.Unreachable -> Decision.Wait(
                 backoff(attempt),
                 "no answer (${o.message.take(80)}): wait for health ok",
@@ -71,13 +119,26 @@ class RetryPolicy(
             )
 
             is Outcome.Http -> when {
+                o.status == 429 && attempt >= rateLimitHaltAfter ->
+                    Decision.Halt("$attempt 429s in a row on one event: the limit is not clearing; lane stopped, the event stays due")
+
                 o.status == 429 -> Decision.Wait(
                     maxOf(rateLimitWaitMs, (o.retryAfterS ?: 0L) * 1000L),
                     "429: wait ${rateLimitWaitMs / 1000} s, honouring Retry-After=${o.retryAfterS ?: "none"}",
                     alert = stuck,
                 )
 
-                o.status == 401 -> Decision.Wait(0, "401: token not accepted, drop it and log in again", dropToken = true, alert = stuck)
+                (o.status == 401 || o.status == 403) && attempt >= authHaltAfter ->
+                    Decision.Halt("${o.status} after $attempt attempts: the key or login is not accepted; lane stopped, the event stays due")
+
+                // one more try after a pause (a stale token is dropped first), never a tight loop
+                o.status == 401 || o.status == 403 ->
+                    Decision.Wait(
+                        authWaitMs,
+                        "${o.status}: not accepted, try once more after ${authWaitMs / 1000} s",
+                        dropToken = o.status == 401,
+                        alert = stuck,
+                    )
 
                 o.status == 502 || o.status == 503 || o.status == 504 ->
                     Decision.Wait(backoff(attempt), "${o.status}: restart or overload, wait for health ok", needHealth = true, alert = stuck)

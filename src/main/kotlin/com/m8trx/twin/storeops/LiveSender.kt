@@ -9,6 +9,7 @@ import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.ItemReceiveRequest
+import com.m8trx.twin.connect.model.bearer.ItemReceiveResult
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -29,7 +30,10 @@ class LiveSender private constructor(
     private val placeholders: Placeholders,
     private val auth: WebhookClient.AuthMode,
     private val healthUrl: String,
-    private val http: ConnectHttp = ConnectHttp(),
+    /** Webhook sends (moves, directives) wait up to 60 s; a timeout is [Outcome.Unreachable] and backs off. */
+    private val http: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(WEBHOOK_TIMEOUT_S)),
+    private val receiveHttp: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(RECEIVE_TIMEOUT_S)),
+    private val healthHttp: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(10)),
 ) : OpsSender {
     init {
         LiveClients.constructed++
@@ -37,11 +41,11 @@ class LiveSender private constructor(
 
     private val webhook by lazy { WebhookClient(config, http) }
     private val bearer by lazy {
-        ConnectClient(config.copy(serviceBearer = System.getenv("M8TRX_TWIN_SERVICE_BEARER")?.takeIf { it.isNotBlank() }), http)
+        ConnectClient(config.copy(serviceBearer = System.getenv("M8TRX_TWIN_SERVICE_BEARER")?.takeIf { it.isNotBlank() }), receiveHttp)
     }
 
     override fun health(): Pair<Int, String?> = try {
-        when (val r = http.send("GET", healthUrl)) {
+        when (val r = healthHttp.send("GET", healthUrl)) {
             is ConnectResponse.Ok -> r.status to r.rawBody
             is ConnectResponse.Err -> r.status to r.rawBody
         }
@@ -63,7 +67,7 @@ class LiveSender private constructor(
             }
             when (r) {
                 null -> Outcome.Http(501)
-                is ConnectResponse.Ok -> Outcome.Accepted
+                is ConnectResponse.Ok -> if (item.route == Route.BEARER_RECEIVE) receiveOutcome(item, r.rawBody) else Outcome.Accepted
                 is ConnectResponse.Err -> Outcome.Http(r.error.status, r.error.retryAfterSeconds)
             }
         }
@@ -72,7 +76,27 @@ class LiveSender private constructor(
     }
 
     companion object {
-        fun create(live: Boolean, slug: String, chainDir: Path, stateDir: Path): LiveSender {
+        /**
+         * A receive answers 200 `{"received":N,"created":M,"errors":[{epc,reason}]}`: parsed to [Outcome.ReceiveAnswer] (the runner decides per
+         * error code). An answer that does not parse, or fewer `received` than EPCs sent with no `errors[]` entry, is [Outcome.ItemErrors].
+         */
+        fun receiveOutcome(item: SendItem, rawBody: String): Outcome {
+            val res = try {
+                ConnectMappers.camel.readValue(rawBody, ItemReceiveResult::class.java)
+            } catch (e: IOException) {
+                return Outcome.ItemErrors(listOf(ItemError(null, "unparseable: receive answer is not the expected JSON: ${rawBody.take(200)}")))
+            }
+            val answer = Outcome.ReceiveAnswer(res.received, res.created, res.errors.map { ItemError(it.epc, it.reason) })
+            // cross-check: received = tags sent - distinct error tags, and every error tag is one of the request's
+            ReceiveCheck.mismatch(item.epcs, answer)?.let { return Outcome.ItemErrors(listOf(ItemError(null, "mismatch: $it"))) }
+            return answer
+        }
+
+        /** Receive requests wait up to 150 s: above the 120 s front door, so a 504 is the front door's, never our own cut. */
+        const val RECEIVE_TIMEOUT_S = 150L
+        const val WEBHOOK_TIMEOUT_S = 60L
+
+        fun create(live: Boolean, slug: String, chainDir: Path, stateDir: Path, backroomZones: Map<String, String> = emptyMap()): LiveSender {
             require(live) { "LiveSender is built only on a live run (M8TRX_STORE_OPS_LIVE=true); a dry run never constructs it" }
             val site = DatedStream.readSiteIds(chainDir.resolve("site_ids.csv"))[slug] ?: error("no site id for $slug")
             val space = stateDir.resolve("receive/stockroom-spaces.csv").takeIf { Files.exists(it) }?.let { f ->
@@ -87,7 +111,7 @@ class LiveSender private constructor(
             }
             return LiveSender(
                 ConnectConfig.fromEnv(),
-                Placeholders(site, space),
+                Placeholders(site, space, backroomZones),
                 auth,
                 System.getenv("M8TRX_HEALTH_URL")?.takeIf { it.isNotBlank() } ?: Health.URL,
             )

@@ -207,6 +207,13 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
         return null
     }
 
+    /** The platform's stock of [slug] for a caller outside the drive (the reset's spot count): logs in as the store's manager, then reads. */
+    fun platformStockFor(slug: String): StoreStock {
+        val email = cfg.actorEmail(slug)
+        val jwt = ops.jwt(email) ?: error("login refused for $email")
+        return platformStock(jwt, cfg.keys.store(slug), cfg.siteId(slug))
+    }
+
     /**
      * Where the PLATFORM says each in-stock unit of the store is right now — one Hasura read as the store manager
      * (`thing_location` ∪ `item.state = in_stock` ∪ `item_identifiers`, all selectable by the `frontEnd` role), paged. The

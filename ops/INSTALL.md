@@ -107,3 +107,129 @@ for a store the file still gives to `hourly`, and `store-ops start` re-checks be
 day, what it would send), `./gradlew storeDayGapCheck` (the gap ledger's planned checks), `./gradlew storeOpsSelfTest`.
 For a real reset night the reset needs the box's `.twin-state` (`sold-epcs.txt`, `receive/received-stock.csv`, `moves/placements.csv`,
 `stock/missing-epcs.txt`) copied right before the run.
+
+---
+
+# Denver reset night: LIVE run-card (`storeDayReset`, reset date 2026-11-19)
+
+Run by hand on the box as `m8trx` from `/opt/m8trx/twin` (the chain paths are relative to it), on the merged branch. Nothing here is installed
+as a service. One JVM does the whole night; the reset HOLD file stops it, the sent-ledger resumes it.
+
+**Reset date 2026-11-19.** Denver's local midnight of 11-19 has already passed, so the old-directive end and the new plan are not held back
+by the midnight gate: they go at the END of the run, after every receive and move. (A later date would make the run wait for that midnight.)
+
+## 0. Box facts this card relies on
+
+- **Keys:** `/opt/m8trx/twin/.env` holds the tenant id, the integration slug, the webhook key, the service bearer (receive), the read bearer
+  and the ops password, as the `M8TRX_*` variables the code reads (`M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG`, `M8TRX_TWIN_WEBHOOK_KEY`,
+  `M8TRX_TWIN_SERVICE_BEARER`, `M8TRX_TWIN_BEARER`, `M8TRX_OPS_PASSWORD`). Load it with `set -a; . /opt/m8trx/twin/.env; set +a` and check
+  with `env | grep -c '^M8TRX_'` (there is no `store-ops.env`).
+- **HOLD is NOT the reset's file.** `/opt/m8trx/twin-ops/HOLD` is shared: the hourly pass exits on it and the live plane ENDS on it
+  (restarting the live plane is Bob's word). The reset uses its own file, `M8TRX_RESET_HOLD_FILE`, default **`/opt/m8trx/twin-ops/reset-HOLD`**.
+- **Two writers:** the box's hourly pass (`twin-hourly.sh`, deploy-local, not edited by this repo) runs `scripts/demo/day.sh` for ALL ten stores
+  and does not read the owner file. It takes `flock -w 60 /opt/m8trx/twin-ops/lock`; when another holder has it, it logs
+  "another twin run holds the lock - pass skipped" and exits 0. So the reset runs UNDER that lock: every hourly pass is skipped, for all stores,
+  while it runs; the passes after it catch up yesterday and today.
+- **Owner file:** `/opt/m8trx/twin-ops/store-ops-owner.csv` does not exist yet. The reset requires it to say `dec-us-denver,storeday`
+  (the hourly pass ignores the file; the lock is what keeps it away).
+
+## 1. Gates (the JVM refuses, exit 3, nothing sent, if one is not met)
+
+| Gate | How to satisfy it |
+|---|---|
+| owner = `storeday` | `printf 'slug,owner\ndec-us-denver,storeday\n' > /opt/m8trx/twin-ops/store-ops-owner.csv` |
+| receive probe passed | `install -D -m 644 ops/reset-probe-result.example.json /opt/m8trx/twin/.twin-state/reset/probe-result-dec-us-denver.json` (passed=true, `at` 2026-11-19T09:13:05Z, request id `rst-dec-us-denver-20261120-r-a39ac9b48b`, received 50 created 50 errors [], 50/50 sku + in_stock, server read 50/50 in the Back Room; every `checks` value must be true) |
+| old directive | save the store's `/compliance/state` JSON, then `M8TRX_RESET_COMPLIANCE_JSON=<that file> java -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.ResetLiveMainKt` (or `./gradlew storeDayResetOldDirective`) writes `.twin-state/reset/old-directive-dec-us-denver.json` |
+| spot count | WITH `M8TRX_OPS_PASSWORD` the tool always reads the platform (`StoreStock.fromPlatform`, Hasura as the store manager) for the 20 fixtures the report lists and STOPS before any send if more than 2% of the sampled units disagree. `M8TRX_RESET_SPOTCOUNT_ACK="<who counted, which fixtures, how many disagreed>"` is used ONLY if the read cannot run (no password, or the read errors); the log says which path was taken |
+| keys | the `M8TRX_*` variables above |
+| pace | a live run refuses `M8TRX_RESET_MOVE_CHUNK` over 25, `M8TRX_RESET_MOVE_EVERY_S` under 3.5, and receive requests over 50 tags |
+| rack zone ids | resolved from `/spatial/identity` (zone code `BR-nn`, else name "Backroom Fixture n"); if a rack is not found the JVM refuses and names it: write `BR-nn,<zone id>` lines in `.twin-state/reset/backroom-zones-dec-us-denver.csv` (wins over the read) |
+
+## 2. Plan first (dry run, sends nothing) and read the report
+
+```
+cd /opt/m8trx/twin
+set -a; . /opt/m8trx/twin/.env; set +a
+export M8TRX_STREAM_SOLD_LOG=/opt/m8trx/twin/.twin-state/sold-epcs.txt     # the state dir is its parent
+export M8TRX_RESET_DATE=2026-11-19 M8TRX_RESET_OUT=/opt/m8trx/twin/out/reset
+./gradlew storeOpsDist --offline        # once: the classpath copy used below
+java -Xmx6g -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.StoreDayResetKt
+# report: $M8TRX_RESET_OUT/dec-us-denver/reset-2026-11-19/report.md (read the LIVE ESTIMATE)
+```
+
+## 3. Start (live), under the hourly lock
+
+Start it with `java -cp` (the primary path): gradle maps the exit codes 3 (refused) and 6 (HOLD) to 1, so under gradle they cannot be told apart.
+
+```
+cd /opt/m8trx/twin
+set -a; . /opt/m8trx/twin/.env; set +a
+export M8TRX_STREAM_SOLD_LOG=/opt/m8trx/twin/.twin-state/sold-epcs.txt
+export M8TRX_RESET_DATE=2026-11-19 M8TRX_RESET_OUT=/opt/m8trx/twin/out/reset
+export M8TRX_RESET_LIVE=true M8TRX_RESET_CONFIRM=dec-us-denver
+export M8TRX_RESET_RECEIVE_LANES=1          # 1 (default) .. 4; tonight most likely 1 (a 50-tag receive holds one of the server's 4 event-loop threads ~50 s)
+# export M8TRX_RESET_SPOTCOUNT_ACK="..."    # only for the fallback described in the gates table
+nohup flock -w 600 /opt/m8trx/twin-ops/lock \
+  java -Xmx6g -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.StoreDayResetKt \
+  > /opt/m8trx/twin-ops/log/reset-live.out 2>&1 &
+```
+
+`flock -w 600` waits up to 10 minutes for a running hourly pass to finish, then holds the lock for the whole run (use `-n` instead to fail at once
+if the lock is busy). While it is held every hourly pass logs "another twin run holds the lock - pass skipped". Keep requests at 50 tags.
+
+What it does: gates, then plans and FREEZES the schedule (`live-started.json`, `schedule.jsonl` in the out dir), then runs the receive lane(s)
+and the move lane together. A move batch waits until every EPC in it was counted by a receive answer (not in `errors[]`); moves of units
+already on hand go at once. The directive steps (old end, then the new plan) go last, after every receive and move (the 11-19 midnight has passed).
+Backoff: 429 (Retry-After; halt after 30 in a row), any 5xx, no answer; 401/403 pause 10 s once, then halt; webhook timeout 60 s; the receive
+client timeout is 150 s and after a timeout or 504 the SAME request waits at least 60 s before it is re-sent (safe: the server finishes the
+original). Health must answer a top-level `"status":"ok"` in under 1 s before each receive (move lane: at least every 30 s); 10 failures in a
+row on one item halt. Per-tag receive `errors[]`: `internal_error` tags are re-sent later in a retry request of those tags only (id
+`<original>-retryN`, tags rotated so each body differs) and the night goes on; STOP on more than 5 `internal_error` tags in a row or more than 10 in
+one request, and on ANY `unknown_product`, `undecodable_tag`, `invalid_space`, `not_admitted` or other code, or if an answer does not match its
+request (an error tag not in the request, or `received` not equal to tags sent minus distinct error tags). Only counted tags are accepted:
+they unblock their moves and are booked in the ledger.
+
+## 4. Watch, ramp, stop, resume
+
+```
+OUT=/opt/m8trx/twin/out/reset/dec-us-denver/reset-2026-11-19
+tail -f $OUT/live-run.log          # events; one STATUS line a minute: receives in flight, tags received/created, move batches, health ms, ETA
+cat $OUT/progress.json             # counts, rewritten every ~5 s
+wc -l $OUT/sent-ledger.tsv         # accepted items
+```
+
+- **Ramp the receive lanes during the run (no restart):** `echo 2 > /opt/m8trx/twin-ops/reset-lanes`, later `echo 4 > ...` (re-read every
+  second; clamped to 1..4; each change is logged; a garbled or half-written file keeps the last valid value; `rm` it to go back to the env value).
+  Lowering the number starts no new request until the requests in flight are below it. Never more than 4 in flight.
+- **Stop cleanly:** `touch /opt/m8trx/twin-ops/reset-HOLD` (NOT `HOLD`). Requests in flight finish, nothing new starts, exit 6. `rm` it to allow a restart.
+- **Resume** (after HOLD, a halt, a crash or a reboot): **wait at least 60 s** first (a receive that was in flight is finished by the server
+  anyway), remove `reset-HOLD`, then run step 3 again with the SAME env, `M8TRX_RESET_OUT` and date. The frozen `schedule.jsonl` is reused (the
+  ledger changes as units are booked, so it is never re-planned), accepted ids in `sent-ledger.tsv` are skipped, the spot count is not repeated.
+  To plan again from scratch use a new `M8TRX_RESET_OUT`.
+- Exit codes (with `java -cp`): 0 done, 1 halted (read the last `HALT` line), 3 refused (nothing sent), 6 reset-HOLD.
+
+## 5. After the run: hand Denver back to the hourly pass
+
+When `$OUT/reset-complete.json` exists (the lock is released when the JVM exits):
+
+```
+printf 'slug,owner\ndec-us-denver,hourly\n' > /opt/m8trx/twin-ops/store-ops-owner.csv
+```
+
+The hourly pass needs no further step and does not read `$OUT/state/post-reset` (that snapshot is only for the store-day driver). The reset
+appended, never rewrote, `.twin-state/receive/received-stock.csv` (`epc,ean,slug,fixture,date`, fixture = the BR rack the unit is booked to),
+`receive/receive-reset-<yyyymmdd>.sent` and `moves/placements.csv` (`epc,fixture,date`, later line wins); `sold-epcs.txt` and
+`missing-epcs.txt` are untouched. What each hourly step reads afterwards:
+
+| hourly step (`day.sh`) | stock view | sees the reset? |
+|---|---|---|
+| `move` (restock, `ConnectMovementDrive`) | chain `epcs.csv` + `received-stock.csv`, positions from `placements.csv` | yes |
+| `stock` (`StockDrive`) | live: the PLATFORM's thing_location (minus `missing-epcs.txt`); dry: `StoreStock.load` (epcs + received - sold, moved by placements) | yes (the platform is the truth) |
+| `tasks` (`TaskDrive.soldDown`) | `placements.csv`, else the chain `epcs.csv` fixture | yes for the units it sees (it only looks at sold units) |
+| `fixmoves` | fixture geometry only | no stock view |
+| `stream` (sales, `DatedStream.allocate`) | chain `epcs.csv` ONLY, minus the sold log; back-of-house seed units first | NO: it ignores `received-stock.csv` and `placements.csv` |
+
+So after the handback the hourly stream keeps selling only unsold chain-seed units (never a reset-received unit, and "wall or back room" is
+judged from the seed location, not from where the reset put the unit), while `move`/`stock` see the reset's stock. An EAN whose seed units are
+all sold is dropped or substituted by the stream even though the reset put new units of it on the shelf. Fixing that is a change to the sales
+allocation (not part of this PR).

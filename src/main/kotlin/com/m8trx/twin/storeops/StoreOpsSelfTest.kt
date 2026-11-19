@@ -42,6 +42,7 @@ fun main() {
         "reset (Denver, seed ledger): conservation, no collision, pace, ordering, idempotent ids, post-state" to ::resetDenver,
         "driver dry run: one Denver day sends exactly the wire plan in order; HOLD stops it; no live client built" to ::driverDry,
         "no network: LiveSender cannot be built unless live, and no dry path builds it" to ::noNetwork,
+        *resetLiveTests().toTypedArray(),
         "gap check: every signal has a surface or 'no surface'; template written" to ::gapCheck,
         "LiveDrive: default people source is the generator and its output is byte-identical to before the switch" to ::liveDefault,
         "LiveDrive: the store-day sidecar source reads shopper positions; unknown values refused" to ::liveSidecar,
@@ -84,7 +85,7 @@ private fun policy() {
     check((p.decide(Outcome.Http(500), 1) as Decision.Wait).needHealth) { "other 5xx retried" }
     check((p.decide(Outcome.Http(401), 1) as Decision.Wait).dropToken) { "401 drops the token" }
     check(p.decide(Outcome.Http(400), 1) is Decision.Halt) { "400 halts the lane, it is not retried and not skipped" }
-    check(p.decide(Outcome.Http(403), 1) is Decision.Halt) { "403 halts" }
+    check(p.decide(Outcome.Http(403), 1) is Decision.Wait && p.decide(Outcome.Http(403), 2) is Decision.Halt) { "403 pauses once, then halts" }
     check(
         (1..8).map {
             p.backoff(it)
@@ -315,10 +316,19 @@ private fun resetDenver() {
     val items = b.items
     val rec = items.filter { it.kind == "receive" }
     check(rec.all { it.epcs.size in 1..50 } && rec.sumOf { it.epcs.size } == p.received.size) { "receive requests of <= 50 EPCs carry every new EPC" }
-    check(rec.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == 40_000L }) { "receives strictly one at a time, about 40 s each (A16)" }
+    check(
+        rec.zipWithNext().all { (x, y) ->
+            y.dueMs - x.dueMs == ResetPacing().receiveEstMs
+        },
+    ) { "nominal schedule: one receive per measured 50 s (1.0 s an EPC)" }
     val mov = items.filter { it.kind == "move" }
     check(mov.all { it.epcs.size <= 25 }) { "move batches stay small (<= 25 units)" }
-    check(mov.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == 2_000L }) { "one move batch every 2 s" }
+    check(mov.zipWithNext().all { (x, y) -> y.dueMs - x.dueMs == 3_750L }) { "one move batch every 3.75 s" }
+    check(
+        mov.map {
+            it.payload.toString()
+        }.toSet().size == mov.size && mov.map { it.extId }.toSet().size == mov.size,
+    ) { "no two move batches share a body" }
     check(
         mov.filter {
             it.payload.path("to_zone_id").asText().startsWith("@backroom_zone:BR-")
@@ -347,7 +357,10 @@ private fun resetDenver() {
     ) { "pace ceilings enforced" }
     StoreDayReset.write(OUT.resolve("denver-report"), DENVER, FIRST_DAY, inputs, b, pacing)
     val rep = Files.readString(OUT.resolve("denver-report/report.md"))
-    check(rep.contains("BLOCKER: no old directive provided") && rep.contains("two-night split") && rep.contains("F-9 BLOCKER")) {
+    check(
+        rep.contains("BLOCKER: no old directive provided") && rep.contains("two-night split") && rep.contains("receive probe (F-9") &&
+            rep.contains("LIVE ESTIMATE with 1 receive lane"),
+    ) {
         "the report names the open blockers and proposes a split"
     }
     val nights = StoreDayReset.nights(items)
@@ -468,7 +481,11 @@ private fun noNetwork() {
         s.filter { it.toString().endsWith(".kt") && !it.endsWith("LiveSender.kt") && !it.endsWith("StoreOpsSelfTest.kt") }
             .filter { Files.readString(it).contains("LiveSender.create(") }.map { it.toString() }.toList()
     }
-    check(callers.isEmpty()) { "LiveSender.create is called from $callers" }
+    check(
+        callers.map {
+            Path.of(it).fileName.toString()
+        } == listOf("ResetLiveMain.kt"),
+    ) { "LiveSender.create is called only by the live reset entry, got $callers" }
     // and the storeops package imports no http/nats class except LiveSender
     val offenders = Files.list(Path.of("src/main/kotlin/com/m8trx/twin/storeops")).use { s ->
         s.filter { it.toString().endsWith(".kt") && !it.endsWith("LiveSender.kt") && !it.endsWith("StoreOpsSelfTest.kt") }
@@ -600,7 +617,10 @@ private fun resetOldDirective() {
     // F-9: the live flag refuses without a passed probe result
     val f = ReceiveProbe.resultFile(OUT.resolve("probe-state"), DENVER)
     Files.deleteIfExists(f)
-    check(ReceiveProbe.refusal(f) != null && StoreDayReset.liveRefusal(DENVER, OUT.resolve("probe-state")).contains("probe")) {
+    check(
+        ReceiveProbe.refusal(f) != null &&
+            ResetGate.check(DENVER, { null }, OUT.resolve("probe-state"), OUT.resolve("no-owner.csv"), 0).reasons.any { it.contains("probe") },
+    ) {
         "no result file: refused"
     }
     Files.createDirectories(f.parent)
