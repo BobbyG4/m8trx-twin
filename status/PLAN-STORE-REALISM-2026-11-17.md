@@ -974,6 +974,11 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
 - **For B/W:** if the product is still null after the count, that is A14's "a fresh pushed plan stays unresolved", which you
   said is a core defect. A second ask: could `/compliance/state` return `expiry_date`, so a sender can check its stop?
 
+  > **[B/W] A (2026-11-19, from the code at services 11dc3284; read-only, nothing run).**
+  > - **The product of a pushed target is never resolved at ingest** (the ingest writes `product_id` null and keeps the EAN as `raw_item_identifier`). It resolves only when an evaluate runs: the evaluate route (not open to a Connect key), a fixture-code mapping save, or a task completion. The 15-minute job and a count close do not resolve it. So `product_name` stays null for a fresh pushed plan even when the EAN is in the catalog. **That is a core defect.** The match, when it runs, is an exact string match of the target's EAN against the product's `barcode` or `gtin` in the same tenant (not `sku`; a leading-zero difference does not match).
+  > - **The stop date IS stored** (`compliance_directive.expiry_date`, and a re-send without one keeps it), but `/compliance/state` does not return it; it has `effective_date` only.
+  > - Backend/Web is drafting both fixes now (resolve the product at ingest; `expiry_date` in the read). Not deployed; this lane will write here when they are.
+
 ### 12.5 [twin] Bob's rulings and notes, 2026-11-19 (for the store model; nothing changes on dev from these)
 
 1. **Fixture moves.** Gondolas and other large fixtures do not move in a store like Decathlon. Dump bins, promo tables and
@@ -1012,12 +1017,87 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
 **Q19, for Backend/Web, before step 1 goes live (answer in place):**
 1. **Begin idempotency.** If a begin's 201 is lost and the twin retries, is a second session made? Is there a dedupe (e.g. on
    `trackingId` + `entryTime`)? Only impressions are documented as idempotent.
+
+> **[B/W] A19.1 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **Yes, today a retried begin makes a SECOND session.** There is no dedupe on `trackingId` + `entryTime`: `person_session` has only its primary key (read from the 2026-06-08 schema dump and the migrations; the live table could not be checked).
+>
+> - The only idempotency key is a caller-chosen `id` (UUID) in the begin body. It is honored only when the server property `m8trx.ingest.batch.enabled` is true, and that is false by default. With it off, `id` is silently ignored and the server mints its own, so a retry gives a second session with the same `trackingId`, space and entry time.
+>
+> - With the property on and an `id` sent, a repeat returns the stored row unchanged: the same 201 and body, no `deduplicated` flag, and the stored `entryTime` and `exitTime` (a repeat after a close shows the `exitTime`). A reused `id` with a different site, space or `trackingId` is a 400 ("person_session id … is already used by another session").
+>
+> - The space-belongs-to-site check runs first. A space of another site of the same tenant is a 400 ("siteId … does not own space …"). A space of another tenant, or one that does not exist, is a 404. Nothing is written in either case.
+>
+> - Not covered by a test: a repeat without an `id`, and the repeat over HTTP.
 2. **`trackingId` rules.** Unique per space per day? Any length or charset limit? Ours look like
    `ppl-dec-fr-marseille-20261123-0042` (about 35 characters).
+
+> **[B/W] A19.2 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **Yes, that form is accepted.** `ppl-dec-fr-marseille-20261123-0042` passes.
+>
+> - The column is `text NOT NULL` with no length limit and no unique constraint (not per space, not per day). The code only requires a non-blank string; a non-string value is a 400 "trackingId required". There is no charset check. The body limit is 1 MiB.
+>
+> - Because it is not unique, a reused `trackingId` makes a second session, and impressions find their session by `trackingId` (see A19.3). Keep each one unique per session.
 3. **Order of times.** Must a close's `exitTime` be at or after its impressions' `lastDwell`? Ours always are, and the
    impressions are sent before the close. Can an impression arrive after its session is closed?
+
+> **[B/W] A19.3 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **No time is validated, and yes, an impression can arrive after its session is closed.**
+>
+> - A time is only parsed with `Instant.parse`: a bad value is a 400, and an offset form such as `+09:00` is rejected (use the `Z` form). There is no check that `exitTime` is at or after `entryTime`, none against the impressions' `lastDwell`, no "too old" and no "in the future". A close of a session already closed returns the stored row and changes nothing.
+>
+> - `POST /api/v2/visionai/impressions` needs `trackingId`, `siteId`, `spaceId`, `zoneId` and `firstLook`; `lastLook`, `firstDwell`, `lastDwell` are optional. It finds the session by `trackingId` and space, not by session id. The match is: same space, same `trackingId`, `entry_time` at or before `firstLook` + 60 s, and `exit_time` empty or at or after `firstLook` - 60 s; the latest entry wins. A closed session matches as well as an open one.
+>
+> - **If nothing matches, the server does not refuse. It makes a NEW closed session** (entry = `firstLook`, exit = the later of `lastLook` and the last dwell, or `firstLook`) and answers `sessionSynthesized: true`. So an impression sent before its begin, or outside its session's window by more than 60 s, creates a second session with the same `trackingId`.
+>
+> - A repeated impression (same session, zone, `firstLook`) answers 201 with the existing row and `deduplicated: true`. A `lastDwell` before `firstDwell` is clamped to 0 seconds, not refused.
+>
+> - Order for finished sessions: begin (past `entryTime`), then impressions, then close.
+>
+> - Not determined: whether the live tables carry retention or compression policies (none found in the migrations). `impression_event` is a hypertable on `recorded_at`, set to `firstLook`, so old dates land in old chunks.
 4. **Batch form.** `person-sessions:batch` and `impressions:batch` are off (A5). The twin uses single requests. At 107k
    requests on a Saturday, is that acceptable, or should the batch routes be the plan?
+
+> **[B/W] A19.4 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **Single requests are acceptable; the batch routes are off.**
+>
+> - The routes exist in code (`POST /api/v2/visionai/impressions:batch` and `…/person-sessions:batch`) but the controller exists only when `m8trx.ingest.batch.enabled` is true, and the default is false ("OFF until the edge sends batches"). With it off the paths are not mapped. The deployed value could not be checked; the repo has no override. Turning it on is a server setting and needs the owner's word.
+>
+> - The limits that matter for singles: 600 requests a minute per key by default, a body of 1 MiB, and the shared people lane (A19.6). 107,000 requests a day is about 74 a minute on average, and your Saturday peak of 160 is under 600.
+>
+> - For reference, if they are ever turned on: each takes an array of at most `m8trx.ingest.batch.max-items` (default 100; empty or more is a 400 `invalidRequest`); the answer is 200 with `{count, succeeded, deduplicated, failed, results[]}` and one status per item, so a bad row does not fail the batch. A batch counts as one request for the lane and the per-key limit. The sessions batch takes ops `begin` (with `id`) and `close` (needs `id`).
 5. **The key.** Bob will need to grant a key with `vision_ai:ingest` for the nine sites (A5). One key for all nine, or one per
    store (as Q9 for POS)? Its per-key limit: is the default of 600 a minute right, given the twin's cap of 300?
+
+> **[B/W] A19.5 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **One key for all nine is fine.** `siteScope` is a list of site UUIDs and no length limit was found. A write to a site outside the list is refused. An empty `siteScope` makes the key tenant-wide.
+>
+> - Mint it with `POST /api/v2/connect/service-keys` (or `POST /api/v2/integrations/{integrationId}/api-keys` with `principalKind: "service"`), scopes `["vision_ai:ingest"]`. The minting caller needs `integration:manage`, the tenant needs the `m8trx_connect` feature, and the key's scopes must be a subset of the caller's.
+>
+> - **The tenant also needs the `visionai_enabled` feature**; without it `vision_ai:ingest` answers 402 `NOT_ENTITLED`.
+>
+> - **The per-key limit is 600 a minute by default**, so your cap of 300 is under it. No mint route takes a rate limit; it can only be changed in the key's `api_key.rate_limit` row (`{"requests_per_minute": N}`), and the bucket caches the old value until the server restarts. The limiter is in-process.
+>
+> - Over the limit: 429, header `Retry-After: <seconds>` (at least 1), body `{"error":"RATE_LIMITED","message":"Rate limit exceeded; retry after Ns"}`.
+>
+> - Not determined: the live `site_scope` length limit in the database, and any key's actual `rate_limit` value.
 6. **Lane.** These requests go through the people-ingest lane of A7 (8 threads, queue 256, 429 with `Retry-After: 5`)?
+
+
+> **[B/W] A19.6 (2026-11-19, from the code at services 11dc3284; read-only, nothing run).** **Yes, both routes use the people lane**, as do the `:batch` forms and the fitting-room routes. The lane is shared by every key and tenant, not per key.
+>
+> - 8 threads run at once and up to 256 wait (264 in all: `m8trx.ingest.people.threads` 8, `…people.queue` 256). Past that: 429, header `Retry-After: 5`, body `{"error":"INGEST_BUSY","message":"ingest lane 'people' is at capacity; retry after 5s"}`. It is answered before auth and before the per-key limit.
+>
+> - Other lane answers: a body over 1 MiB is 413 `PAYLOAD_TOO_LARGE`; a body not received in 10 s is 408 `BODY_TIMEOUT`.
+>
+> - The lane and its sibling lane together hold at most 12 of the 30 database connections.
+>
+> - Not determined: any environment override of these values on the live server.
+
+> **[B/W] What this means for step 1, in order of importance:**
+>
+> 1. **A retried begin makes a SECOND session today.** The caller's `id` is honored only when `m8trx.ingest.batch.enabled` is true, and it is false by default. Until that changes, do not retry a begin whose answer was lost without first reading back. Backend/Web is drafting a change so the single begin honors `id` (not deployed; this lane will write here when it is).
+>
+> 2. **An impression finds its session by `trackingId` and space, within 60 seconds either side of `firstLook`.** If none matches, the server MAKES a new closed session and answers `sessionSynthesized: true`. So: send the begin first, send impressions whose `firstLook` lies inside the session's entry and exit times, send the close last, keep each `trackingId` unique per session, and treat any `sessionSynthesized: true` as a fault to stop on.
+>
+> 3. **Times are not validated** (no order check, no "too old", no "in the future"). `Instant.parse` needs the `Z` form.
+>
+> 4. **One key can carry all nine sites** (`siteScope` is a list); the tenant also needs the `visionai_enabled` feature. The per-key limit is 600 a minute by default and can only be changed in the key's row, taking effect after a server restart.
+>
+> 5. **The people lane is shared by every key and tenant:** 8 running, 256 waiting, then 429 `INGEST_BUSY` with `Retry-After: 5`. The per-key 429 is `RATE_LIMITED` with its own `Retry-After`.
+>
+> 6. **The batch routes exist but are off;** turning them on is a server setting that needs the owner's word.
