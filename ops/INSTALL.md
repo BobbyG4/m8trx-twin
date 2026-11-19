@@ -140,10 +140,11 @@ by the midnight gate: they go at the END of the run, after every receive and mov
 | owner = `storeday` | `printf 'slug,owner\ndec-us-denver,storeday\n' > /opt/m8trx/twin-ops/store-ops-owner.csv` |
 | receive probe passed | `install -D -m 644 ops/reset-probe-result.example.json /opt/m8trx/twin/.twin-state/reset/probe-result-dec-us-denver.json` (passed=true, `at` 2026-11-19T09:13:05Z, request id `rst-dec-us-denver-20261120-r-a39ac9b48b`, received 50 created 50 errors [], 50/50 sku + in_stock, server read 50/50 in the Back Room; every `checks` value must be true) |
 | old directive | save the store's `/compliance/state` JSON, then `M8TRX_RESET_COMPLIANCE_JSON=<that file> java -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.ResetLiveMainKt` (or `./gradlew storeDayResetOldDirective`) writes `.twin-state/reset/old-directive-dec-us-denver.json` |
-| spot count | WITH `M8TRX_OPS_PASSWORD` the tool always reads the platform (`StoreStock.fromPlatform`, Hasura as the store manager) for the 20 fixtures the report lists and STOPS before any send if more than 2% of the sampled units disagree. `M8TRX_RESET_SPOTCOUNT_ACK="<who counted, which fixtures, how many disagreed>"` is used ONLY if the read cannot run (no password, or the read errors); the log says which path was taken |
+| existence pre-check (GATING) | the ledger EPCs of the 20 sampled fixtures (at most 2,000 EPCs) are read through the bearer `POST /inventory/items/details` in chunks of 200 (the read key `M8TRX_TWIN_BEARER`, inventory:read). MORE than 2% not `in_stock` with an `itemId` STOPS the run before any send. A location mismatch is NOT a gate: the October put-aways (the 3,092 units from 10-12) were booked in `placements.csv` but never sent, and the reset's moves place them |
 | keys | the `M8TRX_*` variables above |
 | pace | a live run refuses `M8TRX_RESET_MOVE_CHUNK` over 25, `M8TRX_RESET_MOVE_EVERY_S` under 3.5, and receive requests over 50 tags |
-| rack zone ids | resolved from `/spatial/identity` (zone code `BR-nn`, else name "Backroom Fixture n"); if a rack is not found the JVM refuses and names it: write `BR-nn,<zone id>` lines in `.twin-state/reset/backroom-zones-dec-us-denver.csv` (wins over the read) |
+| zone ids (EVERY move is `to_zone_id`) | the server resolves a `to_fixture_code` only by an exact zone NAME (or a per-site mapping, Denver has one row), so a code-addressed move is refused `destination_unresolved` while the webhook still answers 200. So no move uses a fixture code. Floor fixtures: the zone ids in the schedule come from the keys export (the dry run uses them and says so); the live run reads `/spatial/identity` once and cross-checks every one by zone code, else name, and REFUSES naming the code if one is missing or the two ids differ. Back-room racks: resolved from the same read (zone code `BR-nn`, else name "Backroom Fixture n"); if a rack is not found the JVM refuses and names it: write `BR-nn,<zone id>` lines in `.twin-state/reset/backroom-zones-dec-us-denver.csv` (wins over the read). Move bodies carry no `occurred_at` |
+| move-all | `M8TRX_RESET_MOVE_ALL` (default true): every on-hand unit, also the ones already in place, gets an explicit move to its own cell or rack |
 
 ## 2. Plan first (dry run, sends nothing) and read the report
 
@@ -169,7 +170,6 @@ export M8TRX_RESET_DATE=2026-11-19 M8TRX_RESET_OUT=/opt/m8trx/twin/out/reset
 export M8TRX_RESET_LIVE=true M8TRX_RESET_CONFIRM=dec-us-denver
 export M8TRX_RESET_HOLD_DIRECTIVES=true       # 2026-11-19: BOTH plan items stay out (webhook body cap 256 KiB; a 6,365-target plan is 1.13 MB; form is Bob's choice)
 export M8TRX_RESET_RECEIVE_LANES=1          # 1 (default) .. 4; tonight most likely 1 (a 50-tag receive holds one of the server's 4 event-loop threads ~50 s)
-# export M8TRX_RESET_SPOTCOUNT_ACK="..."    # only for the fallback described in the gates table
 nohup flock -w 600 /opt/m8trx/twin-ops/lock \
   java -Xmx6g -cp "/opt/m8trx/twin-ops/store-ops-dist/*" com.m8trx.twin.storeops.StoreDayResetKt \
   > /opt/m8trx/twin-ops/log/reset-live.out 2>&1 &
@@ -190,6 +190,11 @@ one request, and on ANY `unknown_product`, `undecodable_tag`, `invalid_space`, `
 request (an error tag not in the request, or `received` not equal to tags sent minus distinct error tags). Only counted tags are accepted:
 they unblock their moves and are booked in the ledger.
 
+**Post-check (report only):** after every receive and move is accepted, the run waits 120 s after the last move (moves are processed after the
+server answers them), then compares the platform's location of the same 20 fixtures with the ledger the reset just wrote
+(`StoreStock.fromPlatform`, store-manager read, needs `M8TRX_OPS_PASSWORD`; skipped with a note without it). The per-fixture lines and the verdict
+go to `live-run.log` and into `reset-complete.json` (`post_check`, `post_check_fixtures`; the pre-check verdict is `pre_check`). It never stops the run.
+
 ## 4. Watch, ramp, stop, resume
 
 ```
@@ -205,7 +210,7 @@ wc -l $OUT/sent-ledger.tsv         # accepted items
 - **Stop cleanly:** `touch /opt/m8trx/twin-ops/reset-HOLD` (NOT `HOLD`). Requests in flight finish, nothing new starts, exit 6. `rm` it to allow a restart.
 - **Resume** (after HOLD, a halt, a crash or a reboot): **wait at least 60 s** first (a receive that was in flight is finished by the server
   anyway), remove `reset-HOLD`, then run step 3 again with the SAME env, `M8TRX_RESET_OUT` and date. The frozen `schedule.jsonl` is reused (the
-  ledger changes as units are booked, so it is never re-planned), accepted ids in `sent-ledger.tsv` are skipped, the spot count is not repeated.
+  ledger changes as units are booked, so it is never re-planned), accepted ids in `sent-ledger.tsv` are skipped, the existence pre-check is not repeated.
   To plan again from scratch use a new `M8TRX_RESET_OUT`.
 - Exit codes (with `java -cp`): 0 done, 1 halted (read the last `HALT` line), 3 refused (nothing sent), 6 reset-HOLD.
 
