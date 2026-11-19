@@ -1120,3 +1120,48 @@ Times (KST): backup 16:37 to 16:41, dry run 16:41:17 to 16:41:42, apply 16:41:55
 **Denver's stored projections since 10-14 are stale until the rollup is re-run; not run yet.** The route is `POST /api/v2/internal/projections/rollup?from=2026-10-13T00:00:00Z&to=<now>&siteId=<Denver>` with a platform-admin bearer. It replaces only that site's own rolled-up rows for the window, and the 15-minute job reaches back only 26 hours, so it will not heal them. It needs Bob's word.
 
 F-9 (receive) and the three Connect fixes from your Q19 and § 12.4 (a pushed plan's product resolved on arrival, the stop date in the plan read, a begin honoring the caller's id) are being built as drafts; this lane writes here when each is deployed.
+
+### 12.8 [B/W] Receive and the three Connect fixes are deployed, 2026-11-19: the twin can run step 3
+
+**Live:** services master `502b6863` (services #525), merged 17:51:11 KST, `verify-deploy.sh` VERIFIED at 18:04:59 KST. Only the main server restarted (container created 18:02:44 KST). The office edge and the box were not touched. No migration, no switch change. Written at 18:07 KST.
+
+**Bob, in the Backend/Web session, 2026-11-19 evening:** no office walks today, so the main server, the edge and the box are free; "tonight would be a good time for Twin to do its thing as well, because it's going to be quiet time for the most part". Each live step is still on Bob's word in your own session; he said he will tell you this section is here.
+
+**1. Receive (your F-9).** `POST /api/v2/inventory/items/receive`
+- F-9 was not a regression. Receive never set a product or a location; the 10-12 units got their products from a migration run by SQL (mig 264), not from the call. It does both now.
+- A new EPC becomes an `in_stock` item with its product and a location at the request's `spaceId`. The EPC is decoded with the tenant's tag profiles to an EAN; a product matches when its `gtin`, `barcode` or `attributes.ean` equals that EAN, within the tenant.
+- Per-item refusals, in this order for a new EPC. Nothing is created for a refused EPC. The response shape is unchanged (`received`, `created`, `errors[] {epc, reason}`); `reason` begins with the code and a colon.
+
+  | Code | When |
+  |---|---|
+  | `not_admitted` | the tag is outside the tenant's tag encoding (unchanged) |
+  | `invalid_space` | `spaceId` is not a live space of the site in the tenant (before: any UUID was accepted and ignored) |
+  | `undecodable_tag` | none of the tenant's tag profiles gives the tag a product code (Bob's ruling of 2026-11-19; before: an item with no product) |
+  | `unknown_product` | the EAN is not in the tenant's catalog; the reason names the EAN (before: an item with no product) |
+
+- A repeat of an EPC that is already `in_stock` is counted in `received` (not in `created`) and writes nothing. One exception: an item with no location gets one at the request's space. A repeat never moves an item and never changes its product, so the 11-17 probe item (item 18, `sku null`) stays without a product.
+- Each EPC is saved whole or not at all (item, identifier, state change, location). One EPC failing does not undo the others in the request. A resumed request is safe.
+- Nothing here makes receive faster: each EPC is its own transaction and a compliance recompute after it. The A16 pace stands.
+
+**Your first request (§ 12.3), checked read-only on mother at 18:06 KST:**
+- EAN `2142367790007` is one Decathlon product (sku `4236779`, `gtin` = `barcode`, enabled).
+- Space `e19e1502-…` is "Back Room", a live space of Denver.
+- No identifier beginning `3038D13702F8BE06FC23AC` exists yet.
+- So the expected answer is `received 50, created 50, errors []`, if all 50 EPCs decode to EANs in the catalog. Treat any entry in `errors` as a stop and post it here.
+- Post the 50 reads here as you planned. Backend/Web then does the server read of the location (each item in the Back Room) and writes the result under yours.
+
+**2. A pushed plan's product is resolved when the plan arrives (§ 12.4, A14).**
+- The match runs in the same transaction as the write: the target's item identifier equals the product's `barcode` or `gtin`, exact string, in the plan's tenant. Not `attributes.ean`, not `sku`. An identifier with no match stays null.
+- It is not retroactive. Your probe `twin-probe-plan-20261119` (directive `45aea65b-…`) still has two target rows with no product at 18:06 KST: the first send (`GB-R5-U7`, `excluded`) and the re-send ("Gondola R5 Back U7", `resolved`). Its EAN `3608429702252` is in the catalog (sku `2730763`). A re-send of the same `external_directive_id` runs the match again for targets that are still null, so one re-send should show `product_name`. That re-send is the live proof of this fix; nothing else has exercised it on dev yet.
+
+**3. `/compliance/state` returns `expiry_date`** beside `effective_date`, same instant format, null when the plan has no stop. Your probe's stored stop is `2026-11-21T07:00:00Z`.
+
+**4. A person-session begin honors the caller's `id`** (step 1, A19.1), with no server flag.
+- Send a UUID as `id` in the begin body. A repeat with the same `id` and the same site, space and `trackingId` returns the stored session, so a retried begin no longer makes a second one.
+- A reused `id` with a different site, space or `trackingId` is a 400. An `id` that is not a UUID is now a 400 (it was ignored).
+- Without an `id`, a retried begin still makes a second session. A deterministic UUID per session (for example a name-based UUID of your `trackingId`) makes every retry safe.
+- Not changed: the `:batch` routes are off; an impression with no matching session still makes one (`sessionSynthesized: true`, A19.3); the limits and the lane of A19.5 and A19.6.
+
+**Proven how:** unit and Postgres-backed tests on the merged head (2,903 tests, 0 failed; the receive class 17 of 17), CI green, and the deploy check above. No request has been sent to the live routes by Backend/Web; your first receive request and the plan re-send are the first live use.
+
+**Still open on the Backend/Web side:** the re-run of Denver's projections since 10-14 (§ 12.7) waits on Bob's word.
