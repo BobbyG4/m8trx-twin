@@ -1294,3 +1294,32 @@ existence 0 of 1,513 sampled units not `in_stock` (ok). Plan: 739 receives (36,9
 Ramp: 1 lane to 23:17:23, 2 lanes to 23:21:33 (server lane: p50 47 to 49 s, p95 50 to 56 s a request, 0 queued, 0 refused,
 642 items moved, 0 refused), then **4 lanes** with the server lane's OK. All hourly passes are skipped while it holds the lock.
 The location post-check runs 120 s after the last move; results go in `reset-complete.json` and here.
+
+### 12.14 [twin] The Denver reset is done — 2026-11-20 05:35 KST
+
+**Run (box `reset-complete.json`, finished 20:35:44Z):** `LIVE RUN end: DONE accepted=6085 skipped=0 alerts=0`, 1,411 health
+checks, 0 retry requests. Receives: 36,910 tags received, 36,860 created (the 50 of the 18:13 hand send were already in stock),
+23:13 to 01:54 KST. Moves: 5,346 of 5,346 batches, last 05:33:33 KST. Directives: **held** (old plan in force).
+
+**Server lane's read (05:41 KST, dev GraphQL):** 27,453 units moved + 608 already in place = 28,061 (the plan's exact count),
+0 refused, no gap between arrivals over 6 s, work time p50 4.9 s / p95 13.6 s / max 54.3 s (five slow ones 02:59 KST, cause not
+found, nothing lost). Denver: 43,166 in stock, 13,162 sold, 137 missing; 28,109 in-stock units on a fixture.
+
+**Reconciled with the box's frozen plan (built from the box ledger at 23:13, sold-epcs 14:04Z):**
+- 21,853 new units to a cell = server 21,821 created tonight + 32 of the hand-send 50 on a fixture (exact).
+- 15,057 new units left in the back room at the stockroom space with no rack (by design: "received, not put away") = server
+  15,039 + 18 of the 50 (exact).
+- Units already on hand: the ledger has 6,208, and each one got a move (5,433 to a new place, 775 to their own place). **The platform holds 48
+  more Denver units in stock than the ledger** (43,166 vs 6,208 + 36,910). This dates from before tonight, the reset did not
+  touch those units, and it is a follow-up: check them against `sold-epcs.txt` / `missing-epcs.txt` for unsent sales or missing marks.
+
+**Location post-check (120 s after the last move, report only):** 4 of 5,921 sampled ledger units disagree (0.07 %, limit 2 %), on
+3 of 20 fixtures: GB-R3-U1 ledger 259 / platform 260, GB-R4-U7 258 / 260, GB-R6-U6 172 / 173. The other 17 match exactly.
+(Before the reset, 793 of 1,513 were off.)
+
+**Handback:** the lock was released at 05:35. The hourly pass ran at 06:00 KST (sent 100, errors 0, 718 s) and 07:00 KST (sent 6,
+errors 0). The owner file was set to `dec-us-denver,hourly` at 07:28 KST.
+
+**Still open:** the plan form (Bob: 6 plans of 1,200 targets or fewer, or a server change; targets must resolve by zone id or
+mapping); the old plan end goes only with the new plan. The hourly stream (`DatedStream.allocate`) sells only seed units, never
+reset-received ones. The twin's other move paths should send `to_zone_id`. The 48-unit drift.
