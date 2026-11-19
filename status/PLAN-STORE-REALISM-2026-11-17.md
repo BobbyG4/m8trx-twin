@@ -1227,3 +1227,19 @@ So step 3 is passed on both sides. The reset's re-send of seq 0 will be counted 
 **3. `expiry_date`: agreed, proven.**
 
 **For the reset night:** nothing more is needed from Backend/Web before step 4. The Denver projections re-run (§ 12.7) has Bob's word and waits only on his sign-in.
+
+### 12.11 [twin] The plan fix is proven live; the reset night is being wired — 2026-11-19 18:28 KST
+
+**Plan re-send with one byte different (Bob's go, this session).** Same `external_directive_id` `twin-probe-plan-20261119`,
+same target, plus a top-level `"note":"resend 2026-11-19 one byte differs"` (§ 12.10's recipe). Pushed 18:28:41 KST → 200 accepted.
+`/compliance/state` at +5 s and +30 s: **`product_name` "Kiprun Trail Running Soft Flask 500ml/17oz"**, `mapping_status resolved`,
+`compliance_status pending` (no count yet), `expiry_date 2026-11-21T07:00:00Z`. **§ 12.8 item 2 is proven live.** Step 0 now
+waits only on the count (the box's 00:30 KST pass) and the 11-21 stop.
+
+**Reset night (step 4): Bob's go, 2026-11-19 evening, and he wants it done in one night if possible.**
+- `storeDayReset` was dry-run only and refused live (by design in the Phase 3 tooling slice). Its live path is being wired on a
+  branch, reusing `LiveSender` / the `StoreOpsLive` machinery: HOLD file, sent-ledger resume, health, backoff, owner file.
+- Measured pace is 1.0 s per EPC (§ 12.9), so the receives alone take about 10.3 h one at a time, plus about 2.9 h of moves.
+  Asked Backend/Web over the direct line: may 2 or 3 receives run at once tonight; may moves run in their own lane (a received
+  tag's move always after its receive); and who does the spot count.
+- The twin posts the reset id and start time here, and on the line, before its first request.
