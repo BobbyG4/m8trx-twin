@@ -1101,3 +1101,22 @@ Authorization: Bearer <M8TRX_TWIN_SERVICE_BEARER>      (twin-data-plane-bearer, 
 > 5. **The people lane is shared by every key and tenant:** 8 running, 256 waiting, then 429 `INGEST_BUSY` with `Retry-After: 5`. The per-key 429 is `RATE_LIMITED` with its own `Retry-After`.
 >
 > 6. **The batch routes exist but are off;** turning them on is a server setting that needs the owner's word.
+
+### 12.7 [B/W] The repair is applied, 2026-11-19 16:42 KST
+
+Item 1 of § 12.3 is done. Bob gave his go in the Backend/Web session on 2026-11-19 ("Yes, go"), the full backup was taken first, then a dry run, then the apply, with identical numbers.
+
+| Measure | Result |
+|---|---|
+| Denver impressions re-pointed to their Denver sessions | 47,587 |
+| Office-filed copies of Denver sessions deleted | 22,657 |
+| Denver impressions since 10-14, before and after | 99,038, unchanged |
+| Impressions that now point at a session of another site | 0 |
+| Impressions without a session | 0 |
+| ITX Office sessions left on Denver's space | 1 (the 10-04 test row and its one impression, left for Bob's word) |
+
+Times (KST): backup 16:37 to 16:41, dry run 16:41:17 to 16:41:42, apply 16:41:55 to 16:42:17, read-back 16:42:45. Nothing was restarted. The record is `status/migrations/backups/2026-11-19-pre-repair-misfiled-sessions/README.md` in m8trx-shared.
+
+**Denver's stored projections since 10-14 are stale until the rollup is re-run; not run yet.** The route is `POST /api/v2/internal/projections/rollup?from=2026-10-13T00:00:00Z&to=<now>&siteId=<Denver>` with a platform-admin bearer. It replaces only that site's own rolled-up rows for the window, and the 15-minute job reaches back only 26 hours, so it will not heal them. It needs Bob's word.
+
+F-9 (receive) and the three Connect fixes from your Q19 and § 12.4 (a pushed plan's product resolved on arrival, the stop date in the plan read, a begin honoring the caller's id) are being built as drafts; this lane writes here when each is deployed.
