@@ -1243,3 +1243,26 @@ waits only on the count (the box's 00:30 KST pass) and the 11-21 stop.
   Asked Backend/Web over the direct line: may 2 or 3 receives run at once tonight; may moves run in their own lane (a received
   tag's move always after its receive); and who does the spot count.
 - The twin posts the reset id and start time here, and on the line, before its first request.
+
+### 12.12 [B/W] Denver's projections are re-run; sizing for the reset night — 2026-11-19 18:38 KST
+
+The two lanes now also talk directly (session to session, on Bob's ask). This section is the record of what was said there. Neither lane passes Bob's word to the other.
+
+**1. § 12.7's open item is closed.** The re-run of Denver's stored projections was sent at 18:34:54 KST on Bob's word, from his platform-admin sign-in. Answer 200 in 16 s, `failures 0`, no skipped days, 12,482 rows written (traffic 1,962, behavioral 8,202, commerce 2,318). Read back on mother at 18:35:22 KST: every Denver projection row from 10-13 on was computed at 18:34:54 KST.
+
+**2. Receives: one request at a time on the live code (`502b6863`).** From a code read, nothing measured tonight.
+- Receive has no lane. Its database work (about ten round trips a tag, about 85 ms each to mother: your 1 tag a second) runs on one of the main server's four event-loop threads for the whole request. Those threads also serve login, health and everything else. Two or three 50-second requests at once would pin half or most of them.
+- So A16 stands: 50 tags a request, one request at a time, wait for each answer. About 10.3 h for 36,900.
+- **Drafted, not approved, not deployed:** a server change that gives receive its own lane (4 at a time, 16 waiting, then 429 `INGEST_BUSY` with `Retry-After: 5`). If Bob approves it and it is verified live before the night starts, up to 4 receive requests may run at once (about 2.6 h). Backend/Web says "the receive lane is live" on the direct line and here; until then, one.
+- Back off on: any 429 (honor `Retry-After`), any 5xx or 504 (wait, re-send; a repeat is counted `received` and writes nothing), `/server/api/health` over 1 s or not `ok`.
+
+**3. Moves alongside receives: yes, at about 6 to 7 tags a second.**
+- A move batch is acknowledged first and processed after, on a shared background pool: 4 threads, growing to 16 only once 256 batches wait. If all 16 are busy and the queue is full, the work falls onto the event loop.
+- A moved tag costs about 12 to 14 round trips (about 1 to 1.2 s), and a batch is not one transaction. Full growth is about 13 to 16 tags a second, so 25 tags every 2 s (12.5 a second) is too close. **Send 25 tags every 3.5 to 4 s:** about 5 to 5.7 h for 5,160 batches.
+- The answer cannot show a refused tag. A tag that does not exist yet is refused (`item_not_found`), logged and not retried. A move must wait until its tag's receive answer has arrived with the tag counted.
+- A move body identical to an earlier one from the same integration is dropped as a duplicate (§ 12.10).
+- Moves and receives of different tags share no lock.
+
+**4. The spot count read** is the twin's own Hasura read with its store-manager sign-in (`StoreStock.fromPlatform`); it does not depend on the Connect key. Backend/Web does a server read on request (20 fixture codes and ledger counts).
+
+**Timing.** Live code: about 10.5 h in all (a 21:30 start ends about 08:00). With the receive lane: receives about 2.6 h, moves about 5 to 5.7 h, ending about 03:00 to 03:30.
