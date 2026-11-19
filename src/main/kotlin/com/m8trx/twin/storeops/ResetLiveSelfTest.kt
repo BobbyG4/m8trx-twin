@@ -169,6 +169,7 @@ private fun run(
 fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
     "reset live: 3 receive lanes run at once; a move waits for its receives, on-hand moves do not; every item sent once" to ::liveDependency,
     "reset live: the directives go last, after every receive and move, and not before the store's local midnight" to ::liveDirectiveLast,
+    "reset live: M8TRX_RESET_HOLD_DIRECTIVES sends every receive and move and NO directive (old plan stays in force)" to ::liveHoldDirectives,
     "reset live: resume skips accepted ids; HOLD stops cleanly (no new request) and a rerun finishes the rest without resending" to ::liveResumeHold,
     "reset live: a receive with errors[] stops the run, prints the entries, and is not marked accepted" to ::liveReceiveErrors,
     "reset live: internal_error tags are re-sent in a retry request (different body), moves wait for them; limits stop the night" to ::liveInternal,
@@ -200,6 +201,29 @@ private fun liveDependency() {
     check(runCatching { ResetLiveParams(5, 1, 1, 1, 1, 0) }.isFailure && runCatching { ResetLiveParams(0, 1, 1, 1, 1, 0) }.isFailure) {
         "lanes beyond 1..4 refused"
     }
+}
+
+private fun liveHoldDirectives() {
+    val sched = Schedule()
+    val clock = VirtualClock(0)
+    val sender = FakeSender(sched, clock)
+    val events = mutableListOf<String>()
+    val p = params(3, 0)
+    val held = ResetLiveParams(
+        receiveLanes = p.receiveLanes, moveSpacingMs = p.moveSpacingMs, directiveSpacingMs = p.directiveSpacingMs,
+        healthPollMs = p.healthPollMs, idlePollMs = p.idlePollMs, midnightMs = 0, progressEveryMs = 1, retryDelayMs = 5,
+        statusEveryMs = Long.MAX_VALUE / 4, holdDirectives = true,
+    )
+    val res = ResetLiveRunner(
+        sched.items, sender, RetryPolicy(), SentLedger(null), null, held, { false }, clock,
+        onEvent = { synchronized(events) { events += it } },
+    ).run()
+    check(res.end == ResetLiveRunner.End.DONE) { "done: ${res.end} ${res.haltReason}" }
+    check(sender.directiveAt.isEmpty() && "rst-t-end-OLD" !in sender.order && "PLNW-t" !in sender.order) {
+        "no directive sent: ${sender.directiveAt}"
+    }
+    check(sender.order.toSet() == sched.body.toSet()) { "every receive and move sent" }
+    check(events.any { it.contains("directive steps HELD") && it.contains("PLNW-t") }) { "the hold is logged: $events" }
 }
 
 private fun liveDirectiveLast() {

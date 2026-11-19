@@ -51,6 +51,13 @@ class ResetLiveParams(
     /** The store's local midnight of the reset day: the gated items (old end, new plan) do not go before it. */
     val midnightMs: Long,
     val progressEveryMs: Long = 5_000,
+    /**
+     * `M8TRX_RESET_HOLD_DIRECTIVES=true`: the directive steps (old end, new plan) are NOT sent; the run ends after receives and moves.
+     * 2026-11-19 (server lane): the webhook route refuses bodies over 256 KiB and a second delivery under one id REPLACES the targets, so
+     * a 6,365-target period plan cannot go as one body; both plan items stay out until Bob picks the form (the old plan is ended only in
+     * the same step that lands the new one, so Denver is never without a plan in force).
+     */
+    val holdDirectives: Boolean = false,
     /** The move lane re-checks health at least this often (receives and directives check before every request). */
     val moveHealthEveryMs: Long = 30_000,
     /** A health answer slower than this is NOT ready (the server lane: GET health over 1 s means the event loops are busy). */
