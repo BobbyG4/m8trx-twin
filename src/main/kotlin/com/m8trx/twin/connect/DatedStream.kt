@@ -126,15 +126,18 @@ object DatedStream {
     }
 
     /** What [slug] holds, before the sold-log, the missing list and other dates' reservations come off: seed ∪ received at their current fixtures. */
-    fun onHand(chainDir: Path, slug: String, src: StockSources): List<EpcRow> {
+    fun onHand(chainDir: Path, slug: String, src: StockSources): List<EpcRow> =
+        onHand(chainDir, slug, ReceiveStock.readStock(src.received).filter { it.slug == slug }, RestockMoves.readPlacements(src.placements))
+
+    /** [onHand] from ledgers the caller already read once ([received] = this store's rows, [placements] = the whole ledger). */
+    fun onHand(chainDir: Path, slug: String, received: List<ReceiveStock.ReceivedRow>, placements: Map<String, String>): List<EpcRow> {
         val dir = chainDir.resolve("stores/$slug")
-        val itemCdByEan = loadItemCdByEan(dir.resolve("assortment.csv"))
         return mergeOnHand(
             slug,
             loadEpcRows(dir.resolve("epcs.csv")),
-            ReceiveStock.readStock(src.received),
-            RestockMoves.readPlacements(src.placements),
-            itemCdByEan,
+            received,
+            placements,
+            loadItemCdByEan(dir.resolve("assortment.csv")),
         )
     }
 
@@ -363,7 +366,9 @@ object DatedStream {
         val reservedElsewhere = reservedByOtherPlans(stateDir, planFile)
         val sources = StockSources.fromEnv(soldLog)
         val missing = StoreStock.readLines(sources.missing)
-        val stock: Map<String, List<EpcRow>> = stores.associateWith { onHand(chainDir, it, sources) }
+        val receivedBySlug = ReceiveStock.readStock(sources.received).groupBy { it.slug }
+        val placements = RestockMoves.readPlacements(sources.placements)
+        val stock: Map<String, List<EpcRow>> = stores.associateWith { onHand(chainDir, it, receivedBySlug[it].orEmpty(), placements) }
         log.info(
             "on hand (seed ∪ received, current fixtures): {} · sources received={} placements={} missing={} ({} units)",
             stock.mapValues { it.value.size },
@@ -435,7 +440,7 @@ object DatedStream {
         val eanByEpc = stock.values.flatten().associate { it.epc to it.ean }
         // A unit already in the sold-log never goes on the wire again, whatever ids the split gives a receipt this run
         // (a book that changed between passes can re-split a partly sent receipt; the platform refuses a sold EPC).
-        val parts = sales.flatMap { priceSale(it, eanByEpc, book) }.let { all -> unsoldParts(all, priorSold) }
+        val parts = sales.flatMap { priceSale(it, eanByEpc, book) }.let { all -> unsoldParts(all, priorSold + missing) }
         logPriceCoverage(sales.size, parts, remembered.size, plannedPrices.size)
         val items: List<Item> = (parts.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()

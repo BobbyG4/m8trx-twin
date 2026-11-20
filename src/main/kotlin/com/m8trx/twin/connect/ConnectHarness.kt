@@ -1038,6 +1038,20 @@ private fun datedStreamSellsOnHand() {
             "received units in BR-09 count as back-of-house; only the ${moved.size} moved ones are floor"
         }
 
+        // a unit counted missing after the plan froze never goes on the wire: unsoldParts(priorSold + missing)
+        val frozen = plan.sales.map { DatedStream.PricedPart(it, it.saleId, it.epcs, null, null, null) }
+        val lost = sold.take(3).toSet()
+        val kept = DatedStream.unsoldParts(frozen, lost).flatMap { it.epcs }
+        check(kept.none { it in lost } && kept.size == sold.size - lost.size) { "a missing unit in a frozen plan is not sent" }
+
+        // a malformed date on one row skips that row, never aborts the pass
+        val badFile = dir.resolve("receive/bad.csv")
+        java.nio.file.Files.write(
+            badFile,
+            listOf("epc,ean,slug,fixture,date", "E1,1,s,BR-01,2026-10-05", "E2,1,s,BR-01,not-a-date", "E3,1,s,BR-01,2026-10-06"),
+        )
+        check(ReceiveStock.readStock(badFile).map { it.epc } == listOf("E1", "E3")) { "a bad-date row is skipped, not fatal" }
+
         // freeze: deterministic, and the plan file round-trips unchanged
         check(DatedStream.allocate(day, held, soldSeed, "selftest", cat).sales == plan.sales) { "allocation must be deterministic" }
         val pf = dir.resolve("stream/plan.csv")
