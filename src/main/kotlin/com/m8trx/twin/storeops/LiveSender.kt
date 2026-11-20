@@ -30,6 +30,8 @@ class LiveSender private constructor(
     private val placeholders: Placeholders,
     private val auth: WebhookClient.AuthMode,
     private val healthUrl: String,
+    /** Reconcile lane: a webhook 2xx whose body reports a refused item is [Outcome.ItemErrors] (halts), not [Outcome.Accepted]. */
+    private val strictWebhook: Boolean = false,
     /** Webhook sends (moves, directives) wait up to 60 s; a timeout is [Outcome.Unreachable] and backs off. */
     private val http: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(WEBHOOK_TIMEOUT_S)),
     private val receiveHttp: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(RECEIVE_TIMEOUT_S)),
@@ -67,7 +69,16 @@ class LiveSender private constructor(
             }
             when (r) {
                 null -> Outcome.Http(501)
-                is ConnectResponse.Ok -> if (item.route == Route.BEARER_RECEIVE) receiveOutcome(item, r.rawBody) else Outcome.Accepted
+
+                is ConnectResponse.Ok -> when {
+                    item.route == Route.BEARER_RECEIVE -> receiveOutcome(item, r.rawBody)
+
+                    strictWebhook -> WebhookAnswer.refusal(r.rawBody)?.let { Outcome.ItemErrors(listOf(ItemError(null, "webhook answer: $it"))) }
+                        ?: Outcome.Accepted
+
+                    else -> Outcome.Accepted
+                }
+
                 is ConnectResponse.Err -> Outcome.Http(r.error.status, r.error.retryAfterSeconds)
             }
         }
@@ -95,6 +106,25 @@ class LiveSender private constructor(
         /** Receive requests wait up to 150 s: above the 120 s front door, so a 504 is the front door's, never our own cut. */
         const val RECEIVE_TIMEOUT_S = 150L
         const val WEBHOOK_TIMEOUT_S = 60L
+
+        /** The reconcile sender's client: webhook routes only, no store placeholders (every body carries real ids), strict about refused items. */
+        fun createForRecon(live: Boolean): LiveSender {
+            require(live) { "LiveSender is built only on a live run (M8TRX_RECON_LIVE=true); a dry run never constructs it" }
+            val auth = if (System.getenv("M8TRX_STORE_OPS_AUTH")?.lowercase() ==
+                "hmac"
+            ) {
+                WebhookClient.AuthMode.HMAC
+            } else {
+                WebhookClient.AuthMode.API_KEY
+            }
+            return LiveSender(
+                ConnectConfig.fromEnv(),
+                Placeholders(null, null),
+                auth,
+                System.getenv("M8TRX_HEALTH_URL")?.takeIf { it.isNotBlank() } ?: Health.URL,
+                strictWebhook = true,
+            )
+        }
 
         fun create(live: Boolean, slug: String, chainDir: Path, stateDir: Path, backroomZones: Map<String, String> = emptyMap()): LiveSender {
             require(live) { "LiveSender is built only on a live run (M8TRX_STORE_OPS_LIVE=true); a dry run never constructs it" }
