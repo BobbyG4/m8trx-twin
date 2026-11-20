@@ -677,6 +677,17 @@ storeOpsTask(
     "Offline: people-by-REST mapping equals the truth ledger, session and impression invariants, Denver refused, determinism, pacing under the cap, backoff, no live client.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestSelfTest") }
+storeOpsTask(
+    "storeDayPeopleRestLive",
+    "com.m8trx.twin.storeops.PeopleRestLiveMainKt",
+    "People-by-REST live sender for the nine non-Denver stores. DRY (prints the exact expected counts, sends nothing) unless M8TRX_PEOPLE_REST_LIVE=true AND M8TRX_PEOPLE_REST_CONFIRM=<slugs of the run> AND M8TRX_TWIN_PEOPLE_BEARER. Scope: _STORES, _DATE, _FROM/_UNTIL (store-local HH:mm). Backfill and Denver are refused. Frozen plan, sent-ledger, progress, people-HOLD. Run-card: ops/INSTALL.md.",
+)
+storeOpsTask(
+    "storeDayPeopleRestLiveSelfTest",
+    "com.m8trx.twin.storeops.PeopleRestLiveSelfTestKt",
+    "Offline (fake transport, simulated clock): live people-by-REST refusals, window rule, begin-before-impression, resume, cap, retry decisions.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestLiveSelfTest") }
 
 // The store-ops service's classpath, copied like liveDist so the hourly pass's build never rewrites a jar under a running JVM.
 tasks.register<Sync>("storeOpsDist") {

@@ -239,3 +239,36 @@ So after the handback the hourly stream keeps selling only unsold chain-seed uni
 judged from the seed location, not from where the reset put the unit), while `move`/`stock` see the reset's stock. An EAN whose seed units are
 all sold is dropped or substituted by the stream even though the reset put new units of it on the shelf. Fixing that is a change to the sales
 allocation (not part of this PR).
+
+# People by REST, first live test: one store, one hour (`storeDayPeopleRestLive`)
+
+Nine non-Denver stores only (Denver keeps its edge and is refused). One service key (`vision_ai:ingest`, site-scoped to the nine). Backfill is
+refused, and so is a date before the store-local today. No secret is in the repo: the key is an env var.
+
+Window rule: a session is in when its BEGIN is due in `[FROM, UNTIL)` store-local. A session that begins before FROM is skipped whole. A session
+that begins in the window keeps its impressions and its close even after UNTIL (no session is left open), so the run ends when the last such
+close is due. A line goes out only when it is due (due <= now); nothing is sent early.
+
+```
+cd ~/IdeaProjects/m8trx-twin     # on the box, the checkout of the merged branch
+export M8TRX_PEOPLE_REST_STORES=dec-us-nyc        # subset of the nine
+export M8TRX_PEOPLE_REST_FROM=10:00 M8TRX_PEOPLE_REST_UNTIL=11:00   # store-local; DATE defaults to the store-local today
+export M8TRX_PEOPLE_REST_OUT=/opt/m8trx/twin-ops/people-rest         # run files: $OUT/live/<date>/
+# 1. DRY (nothing sent, nothing written): prints the exact expected counts per store and kind
+./gradlew storeDayPeopleRestLive
+# 2. LIVE: needs all three
+export M8TRX_PEOPLE_REST_LIVE=true M8TRX_PEOPLE_REST_CONFIRM=dec-us-nyc   # exactly the slugs of the run
+export M8TRX_TWIN_PEOPLE_BEARER=...                                       # from 1Password, never committed
+./gradlew storeDayPeopleRestLive
+```
+
+Optional: `M8TRX_PEOPLE_REST_CAP_PER_MIN` (300, max 600, one global cap for the key), `M8TRX_PEOPLE_REST_SEED`, `M8TRX_PEOPLE_REST_BASE_URL`
+(default `https://dev.m8trx.com/server`), `M8TRX_OPS_DIR` (`/opt/m8trx/twin-ops`).
+
+- **Check counts:** compare the printed table with `$OUT/live/<date>/run-complete.json` (`expected` vs `counts_this_run`, plus `sent-ledger.tsv`).
+- **Watch:** `tail -f $OUT/live/<date>/live-run.log`; `cat $OUT/live/<date>/progress.json`; `wc -l $OUT/live/<date>/sent-ledger.tsv`.
+- **Stop cleanly:** `touch /opt/m8trx/twin-ops/people-HOLD` (NOT `HOLD`, which stops the live plane). `rm` it to allow a restart. Exit 6.
+- **Resume** (HOLD, halt, crash): same env, same `OUT` and date. The frozen `plan.jsonl` is reused (a different store/date/window/seed against it is
+  refused), ids in `sent-ledger.tsv` are skipped. Exit codes: 0 done, 1 halted (read the last `end:` line), 3 refused, 6 HOLD.
+- **Halts:** 402 `NOT_ENTITLED` at once; 401/403 retried once then halt; a 4xx refusal halts with the request still due; 429 waits at least a minute
+  (or `Retry-After`); 5xx and no answer wait for the health gate (`GET /server/api/health`, 200 and `"status":"ok"`).
