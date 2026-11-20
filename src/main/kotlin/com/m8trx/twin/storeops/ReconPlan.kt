@@ -26,8 +26,11 @@ import java.nio.file.Path
 object Recon {
     const val BATCH_MAX = 25
 
-    /** 16 a minute. */
-    const val SPACING_MS = 3_750L
+    /**
+     * 8 batches of at most 25 a minute = at most 200 items a minute (server lane, 2026-11-21: the move pool works about 240 items a
+     * minute with a 256-event queue shared with live sales; 400 a minute put it 70 s behind).
+     */
+    const val SPACING_MS = 7_500L
     const val NONE_LOCATION = "BACKROOM:(none)"
     const val BACKROOM = "BACKROOM:"
 

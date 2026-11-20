@@ -19,7 +19,7 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.ReconSend")
 /**
  * `./gradlew reconcileSend` - re-sends what the platform missed, through Connect, from the twin-vs-platform differences file.
  *
- * DRY by default: prints counts per site (units, batches, minutes at 16 a minute), the first bodies and every unresolved location or unsourced
+ * DRY by default: prints counts per site (units, batches, minutes at 8 a minute), the first bodies and every unresolved location or unsourced
  * sale, writes the frozen plan (`<out>/<kind>/plan.jsonl`) and sends NOTHING (no client is built; the identity read is a plain READ and is
  * skipped when `M8TRX_RECON_IDENTITY_DIR` holds saved `<slug>.json` answers). LIVE only with `M8TRX_RECON_LIVE=true` AND
  * `M8TRX_RECON_CONFIRM=<the sites of the run, csv>` (equal to `M8TRX_RECON_SITES`).
@@ -197,11 +197,11 @@ object ReconSendMain {
         // ── report ──
         val bySite = planned.groupBy { it.site }
         val order = Recon.siteOrder(bySite.mapValues { it.value.size })
-        log.info("plan ({}; {} ms between sends = 16 a minute; one store at a time, smallest first):", kind, Recon.SPACING_MS)
+        log.info("plan ({}; {} ms between sends = 8 a minute, at most 200 items; one store at a time, smallest first):", kind, Recon.SPACING_MS)
         order.forEach { s ->
             val items = bySite.getValue(s)
             log.info(
-                "  {}: {} units in {} {} -> {} min at 16/min",
+                "  {}: {} units in {} {} -> {} min at 8/min",
                 s,
                 items.sumOf { it.item.epcs.size },
                 items.size,
