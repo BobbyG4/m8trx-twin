@@ -75,6 +75,7 @@ fun main() {
     stressPlan()
     tenStorePlanRefs()
     datedSaleOccurredAt()
+    datedStreamSellsOnHand()
     alarmDayEnvelope()
     multiStoreMoves()
     restockMovesPlan()
@@ -975,4 +976,76 @@ private fun receiveStockPlan() {
     log.info(
         "[receive] SGTIN-96 round-trip, manifest rule shared, minted EPCs unique/in-block/EAN-decodable, ledger resume, dry chain refills 11/11 (was 1/11) ✓",
     )
+}
+
+/**
+ * The dated stream sells what the store HOLDS (seed ∪ received, at current fixtures), not the seed alone: a store whose
+ * seed is all sold still sells from received units; the sold-log and the missing list never sell; a moved unit carries
+ * its moved fixture; a plan is deterministic and survives the plan file round-trip (the freeze).
+ */
+private fun datedStreamSellsOnHand() {
+    val slug = "dec-us-denver"
+    val date = java.time.LocalDate.of(2026, 10, 6)
+    val day = checkNotNull(RecentDay(chainDir = CHAIN).run(slug, date)) { "Denver is open on $date" }
+    val seed = DatedStream.loadEpcRows(CHAIN.resolve("stores/$slug/epcs.csv"))
+    val cat = DatedStream.loadCatalog(CHAIN.resolve("stores/$slug/assortment.csv"))
+    val dir = java.nio.file.Files.createTempDirectory("onhand-selftest")
+    try {
+        // received: one new unit per seed unit, same EAN, booked to the stockroom
+        val received = seed.mapIndexed { i, r ->
+            ReceiveStock.ReceivedRow(Sgtin96.encode(r.ean, 9_000_000L + i), r.ean, slug, "BR-09", date.minusDays(1))
+        }
+        val other = received.first().copy(slug = "dec-fr-paris", epc = Sgtin96.encode(received.first().ean, 8_999_999L))
+        val recFile = dir.resolve("receive/received-stock.csv")
+        ReceiveStock.appendStock(recFile, dir.resolve("receive/x.sent"), received + other)
+        val moved = received.take(5).map { it.epc }
+        val plFile = dir.resolve("moves/placements.csv")
+        RestockMoves.appendPlacements(plFile, moved, "FLOOR-MOVED", date.minusDays(1))
+        val src = DatedStream.StockSources(recFile, plFile, dir.resolve("stock/missing-epcs.txt"))
+
+        val held = DatedStream.onHand(CHAIN, slug, src)
+        check(held.size == seed.size * 2) { "on hand = seed + received of THIS store only: ${held.size} vs ${seed.size * 2}" }
+        check(held.map { it.epc }.toSet().size == held.size) { "de-duplicated by EPC" }
+        check(held.none { it.epc == other.epc }) { "another store's received unit is not this store's stock" }
+        check(held.filter { it.epc in moved }.all { it.fixture == "FLOOR-MOVED" && !it.backOfHouse }) { "a moved unit carries its moved fixture" }
+        check(held.filter { it.epc in received.map { r -> r.epc } && it.epc !in moved }.all { it.fixture == "BR-09" && it.backOfHouse }) {
+            "an unmoved received unit keeps its received fixture"
+        }
+        check(held.filter { it.epc in received.map { r -> r.epc } }.all { it.itemCd.isNotBlank() }) {
+            "a received unit resolves its item code (the restock manifest counts by it)"
+        }
+
+        // zero seed left: every seed unit is in the sold-log, the stream sells from received
+        val soldSeed = seed.map { it.epc }.toSet()
+        val plan = DatedStream.allocate(day, held, soldSeed, "selftest", cat)
+        val sold = plan.sales.flatMap { it.epcs }
+        val recSet = received.map { it.epc }.toSet()
+        check(sold.isNotEmpty() && plan.droppedLines == 0) {
+            "a store with no seed left still sells: ${sold.size} units, ${plan.droppedLines} dropped"
+        }
+        check(sold.all { it in recSet }) { "only received units sell when the seed is gone" }
+        check(sold.none { it in soldSeed }) { "a sold-log unit never sells" }
+
+        // sold-log + missing units from the received set are excluded too
+        val gone = sold.take(40).toSet()
+        val plan2 = DatedStream.allocate(day, held, soldSeed + gone, "selftest", cat)
+        check(plan2.sales.flatMap { it.epcs }.none { it in gone }) { "sold/missing received units never sell again" }
+
+        // back-of-house follows the CURRENT fixture: all received units moved to the floor = none sold from the back
+        val floor = held.map { if (it.epc in recSet) it.copy(fixture = "FLOOR-MOVED") else it }
+        check(DatedStream.allocate(day, floor, soldSeed, "selftest", cat).fromBackOfHouse == 0) { "BOH follows the current fixture" }
+        check(plan.units - plan.fromBackOfHouse <= moved.size && plan.fromBackOfHouse > 0) {
+            "received units in BR-09 count as back-of-house; only the ${moved.size} moved ones are floor"
+        }
+
+        // freeze: deterministic, and the plan file round-trips unchanged
+        check(DatedStream.allocate(day, held, soldSeed, "selftest", cat).sales == plan.sales) { "allocation must be deterministic" }
+        val pf = dir.resolve("stream/plan.csv")
+        java.nio.file.Files.createDirectories(pf.parent)
+        DatedStream.writePlan(pf, plan.sales)
+        check(DatedStream.readPlan(pf) == plan.sales) { "a persisted plan reads back identical (plan reuse)" }
+    } finally {
+        dir.toFile().deleteRecursively()
+    }
+    log.info("[recent] dated stream sells on-hand: seed ∪ received, current fixtures, sold-log/missing excluded, plan frozen ✓")
 }

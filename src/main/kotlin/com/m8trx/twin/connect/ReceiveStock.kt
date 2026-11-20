@@ -141,7 +141,14 @@ object ReceiveStock {
                 slug,
                 date,
                 seed,
-                DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                // seed + received: a sold received unit must count in the receipt, as it does in the stream's manifest
+                DatedStream.mergeOnHand(
+                    slug,
+                    DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                    stock,
+                    emptyMap(),
+                    DatedStream.loadItemCdByEan(chainDir.resolve("stores/$slug/assortment.csv")),
+                ),
                 sales.filter { it.store == slug },
                 sentIds,
                 mine,
