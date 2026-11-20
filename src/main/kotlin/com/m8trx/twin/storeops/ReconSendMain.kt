@@ -64,6 +64,9 @@ object ReconSendMain {
         return r
     }
 
+    // Server lane, 2026-11-21: with its move queue full the platform makes the sender wait instead of refusing; stop and say so.
+    const val SLOW_ANSWER_MS = 10_000L
+
     /** Wraps the live sender: after an accepted move, `placements.csv` gets a line only for a unit whose recorded fixture DIFFERS from the destination. */
     class PlacementSender(
         private val inner: OpsSender,
@@ -79,7 +82,19 @@ object ReconSendMain {
 
         override fun dropToken() = inner.dropToken()
 
-        override fun send(item: SendItem): Outcome = inner.send(item).also { o ->
+        /** Set when one send took longer than [SLOW_ANSWER_MS] to be answered: the server's move queue is full and it is making the sender wait. */
+        var slow: String? = null
+            private set
+
+        override fun send(item: SendItem): Outcome {
+            val t0 = System.currentTimeMillis()
+            val o = sendInner(item)
+            val ms = System.currentTimeMillis() - t0
+            if (ms > SLOW_ANSWER_MS && slow == null) slow = "${item.extId} answered after $ms ms (limit $SLOW_ANSWER_MS ms)"
+            return o
+        }
+
+        private fun sendInner(item: SendItem): Outcome = inner.send(item).also { o ->
             if (o == Outcome.Accepted && item.kind == "move") {
                 val code = destCodeOf[item.extId] ?: return@also
                 val differ = item.epcs.filter { placements[it] != null && placements[it] != code }
@@ -309,6 +324,10 @@ object ReconSendMain {
                     }
 
                     Pump.State.WAITING -> Thread.sleep(250)
+                }
+                sender.slow?.let {
+                    log.error("HALTED at {}: slow answer, {} - the server's queue is full; tell the server lane, re-run resumes", slug, it)
+                    return 1
                 }
             }
             log.info("{}: done ({} delivered this run; verify by the re-run comparison against the platform)", slug, pump.queue.acked)
