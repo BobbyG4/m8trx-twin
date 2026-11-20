@@ -272,3 +272,23 @@ Optional: `M8TRX_PEOPLE_REST_CAP_PER_MIN` (300, max 600, one global cap for the 
   refused), ids in `sent-ledger.tsv` are skipped. Exit codes: 0 done, 1 halted (read the last `end:` line), 3 refused, 6 HOLD.
 - **Halts:** 402 `NOT_ENTITLED` at once; 401/403 retried once then halt; a 4xx refusal halts with the request still due; 429 waits at least a minute
   (or `Retry-After`); 5xx and no answer wait for the health gate (`GET /server/api/health`, 200 and `"status":"ok"`).
+
+## People by REST: the nine stores daily (installed on the box 2026-11-20, plan § 12.15)
+
+Deploy-local on the box (not in this repo): `/opt/m8trx/twin-ops/people-daily.sh <group> [FROM]` plus four systemd pairs,
+`m8trx-twin-people-<group>.timer` → `m8trx-twin-people@<group>.service` (Type=oneshot, User=m8trx, RuntimeMaxSec=26h, Nice=10).
+
+| group | stores | timer | cap/min |
+|---|---|---|---|
+| kr | dec-kr-seoul, dec-kr-busan | 00:02 Asia/Seoul | 80 |
+| fr | dec-fr-bordeaux, -lille, -lyon, -marseille, -paris | 00:02 Europe/Paris | 120 |
+| us-east | dec-us-nyc | 00:02 America/New_York | 50 |
+| us-west | dec-us-sf | 00:02 America/Los_Angeles | 50 |
+
+Each run is the group's store-local day, window 00:00 to 23:59, sent as it happens (`storeDayPeopleRestLive`, key `M8TRX_TWIN_PEOPLE_BEARER`).
+The caps add up to the key's twin cap of 300 a minute. Stores open 10:00 to 21:00, so a run ends around 22:00 local, before the next timer.
+- Run files: `/opt/m8trx/twin-ops/people-rest/<group>/live/<date>/` (plan, sent-ledger, progress, run-complete).
+- Logs: `/opt/m8trx/twin-ops/log/people-<group>-<yyyymmdd>.log`.
+- Stop all groups: `touch /opt/m8trx/twin-ops/people-HOLD` (never `$OPS/HOLD`, which stops the live plane).
+- A halted run (exit 1) is not restarted. Rerun the same group the same day to resume from its sent-ledger.
+- Backfill of past days is still refused by the sender. It is allowed by Bob's rule now that the live test has passed, but not built yet.
