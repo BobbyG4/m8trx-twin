@@ -33,7 +33,7 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.ReconSend")
  * `M8TRX_CONNECT_INTEGRATION_SLUG`, and `M8TRX_TWIN_SERVICE_BEARER` for the `/spatial/identity` read.
  *
  * **Operator:** run it under the shared lock (`flock /opt/m8trx/twin-ops/lock ./gradlew reconcileSend`), never beside the hourly pass or the day
- * step. The stop file ends it between sends (exit 6); the sent-ledger (`<out>/<kind>/sent.log`, accepted ids) makes a re-run resume. A webhook answer
+ * step. The stop file ends it between sends (exit 6); the ledger (`<out>/<kind>/sent.log`, ids DELIVERED = answered 2xx) makes a re-run resume; a second run of the same kind is refused by a lock on `sent.log.lock`. "Delivered" is not "applied": the webhook answers 200 and processes async, so an unresolved destination is not reported in the body. Verification is the re-run comparison against the platform, which the operator does after each site; the full body of the first 3 answers per site and of any non-plain answer is logged. A webhook answer
  * that reports an item not accepted HALTS the lane (exit 1, the item stays due). Exit: 0 done, 1 halted, 3 refused, 6 HOLD.
  */
 object ReconSendMain {
@@ -109,7 +109,7 @@ object ReconSendMain {
     fun run(): Int {
         val live = env("M8TRX_RECON_LIVE")?.toBoolean() == true
         val kind = try {
-            Recon.Kind.parse(env("M8TRX_RECON_KIND"))
+            if (env("M8TRX_RECON_KIND") == null) Recon.Kind.MOVES else Recon.Kind.parse(env("M8TRX_RECON_KIND"))
         } catch (e: IllegalArgumentException) {
             log.error("REFUSING: {}", e.message)
             return 3
@@ -131,6 +131,7 @@ object ReconSendMain {
         val stateDir = Path.of(env("M8TRX_RECON_STATE_DIR") ?: ".twin-state")
         val hold = Path.of(env("M8TRX_RECON_HOLD") ?: "/opt/m8trx/twin-ops/recon-HOLD")
 
+        val hash = Recon.planHash(diff, kind, sites)
         val rows = Recon.select(kind, Recon.readDiff(diff), sites)
         log.info(
             "reconcileSend {} {}: {} rows selected{}",
@@ -168,6 +169,13 @@ object ReconSendMain {
                     continue
                 }
                 val identity = identityFrom(env("M8TRX_RECON_IDENTITY_DIR"), slug, readOk = !env("M8TRX_TWIN_SERVICE_BEARER").isNullOrBlank())
+                if (identity != null && (identity.sites.size != 1 || identity.sites.single().slug != slug)) {
+                    problems +=
+                        "$slug: the /spatial/identity answer must hold exactly one site and it must be $slug, got ${identity.sites.map {
+                            it.slug
+                        }}; refused"
+                    continue
+                }
                 if (identity == null || identity.truncated) {
                     val why = if (identity == null) "could not read /spatial/identity" else "/spatial/identity answered truncated"
                     problems += "$slug: $why (set M8TRX_TWIN_SERVICE_BEARER or M8TRX_RECON_IDENTITY_DIR)"
@@ -214,7 +222,7 @@ object ReconSendMain {
         planned.take(3).forEach { log.info("  body: {}", it.item.payload) }
 
         if (!live) {
-            Recon.writePlan(planFile, planned)
+            Recon.writePlan(planFile, planned, hash)
             log.info("DRY RUN: nothing sent, no client built; frozen plan written to {}", planFile)
             return 0
         }
@@ -224,8 +232,16 @@ object ReconSendMain {
             log.error("REFUSING: {} problem(s) above; nothing is sent", problems.size)
             return 3
         }
+        if (Files.exists(planFile) && Recon.readPlanHash(planFile) != hash) {
+            log.error(
+                "REFUSING: the frozen plan {} was built from a different differences file, kind or sites; delete {} and run a dry run again",
+                planFile,
+                planFile,
+            )
+            return 3
+        }
         val frozen = if (Files.exists(planFile)) Recon.readPlan(planFile).filter { it.site in sites } else planned.filter { it.site in sites }
-        if (!Files.exists(planFile)) Recon.writePlan(planFile, planned)
+        if (!Files.exists(planFile)) Recon.writePlan(planFile, planned, hash)
         if (frozen.isEmpty()) {
             log.error("REFUSING: the plan holds nothing for {}", sites.sorted())
             return 3
@@ -234,11 +250,35 @@ object ReconSendMain {
             log.error("REFUSING: the stop file {} exists; nothing is sent until it is removed", hold)
             return 6
         }
+        Files.createDirectories(out)
+        val lockChannel = java.nio.channels.FileChannel.open(
+            out.resolve("sent.log.lock"),
+            java.nio.file.StandardOpenOption.CREATE,
+            java.nio.file.StandardOpenOption.WRITE,
+        )
+        val lock = try {
+            lockChannel.tryLock()
+        } catch (e: java.nio.channels.OverlappingFileLockException) {
+            null
+        }
+        if (lock == null) {
+            log.error("REFUSING: another reconcile {} run holds {}; two runs of one kind never write together", kind, out.resolve("sent.log.lock"))
+            return 3
+        }
         val ledger = SentLedger(out.resolve("sent.log"))
         val liveBySite = frozen.groupBy { it.site }
         val liveOrder = Recon.siteOrder(liveBySite.mapValues { it.value.size })
         val destCodes = frozen.associate { it.item.extId to it.destCode }
-        val sender = PlacementSender(LiveSender.createForRecon(true), destCodes, stateDir.resolve("moves/placements.csv"), LocalDate.now())
+        val siteOf = frozen.associate { it.item.extId to it.site }
+        val shown = HashMap<String, Int>()
+        val liveSender = LiveSender.createForRecon(true)
+        liveSender.onAnswer = { item, body ->
+            val site = siteOf[item.extId] ?: "?"
+            val n = (shown[site] ?: 0) + 1
+            shown[site] = n
+            if (n <= 3 || !WebhookAnswer.isPlain(body)) log.info("webhook answer {} #{} {}: {}", site, n, item.extId, body)
+        }
+        val sender = PlacementSender(liveSender, destCodes, stateDir.resolve("moves/placements.csv"), LocalDate.now())
         val policy = RetryPolicy()
         for (slug in liveOrder) {
             val items = liveBySite.getValue(slug).map { it.item }
@@ -271,7 +311,7 @@ object ReconSendMain {
                     Pump.State.WAITING -> Thread.sleep(250)
                 }
             }
-            log.info("{}: done ({} sent this run)", slug, pump.queue.acked)
+            log.info("{}: done ({} delivered this run; verify by the re-run comparison against the platform)", slug, pump.queue.acked)
             if (liveOrder.last() != slug) Thread.sleep(Recon.SPACING_MS)
         }
         log.info("reconcileSend {} done; {} placement line(s) appended", kind, sender.appended)

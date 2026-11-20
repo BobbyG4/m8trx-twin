@@ -189,10 +189,10 @@ object Recon {
 
     class SalePlan(val planned: List<Planned>, val unsourced: List<Unsourced>, val causes: Map<Cause, Int>)
 
-    /** `<orig>-r1`: a resend of unlanded units gets a NEW external id (the platform dedupes a webhook receipt on `external_event_id`). */
-    fun resendId(origSaleId: String) = "$origSaleId-r1"
+    /** `<orig>-r1-<hash of the EPC set>` (like [moveId]): a resend of unlanded units gets a NEW external id (the platform dedupes a webhook receipt on `external_event_id`). */
+    fun resendId(origSaleId: String, epcs: List<String>) = "$origSaleId-r1-${SendItem.hash(epcs.sorted().joinToString(","))}"
 
-    fun derivedSaleId(slug: String, epc: String) = "recon-sale-$slug-${SendItem.hash(epc)}-r1"
+    fun derivedSaleId(slug: String, epcs: List<String>) = "recon-sale-$slug-${SendItem.hash(slug, epcs.sorted().joinToString(","))}-r1"
 
     /**
      * The sale resends. [index] says where each EPC's original sale is; [times] (`epc,occurred_at`, optional operator file) wins over everything and is
@@ -228,8 +228,11 @@ object Recon {
             val ev = if (epcs.size == 1) SaleEvent.byEpc(id, at, epcs.single()) else SaleEvent.byEpcList(id, at, epcs)
             return Planned(slug, SendItem(seq++, 0, 2, "sale", id, ConnectMappers.snake.valueToTree(ev), epcs), "", null, at)
         }
-        byReceipt.forEach { (sid, rs) -> out += item(resendId(sid), receiptAt.getValue(sid), rs.map { it.epc }.sorted(), receiptStore.getValue(sid)) }
-        single.forEach { (r, at) -> out += item(derivedSaleId(r.site, r.epc), at, listOf(r.epc), r.site) }
+        byReceipt.forEach { (sid, rs) ->
+            out +=
+                item(resendId(sid, rs.map { it.epc }), receiptAt.getValue(sid), rs.map { it.epc }.sorted(), receiptStore.getValue(sid))
+        }
+        single.forEach { (r, at) -> out += item(derivedSaleId(r.site, listOf(r.epc)), at, listOf(r.epc), r.site) }
         return SalePlan(
             out.sortedWith(compareBy({ it.site }, { it.item.extId })).mapIndexed { i, p ->
                 Planned(p.site, SendItem(i, 0, 2, "sale", p.item.extId, p.item.payload, p.item.epcs), p.destName, p.destCode, p.occurredAt)
@@ -252,7 +255,19 @@ object Recon {
 
     // ── frozen plan ──────────────────────────────────────────────────────────
 
-    fun writePlan(file: Path, planned: List<Planned>) {
+    /** SHA-256 over the differences file's bytes, the kind and the sorted sites: what a frozen plan was built from. */
+    fun planHash(diff: Path, kind: Kind, sites: Set<String>): String {
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        md.update(Files.readAllBytes(diff))
+        md.update("|${kind.name}|${sites.sorted().joinToString(",")}".toByteArray())
+        return md.digest().joinToString("") { "%02x".format(it) }
+    }
+
+    /** The hash in the plan file's header line, or null when there is none. */
+    fun readPlanHash(file: Path): String? = Files.readAllLines(file).firstOrNull()?.takeIf { it.isNotBlank() }
+        ?.let { ConnectMappers.snake.readTree(it) }?.takeIf { it.path("header").asBoolean(false) }?.path("plan_hash")?.asText()
+
+    fun writePlan(file: Path, planned: List<Planned>, hash: String = "") {
         file.toAbsolutePath().parent?.let { Files.createDirectories(it) }
         val lines = planned.map { p ->
             ConnectMappers.snake.createObjectNode().also {
@@ -265,10 +280,16 @@ object Recon {
                 it.set<JsonNode>("payload", p.item.payload)
             }.toString()
         }
-        Files.write(file, lines)
+        val header = ConnectMappers.snake.createObjectNode().also {
+            it.put("header", true)
+            it.put("plan_hash", hash)
+        }.toString()
+        Files.write(file, listOf(header) + lines)
     }
 
-    fun readPlan(file: Path): List<Planned> = Files.readAllLines(file).filter { it.isNotBlank() }.mapIndexed { i, l ->
+    fun readPlan(file: Path): List<Planned> = Files.readAllLines(file).filter {
+        it.isNotBlank() && !it.startsWith("{\"header\"")
+    }.mapIndexed { i, l ->
         val n = ConnectMappers.snake.readTree(l)
         val kind = n.path("kind").asText()
         val payload = n.path("payload")
@@ -344,30 +365,52 @@ class ReconSaleIndex private constructor(private val plans: Map<String, List<Rec
     }
 }
 
-/** Reads a webhook 2xx body for a sign that an item was NOT accepted: a non-empty refusal list, a refusing status word, or an unresolved note. */
+/**
+ * Reads a webhook 2xx body. The twin-pos webhook answers 200 and processes ASYNC: a destination it cannot resolve is NOT reported in the body
+ * (`destination_unresolved` still answers 200), so no body can prove a move applied. "delivered" is all a 2xx means; verification is the re-run
+ * comparison against the platform, which the operator does after each site. What this does: [refusal] flags a body that SAYS something was not
+ * taken (the lane halts), and [isPlain] says whether a body is a plain success (anything else is logged in full).
+ */
 object WebhookAnswer {
-    private val REFUSAL_KEYS = listOf("errors", "refused", "rejected", "unresolved", "quarantined", "failed", "refused_items", "refusedItemIds")
+    private val NON_EMPTY_KEYS = listOf(
+        "errors", "error", "refused", "rejected", "unresolved", "quarantined", "failed", "refused_items", "refusedItemIds", "refused_item_ids",
+        "skipped", "ignored", "unknown_epcs", "not_found",
+    )
     private val BAD_STATUS = setOf("error", "rejected", "quarantined", "refused", "failed", "unresolved", "partial")
+    private val BENIGN_KEYS =
+        setOf("status", "success", "ok", "received", "accepted", "queued", "id", "event_id", "external_event_id", "message", "duplicate")
 
-    /** Null when the body shows nothing refused (including an empty body or one that is not JSON: a bare 200 ack). */
+    private fun parse(rawBody: String?): JsonNode? = try {
+        if (rawBody.isNullOrBlank()) null else ConnectMappers.snake.readTree(rawBody)
+    } catch (e: java.io.IOException) {
+        null
+    }
+
+    /** Null when the body shows nothing refused (a blank or non-JSON body is a bare ack). An array body, `success:false`, `ok:false`, `accepted:0`, a non-empty skipped/ignored/refused list: refused. */
     fun refusal(rawBody: String?): String? {
         if (rawBody.isNullOrBlank()) return null
-        val n = try {
-            ConnectMappers.snake.readTree(rawBody)
-        } catch (e: java.io.IOException) {
-            return if (rawBody.contains("unresolved", ignoreCase = true)) rawBody.take(200) else null
-        }
-        if (n == null || !n.isObject) return null
-        return scan(n, 0)
+        val n = parse(rawBody)
+        if (n == null) return if (rawBody.contains("unresolved", ignoreCase = true)) rawBody.take(200) else null
+        if (n.isArray) return "array body: ${n.toString().take(200)}"
+        return if (n.isObject) scan(n, 0) else null
+    }
+
+    /** True for a blank body or an object with only benign keys and no refusal marker. Anything else is logged in full by the sender. */
+    fun isPlain(rawBody: String?): Boolean {
+        if (rawBody.isNullOrBlank()) return true
+        val n = parse(rawBody) ?: return false
+        return n.isObject && refusal(rawBody) == null && n.fieldNames().asSequence().all { it in BENIGN_KEYS }
     }
 
     private fun scan(n: JsonNode, depth: Int): String? {
         if (depth > 3) return null
-        for (k in REFUSAL_KEYS) {
+        for (k in NON_EMPTY_KEYS) {
             val v = n.path(k)
-            if (v.isArray && v.size() > 0) return "$k: ${v.toString().take(200)}"
+            if ((v.isArray || v.isObject) && v.size() > 0) return "$k: ${v.toString().take(200)}"
             if (v.isNumber && v.asInt() > 0) return "$k=${v.asInt()}"
         }
+        for (k in listOf("success", "ok")) if (n.path(k).isBoolean && !n.path(k).asBoolean()) return "$k=false ${n.toString().take(160)}"
+        if (n.path("accepted").isNumber && n.path("accepted").asInt() == 0) return "accepted=0 ${n.toString().take(160)}"
         val st = n.path("status").asText("").lowercase()
         if (st in BAD_STATUS) return "status=$st ${n.toString().take(160)}"
         val code = n.path("code").asText("").lowercase()

@@ -137,7 +137,10 @@ fun main() {
     val sp = Recon.planSales(srows, idx)
     check(sp.planned.size == 2, { "two sourced receipts: ${sp.planned.size}" })
     val ev = sp.planned.first { it.item.epcs == listOf("U1") }
-    check(ev.item.extId == "twin-day-1-dec-x-0042-r1", { "new derived id: ${ev.item.extId}" })
+    check(ev.item.extId == Recon.resendId(rc.saleId, listOf("U1")) && ev.item.extId.startsWith("twin-day-1-dec-x-0042-r1-"), {
+        "new derived id: ${ev.item.extId}"
+    })
+    check(Recon.resendId(rc.saleId, listOf("U1")) != Recon.resendId(rc.saleId, listOf("U1", "U2")), { "id depends on the EPC set" })
     check(ev.item.extId != rc.saleId, { "never the original id" })
     check(ev.item.payload.path("occurred_at").asText() == "2026-11-09T12:44:05.997Z", { "original occurred_at kept: ${ev.item.payload}" })
     check(ev.item.payload.path("epc").asText() == "U1" && !ev.item.payload.has("epc_list"), {
@@ -171,6 +174,16 @@ fun main() {
     check(back.first().destCode == plan.planned.first().destCode && back.last().occurredAt == sp.planned.last().occurredAt, {
         "dest code and occurred_at round-trip"
     })
+
+    println("[plan hash] a frozen plan carries a hash of diff, kind and sites")
+    val h1 = Recon.planHash(csv, Recon.Kind.MOVES, setOf("dec-x"))
+    check(
+        h1 == Recon.planHash(csv, Recon.Kind.MOVES, setOf("dec-x")) && h1 != Recon.planHash(csv, Recon.Kind.RACKS, setOf("dec-x")) &&
+            h1 != Recon.planHash(csv, Recon.Kind.MOVES, setOf("dec-y")),
+        { "hash depends on kind and sites" },
+    )
+    Recon.writePlan(pf, plan.planned, h1)
+    check(Recon.readPlanHash(pf) == h1 && Recon.readPlan(pf).size == plan.planned.size, { "header read back, plan lines unaffected" })
 
     println("[dry run] sends nothing; live needs both keys and the credentials")
     check(LiveClients.constructed == clientsBefore, { "planning built a live client" })
@@ -216,6 +229,17 @@ fun main() {
     })
     check(WebhookAnswer.refusal("""{"received":true,"errors":[{"epc":"A","reason":"destination_unresolved"}]}""") != null, { "errors[] refused" })
     check(WebhookAnswer.refusal("""{"status":"quarantined"}""") != null, { "quarantined refused" })
+    check(
+        listOf(
+            """{"success":false}""", """{"ok":false}""", """{"accepted":0}""", """{"skipped":["A"]}""", """{"ignored":[1]}""",
+            """{"refused_item_ids":["A"]}""", """{"unknown_epcs":["A"]}""", """{"not_found":["A"]}""", """[{"a":1}]""",
+        ).all { WebhookAnswer.refusal(it) != null },
+        { "each refusal marker halts" },
+    )
+    check(
+        WebhookAnswer.isPlain("""{"status":"ok"}""") && !WebhookAnswer.isPlain("""{"status":"ok","extra":1}""") && !WebhookAnswer.isPlain("[]"),
+        { "plain vs logged in full" },
+    )
     check(WebhookAnswer.refusal("""{"errors":[]}""") == null, { "an empty errors[] is fine" })
     val refusing = object : OpsSender {
         var n = 0

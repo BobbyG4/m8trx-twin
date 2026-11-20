@@ -41,6 +41,10 @@ class LiveSender private constructor(
         LiveClients.constructed++
     }
 
+    /** Reconcile lane: called with every webhook 2xx body, so the runner can log the full answers. */
+    @Volatile
+    var onAnswer: ((SendItem, String?) -> Unit)? = null
+
     private val webhook by lazy { WebhookClient(config, http) }
     private val bearer by lazy {
         ConnectClient(config.copy(serviceBearer = System.getenv("M8TRX_TWIN_SERVICE_BEARER")?.takeIf { it.isNotBlank() }), receiveHttp)
@@ -71,6 +75,14 @@ class LiveSender private constructor(
                 null -> Outcome.Http(501)
 
                 is ConnectResponse.Ok -> when {
+                    item.route != Route.BEARER_RECEIVE && onAnswer != null -> {
+                        onAnswer?.invoke(item, r.rawBody)
+                        WebhookAnswer.refusal(r.rawBody)?.takeIf {
+                            strictWebhook
+                        }?.let { Outcome.ItemErrors(listOf(ItemError(null, "webhook answer: $it"))) }
+                            ?: Outcome.Accepted
+                    }
+
                     item.route == Route.BEARER_RECEIVE -> receiveOutcome(item, r.rawBody)
 
                     strictWebhook -> WebhookAnswer.refusal(r.rawBody)?.let { Outcome.ItemErrors(listOf(ItemError(null, "webhook answer: $it"))) }
