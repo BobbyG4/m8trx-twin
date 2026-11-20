@@ -1323,3 +1323,34 @@ errors 0). The owner file was set to `dec-us-denver,hourly` at 07:28 KST.
 **Still open:** the plan form (Bob: 6 plans of 1,200 targets or fewer, or a server change; targets must resolve by zone id or
 mapping); the old plan end goes only with the new plan. The hourly stream (`DatedStream.allocate`) sells only seed units, never
 reset-received ones. The twin's other move paths should send `to_zone_id`. The 48-unit drift.
+
+### 12.15 [twin] The Denver plan is in force; own-code proven; step 1 (people by REST) passed its first live test — 2026-11-20
+
+Bob, 2026-11-20 morning: the Denver plan and the people step are for the twin and B/W lanes to decide together ("you got my goal").
+
+**Denver plan (services #527 live 09:18 KST: webhook cap 2 MiB, codes resolve by name → mapping → the fixture's own code, one lookup per site).**
+Order on B/W's read of the code: a pushed plan never supersedes another, and an expired plan cannot be revived, so the NEW plan went first.
+- (b) `PLNW-dec-us-denver-20261116` was posted alone at 09:37:12 KST: the reset's frozen run, resumed with directives no longer held, and the old end marked sent in its ledger for that one run (ledger backed up).
+  The server took 10.7 s. All 6,365 targets resolved (by NAME) onto 113 fixtures, and every target has a product. The totals equal the body: 26,867 units, 2,497 products.
+  Five fixtures were cross-checked on both sides and all match.
+- (a) The old plan's end, `PLN-dec-us-denver-fe44dd290a92` with expiry 2026-11-19, was posted at 09:41:12 KST. It expired at the 09:45 tick.
+  Bob ended the web-editor plan "Nov 14" himself at 09:45:49.
+- In force at Denver now: the new plan, and `twin-probe-plan-20261119`, which is kept until its 11-21 stop for step 0's last read. They share one fixture, Gondola R5 Back U7.
+- Compliance at 09:47 KST: 6,365 pending, 0 evaluated. **The server never evaluates a pushed plan on activation.** A target gets judged only by a state change or move at its fixture, a count closing there, a task, or a mapping save.
+  Bob's ruling (B/W): a plan going into force gets one batch pass from the location record, marked `inferred_record`. This is services #532, and plans already in force get picked up at the next scheduler run.
+- **Own-code step proven (10:07:27 KST):** one move of a unit already on GF-R6-U3, sent with `to_fixture_code: "GF-R6-U3"` and `site_id` only, external id `twin-owncode-test-20261120-1`.
+  Server: moved 0, skipped 1, superseded 0, refused 0. Denver has no fixture named GF-R6-U3 and no mapping for it, so the code resolved by the fixture's own code.
+- Location check on the re-run: 6 of 5,918 units disagree (0.10 %).
+
+**Step 1, people for the nine stores (#42, merged 28411b4).**
+- Key: `twin-people-rest`, service, `vision_ai:ingest`, the nine non-Denver sites. Bob minted it after fixing a permission. It is in the box `.env` as `M8TRX_TWIN_PEOPLE_BEARER`, and the auth check passed (fake key 401, real key 400 on an empty body). Vision AI is enabled on all nine stores.
+- Sender: frozen plan plus sent-ledger, a global cap of 300 a minute, the health gate, RetryPolicy, and `people-HOLD`.
+  Every begin carries `id` = `UUID.nameUUIDFromBytes("m8trx-twin:" + trackingId)`, and its close PATCHes that UUID. A 201 carrying a different id halts the run. An impression or close is never sent before its begin is accepted.
+  Review fixes in 95b1906: the begin id, the 201 check, ledger write order, lock order.
+- **First live test: dec-kr-seoul, sessions beginning 10:30 to 11:30 KST on 11-20, sent as they happen.**
+  - Twin: 59 begins (201, each echoing our UUID), 321 impressions (201) and 59 closes (200). 0 refused, 0 retried, 0 synthesized. Ended 12:13:07 KST.
+  - B/W read at 12:14: 59 sessions, 59 distinct tracking ids, none doubled, all at site 7d03e0ce, all closed, 321 impressions linked, none synthesized.
+  - One session (-18, a 14 s visit) has no impression, which matches the plan.
+- Next: all nine stores daily, sent as the day happens (scheduling below); past days only after this (Bob's rule, now met).
+
+**Webhook keys (B/W confirmed, a rule tightened in #532):** every twin webhook post uses `M8TRX_TWIN_WEBHOOK_KEY` (twin-po-sim-2, bound to twin-pos, `webhook:write`). The service keys never go on a webhook post.
