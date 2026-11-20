@@ -689,6 +689,18 @@ storeOpsTask(
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestLiveSelfTest") }
 
+storeOpsTask(
+    "reconcileSend",
+    "com.m8trx.twin.storeops.ReconSendMainKt",
+    "Reconcile sender (sales | moves | racks from the twin-vs-platform differences CSV, through Connect). DRY by default (counts per site, first bodies, frozen plan; sends nothing). LIVE only with M8TRX_RECON_LIVE=true AND M8TRX_RECON_CONFIRM=<sites csv>. Env: M8TRX_RECON_DIFF, _KIND, _SITES, _STREAM_DIR, _OUT, _HOLD (recon-HOLD). 16 sends a minute, one store at a time, smallest first, sent-ledger resume. Run under the shared lock.",
+)
+storeOpsTask(
+    "reconcileSelfTest",
+    "com.m8trx.twin.storeops.ReconSelfTestKt",
+    "Offline: reconcile batching (<= 25, one destination, to_zone_id only), deterministic ids, unresolved zones refused, sale resend keeps occurred_at with only unlanded units, dry run sends nothing, halt on a refused item, resume, placements.",
+)
+tasks.named("offlineSelfTest") { dependsOn("reconcileSelfTest") }
+
 // The store-ops service's classpath, copied like liveDist so the hourly pass's build never rewrites a jar under a running JVM.
 tasks.register<Sync>("storeOpsDist") {
     group = "distribution"
