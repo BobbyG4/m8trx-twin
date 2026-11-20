@@ -285,10 +285,12 @@ Deploy-local on the box (not in this repo): `/opt/m8trx/twin-ops/people-daily.sh
 | us-east | dec-us-nyc | 00:02 America/New_York | 50 |
 | us-west | dec-us-sf | 00:02 America/Los_Angeles | 50 |
 
-Each run is the group's store-local day, window 00:00 to 23:59, sent as it happens (`storeDayPeopleRestLive`, key `M8TRX_TWIN_PEOPLE_BEARER`).
+The script starts ONE run per store (own plan, ledger and halt), so a refusal at one store never stops the others. Per-store caps: seoul 50, busan 30; paris 40, lille 25, lyon 25, bordeaux 15, marseille 15; nyc 50; sf 50. A third argument limits a run to some stores (`people-daily.sh kr 12:20 dec-kr-seoul`).
+Each run is the store-local day, window 00:00 to 23:59, sent as it happens (`storeDayPeopleRestLive`, key `M8TRX_TWIN_PEOPLE_BEARER`).
 The caps add up to the key's twin cap of 300 a minute. Stores open 10:00 to 21:00, so a run ends around 22:00 local, before the next timer.
-- Run files: `/opt/m8trx/twin-ops/people-rest/<group>/live/<date>/` (plan, sent-ledger, progress, run-complete).
-- Logs: `/opt/m8trx/twin-ops/log/people-<group>-<yyyymmdd>.log`.
+- Run files: `/opt/m8trx/twin-ops/people-rest/<store>/live/<date>/` (plan, sent-ledger, progress, run-complete).
+- Logs: `/opt/m8trx/twin-ops/log/people-<store>-<yyyymmdd>.log`.
+- Check the key's sites with `GET /server/api/v2/connect/whoami` (Bearer). 2026-11-20: Busan and Lille were missing, and their first begin answered 403.
 - Stop all groups: `touch /opt/m8trx/twin-ops/people-HOLD` (never `$OPS/HOLD`, which stops the live plane).
 - A halted run (exit 1) is not restarted. Rerun the same group the same day to resume from its sent-ledger.
 - Backfill of past days is still refused by the sender. It is allowed by Bob's rule now that the live test has passed, but not built yet.
