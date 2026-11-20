@@ -221,7 +221,7 @@ fun main() {
         )
     while (pump.pump(clock.nowMs) != Pump.State.IDLE) clock.advance(250)
     check(dry.sent.size == plan.planned.size, { "every batch handed to the (recording) sender once" })
-    check(clock.nowMs >= (plan.planned.size - 1) * Recon.SPACING_MS, { "paced at 3.75 s: ${clock.nowMs} ms for ${plan.planned.size} batches" })
+    check(clock.nowMs >= (plan.planned.size - 1) * Recon.SPACING_MS, { "paced at 7.5 s: ${clock.nowMs} ms for ${plan.planned.size} batches" })
 
     println("[halt] an answer that reports an item not accepted stops the lane; a 2xx ack with nothing refused does not")
     check(WebhookAnswer.refusal("""{"status":"ok"}""") == null && WebhookAnswer.refusal("") == null && WebhookAnswer.refusal("OK") == null, {
