@@ -21,8 +21,7 @@ import java.time.LocalDate
  *  - a session CLOSE `PATCH /api/v2/visionai/person-sessions/{id}` `{exitTime}`, due at the exit crossing.
  *
  * The impression is tied to its session by `trackingId` (the platform resolves it by space and window, +-60 s), so it needs no server id. The
- * CLOSE does: the server's session id comes back in the begin's 201 and is known only at send time, so a close line carries `session_ref`
- * (the begin's idempotent id) and the sender resolves it. Ids: `ppl-<slug>-<yyyymmdd>-<shopper>-b | i<n> | c`; the trackingId is the id
+ * CLOSE PATCHes the session by the begin's caller UUID (see [sessionUuid]); a close line still carries `session_ref` (the begin's line id) for ordering. Ids: `ppl-<slug>-<yyyymmdd>-<shopper>-b | i<n> | c`; the trackingId is the id
  * without its suffix. Time model of an impression, from the behavior model's episode (approach 1.2 s, engaged span, disengage 1.2 s):
  * firstDwell = firstLook = the visit's start, lastLook = start + approach + dwell, lastDwell = lastLook + disengage.
  */
@@ -72,6 +71,13 @@ object PeopleRest {
         return StoreIds(slug, site, st.salesFloorSpaceId, st.fixtures.associate { it.code to it.zoneId })
     }
 
+    /**
+     * The caller `id` of a session BEGIN (services #525 dedupes a begin only on a caller UUID `id`; a non-UUID is a 400): the name-based UUID of
+     * `"m8trx-twin:" + trackingId`, so a resent begin (same id, site, space, trackingId) returns the stored session instead of making a second
+     * one. The CLOSE PATCHes `/person-sessions/{this uuid}`.
+     */
+    fun sessionUuid(trackingId: String): String = java.util.UUID.nameUUIDFromBytes("m8trx-twin:$trackingId".toByteArray()).toString()
+
     fun stamp(date: LocalDate): String = date.toString().replace("-", "")
 
     fun plan(slug: String, date: LocalDate, r: DayResult, ids: StoreIds): List<Line> {
@@ -83,6 +89,7 @@ object PeopleRest {
             out += Line(
                 rec.entryMs, RANK_BEGIN, seq++, "person_begin", "$base-b", "POST", SESSIONS_PATH, null,
                 ConnectMappers.camel.createObjectNode().also {
+                    it.put("id", sessionUuid(base))
                     it.put("trackingId", base)
                     it.put("siteId", ids.siteId)
                     it.put("spaceId", ids.spaceId)
@@ -113,7 +120,7 @@ object PeopleRest {
                 )
             }
             out += Line(
-                rec.exitMs, RANK_CLOSE, seq++, "person_close", "$base-c", "PATCH", "$SESSIONS_PATH/{session_ref}", "$base-b",
+                rec.exitMs, RANK_CLOSE, seq++, "person_close", "$base-c", "PATCH", "$SESSIONS_PATH/${sessionUuid(base)}", "$base-b",
                 ConnectMappers.camel.createObjectNode().also { it.put("exitTime", Instant.ofEpochMilli(rec.exitMs).toString()) },
                 rec.id,
             )

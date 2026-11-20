@@ -66,65 +66,68 @@ object PeopleRestLiveMain {
         val gate = PeopleLiveGate.refusals(live, backfill, stores, env("M8TRX_PEOPLE_REST_CONFIRM"), bearer != null, backdated, frozen)
         if (gate.isNotEmpty()) return refuse(gate)
 
-        val items: List<SendItem>
-        if (frozen) {
-            if (ConnectMappers.snake.readTree(Files.readString(metaFile)) != meta) {
-                return refuse(
-                    listOf("the frozen plan in $dir was made with other stores/date/window/seed; use another M8TRX_PEOPLE_REST_OUT or remove it"),
-                )
+        // the plan files are written, and the run is made, only under the run lock (live); a dry run takes no lock and writes nothing
+        fun work(): Int {
+            val items: List<SendItem>
+            if (frozen) {
+                if (ConnectMappers.snake.readTree(Files.readString(metaFile)) != meta) {
+                    return refuse(
+                        listOf("the frozen plan in $dir was made with other stores/date/window/seed; use another M8TRX_PEOPLE_REST_OUT or remove it"),
+                    )
+                }
+                items = PeopleLivePlan.read(planFile)
+                log.info("FROZEN plan reused: {} ({} lines)", planFile, items.size)
+            } else {
+                val perStore = stores.map { slug ->
+                    val sim = sims.getValue(slug)
+                    val date = dates.getValue(slug)
+                    val r = sim.simulate(sim.initialState(), date, seed ?: sim.behavior.params.seed)
+                    val day = PeopleRest.plan(slug, date, r, PeopleRest.idsFor(slug, keys, siteIds))
+                    slug to PeopleWindow.select(day, zones.getValue(slug), date, fromMin, untilMin)
+                }
+                items = PeopleLivePlan.merge(perStore)
+                if (live) {
+                    PeopleLivePlan.write(planFile, items)
+                    Files.writeString(metaFile, meta.toPrettyString())
+                }
             }
-            items = PeopleLivePlan.read(planFile)
-            log.info("FROZEN plan reused: {} ({} lines)", planFile, items.size)
-        } else {
-            val perStore = stores.map { slug ->
-                val sim = sims.getValue(slug)
-                val date = dates.getValue(slug)
-                val r = sim.simulate(sim.initialState(), date, seed ?: sim.behavior.params.seed)
-                val day = PeopleRest.plan(slug, date, r, PeopleRest.idsFor(slug, keys, siteIds))
-                slug to PeopleWindow.select(day, zones.getValue(slug), date, fromMin, untilMin)
+            val ledger = PeopleLedger(dir.resolve("sent-ledger.tsv").takeIf { live })
+            val ledgerRead = PeopleLedger(dir.resolve("sent-ledger.tsv"))
+            printExpected(items, ledgerRead, System.currentTimeMillis(), stores, dates, fromMin, untilMin, cap, live)
+            if (!live) {
+                println("DRY: M8TRX_PEOPLE_REST_LIVE is not true; nothing was sent, no client was built, no file was written.")
+                return 0
             }
-            items = PeopleLivePlan.merge(perStore)
-            if (live) {
-                PeopleLivePlan.write(planFile, items)
-                Files.writeString(metaFile, meta.toPrettyString())
+            val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
+            val hold = Path.of(env("M8TRX_PEOPLE_REST_HOLD_FILE") ?: "$ops/people-HOLD")
+            if (Files.exists(hold)) {
+                log.error("REFUSING: HOLD is set ({}): nothing is sent until it is removed", hold)
+                return 6
+            }
+            val transport = PeopleRestHttp.create(true, env("M8TRX_PEOPLE_REST_BASE_URL") ?: PeopleRestHttp.DEFAULT_BASE, bearer!!)
+            val runner = PeopleLiveRunner(
+                items,
+                transport,
+                ledger,
+                PeopleLiveParams(cap),
+                System::currentTimeMillis,
+                { Thread.sleep(it) },
+                { Files.exists(hold) },
+                dir,
+            )
+            val end = runner.run()
+            println("people-rest live: $end ${runner.haltReason.orEmpty()} counts=${runner.counters.toJson()}")
+            return when (end) {
+                PeopleLiveRunner.End.DONE -> 0
+                PeopleLiveRunner.End.HOLD -> 6
+                PeopleLiveRunner.End.HALTED -> 1
             }
         }
-        val ledger = PeopleLedger(dir.resolve("sent-ledger.tsv").takeIf { live })
-        val ledgerRead = PeopleLedger(dir.resolve("sent-ledger.tsv"))
-        printExpected(items, ledgerRead, System.currentTimeMillis(), stores, dates, fromMin, untilMin, cap, live)
-        if (!live) {
-            println("DRY: M8TRX_PEOPLE_REST_LIVE is not true; nothing was sent, no client was built, no file was written.")
-            return 0
-        }
-        val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
-        val hold = Path.of(env("M8TRX_PEOPLE_REST_HOLD_FILE") ?: "$ops/people-HOLD")
-        if (Files.exists(hold)) {
-            log.error("REFUSING: HOLD is set ({}): nothing is sent until it is removed", hold)
-            return 6
-        }
+        if (!live) return work()
         Files.createDirectories(dir)
         FileChannel.open(dir.resolve("lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
             val lock = ch.tryLock() ?: return refuse(listOf("another people-rest run holds ${dir.resolve("lock")}"))
-            lock.use {
-                val transport = PeopleRestHttp.create(true, env("M8TRX_PEOPLE_REST_BASE_URL") ?: PeopleRestHttp.DEFAULT_BASE, bearer!!)
-                val runner = PeopleLiveRunner(
-                    items,
-                    transport,
-                    ledger,
-                    PeopleLiveParams(cap),
-                    System::currentTimeMillis,
-                    { Thread.sleep(it) },
-                    { Files.exists(hold) },
-                    dir,
-                )
-                val end = runner.run()
-                println("people-rest live: $end ${runner.haltReason.orEmpty()} counts=${runner.counters.toJson()}")
-                return when (end) {
-                    PeopleLiveRunner.End.DONE -> 0
-                    PeopleLiveRunner.End.HOLD -> 6
-                    PeopleLiveRunner.End.HALTED -> 1
-                }
-            }
+            lock.use { return work() }
         }
     }
 

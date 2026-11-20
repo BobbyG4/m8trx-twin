@@ -40,6 +40,7 @@ private fun session(n: Int, startMin: Int, imps: Int, lenMin: Int = 20, slug: St
         PeopleRest.Line(
             t, PeopleRest.RANK_BEGIN, 0, "person_begin", "$base-b", "POST", PeopleRest.SESSIONS_PATH, null,
             body(
+                "id" to PeopleRest.sessionUuid(base),
                 "trackingId" to base,
             ),
             "s$n",
@@ -51,7 +52,11 @@ private fun session(n: Int, startMin: Int, imps: Int, lenMin: Int = 20, slug: St
         )
     }
     out += PeopleRest.Line(
-        t + lenMin * 60_000L, PeopleRest.RANK_CLOSE, 99, "person_close", "$base-c", "PATCH", "${PeopleRest.SESSIONS_PATH}/{session_ref}", "$base-b",
+        t + lenMin * 60_000L, PeopleRest.RANK_CLOSE, 99, "person_close", "$base-c", "PATCH",
+        "${PeopleRest.SESSIONS_PATH}/${PeopleRest.sessionUuid(
+            base,
+        )}",
+        "$base-b",
         body("exitTime" to "x"), "s$n",
     )
     return out
@@ -62,6 +67,7 @@ private fun plan(vararg s: List<PeopleRest.Line>): List<SendItem> = PeopleLivePl
 /** A scripted transport: [script] answers (method, path, attempt-of-this-path); every call is recorded with the simulated time. */
 private class Fake(val clock: SimClock, val script: (String, String, Int) -> PeopleAnswer? = { _, _, _ -> null }) : PeopleTransport {
     val calls = ArrayList<Triple<Long, String, String>>()
+    val bodies = ArrayList<String>()
     var healthStatus = 200
     private val seen = HashMap<String, Int>()
 
@@ -70,6 +76,7 @@ private class Fake(val clock: SimClock, val script: (String, String, Int) -> Peo
     override fun call(method: String, path: String, body: String): PeopleAnswer {
         val n = seen.merge("$method $path $body", 1, Int::plus)!!
         calls += Triple(clock.nowMs, method, path)
+        bodies += body
         return script(method, path, n) ?: PeopleAnswer(if (method == "POST") 201 else 200, "{}", null)
     }
 }
@@ -266,16 +273,84 @@ private fun decisions() {
     // 400: refused, halts
     val (_, f400, e400) = go({ _, _ -> PeopleAnswer(400, null, null) })
     check(e400 == PeopleLiveRunner.End.HALTED && f400.calls.size == 1) { "400 halts" }
-    // the 201's id differs from ours: the close uses the returned one, and it is in the ledger
+    val uuid = PeopleRest.sessionUuid("ppl-$SLUG-20261123-s1")
+    // the 201 echoes our UUID: fine, the close PATCHes the same UUID, the answer's id is recorded
     val led = PeopleLedger(null)
-    val (r7, f7, e7) = go({ m, _ -> if (m == "POST") PeopleAnswer(201, "{\"id\":\"srv-123\"}", null) else null }, led)
-    check(e7 == PeopleLiveRunner.End.DONE && f7.calls.last().third == "${PeopleRest.SESSIONS_PATH}/srv-123" && r7.counters.idRemaps == 1) {
-        "the close PATCHes the returned id: ${f7.calls.last().third}"
+    val (r7, f7, e7) = go({ m, _ -> if (m == "POST") PeopleAnswer(201, "{\"id\":\"$uuid\"}", null) else null }, led)
+    check(e7 == PeopleLiveRunner.End.DONE && f7.calls.last().third == "${PeopleRest.SESSIONS_PATH}/$uuid") {
+        "the close PATCHes our UUID: ${f7.calls.last().third}"
     }
-    check(led.serverId("ppl-$SLUG-20261123-s1-b") == "srv-123") { "the server id is recorded" }
-    // the returned id equals ours: the close PATCHes ours
-    val (_, f8, _) = go({ m, _ -> if (m == "POST") PeopleAnswer(201, "{\"id\":\"ppl-$SLUG-20261123-s1-b\"}", null) else null })
-    check(f8.calls.last().third == "${PeopleRest.SESSIONS_PATH}/ppl-$SLUG-20261123-s1-b") { "no id returned or the same id: our id is used" }
+    check(led.serverId("ppl-$SLUG-20261123-s1-b") == uuid && r7.counters.missingServerIds == 0) { "the echoed id is recorded" }
+    // the 201 has no parseable id: a warning, carry on with ours, never the ppl-...-b line id
+    val (r8, f8, e8) = go({ _, _ -> null })
+    check(e8 == PeopleLiveRunner.End.DONE && f8.calls.last().third.endsWith("/$uuid") && r8.counters.missingServerIds == 1) {
+        "no id in the 201: carry on with ours"
+    }
+    check(r8.events.any { "WARNING" in it } && f8.calls.none { "ppl-" in it.third }) { "warned, and no line id ever goes in a path" }
+    // the 201 carries a DIFFERENT id: the server ignored ours, halt loudly, nothing after the begin is sent, begin not in the ledger
+    val led9 = PeopleLedger(null)
+    val (r9, f9, e9) = go({ m, _ -> if (m == "POST") PeopleAnswer(201, "{\"id\":\"11111111-2222-3333-4444-555555555555\"}", null) else null }, led9)
+    check(e9 == PeopleLiveRunner.End.HALTED && f9.calls.size == 1 && r9.haltReason!!.contains("server_id_mismatch") && led9.size == 0) {
+        "a different id in the 201 halts (${r9.haltReason})"
+    }
+}
+
+private fun sessionId() {
+    val items = plan(session(1, 0, 1, lenMin = 5))
+    val uuid = PeopleRest.sessionUuid("ppl-$SLUG-20261123-s1")
+    check(
+        runCatching {
+            java.util.UUID.fromString(uuid)
+        }.isSuccess && uuid == PeopleRest.sessionUuid("ppl-$SLUG-20261123-s1"),
+    ) { "deterministic UUID" }
+    val beginBody = items.first { PeopleLivePlan.wireKind(it) == "person_begin" }.payload.path("body")
+    check(beginBody.path("id").asText() == uuid) { "the begin body carries the UUID id" }
+    val f = Fake(SimClock(T0))
+    check(runner(items, f, PeopleLedger(null)).run() == PeopleLiveRunner.End.DONE) { "run done" }
+    check(ConnectMappers.snake.readTree(f.bodies.first()).path("id").asText() == uuid) { "the wire begin carries the UUID id" }
+    check(f.calls.last().third == "${PeopleRest.SESSIONS_PATH}/$uuid") { "the close path uses the same UUID" }
+    // the begin's answer is lost (no answer), the begin is resent: same body, same id
+    val f2 = Fake(SimClock(T0))
+    var lost = false
+    val t2 = object : PeopleTransport by f2 {
+        override fun call(method: String, path: String, body: String): PeopleAnswer {
+            val a = f2.call(method, path, body)
+            if (!lost && method == "POST" && path == PeopleRest.SESSIONS_PATH) {
+                lost = true
+                throw IOException("answer lost")
+            }
+            return a
+        }
+    }
+    val e2 = PeopleLiveRunner(items, t2, PeopleLedger(null), PeopleLiveParams(), { f2.clock.nowMs }, { f2.clock.advance(it) }, { false }, null).run()
+    val begins = f2.bodies.filter { "\"id\"" in it }
+    check(e2 == PeopleLiveRunner.End.DONE && begins.size == 2 && begins[0] == begins[1]) {
+        "a resent begin is byte-identical, same id (${begins.size})"
+    }
+    // a begin body without a UUID id is never sent
+    val bad = items.first { PeopleLivePlan.wireKind(it) == "person_begin" }
+    (bad.payload.path("body") as com.fasterxml.jackson.databind.node.ObjectNode).put("id", "ppl-x-b")
+    val f3 = Fake(SimClock(T0))
+    check(
+        PeopleLiveSender(f3, PeopleLedger(null), PeopleCounters(), {
+            0L
+        }).send(bad) == Outcome.Http(422) && f3.calls.isEmpty(),
+    ) { "a non-UUID id is not sent" }
+}
+
+private fun ledgerFailure() {
+    val dir = OUT.resolve("ledger-fail")
+    dir.toFile().deleteRecursively()
+    Files.createDirectories(dir)
+    // the ledger parent is a regular file: the append fails
+    Files.writeString(dir.resolve("blocker"), "x")
+    val led = PeopleLedger(dir.resolve("blocker").resolve("sent-ledger.tsv"))
+    val items = plan(session(1, 0, 0, lenMin = 5))
+    val f = Fake(SimClock(T0))
+    val r = runner(items, f, led)
+    check(r.run() == PeopleLiveRunner.End.HALTED && r.haltReason!!.contains("ledger_write_failed") && !led.isSent(items.first().extId)) {
+        "a ledger write failure halts cleanly and the id is not marked sent (${r.haltReason})"
+    }
 }
 
 private fun frozenPlan() {
@@ -319,6 +394,8 @@ fun main() {
         "resume: HOLD stops cleanly, a rerun skips the sent-ledger, progress and run-complete written" to ::resume,
         "cap: a 400-session burst with 429 and 502 never exceeds the sliding 60 s cap" to ::cap,
         "decisions: 429 Retry-After, 5xx and no answer via health, 401/403 once then halt, 402 clear halt, 400 halts, server id used" to ::decisions,
+        "begin carries a UUID id, the close uses it, a resent begin is identical" to ::sessionId,
+        "a ledger write failure halts cleanly" to ::ledgerFailure,
         "frozen plan reads back" to ::frozenPlan,
         "no network class in the live logic, no key in the source" to ::noSecrets,
     )

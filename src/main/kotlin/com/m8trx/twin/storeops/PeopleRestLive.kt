@@ -172,21 +172,25 @@ class PeopleLedger(private val file: Path?) {
     fun serverId(id: String): String? = serverIds[id]
 
     fun record(id: String, kind: String, status: Int, serverId: String?, ts: Instant) {
-        if (!done.add(id)) return
-        serverId?.let { serverIds[id] = it }
+        if (id in done) return
+        // file first, then memory: a failed write throws IOException and the id is NOT marked sent
         file?.let {
             it.toAbsolutePath().parent?.let { p -> Files.createDirectories(p) }
             Files.writeString(it, "$id\t$kind\t$status\t${serverId.orEmpty()}\t$ts\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND)
         }
+        done += id
+        serverId?.let { serverIds[id] = it }
     }
 }
+
+private val UUID_SHAPE = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
 class PeopleCell(var sent: Int = 0, var refused: Int = 0, var retried: Int = 0)
 
 class PeopleCounters {
     val cells = TreeMap<String, TreeMap<String, PeopleCell>>()
     var synthesized = 0
-    var idRemaps = 0
+    var missingServerIds = 0
 
     fun cell(store: String, kind: String) = cells.getOrPut(store) { TreeMap() }.getOrPut(kind) { PeopleCell() }
 
@@ -211,6 +215,7 @@ class PeopleLiveSender(
     val counters: PeopleCounters,
     private val now: () -> Long,
     private val onAttempt: (Long) -> Unit = {},
+    private val warn: (String) -> Unit = {},
 ) : OpsSender {
     private val json = ObjectMapper()
     private val attempts = HashMap<String, Int>()
@@ -230,7 +235,14 @@ class PeopleLiveSender(
             lastStatus = 422
             return Outcome.Http(422) // never an impression or a close before its begin is accepted
         }
-        val path = p.path("path").asText().replace("{session_ref}", ref?.let { ledger.serverId(it) ?: it } ?: "")
+        val path = p.path("path").asText()
+        val sessionUuid = if (wire == "person_begin") p.path("body").path("id").asText() else path.substringAfterLast('/')
+        // a begin goes out only with its caller UUID id (services #525), and a close path ends in a UUID: never a placeholder or a line id
+        if (path.contains('{') || (!UUID_SHAPE.matches(sessionUuid) && wire != "person_impression")) {
+            lastStatus = 422
+            counters.cell(store, label).refused++
+            return Outcome.Http(422)
+        }
         val n = attempts.merge(item.extId, 1, Int::plus)!!
         val cell = counters.cell(store, label)
         if (n > 1) cell.retried++
@@ -251,15 +263,22 @@ class PeopleLiveSender(
         if (wire == "person_begin") {
             serverId = listOf(answer?.path("id"), answer?.path("data")?.path("id"), answer?.path("sessionId"))
                 .firstNotNullOfOrNull { it?.takeIf(JsonNode::isTextual)?.asText()?.ifBlank { null } }
-            if (serverId != null && serverId != item.extId) {
-                counters.idRemaps++
-            } else if (serverId == item.extId) {
-                serverId = null
+            if (serverId == null) {
+                counters.missingServerIds++
+                warn("WARNING ${item.extId}: the 201 carries no parseable id; carrying on with our UUID $sessionUuid")
+            } else if (!serverId.equals(sessionUuid, ignoreCase = true)) {
+                // the server ignored our id: the close would PATCH a session that is not the one made. Halt, loudly; the begin stays due.
+                lastStatus = 500
+                return Outcome.ItemErrors(listOf(ItemError(item.extId, "server_id_mismatch: sent id $sessionUuid, the 201 answered $serverId")))
             }
         } else if (answer?.path("sessionSynthesized")?.asBoolean(false) == true) {
             counters.synthesized++
         }
-        ledger.record(item.extId, wire, a.status, serverId, Instant.ofEpochMilli(t))
+        try {
+            ledger.record(item.extId, wire, a.status, serverId, Instant.ofEpochMilli(t))
+        } catch (e: IOException) {
+            return Outcome.ItemErrors(listOf(ItemError(item.extId, "ledger_write_failed: ${e.message}; the request WAS accepted (HTTP ${a.status})")))
+        }
         cell.sent++
         return Outcome.Accepted
     }
@@ -315,7 +334,7 @@ class PeopleLiveRunner(
     }
 
     fun run(): End {
-        val sender = PeopleLiveSender(transport, ledger, counters, clock) { window.add(it) }
+        val sender = PeopleLiveSender(transport, ledger, counters, clock, { window.add(it) }, { event(it) })
         val pump = Pump(
             items.filter { !ledger.isSent(it.extId) }, sender, policy, SentLedger(null), OrderingGuard(emptyList()),
             mapOf(PeoplePace.KIND to PeoplePace.gapMs(params.capPerMin)), params.healthEveryMs, 5_000, hold, { event(it) },
@@ -367,7 +386,7 @@ class PeopleLiveRunner(
         val n = ConnectMappers.snake.createObjectNode()
         n.put("state", state).put("at", Instant.ofEpochMilli(now).toString()).put("planned", items.size).put("skipped_by_ledger", skipped)
         n.put("remaining", pump.queue.size).put("health_checks", pump.healthChecks).put("halt", haltReason)
-        n.put("synthesized_sessions", counters.synthesized).put("server_id_remaps", counters.idRemaps)
+        n.put("synthesized_sessions", counters.synthesized).put("begins_without_parseable_id", counters.missingServerIds)
         n.set<JsonNode>("counts", counters.toJson())
         Files.createDirectories(d)
         Files.writeString(d.resolve("progress.json"), n.toPrettyString())
@@ -377,7 +396,10 @@ class PeopleLiveRunner(
         val d = dir ?: return
         val n = ConnectMappers.snake.createObjectNode()
         n.put("completed_at", Instant.ofEpochMilli(clock()).toString()).put("planned", items.size).put("skipped_by_ledger", skipped)
-        n.put("alerts", pump.alerts.size).put("synthesized_sessions", counters.synthesized).put("server_id_remaps", counters.idRemaps)
+        n.put(
+            "alerts",
+            pump.alerts.size,
+        ).put("synthesized_sessions", counters.synthesized).put("begins_without_parseable_id", counters.missingServerIds)
         n.set<JsonNode>("counts_this_run", counters.toJson())
         n.set<JsonNode>("expected", ConnectMappers.snake.valueToTree(PeopleLivePlan.counts(items)))
         Files.writeString(d.resolve("run-complete.json"), n.toPrettyString())
