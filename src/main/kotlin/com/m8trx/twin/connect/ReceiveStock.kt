@@ -141,7 +141,14 @@ object ReceiveStock {
                 slug,
                 date,
                 seed,
-                DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                // seed + received: a sold received unit must count in the receipt, as it does in the stream's manifest
+                DatedStream.mergeOnHand(
+                    slug,
+                    DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
+                    stock,
+                    emptyMap(),
+                    DatedStream.loadItemCdByEan(chainDir.resolve("stores/$slug/assortment.csv")),
+                ),
                 sales.filter { it.store == slug },
                 sentIds,
                 mine,
@@ -233,10 +240,23 @@ object ReceiveStock {
 
     fun readStock(file: Path): List<ReceivedRow> {
         if (!Files.exists(file)) return emptyList()
-        return Files.readAllLines(file).drop(1).mapNotNull { l ->
+        var bad = 0
+        val rows = Files.readAllLines(file).drop(1).mapNotNull { l ->
             val c = l.split(",")
-            if (c.size < 5 || c[0].isBlank()) null else ReceivedRow(c[0].trim(), c[1].trim(), c[2].trim(), c[3].trim(), LocalDate.parse(c[4].trim()))
+            if (c.size < 5 || c[0].isBlank()) {
+                null
+            } else {
+                runCatching { ReceivedRow(c[0].trim(), c[1].trim(), c[2].trim(), c[3].trim(), LocalDate.parse(c[4].trim())) }
+                    .getOrElse {
+                        bad++
+                        null
+                    }
+            }
         }
+        if (bad > 0) {
+            org.slf4j.LoggerFactory.getLogger("com.m8trx.twin.connect.ReceiveStock").warn("{}: skipped {} row(s) with a malformed date", file, bad)
+        }
+        return rows
     }
 
     fun appendStock(file: Path, ledger: Path, rows: List<ReceivedRow>) {

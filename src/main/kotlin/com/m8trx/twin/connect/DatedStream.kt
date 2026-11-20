@@ -8,6 +8,7 @@ import com.m8trx.twin.connect.model.webhook.ShipmentLine
 import com.m8trx.twin.connect.model.webhook.ShipmentManifest
 import com.m8trx.twin.connect.sim.InboundPushDriver
 import com.m8trx.twin.history.RecentDay
+import com.m8trx.twin.ops.StoreStock
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,9 +29,13 @@ import kotlin.random.Random
  *  - **`occurred_at`** is the transaction's own time — the shopper's exit from the store — so sales spread
  *    across the store's operating hours instead of landing as a burst at send time.
  *  - **One sale event per transaction**: `epc` for a one-unit basket, `epc_list` for the rest.
- *  - **Each EPC sells once.** Every basket line takes a unit of its own EAN from the store's `epcs.csv`,
- *    back-of-house (`BR-*`) first so the floor still looks stocked, never one already in the shared sold-log
- *    or reserved by another date's plan. A line whose EAN has no unit left is dropped and counted. The run
+ *  - **Each EPC sells once, from what the store HOLDS.** Every basket line takes a unit of its own EAN from the store's
+ *    on-hand list ([onHand]): the seed `epcs.csv` ∪ the units the twin received there (`receive/received-stock.csv`: the
+ *    chain receipt and the Denver reset's), each at its CURRENT fixture (`moves/placements.csv`, the twin's location ledger,
+ *    a later line wins) else the fixture it was seeded/received to. Back-of-house (`BR-*`, by that current fixture) first so
+ *    the floor still looks stocked; never a unit in the shared sold-log, in `stock/missing-epcs.txt` (a count's
+ *    `missing`), or reserved by another date's plan. A received unit's item code comes from the store's `assortment.csv`
+ *    by EAN, so the restock manifest counts it. A line whose EAN has no unit left is dropped and counted. The run
  *    prints each store's runway (units left ÷ today's units) — the brief's budget is ≥ 12 days.
  *  - **Resumable.** A live run persists its plan (`.twin-state/stream/<runId>.plan.csv`) and a sent ledger
  *    (`<runId>.sent`). A re-run of the same date and seed reuses the plan, skips what was sent, and sends
@@ -50,7 +55,9 @@ import kotlin.random.Random
  * `M8TRX_STREAM_ALLOW_FUTURE` (false) · `M8TRX_STREAM_GAP_MS` (120 → ≤ 8/s, under the measured ≤ 12 ceiling) ·
  * `M8TRX_STREAM_MAX_ERRORS` (5 consecutive refusals stop the run) · `M8TRX_STREAM_LIMIT` (send at most N
  * events — the warm-up) · `M8TRX_STREAM_SOLD_LOG` · `M8TRX_RUN_ID` (default `twin-day-<yyyymmdd>-<seed>`) ·
- * `M8TRX_CHAIN_DIR`.
+ * `M8TRX_CHAIN_DIR` · the on-hand sources, each defaulting beside the sold-log's directory `<state>`:
+ * `M8TRX_STREAM_RECEIVED` (`<state>/receive/received-stock.csv`; a missing file = seed only) ·
+ * `M8TRX_STREAM_PLACEMENTS` (`<state>/moves/placements.csv`) · `M8TRX_STREAM_MISSING` (`<state>/stock/missing-epcs.txt`).
  */
 object DatedStream {
     private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.DatedStream")
@@ -83,6 +90,72 @@ object DatedStream {
     fun loadEpcRows(file: Path): List<EpcRow> = Files.readAllLines(file).drop(1).mapNotNull { line ->
         val c = line.split(",")
         if (c.size < 6 || c[0].isBlank()) null else EpcRow(c[0].trim(), c[1].trim(), c[4].trim(), c[2].trim())
+    }
+
+    /** The twin's own stock ledgers a dated run reads (all read-only; a missing file is an empty ledger). */
+    data class StockSources(val received: Path, val placements: Path, val missing: Path) {
+        companion object {
+            fun fromEnv(soldLog: Path): StockSources {
+                val state = soldLog.parent ?: Path.of(".twin-state")
+                fun env(k: String, d: Path) = System.getenv(k)?.takeIf { it.isNotBlank() }?.let { Path.of(it) } ?: d
+                return StockSources(
+                    env("M8TRX_STREAM_RECEIVED", state.resolve("receive/received-stock.csv")),
+                    env("M8TRX_STREAM_PLACEMENTS", state.resolve("moves/placements.csv")),
+                    env("M8TRX_STREAM_MISSING", state.resolve("stock/missing-epcs.txt")),
+                )
+            }
+        }
+    }
+
+    /**
+     * Pure merge: [seed] rows then the [received] rows of [slug], de-duplicated by EPC (the seed row wins), every unit at its
+     * CURRENT fixture ([placements]: epc → fixture, else the fixture it was seeded/received to). A received unit's item code
+     * is its EAN's in [itemCdByEan] (the seed rows' item codes fill any EAN the assortment lacks).
+     */
+    fun mergeOnHand(
+        slug: String,
+        seed: List<EpcRow>,
+        received: List<ReceiveStock.ReceivedRow>,
+        placements: Map<String, String>,
+        itemCdByEan: Map<String, String>,
+    ): List<EpcRow> {
+        val cd = seed.filter { it.itemCd.isNotBlank() }.associate { it.ean to it.itemCd } + itemCdByEan
+        val rec = received.asSequence().filter { it.slug == slug }.map { EpcRow(it.epc, it.ean, it.fixture, cd[it.ean].orEmpty()) }
+        return (seed.asSequence() + rec).distinctBy { it.epc }
+            .map { r -> placements[r.epc]?.takeIf { it != r.fixture }?.let { r.copy(fixture = it) } ?: r }.toList()
+    }
+
+    /** What [slug] holds, before the sold-log, the missing list and other dates' reservations come off: seed ∪ received at their current fixtures. */
+    fun onHand(chainDir: Path, slug: String, src: StockSources): List<EpcRow> =
+        onHand(chainDir, slug, ReceiveStock.readStock(src.received).filter { it.slug == slug }, RestockMoves.readPlacements(src.placements))
+
+    /** [onHand] from ledgers the caller already read once ([received] = this store's rows, [placements] = the whole ledger). */
+    fun onHand(chainDir: Path, slug: String, received: List<ReceiveStock.ReceivedRow>, placements: Map<String, String>): List<EpcRow> {
+        val dir = chainDir.resolve("stores/$slug")
+        return mergeOnHand(
+            slug,
+            loadEpcRows(dir.resolve("epcs.csv")),
+            received,
+            placements,
+            loadItemCdByEan(dir.resolve("assortment.csv")),
+        )
+    }
+
+    /** `assortment.csv` → EAN → item_cd (empty when the file is absent). */
+    internal fun loadItemCdByEan(file: Path): Map<String, String> {
+        if (!Files.exists(file)) return emptyMap()
+        val lines = Files.readAllLines(file)
+        if (lines.size < 2) return emptyMap()
+        val h = csvSplit(lines.first())
+        val iEan = h.indexOf("ean")
+        val iItem = h.indexOf("item_cd")
+        if (iEan < 0 || iItem < 0) return emptyMap()
+        return lines.drop(1).mapNotNull { l ->
+            val c = csvSplit(l)
+            val e = c.getOrNull(iEan)?.trim().orEmpty()
+            val i = c.getOrNull(iItem)?.trim().orEmpty()
+            if (e.isEmpty() || i.isEmpty()) null else e to i
+        }.toMap()
     }
 
     /** `assortment.csv` → EAN → (department, price_usd): what a substitute is matched on. */
@@ -291,6 +364,19 @@ object DatedStream {
         val recent = RecentDay(seed, chainDir)
         val priorSold = readPriorSold(soldLog)
         val reservedElsewhere = reservedByOtherPlans(stateDir, planFile)
+        val sources = StockSources.fromEnv(soldLog)
+        val missing = StoreStock.readLines(sources.missing)
+        val receivedBySlug = ReceiveStock.readStock(sources.received).groupBy { it.slug }
+        val placements = RestockMoves.readPlacements(sources.placements)
+        val stock: Map<String, List<EpcRow>> = stores.associateWith { onHand(chainDir, it, receivedBySlug[it].orEmpty(), placements) }
+        log.info(
+            "on hand (seed ∪ received, current fixtures): {} · sources received={} placements={} missing={} ({} units)",
+            stock.mapValues { it.value.size },
+            sources.received,
+            sources.placements,
+            sources.missing,
+            missing.size,
+        )
         val reused = live && Files.exists(planFile)
         val plans: List<StorePlan> = stores.map { slug ->
             val day = recent.run(slug, date)
@@ -299,8 +385,8 @@ object DatedStream {
             } else {
                 allocate(
                     day,
-                    loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")),
-                    priorSold + reservedElsewhere,
+                    stock.getValue(slug),
+                    priorSold + reservedElsewhere + missing,
                     runId,
                     loadCatalog(chainDir.resolve("stores/$slug/assortment.csv")),
                 )
@@ -340,7 +426,7 @@ object DatedStream {
             )
         }
 
-        val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId) else emptyList()
+        val ops: List<OpItem> = if (chainOps) plannedOps(plans, sales, chainDir, seed, runId, stock = stock) else emptyList()
         // CORE-REQ-007: every unit sells at the price its store last set for it, in the store's currency — the memory of
         // sent updates plus this run's planned ones, on the plan's clock — else at the store's list (price_local). One
         // event per price per receipt. The pricing_update itself is the catalog's base price in the tenant's currency (EUR for Decathlon, CORE-REQ-008).
@@ -351,10 +437,10 @@ object DatedStream {
             PriceBook.listOf(stores.associateWith { loadAssortment(chainDir.resolve("stores/$it/assortment.csv")) }),
             remembered + plannedPrices,
         )
-        val eanByEpc = stores.flatMap { loadEpcRows(chainDir.resolve("stores/$it/epcs.csv")) }.associate { it.epc to it.ean }
+        val eanByEpc = stock.values.flatten().associate { it.epc to it.ean }
         // A unit already in the sold-log never goes on the wire again, whatever ids the split gives a receipt this run
         // (a book that changed between passes can re-split a partly sent receipt; the platform refuses a sold EPC).
-        val parts = sales.flatMap { priceSale(it, eanByEpc, book) }.let { all -> unsoldParts(all, priorSold) }
+        val parts = sales.flatMap { priceSale(it, eanByEpc, book) }.let { all -> unsoldParts(all, priorSold + missing) }
         logPriceCoverage(sales.size, parts, remembered.size, plannedPrices.size)
         val items: List<Item> = (parts.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
@@ -462,6 +548,7 @@ object DatedStream {
         seed: Long,
         runId: String,
         baseCurrency: String = BaseCatalog.currencyFromEnv(),
+        stock: Map<String, List<EpcRow>> = emptyMap(),
     ): List<OpItem> {
         val base = BaseCatalog.of(chainDir, baseCurrency)
         val pricings = System.getenv("M8TRX_DAY_PRICINGS")?.toIntOrNull() ?: 2
@@ -480,7 +567,7 @@ object DatedStream {
             // ReceiveStock reads, so the manifest and the receipt agree.
             val siteId = siteIds[p.store]
             if (siteId != null) {
-                val itemCdByEpc = loadEpcRows(chainDir.resolve("stores/${p.store}/epcs.csv")).associate { it.epc to it.itemCd }
+                val itemCdByEpc = (stock[p.store] ?: loadEpcRows(chainDir.resolve("stores/${p.store}/epcs.csv"))).associate { it.epc to it.itemCd }
                 val sold = sales.filter { it.store == p.store }.flatMap { it.epcs }.mapNotNull { itemCdByEpc[it] }
                     .filter { it.isNotBlank() }.groupingBy { it }.eachCount()
                 val lines = manifestLines(sold)
@@ -539,7 +626,7 @@ object DatedStream {
         }.flatMap { readPlan(it).flatMap { p -> p.epcs } }.toSet()
     }
 
-    private fun writePlan(file: Path, sales: List<PlannedSale>) {
+    internal fun writePlan(file: Path, sales: List<PlannedSale>) {
         Files.write(file, listOf("sale_id,store,occurred_at,epcs") + sales.map { "${it.saleId},${it.store},${it.at},${it.epcs.joinToString(";")}" })
     }
 
