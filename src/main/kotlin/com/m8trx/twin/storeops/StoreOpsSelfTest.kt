@@ -40,6 +40,7 @@ fun main() {
         "reset: old directive end (A14) is scheduled after midnight, before the new plan; back-room moves by zone (A15); probe gate (F-9)" to
             ::resetOldDirective,
         "reset (Denver, seed ledger): conservation, no collision, pace, ordering, idempotent ids, post-state" to ::resetDenver,
+        "reset: back-room cover days = units/day x days in cases, zero demand gets 0, unset keeps the stock plan" to ::backroomCover,
         "driver dry run: one Denver day sends exactly the wire plan in order; HOLD stops it; no live client built" to ::driverDry,
         "no network: LiveSender cannot be built unless live, and no dry path builds it" to ::noNetwork,
         *resetLiveTests().toTypedArray(),
@@ -283,6 +284,22 @@ private fun resetSynthetic() {
         )
         check(r2.unplaceable.size == 1 && r2.finals.none { it.epc == foreign }) { "off-catalog unit is unplaceable and left alone" }
     }
+}
+
+private fun backroomCover() {
+    val chain = Path.of("reference/data/chain")
+    val plain = com.m8trx.twin.storeday.StoreDayModel(DENVER, chain, null)
+    val m7 = com.m8trx.twin.storeday.StoreDayModel(DENVER, chain, 7)
+    check(plain.backroomTarget.values.sum() == plain.stockPlan.filter { it.kind == "backroom" }.sumOf { it.qty }) { "unset keeps the stock plan" }
+    check(m7.backroomTarget.isNotEmpty()) { "7 days gives a target" }
+    for ((ean, q) in m7.backroomTarget) {
+        val cs = m7.caseSize(ean)
+        check(q % cs == 0) { "$ean: $q not whole cases of $cs" }
+        check(q >= Math.ceil(m7.unitsPerDay(ean) * 7 - 1e-9)) { "$ean: $q under 7 days of ${m7.unitsPerDay(ean)}/day" }
+        check(q < m7.unitsPerDay(ean) * 7 + cs) { "$ean: $q more than a case over cover" }
+    }
+    check(m7.demand.keys.filter { m7.unitsPerDay(it) <= 0.0 }.all { it !in m7.backroomTarget }) { "a line with no demand gets 0" }
+    check(com.m8trx.twin.storeday.StoreDayModel(DENVER, chain, 0).backroomTarget.isEmpty()) { "0 days is an empty back room" }
 }
 
 private fun resetDenver() {
