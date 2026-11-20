@@ -13,6 +13,12 @@ import java.nio.file.Path
 class StoreDayModel(
     val slug: String,
     val chainDir: Path = Path.of("reference/data/chain"),
+    /**
+     * Back-room cover in days (`M8TRX_RESET_BACKROOM_COVER_DAYS`). Null (unset env, the default) keeps the stock plan's own back-room rows
+     * (`stock-plan.csv`, from `build_store_model.py`: ceil(demand/day x 7) rounded up to cases, at least one case a line). Set, the back
+     * room target is recomputed from this store's demand: units/day x days, rounded up to cases (bikes: singles); no demand gives 0.
+     */
+    val backroomCoverDays: Int? = System.getenv("M8TRX_RESET_BACKROOM_COVER_DAYS")?.trim()?.takeIf { it.isNotEmpty() }?.toInt(),
     /** Test seam: edits the profile tree after it is read (hours, saturday_lift), so a self-test can vary one thing. Null in every real run. */
     profileTweak: ((com.fasterxml.jackson.databind.node.ObjectNode) -> Unit)? = null,
 ) {
@@ -115,7 +121,39 @@ class StoreDayModel(
     }
 
     /** The rack each EAN's backroom stock lives on (stock plan), and the cover each rack row holds — the reorder target. */
-    val backroomTarget: Map<String, Int> = stockPlan.filter { it.kind == "backroom" }.groupBy { it.ean }.mapValues { (_, r) -> r.sumOf { it.qty } }
+    val backroomTarget: Map<String, Int> by lazy {
+        if (backroomCoverDays == null) {
+            stockPlan.filter { it.kind == "backroom" }.groupBy { it.ean }.mapValues { (_, r) -> r.sumOf { it.qty } }
+        } else {
+            coverTarget(backroomCoverDays)
+        }
+    }
+
+    /** Expected units/day for an EAN averaged over the week by the store's own hours (closed days sell nothing, Saturday carries the lift). */
+    fun unitsPerDay(ean: String): Double {
+        val d = demand[ean] ?: return 0.0
+        val lift = profile.path("saturday_lift").asDouble(1.0)
+        val week = java.time.DayOfWeek.values().sumOf { day ->
+            when {
+                hoursOn(day) == null -> 0.0
+                day.value <= 5 -> d.perDayWeekday
+                day == java.time.DayOfWeek.SATURDAY -> d.perDayWeekend * lift
+                else -> d.perDayWeekend
+            }
+        }
+        return week / 7.0
+    }
+
+    /** `M8TRX_RESET_BACKROOM_CASE_PACK` (unset: the model's case of 6): a smaller pack rounds cover up to that many units (1 = single units). */
+    private val casePackOverride: Int? = System.getenv("M8TRX_RESET_BACKROOM_CASE_PACK")?.trim()?.takeIf { it.isNotEmpty() }?.toInt()
+
+    /** Back-room units per EAN for [days] of cover: units/day x days, rounded up to cases; a line with no demand gets 0. */
+    fun coverTarget(days: Int): Map<String, Int> = demand.keys.mapNotNull { ean ->
+        val need = Math.ceil(unitsPerDay(ean) * days - 1e-9).toInt()
+        val cs = casePackOverride?.let { minOf(it, caseSize(ean)) } ?: caseSize(ean)
+        val q = Math.floorDiv(need + cs - 1, cs) * cs
+        if (q > 0) ean to q else null
+    }.toMap()
     val homeRack: Map<String, String> = stockPlan.filter { it.kind == "backroom" }.groupBy { it.ean }.mapValues { (_, r) -> r.minBy { it.zone }.zone }
 
     /** Case size per EAN: 6, or 1 for a bike-priced line (the stock plan rounds those to singles). */
