@@ -32,6 +32,7 @@ fun main() {
         "fixrevert: sources, agreement, the default targets are the two Denver gondolas" to { fixRevert(keys) },
         "stock: missing follows the platform (close filtered, un-miss, stolen kept, atomic rewrite)" to { missingFollowsPlatform() },
         "stock: missing-pending (kept, promoted when missing, dropped on sold or after 3 days, idempotent)" to { missingPending() },
+        "stock: targeted counts (target parsing, name to code, stolen units unread, worked pulls, result reading)" to { stockTargeted(chain, keys) },
         "ops: login pacing (<= 6/min), JWT exp decode" to { loginPacing() },
         "tasks: backlog, target, top-up, assignees, completion shares, carried" to { taskDay() },
         "traffic9: HISTORY_ONLY=people writes exactly the three people files + MANIFEST" to { traffic9() },
