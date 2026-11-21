@@ -966,6 +966,16 @@ private fun resultsWatch() {
     val w5 = MoveResultsWatch({ null }, everyMs = 1, pendingLimitMs = 10)
     w5.answered("m", """{"eventKey":"k"}""", 0)
     check(w5.check(1_000_000) == null && w5.outstanding() == 1) { "an unreadable results route never halts by itself" }
+    // a chunk whose read failed is skipped, never "not listed"; only answers halt
+    var fail = true
+    val w7 = MoveResultsWatch({ k -> if (fail) null else k.map { ResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 10)
+    w7.answered("m", """{"eventKey":"k"}""", 0)
+    for (i in 1..6) check(w7.check(1_000_000L * i) == null) { "a failed read never halts" }
+    fail = false
+    check(w7.check(10_000_000)?.contains("still pending") == true) { "after a good read the pending event halts" }
+    val w8 = MoveResultsWatch({ k -> if ("k0" in k) null else k.map { ok(it) } }, everyMs = 1, pendingLimitMs = 10)
+    for (i in 0 until 45) w8.answered("m$i", """{"eventKey":"k$i"}""", 0)
+    check(w8.check(1_000_000) == null && w8.confirmed == 5 && w8.outstanding() == 40) { "only the failed chunk stays unconfirmed: ${w8.confirmed}" }
     val f = RT.resolve("move-answers.tsv")
     Files.createDirectories(RT)
     Files.deleteIfExists(f)

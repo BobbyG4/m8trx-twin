@@ -111,14 +111,20 @@ class MoveResultsWatch(
     private val fetch: (List<String>) -> List<ResultEntry>?,
     private val answersFile: Path? = null,
     private val everyMs: Long = 30_000,
-    private val pendingLimitMs: Long = 60_000,
+    private val pendingLimitMs: Long = pendingLimitFromEnv(),
     private val onEvent: (String) -> Unit = {},
 ) {
+    companion object {
+        /** `M8TRX_MOVE_PENDING_LIMIT_S` (default 60): a move event still pending this long after its own post halts the run. */
+        fun pendingLimitFromEnv(): Long = ((System.getenv("M8TRX_MOVE_PENDING_LIMIT_S")?.toDoubleOrNull()?.takeIf { it > 0 } ?: 60.0) * 1000).toLong()
+    }
+
     private class Sent(val extId: String, val sentAt: Long)
 
     private val unconfirmed = LinkedHashMap<String, Sent>()
     private val sentAtOf = HashMap<String, Long>()
     private var lastCheckAt = Long.MIN_VALUE / 2
+    private var failedReads = 0
     var confirmed = 0
         private set
     var unkeyed = 0
@@ -159,21 +165,25 @@ class MoveResultsWatch(
         if (unconfirmed.isEmpty() || (!force && now - lastCheckAt < everyMs)) return null
         lastCheckAt = now
         val seen = HashMap<String, ResultEntry>()
-        var readOk = false
+        val readKeys = HashSet<String>()
         for (chunk in unconfirmed.keys.toList().chunked(ResultsRoute.MAX_KEYS)) {
             val got = fetch(chunk)
             if (got == null) {
-                onEvent("results route unreadable; ${unconfirmed.size} move event(s) unconfirmed, trying again")
+                failedReads++
+                onEvent("results route unreadable ($failedReads in a row); ${chunk.size} move event(s) skipped this round, trying again")
+                if (failedReads == 5) onEvent("WARN: the results route has failed 5 reads in a row; move events are going unchecked")
                 continue
             }
-            readOk = true
+            failedReads = 0
+            readKeys += chunk
             got.forEach { seen[it.key] = it }
         }
         for ((key, sent) in unconfirmed.entries.toList()) {
+            if (key !in readKeys) continue // its chunk failed to read: skipped this round, never "not listed"
             val e = seen[key]
             val age = now - sent.sentAt
             when {
-                e == null -> if (readOk && age > pendingLimitMs) return "move ${sent.extId} ($key): not on the results route $age ms after its post"
+                e == null -> if (age > pendingLimitMs) return "move ${sent.extId} ($key): not on the results route $age ms after its post"
 
                 e.bad -> {
                     onEvent("results ${sent.extId}: ${e.raw}")
