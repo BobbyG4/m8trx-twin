@@ -43,6 +43,7 @@ fun main() {
     orderRounding()
     planOnDenver()
     verifier()
+    reviewRules()
     senderAndBooks()
     gates()
     parsing()
@@ -52,7 +53,7 @@ fun main() {
 }
 
 private fun orderRounding() {
-    println("[order] target - on hand, positive gaps only, rounded UP to cases (bikes singles)")
+    println("[order] target - on hand, positive gaps only, rounded to the NEAREST case (bikes singles)")
     val cs = { ean: String -> if (ean == "BIKE") 1 else 6 }
     val o = DailyDelivery.order(
         mapOf("A" to 4, "B" to 2, "C" to 0, "BIKE" to 1),
@@ -61,14 +62,20 @@ private fun orderRounding() {
         cs,
     )
     val m = o.associateBy { it.ean }
-    check(m["A"]?.qty == 12) { "A: target 11, on hand 3, gap 8 rounds to 12, got ${m["A"]?.qty}" }
+    check(m["A"]?.qty == 6) { "A: target 11, on hand 3, gap 8 is one case, got ${m["A"]?.qty}" }
     check(m["B"] == null && m["C"] == null) { "no order for a met or exceeded target" }
     check(m["BIKE"]?.qty == 2) { "a bike orders singles: gap 2, got ${m["BIKE"]?.qty}" }
+    // the ruling: shortfall 1-2 orders nothing, 3-8 one case, 9-14 two, 15-20 three
+    val expect = mapOf(1 to 0, 2 to 0, 3 to 6, 8 to 6, 9 to 12, 14 to 12, 15 to 18, 20 to 18, 21 to 24)
+    expect.forEach { (gap, qty) ->
+        val q = DailyDelivery.order(mapOf("X" to gap), emptyMap(), emptyMap(), cs).firstOrNull()?.qty ?: 0
+        check(q == qty) { "shortfall $gap orders $qty, got $q" }
+    }
     check(
         o.all {
-            it.qty >= it.gap && it.qty < it.gap + cs(it.ean) && it.qty % cs(it.ean) == 0
+            it.qty % cs(it.ean) == 0 && Math.abs(it.qty - it.gap) <= cs(it.ean) / 2
         },
-    ) { "every line is the smallest whole number of cases covering its gap" }
+    ) { "every line is the nearest whole case, within 3 of its gap" }
 }
 
 private fun planOnDenver() {
@@ -334,4 +341,79 @@ private fun parsing() {
     check(ResultsReader.url(cfg, listOf("k1", "k2")) == "https://h/v1/webhook/T/S/results?idempotency_key=k1&idempotency_key=k2") {
         "the key is repeated once per event key: ${ResultsReader.url(cfg, listOf("k1", "k2"))}"
     }
+}
+
+private fun reviewRules() {
+    println("[review] unconfirmed put-away halts and is dropped from the top-up; items-a-minute cap; no results read under the track lock")
+    // 1. an unconfirmed put-away halts the site, books nothing, and stays pending (not settled)
+    val booked = ArrayList<String>()
+    val settled = ArrayList<String>()
+    val v = MoveVerifier(
+        { keys -> keys.map { entry(it, "processed", moved = 1, superseded = 1) } },
+        { booked += it.extId },
+        { 10_000 },
+        minAgeMs = 0,
+        onSettled = { id, how -> settled += "$id=$how" },
+    )
+    v.track(item("move", "dly-x-20261122-p-a", "E1", "E2"), "kp")
+    v.poll()
+    check(v.bad != null && "put-away not confirmed" in v.bad.orEmpty()) { "an unconfirmed put-away halts the site, entry printed: ${v.bad}" }
+    check(booked.isEmpty() && settled.isEmpty() && v.pendingCount == 1) { "nothing booked, not settled (a resume reads it again)" }
+
+    // the top-up drops units whose put-away is not confirmed
+    val pa1 = item("move", "dly-x-20261122-p-1", "E1", "E2")
+    val pa2 = item("move", "dly-x-20261122-p-2", "E3")
+    val t1 = item("move", "dly-x-20261122-t-1", "E1", "E3", "E9", dest = "Z-9")
+    val t2 = item("move", "dly-x-20261122-t-2", "E2", dest = "Z-9")
+    val (kept, dropped) = DailyDelivery.dropUnconfirmed(listOf(t1, t2), listOf(pa1, pa2), setOf(pa2.extId))
+    check(dropped.toSet() == setOf("E1", "E2")) { "dropped $dropped" }
+    check(kept.size == 1 && kept[0].epcs == listOf("E3", "E9")) { "the batch keeps its other units, a batch left empty goes" }
+    check(kept[0].payload.path("items").map { it.path("epc").asText() } == listOf("E3", "E9") && kept[0].extId != t1.extId) {
+        "the body and the id follow the kept units"
+    }
+    check(DailyDelivery.dropUnconfirmed(listOf(t1), listOf(pa1, pa2), setOf(pa1.extId, pa2.extId)).first == listOf(t1)) {
+        "all confirmed keeps everything"
+    }
+    check(DailyDeliveryMain.MAX_RECEIVE_LANES == 3) { "the delivery caps receive lanes at 3" }
+
+    // 2. rolling items a minute: 150 with a receive lane, 200 alone, shared across batches
+    for ((cap, batches) in listOf(RollingItemLimiter.WITH_RECEIVES to 6, RollingItemLimiter.ALONE to 8)) {
+        var t = 0L
+        val lim = RollingItemLimiter({ t }, { t += it })
+        repeat(batches) { lim.acquire(25, cap) }
+        check(t == 0L) { "cap $cap: $batches batches of 25 fit in the first minute (t=$t)" }
+        lim.acquire(25, cap)
+        check(t >= 60_000) { "cap $cap: the next batch waits for the window to roll (t=$t)" }
+    }
+    var tt = 0L
+    val l2 = RollingItemLimiter({ tt }, { tt += it })
+    var sent = 0
+    repeat(40) {
+        l2.acquire(25, RollingItemLimiter.WITH_RECEIVES)
+        sent += 25
+    }
+    check(sent * 60_000.0 / maxOf(1L, tt) <= 175) { "40 batches average about 150 items a minute (${sent * 60_000.0 / tt})" }
+
+    // 3. a slow results read never blocks track() or a send
+    val entered = java.util.concurrent.CountDownLatch(1)
+    val release = java.util.concurrent.CountDownLatch(1)
+    val slowV = MoveVerifier({ keys ->
+        entered.countDown()
+        release.await()
+        keys.map { entry(it, "processed", moved = 1) }
+    }, {}, { 100_000 }, minAgeMs = 0)
+    slowV.track(item("move", "m-a", "E1"), "ka")
+    val poller = Thread { slowV.poll() }
+    poller.start()
+    check(entered.await(5, java.util.concurrent.TimeUnit.SECONDS)) { "the read started" }
+    val tracker = Thread {
+        slowV.track(item("move", "m-b", "E2"), "kb")
+        slowV.fail("probe")
+    }
+    tracker.start()
+    tracker.join(2_000)
+    val blocked = tracker.isAlive
+    release.countDown()
+    poller.join(5_000)
+    check(!blocked) { "track() and fail() completed while a results read was in flight" }
 }

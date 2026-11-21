@@ -16,7 +16,7 @@ import java.time.LocalDate
  * The daily delivery, PURE (nothing is read or sent here): every store-local morning before opening a delivery replaces what the store
  * sold, then staff put the stock on the shelves.
  *
- *  1. **Order** per EAN = target - on hand, only the positive gaps, each rounded UP to cases ([StoreDayModel.caseSize]: 6, bikes singles).
+ *  1. **Order** per EAN = target - on hand, only the positive gaps, each rounded to the NEAREST whole case ([StoreDayModel.caseSize]: 6, bikes singles; half a case rounds up).
  *     target = the period plan's floor quantity + the back-room cover (`StoreDayModel.backroomTarget`); on hand = every unit the ledger
  *     holds (floor, back room, anywhere). It replaces what sold and heals any drift.
  *  2. **Receive** the order into the stockroom as new EPCs minted from the store's delivery serial block (never one the ledger has used).
@@ -31,6 +31,9 @@ object DailyDelivery {
     /** A move batch carries at most 25 units; one batch every 7.5 s is 200 items a minute, the platform's bulk-move ceiling. */
     const val MOVE_CHUNK = 25
     const val MOVE_SPACING_MS = 7_500L
+
+    /** While a receive lane runs the cap is 150 items a minute: one 25-unit batch every 10 s. */
+    const val MOVE_SPACING_WITH_RECEIVES_MS = 10_000L
     const val MAX_ITEMS_PER_MINUTE = 200
 
     /** One expected receive request: what the daily run estimates for it (one request of 50 tags, measured at about 1 s a tag). */
@@ -40,18 +43,15 @@ object DailyDelivery {
         val gap: Int get() = target - onHand
     }
 
-    /** Positive gaps only, in EAN order, each rounded up to cases of [caseSize]. */
+    /** Positive gaps only, in EAN order, each rounded to the nearest case of [caseSize] (shortfall 1-2 orders nothing, 3-8 one case, 9-14 two); a line that rounds to 0 is dropped. */
     fun order(floorTarget: Map<String, Int>, backTarget: Map<String, Int>, onHand: Map<String, Int>, caseSize: (String) -> Int): List<OrderLine> =
         (floorTarget.keys + backTarget.keys).toSortedSet().mapNotNull { ean ->
             val target = (floorTarget[ean] ?: 0) + (backTarget[ean] ?: 0)
             val have = onHand[ean] ?: 0
             val gap = target - have
-            if (gap <= 0) {
-                null
-            } else {
-                val cs = caseSize(ean)
-                OrderLine(ean, target, have, Math.floorDiv(gap + cs - 1, cs) * cs)
-            }
+            val cs = caseSize(ean)
+            val qty = if (gap <= 0) 0 else Math.floorDiv(gap + cs / 2, cs) * cs
+            if (qty <= 0) null else OrderLine(ean, target, have, qty)
         }
 
     class Plan(
@@ -77,7 +77,7 @@ object DailyDelivery {
          */
         fun estimateMinutes(receiveLanes: Int = 1): Double {
             val receive = receiveRequests * RECEIVE_EST_MS / maxOf(1, receiveLanes)
-            val phase1 = maxOf(receive, putAway.size * MOVE_SPACING_MS)
+            val phase1 = maxOf(receive, putAway.size * MOVE_SPACING_WITH_RECEIVES_MS)
             return (phase1 + topUp.size * MOVE_SPACING_MS + 60_000) / 60_000.0
         }
     }
@@ -90,6 +90,29 @@ object DailyDelivery {
     }
 
     fun ymd(date: LocalDate): String = date.toString().replace("-", "")
+
+    /**
+     * Phase 2's top-up batches without any unit whose put-away is not confirmed: a unit received in THIS plan (it is in a put-away batch) whose
+     * batch's extId is not in [confirmedPutAways] is dropped (it stays in the stockroom). Returns the kept items and the dropped EPCs.
+     */
+    fun dropUnconfirmed(topUps: List<SendItem>, putAways: List<SendItem>, confirmedPutAways: Set<String>): Pair<List<SendItem>, List<String>> {
+        val unconfirmed = putAways.filter { it.extId !in confirmedPutAways }.flatMap { it.epcs }.toSet()
+        val dropped = ArrayList<String>()
+        val kept = topUps.mapNotNull { m ->
+            val bad = m.epcs.filter { it in unconfirmed }
+            if (bad.isEmpty()) return@mapNotNull m
+            dropped += bad
+            val good = m.epcs.filter { it !in unconfirmed }
+            if (good.isEmpty()) return@mapNotNull null
+            val payload = m.payload.deepCopy<com.fasterxml.jackson.databind.node.ObjectNode>()
+            val arr = payload.putArray("items")
+            good.forEach { arr.addObject().put("epc", it).put("quantity", 1) }
+            val id = "${m.extId}f${SendItem.hash(good.joinToString(","))}"
+            payload.put("external_movement_id", id)
+            SendItem(m.seq, m.dueMs, m.rank, m.kind, id, payload, good)
+        }
+        return kept to dropped
+    }
 
     fun isTopUp(item: SendItem): Boolean = item.kind == "move" && "-t-" in item.extId
 
@@ -225,7 +248,8 @@ object SteadyState {
         /** One day's run: receive lane and put-away side by side (about 1 s a tag), then the top-up (as many batches again), plus a minute to verify. */
         fun minutes(): Double {
             val moves = meanBatches * DailyDelivery.MOVE_SPACING_MS
-            return (maxOf(meanUnits * 1_000, moves) + moves + 60_000) / 60_000.0
+            val withReceives = meanBatches * DailyDelivery.MOVE_SPACING_WITH_RECEIVES_MS
+            return (maxOf(meanUnits * 1_000, withReceives) + moves + 60_000) / 60_000.0
         }
     }
 

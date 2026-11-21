@@ -38,6 +38,9 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.DailyDelivery
 object DailyDeliveryMain {
     private fun env(k: String) = System.getenv(k)?.takeIf { it.isNotBlank() }
 
+    /** The delivery runs at most 3 receive lanes: the moves share the platform's worker pool with them. */
+    const val MAX_RECEIVE_LANES = 3
+
     class StoreRun(val slug: String, val plan: DailyDelivery.Plan, val steady: SteadyState.Result, val window: String, val minutes: Double)
 
     private fun fmt(d: Double) = "%.1f".format(d)
@@ -139,8 +142,8 @@ object DailyDeliveryMain {
         val moveSpacingMs = ((env("M8TRX_DELIVERY_MOVE_EVERY_S")?.toDouble() ?: (DailyDelivery.MOVE_SPACING_MS / 1000.0)) * 1000).toLong()
         val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
         val ownerFile = Path.of(env("M8TRX_STORE_OPS_OWNER_FILE") ?: "$ops/store-ops-owner.csv")
-        if (lanes !in 1..ResetGate.MAX_LANES) {
-            log.error("REFUSING: M8TRX_DELIVERY_RECEIVE_LANES must be 1..{}, got {}", ResetGate.MAX_LANES, lanes)
+        if (lanes !in 1..MAX_RECEIVE_LANES) {
+            log.error("REFUSING: M8TRX_DELIVERY_RECEIVE_LANES must be 1..{}, got {}", MAX_RECEIVE_LANES, lanes)
             return 3
         }
         val refusals = DeliveryGate.check(
@@ -292,8 +295,15 @@ class DeliveryLiveRun(
         val answers = out.resolve("answers.tsv")
         val verifiedFile = out.resolve("verified.tsv")
         val rackDefault = model.stockPlan.filter { it.kind == "backroom" }.minOfOrNull { it.zone } ?: "BR-01"
+        val ledger = SentLedger(ResetLivePlan.sentLedgerFile(out))
         val live = LiveSender.create(true, slug, chainDir, stateDir, zones)
-        val sender = DeliverySender(live, slug, answers)
+        val sender = DeliverySender(
+            live,
+            slug,
+            answers,
+            limiter = RollingItemLimiter(),
+            receivesRunning = { items.any { it.kind == "receive" && !ledger.isSent(it.extId) } },
+        )
         val verifier = MoveVerifier(
             LiveResults.reader(ConnectConfig.fromEnv()),
             { DeliveryBooks.bookMove(placements, it, zoneCode, date) },
@@ -313,9 +323,13 @@ class DeliveryLiveRun(
                 }
             }
         }
-        val ledger = SentLedger(ResetLivePlan.sentLedgerFile(out))
         // moves accepted by an earlier run but not yet verified there: read them again from their stored keys
-        val settled = if (Files.exists(verifiedFile)) Files.readAllLines(verifiedFile).map { it.substringBefore('\t') }.toSet() else emptySet()
+        // only a batch the platform CONFIRMED is settled; one listed unconfirmed is read again
+        val settled = if (Files.exists(verifiedFile)) {
+            Files.readAllLines(verifiedFile).filter { it.substringAfter('\t', "") == "booked" }.map { it.substringBefore('\t') }.toSet()
+        } else {
+            emptySet()
+        }
         val keysByMove = DeliverySender.readKeys(answers)
         items.filter { it.kind == "move" && ledger.isSent(it.extId) && it.extId !in settled }.forEach { m ->
             keysByMove[m.extId]?.takeIf { it.isNotBlank() }?.let { verifier.track(m, it) }
@@ -379,7 +393,13 @@ class DeliveryLiveRun(
                 return 1
             }
             halted(null)?.let { return it }
-            val r2 = phase("2 top-up", items.filter(DailyDelivery::isTopUp))
+            val (topUps, left) = DailyDelivery.dropUnconfirmed(
+                items.filter(DailyDelivery::isTopUp),
+                items.filter(DailyDelivery::isPutAway),
+                settled + verifier.booked(),
+            )
+            if (left.isNotEmpty()) event("${left.size} unit(s) left in the stockroom, put-away not confirmed: ${left.take(10)}")
+            val r2 = phase("2 top-up", topUps)
             halted(r2)?.let { return it }
             if (!verifier.drain(600_000)) {
                 halted(null)?.let { return it }

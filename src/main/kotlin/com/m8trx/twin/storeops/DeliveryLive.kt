@@ -90,27 +90,32 @@ class MoveVerifier(
         private set
     val unconfirmed = ArrayList<String>()
 
-    @Synchronized
-    fun track(item: SendItem, eventKey: String) {
+    /** Serialises whole polls; [track] and [fail] take only the short state lock, so a slow results read never delays a send. */
+    private val pollLock = Any()
+
+    /** The extIds of batches the platform confirmed (booked), for the top-up filter. */
+    private val bookedIds = LinkedHashSet<String>()
+
+    fun booked(): Set<String> = synchronized(this) { bookedIds.toSet() }
+
+    fun track(item: SendItem, eventKey: String) = synchronized(this) {
         pending.putIfAbsent(item.extId, Tracked(item, eventKey, now()))
+        Unit
     }
 
-    @Synchronized
-    fun fail(reason: String) {
+    fun fail(reason: String) = synchronized(this) {
         if (bad == null) bad = reason
     }
 
-    @get:Synchronized
-    val pendingCount: Int get() = pending.size
+    val pendingCount: Int get() = synchronized(this) { pending.size }
 
-    /** One round: reads every tracked move that is old enough. */
-    @Synchronized
-    fun poll() {
+    /** One round: reads every tracked move that is old enough. The HTTP read runs OUTSIDE the state lock. */
+    fun poll() = synchronized(pollLock) {
         val t = now()
-        val due = pending.values.filter { t - it.postedAt >= minAgeMs }
+        val due = synchronized(this) { pending.values.filter { t - it.postedAt >= minAgeMs } }
         due.chunked(ResultsReader.MAX_KEYS).forEach { chunk ->
             val entries = reader.read(chunk.map { it.key })?.associateBy { it.key } ?: return@forEach
-            chunk.forEach { tr -> settle(tr, entries[tr.key], t) }
+            synchronized(this) { chunk.forEach { tr -> if (tr.item.extId in pending) settle(tr, entries[tr.key], t) } }
         }
     }
 
@@ -126,13 +131,22 @@ class MoveVerifier(
             fail("${tr.item.extId}: outcome ${e.outcome}, refused ${e.refused}: ${e.raw.take(600)}")
             return
         }
-        pending.remove(tr.item.extId)
         if (e.outcome == "processed" && e.moved + e.skipped == n && e.superseded == 0) {
+            pending.remove(tr.item.extId)
             onConfirmed(tr.item)
+            bookedIds += tr.item.extId
             confirmedBatches++
             confirmedUnits += n
             onSettled(tr.item.extId, "booked")
+        } else if (DailyDelivery.isPutAway(tr.item)) {
+            // an unconfirmed put-away halts the site: its units may not be where the plan says, and nothing may be topped up from it
+            fail(
+                "${tr.item.extId}: put-away not confirmed (moved ${e.moved} skipped ${e.skipped} superseded ${e.superseded} of $n): ${e.raw.take(
+                    600,
+                )}",
+            )
         } else {
+            pending.remove(tr.item.extId)
             unconfirmed += "${tr.item.extId}: ${e.raw.take(300)}"
             onEvent("NOT BOOKED ${tr.item.extId}: moved ${e.moved} skipped ${e.skipped} superseded ${e.superseded} of $n")
             onSettled(tr.item.extId, "unconfirmed")
@@ -182,6 +196,10 @@ class DeliverySender(
     private val answersFile: Path,
     private val slowMs: Long = ReconSendMain.SLOW_ANSWER_MS,
     private val clockMs: () -> Long = System::currentTimeMillis,
+    /** Items-a-minute limiter shared by every move (put-away and top-up); null in a test that does not need it. */
+    private val limiter: RollingItemLimiter? = null,
+    /** True while a receive lane is still running: the cap is then [RollingItemLimiter.WITH_RECEIVES], else [RollingItemLimiter.ALONE]. */
+    private val receivesRunning: () -> Boolean = { false },
 ) : OpsSender {
     @Volatile
     var slow: String? = null
@@ -200,6 +218,7 @@ class DeliverySender(
 
     override fun send(item: SendItem): Outcome {
         if (item.kind != "move") return inner.send(item)
+        limiter?.acquire(item.epcs.size, if (receivesRunning()) RollingItemLimiter.WITH_RECEIVES else RollingItemLimiter.ALONE)
         appendAnswer(item.extId, "", "")
         val t0 = clockMs()
         val o = inner.send(item)
@@ -280,5 +299,33 @@ object DeliveryGate {
         } else {
             null
         }
+    }
+}
+
+/**
+ * The rate cap is ITEMS a minute, rolling over the last 60 s, shared by every move of the run: [WITH_RECEIVES] while a receive lane is running,
+ * [ALONE] when moves run alone. [acquire] blocks until [items] more fit under the cap (a batch larger than the cap goes alone). Clock and sleep are
+ * injected so the self-test runs it on a virtual clock.
+ */
+class RollingItemLimiter(private val now: () -> Long = System::currentTimeMillis, private val sleep: (Long) -> Unit = Thread::sleep) {
+    private val sent = ArrayDeque<Pair<Long, Int>>()
+
+    @Synchronized
+    fun acquire(items: Int, perMinute: Int) {
+        while (true) {
+            val t = now()
+            while (sent.isNotEmpty() && t - sent.first().first >= 60_000) sent.removeFirst()
+            val used = sent.sumOf { it.second }
+            if (used == 0 || used + items <= perMinute) {
+                sent.addLast(t to items)
+                return
+            }
+            sleep(maxOf(50L, sent.first().first + 60_000 - t))
+        }
+    }
+
+    companion object {
+        const val WITH_RECEIVES = 150
+        const val ALONE = 200
     }
 }
