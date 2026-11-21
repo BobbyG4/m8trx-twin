@@ -39,7 +39,9 @@ class StockDrive(
     /** The `POST /inventory/items/details` reader (live runs only; built on first use so a dry run needs no bearer). */
     details: () -> (List<String>) -> List<ItemDetail>? = { ExistenceCheck.liveDetails() },
 ) {
-    private val follow: MissingFollow by lazy { MissingFollow(details(), cfg.stateDir) }
+    private val detailsReader: (List<String>) -> List<ItemDetail>? by lazy { details() }
+    private val follow: MissingFollow by lazy { MissingFollow(detailsReader, cfg.stateDir) }
+    private var lastExceptions: com.fasterxml.jackson.databind.JsonNode? = null
     private val log = LoggerFactory.getLogger(StockDrive::class.java)
     private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http, cfg.stateDir)
 
@@ -213,6 +215,162 @@ class StockDrive(
         return Summary(counts, fixtures, reads, missing, over, closed, held, err, shapes)
     }
 
+    data class TargetedSummary(val stores: Int, val counts: Int, val fixtures: Int, val reads: Int, val closed: Int, val skipped: Int, val err: Int)
+
+    /**
+     * Targeted mode (`M8TRX_STOCK_TARGET`, see [StockTargeted]): one count per store over exactly the named fixtures, now. Dry unless
+     * `M8TRX_STOCK_LIVE=true`, and then only for the stores in [confirm] (`M8TRX_STOCK_TARGET_CONFIRM`, slugs csv). After a close:
+     * the totals, the notYetHeard units (and whether each is a stolen one), the stolen units booked missing only as the platform
+     * reports them ([MissingFollow] state), the rest kept pending; `stock/targeted-<ts>.json` records it.
+     */
+    fun runTargeted(target: Map<String, List<String>>, confirm: Set<String>): TargetedSummary {
+        val ts = cfg.now.toString().replace(":", "").replace("-", "").substringBefore(".").substringBefore("Z")
+        val stolen = StoreStock.readLines(follow.stolenFile()).map { it.uppercase() }.toSet()
+        var counts = 0
+        var fixtures = 0
+        var reads = 0
+        var closed = 0
+        var skipped = 0
+        var err = 0
+        val shown = ArrayList<String>()
+        val report = ArrayList<Map<String, Any?>>()
+        for ((slug, codes) in target) {
+            val store = cfg.keys.store(slug)
+            if (cfg.live && slug !in confirm) {
+                log.warn("  {} NOT CONFIRMED — add it to M8TRX_STOCK_TARGET_CONFIRM to send; skipped", slug)
+                skipped++
+                continue
+            }
+            try {
+                var jwt: String? = null
+                val stock = if (cfg.live) {
+                    jwt = ops.jwt(cfg.actorEmail(slug))
+                    if (jwt == null) {
+                        err++
+                        log.error("  {} login refused — skipped", slug)
+                        continue
+                    }
+                    platformStock(jwt, store, cfg.siteId(slug))
+                } else {
+                    StoreStock.load(cfg.chainDir, cfg.stateDir, slug)
+                }
+                val (plan, empty) = StockTargeted.plan(store, cfg.now, codes, stock, stolen)
+                if (empty.isNotEmpty()) log.warn("  {} no unit to read at {} — dropped from the count", slug, empty)
+                if (plan == null) {
+                    skipped++
+                    continue
+                }
+                counts++
+                fixtures += plan.pulls.size
+                reads += plan.reads
+                log.info(
+                    "  {} {} {} — {} fixtures {} · {} reads · pull seconds {} (plateau {})",
+                    if (cfg.live) "[LIVE]" else "[DRY]",
+                    slug,
+                    plan.countId,
+                    plan.pulls.size,
+                    plan.pulls.joinToString("/") { it.code },
+                    plan.reads,
+                    StockTargeted.pullSeconds(plan).values.toSortedSet().let { "${it.first()}..${it.last()}" },
+                    StockTargeted.WORKED_SECONDS_FLOOR,
+                )
+                if (!cfg.live) {
+                    if (shown.isEmpty()) shown += shapeLines(plan)
+                    continue
+                }
+                val ledgerFile = cfg.stateDir.resolve("stock").resolve("stock-targeted.sent")
+                val err1 = send(plan, emptySet(), ledgerFile)
+                if (err1 != null) {
+                    err++
+                    log.error("    {} — stopping this store", err1)
+                    continue
+                }
+                closed++
+                StoreStock.appendLines(ledgerFile, listOf("${plan.countId},$slug,target,closed"))
+                report += targetedAfter(slug, plan, stock, stolen, lastExceptions)
+            } catch (e: Exception) {
+                err++
+                log.error("  {} FAILED — {}: {}", slug, e.javaClass.simpleName, e.message)
+            }
+        }
+        shown.forEach { log.info("  shape: {}", it) }
+        if (report.isNotEmpty()) {
+            val file = cfg.stateDir.resolve("stock").resolve("targeted-$ts.json")
+            java.nio.file.Files.createDirectories(file.parent)
+            java.nio.file.Files.writeString(
+                file,
+                com.m8trx.twin.connect.model.ConnectMappers.camel.writerWithDefaultPrettyPrinter().writeValueAsString(report),
+            )
+            log.info("targeted result written: {}", file)
+        }
+        log.info(
+            "SIM-RUN stock-targeted stores={} counts={} fixtures={} reads={} closed={} skipped={} sent_err={}",
+            target.size,
+            counts,
+            fixtures,
+            reads,
+            closed,
+            skipped,
+            err,
+        )
+        return TargetedSummary(target.size, counts, fixtures, reads, closed, skipped, err)
+    }
+
+    private fun targetedAfter(
+        slug: String,
+        plan: StockCounts.CountPlan,
+        stock: StoreStock,
+        stolen: Set<String>,
+        ex: com.fasterxml.jackson.databind.JsonNode?,
+    ): Map<String, Any?> {
+        val res = ex?.let { StockTargeted.readResult(it) }
+        // units the count expected at its fixtures: what the platform holds there plus the stolen ones (they are on the missing list, so not in stock)
+        val codes = plan.pulls.map { it.code }.toSet()
+        val atFixtures = codes.flatMap { stock.byFixture[it].orEmpty() }
+        val rows = (atFixtures + stolen).distinct().chunked(MissingFollow.CHUNK).flatMap { detailsReader(it) ?: emptyList() }
+        val epcOfItem = rows.filter { it.itemId != null }.associate { it.itemId!! to it.epc.uppercase() }
+        val stateOf = rows.filter { it.itemId != null }.associate { it.epc.uppercase() to it.state }
+        val nyh = res?.entries.orEmpty().mapNotNull { e -> (e.epc ?: e.itemId?.let { epcOfItem[it] })?.uppercase()?.let { it to e } }
+        // a stolen unit the platform now holds as missing is booked (the platform's word, per MissingFollow); one this count heard
+        // nothing of but the platform still holds in stock stays pending until it says missing
+        val booked = stolen.filter { stateOf[it] == "missing" }.filter { it !in StoreStock.readLines(StoreStock.missingFile(cfg.stateDir)) }
+        StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), booked)
+        follow.addPending(nyh.map { it.first }.filter { it in stolen && stateOf[it] == "in_stock" })
+        log.info(
+            "    totals: missing={} notYetHeard={} misplaced={} · notYetHeard EPCs {} ({} stolen) · stolen now platform-missing {}",
+            res?.missing,
+            res?.notYetHeard,
+            res?.misplaced,
+            nyh.size,
+            nyh.count { it.first in stolen },
+            booked.size,
+        )
+        nyh.forEach { (epc, e) -> log.info("      notYetHeard {} stolen={} reason={} zone={}", epc, epc in stolen, e.reason, e.zoneId) }
+        return mapOf(
+            "slug" to slug,
+            "countId" to plan.countId,
+            "fixtures" to plan.pulls.map { it.code },
+            "reads" to plan.reads,
+            "pullSeconds" to StockTargeted.pullSeconds(plan),
+            "totals" to res?.totals,
+            "missing" to res?.missing,
+            "notYetHeard" to res?.notYetHeard,
+            "misplaced" to res?.misplaced,
+            "notYetHeardUnits" to
+                nyh.map { (epc, e) ->
+                    mapOf(
+                        "epc" to epc,
+                        "itemId" to e.itemId,
+                        "zoneId" to e.zoneId,
+                        "reason" to e.reason,
+                        "stolen" to (epc in stolen),
+                    )
+                },
+            "stolenBookedMissing" to booked,
+            "exceptions" to ex,
+        )
+    }
+
     /** One count end to end; null = closed, else what refused it. */
     private fun send(p: StockCounts.CountPlan, ledger: Set<String>, ledgerFile: java.nio.file.Path): String? {
         val email = cfg.actorEmail(p.slug)
@@ -241,11 +399,13 @@ class StockDrive(
             if (r !is ConnectResponse.Ok) return "observation ${o.code} ${ops.describe(r)}"
             StoreStock.appendLines(ledgerFile, listOf(line))
         }
+        lastExceptions = null
         val close = ops.send(jwt, "POST", "/count/${p.countId}/close", mapOf("reason" to "route_complete"))
         if (close !is ConnectResponse.Ok) return "close ${ops.describe(close)}"
         val ex = ops.send(jwt, "GET", "/count/${p.countId}/exceptions")
         if (ex is ConnectResponse.Ok) {
             val n = ops.json(ex)
+            lastExceptions = n
             log.info("    closed — reconciled={} totals={}", n.path("reconciled").asText(), n.path("totals"))
         } else {
             log.info("    closed — exceptions read {} (the reconcile may still be running)", ops.describe(ex))
@@ -369,6 +529,12 @@ class StockDrive(
 
 fun main() {
     val cfg = OpsConfig.fromEnv("M8TRX_STOCK")
+    System.getenv("M8TRX_STOCK_TARGET")?.takeIf { it.isNotBlank() }?.let { spec ->
+        val confirm = (System.getenv("M8TRX_STOCK_TARGET_CONFIRM") ?: "").split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val s = StockDrive(cfg).runTargeted(StockTargeted.parse(spec), confirm)
+        if (cfg.live && s.err > 0) error("a targeted count was refused — see the log")
+        return
+    }
     LoggerFactory.getLogger("com.m8trx.twin.ops.StockDrive").info(
         "Stock drive → date={} seed={} stores={} live={} state={}",
         cfg.date,

@@ -486,6 +486,11 @@ opsTask(
     "Real cloud counts per store per day (count inbox). Dry-run unless M8TRX_STOCK_LIVE=true.",
 )
 opsTask(
+    "stolenCountTargets",
+    "com.m8trx.twin.ops.StolenCountTargetsKt",
+    "Offline, read-only: stolen-epcs.txt + a platform units CSV (M8TRX_PLATFORM_UNITS_CSV) -> the M8TRX_STOCK_TARGET string for connectStockDrive.",
+)
+opsTask(
     "connectFixtureMoves",
     "com.m8trx.twin.ops.FixtureMoveDriveKt",
     "Small movable fixtures only (promo tables first), 1-2 per store per week on the planogram period's Monday, to a free slot of their region (PUT /zones/{id}). Dry-run unless M8TRX_FIXMOVES_LIVE=true.",
