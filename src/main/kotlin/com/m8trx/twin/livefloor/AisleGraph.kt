@@ -37,6 +37,9 @@ class AisleGraph(val floor: StoreFloor, val hardMm: Double = HARD_DEFAULT_MM, jo
         /** A relaxed stand may come this close to a neighbouring fixture (0.10 m). */
         const val RELAX_MM = 100.0
         const val RUN_JOIN_MM = 400.0
+
+        /** A face shorter than this is a thin fixture's end, not somewhere to stand. */
+        const val MIN_FACE_MM = 300.0
         private const val BUCKET = 500.0
         private const val REACH = 1500.0
         private val RUN_KEY = Regex("^(.*?)(-U\\d+|-\\d+)$")
@@ -655,6 +658,26 @@ class AisleGraph(val floor: StoreFloor, val hardMm: Double = HARD_DEFAULT_MM, jo
         }.toSet()
     }
 
+    /**
+     * A face a person may stand at. Never the end of a thin fixture (a face under [MIN_FACE_MM] long: a dot there sits on the fixture's own line,
+     * 250 mm beyond its end), and for a perimeter fixture only the side that faces the sales floor, never the wall side: `perimeter_west` shelves are
+     * stood at from the east, `perimeter_east` from the west (the other sides are the non-retail strip and the checkout side).
+     */
+    private fun faceUsable(f: Fixture, n: Pt): Boolean {
+        if (f.kind == Fixture.Kind.POLYGON) {
+            val xs = f.ring.map { it.x }
+            val ys = f.ring.map { it.y }
+            val alongX = abs(n.x) < 0.5 // the face runs along x when its normal is vertical
+            val len = if (alongX) xs.max() - xs.min() else ys.max() - ys.min()
+            if (len < MIN_FACE_MM) return false
+        }
+        return when (floor.category[f.code]) {
+            "perimeter_west" -> n.x > 0.5
+            "perimeter_east" -> n.x < -0.5
+            else -> true
+        }
+    }
+
     private fun facesOf(f: Fixture): List<Pair<Pt, Pt>> {
         val faces = ArrayList<Pair<Pt, Pt>>() // face point, outward normal
         if (f.kind == Fixture.Kind.CIRCLE) {
@@ -694,6 +717,7 @@ class AisleGraph(val floor: StoreFloor, val hardMm: Double = HARD_DEFAULT_MM, jo
         var relaxed: Stand? = null
         var relaxedOpen = -1.0
         for ((p, n) in facesOf(f)) {
+            if (!faceUsable(f, n)) continue
             val sx = p.x + n.x * STAND_MM
             val sy = p.y + n.y * STAND_MM
             if (wallClearance(sx, sy) < 100.0) continue

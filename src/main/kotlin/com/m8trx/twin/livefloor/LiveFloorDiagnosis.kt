@@ -17,6 +17,10 @@ fun main() {
     val chain = Path.of("reference/data/chain")
     val all = com.m8trx.twin.storeday.StoreState.STORE_SLUGS
     val slugs = System.getenv("M8TRX_LIVE_FLOOR_TEST_STORES")?.split(",")?.map { it.trim() }?.filter { it in all } ?: all
+    System.getenv("M8TRX_LIVE_FLOOR_STANDS")?.takeIf { it.isNotBlank() }?.let { slug ->
+        standTable(StoreFloor.load(slug, chain))
+        return
+    }
     val whatIf = System.getenv("M8TRX_LIVE_FLOOR_WHATIF")?.takeIf { it.isNotBlank() }?.let(StoreFloor::parseEdits)
     for (slug in slugs) {
         val floor = StoreFloor.load(slug, chain)
@@ -109,4 +113,31 @@ private fun analyse(label: String, floor: StoreFloor, join: Boolean) {
             "; checkout ${if (checkoutLimit == Double.MAX_VALUE) "n/a" else "${checkoutLimit.toInt()} mm"}; " +
             "fixtures whose best stand is reachable at the preferred 0.3 m: $atPreferred/$withFace",
     )
+}
+
+/** The stands of every perimeter fixture of [floor] (`M8TRX_LIVE_FLOOR_STANDS=<slug>`): footprint, face, stand point, checks. */
+private fun standTable(floor: StoreFloor) {
+    val g = AisleGraph(floor)
+    val cx = floor.widthMm / 2
+    val cy = floor.depthMm / 2
+    println("== ${floor.slug} floor ${floor.widthMm.toInt()} x ${floor.depthMm.toInt()} mm; stands of the perimeter fixtures")
+    for (f in floor.fixtures.filter { floor.category[it.code]?.startsWith("perimeter") == true }) {
+        val x0 = f.ring.minOf { it.x }
+        val y0 = f.ring.minOf { it.y }
+        val x1 = f.ring.maxOf { it.x }
+        val y1 = f.ring.maxOf { it.y }
+        println("${f.code} footprint x ${x0.toInt()}..${x1.toInt()} y ${y0.toInt()}..${y1.toInt()}")
+        for (st in g.stands[f.code].orEmpty()) {
+            val nxv = -st.fx
+            val nyv = -st.fy
+            val side = if (nxv * (cx - f.centre.x) + nyv * (cy - f.centre.y) > 0) "floor side" else "WALL side"
+            val inside = g.fixtureClearance(st.x, st.y) == 0.0
+            val outside = st.x < 0 || st.x > floor.widthMm || st.y < 0 || st.y > floor.depthMm
+            println(
+                "   face normal (%+.0f,%+.0f) %s  stand (%d,%d)  to edge %.0f mm  inside a fixture: %s  outside floor: %s%s".format(
+                    nxv, nyv, side, st.x.toInt(), st.y.toInt(), g.distanceTo(f, st.x, st.y), inside, outside, if (st.relaxed) "  RELAXED" else "",
+                ),
+            )
+        }
+    }
 }
