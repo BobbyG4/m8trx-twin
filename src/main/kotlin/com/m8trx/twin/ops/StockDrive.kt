@@ -173,12 +173,13 @@ class StockDrive(
                                 err++
                             } else {
                                 log.info(
-                                    "    missing split: {} listed · {} platform-missing (booked) · {} platform-other (not booked)",
+                                    "    missing split: {} listed · {} platform-missing (booked) · {} platform-other (kept pending, re-read each run)",
                                     split.listed,
                                     split.platformMissing.size,
                                     split.platformOther,
                                 )
                                 StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), split.platformMissing)
+                                follow.addPending(split.pending)
                             }
                             val placements = cfg.stateDir.resolve("moves").resolve("placements.csv")
                             p.over.forEach { RestockMoves.appendPlacements(placements, listOf(it.epc), it.toFixture, cfg.date) }
