@@ -1389,3 +1389,48 @@ queued after Lille), nothing else.**
 Seoul, one at a time, windows :08–:57 between sales passes, 3 receive lanes. Plan swap = new plan first, then the old one's end
 (`/opt/m8trx/twin-ops/plan-swap.sh`). Box scripts: `reset-prep.sh`, `reset-store-7d.sh`, `reset-directives-7d.sh`, `stolen-count.sh`,
 `recon-send.sh`, `recon/results.py`.
+
+### 12.17 [twin] Restocks, people history and Busan's live floor — 2026-11-21 14:20 to 11-22 05:00 KST (running record)
+
+Read-backs and rollups moved to a session on the twin's seat (B/W handover: `status/active/backend-web/HANDOVER-OTHER-SEAT-2026-11-22.md`
+§ C, vault). Each line below is the twin's own record; "B/W read" means the platform was read back to the number.
+
+**Restocks** (every move eventKey read on the results route; post-check = sampled ledger units vs platform):
+
+| store | done (KST) | receives | move batches, processed | post-check | plan swap new / old end (KST) | B/W read |
+|---|---|---|---|---|---|---|
+| Bordeaux | 11-21 14:20 | 7,991 | 1,632 / 1,632 | 0 / 5,392 | 14:25 / 14:27 | floor at plan |
+| Lille | 11-21 16:19 | 12,137 | 2,807 / 2,807 | 0 / 4,153 | 16:51:21 / 16:53:31 | 2,760 / 2,760 targets; old plan ended 17:00 |
+| Lyon | 11-21 18:51 | 12,752 | 2,812 / 2,812 | 0 / 5,207 | 21:34:30 / 21:36:39 | 2,768 / 2,807 (58 units = sales between restock and swap); old plan ended 22:00 |
+| SF | 11-22 00:26 | 22,384 | 4,403 / 4,403 | 0 / 5,596 | 03:32:25 / 03:34:38 | 5,263 / 5,264 (1 unit sold since) |
+| Seoul | running since 11-22 03:50 | 18,615 | 3,416 | | | |
+
+Next: NYC when it closes (~11:00 KST; 25,610 receives, 5,097 batches), then Paris (night, its time). Then the rack pass for every
+store's back-room cover (platform shows it room-level, no fixture: Busan, Lille 2,986, Lyon 3,051, SF 4,905, Denver, ...).
+Probe = 50 units into the stockroom; its `at` time is the SEND time (rows land in the ~50 s after).
+**Incident 11-22 night:** the Mac's SSH agent locked, the Mac-side window controller could not set HOLD at :57, SF ran 22:09–00:26
+through two hours holding the run lock; the 23:00 and 00:00 sales passes skipped, the 01:00 pass caught up (1,384 sent, 0 errors);
+nothing sent twice. Fix: window control now runs on the box (`/opt/m8trx/twin-ops/box-windows.sh`, `log/<label>.ctl`). Prep sets the
+store's owner to `storeday` (no hourly sales): only prep an OPEN store right before its run.
+
+**People history backfill** (batch routes, services #537; Bob's go 11-21 17:0x; 10-05..11-20 store-local; today stays live):
+
+| store | backfill sent: visits / impressions | 11-20 live-fed | site total | batches (all 200) | B/W read / rollup |
+|---|---|---|---|---|---|
+| Seoul | 51,860 / 260,114 | 1,162 / 5,774 | 53,022 / 265,888 | 3,593 | equal / rolled 17:44 |
+| Busan | 20,538 / 114,976 | 454 / 2,576 | 20,992 / 117,552 | 1,630 | equal / rolled 18:11 |
+| Paris | 67,556 / 491,193 | 1,569 / 11,239 | 69,125 / 502,432 | 6,331 | equal / rolled 11-22 03:59 |
+| Lille | 30,523 / 169,916 | 872 / 5,047 | 31,395 / 174,963 | 2,367 | pending (other seat) |
+| Lyon | running from 04:55 | | | 2,207 | |
+
+Then Bordeaux, Marseille, NYC, SF. Pace 120/min, 60/min while a restock receives or moves (B/W rule; #56). Per-request timing
+(#58): `people-backfill/<slug>/batch-requests.tsv`. Lille: median 1.17 s, p99 2.96 s, max 6.31 s, 23 over 3 s (during Seoul's moves),
+no 10 s front-door wait (seen twice at Busan, 11-21 18:06; B/W logged it as a defect to trace).
+
+**Busan's live floor** (#57, #59; Bob's go 11-21): the walking model publishes Busan's REST visits as 5 Hz positions on
+`m8trx.<tenant>.<site>.xovis.objLocation|objEviction` only (hard subject guard: the twin edge's 10-18 build files any non-Denver
+`area.*` space under Denver). Live from 21:30:11 KST; the page showed 18 on the floor = 16 open REST visits + 2 staff; B/W's
+hour-after gate clean (no second source, nothing under Denver). The stand fix (#59, perimeter fixtures stood at from the floor side
+only) goes live at the 08:58 KST restart (Bob: before Busan opens). Layout defect for Bob: every floor's checkout block is reached
+only through two 400 mm gaps; proposal CO-01 west end +600 mm and last PE north end −600 mm (all ten floors; Busan below-0.3 m
+share 17.3 % → 10.2 %). :4223 JetStream: `area.>`, `alarm.>`, `scan.>`, 24 h max age, no byte cap, 0.52 GB; `m8trx.>` not stored.
