@@ -1446,3 +1446,12 @@ into BR-04 (a1a37f9e-…), 24 move batches / 36 units booked (1 put-away of 6 to
 0 unconfirmed. Plan: on hand 8,700 of target 8,057, floor 30 short; steady state about 187 units / 32 lines / 10.5 min a day.
 Owner back to hourly at 08:21. Keys: `out/delivery/dec-kr-busan/delivery-2026-11-22/{sent-ledger,answers,verified}.tsv` on
 the box; line sent to B/W. Next: 08:00-local timers for every store (sudo, Bob), NYC and Paris after their rebuilds.
+
+**Daily delivery timers installed** 2026-11-22 08:29 KST (Bob: "Install now"; #61): `m8trx-twin-delivery@.service` +
+8 timers at 08:00:30 store-local (Busan, Seoul, Bordeaux, Lille, Lyon, Marseille, Denver, SF), `LIVE=1 OWN=1` (the script flips
+the owner to storeday inside the lock and back after, and refuses a store a reset owns). The 30 s puts the hourly pass on the lock
+first; the four French stores fire together and run one after another (about 65 min, so the 08:00 UTC sales pass may skip once and
+catch up at 09:00). Dry runs 08:2x KST: Seoul 0 to do; Bordeaux 11, Lille 22, Lyon 22, Marseille 10, Denver 23, SF 27 min;
+NYC 1,044 and Paris 980 min (first heal) — their timers come after their rebuilds. While a restock runs, `delivery-HOLD` is in
+place, so deliveries in that span exit 6 and the next day's order covers the gap. Stop all: `touch $OPS/delivery-HOLD`; remove
+one: `sudo systemctl disable --now m8trx-twin-delivery-<slug>.timer`.
