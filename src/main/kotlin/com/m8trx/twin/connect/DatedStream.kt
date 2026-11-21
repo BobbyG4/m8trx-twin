@@ -491,6 +491,28 @@ object DatedStream {
                 l.count { it.second && it.first.new == DROPPED },
             )
         }
+        if (!live && reused) {
+            // dry report: what the guard WOULD do once every remaining (not yet sent) sale of the frozen plan has come due
+            val all = guardFloor(allocated, existingSwaps, stock, priorSold + missing, reservedElsewhere) { true }
+            all.fresh.groupBy { storeOf[it.saleId] ?: "?" }.toSortedMap().forEach { (st, l) ->
+                log.info(
+                    "  FLOOR GUARD (dry, all remaining sales) {}: would swap {} · drop {}",
+                    st,
+                    l.count { it.new != DROPPED },
+                    l.count { it.new == DROPPED },
+                )
+            }
+            log.info(
+                "  FLOOR GUARD (dry, all remaining sales): total would swap {} · drop {}",
+                all.fresh.count {
+                    it.new != DROPPED
+                },
+                all.fresh.count {
+                    it.new ==
+                        DROPPED
+                },
+            )
+        }
         val emptied = allocated.count { a -> sales.none { it.saleId == a.saleId } }
         if (emptied > 0) log.info("  FLOOR GUARD: {} sale(s) left with no floor unit — skipped", emptied)
         if (reused) log.info("reusing the persisted plan {} ({} sales) — the allocation is frozen at first live run", planFile, sales.size)
