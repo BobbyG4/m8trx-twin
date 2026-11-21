@@ -30,6 +30,8 @@ fun main() {
             { fixMovesGeometry(chain, keys) },
         "fixmoves: the hold - only the store's own local date, from 07:30 local" to { fixMovesHold(chain) },
         "fixrevert: sources, agreement, the default targets are the two Denver gondolas" to { fixRevert(keys) },
+        "stock: missing follows the platform (close filtered, un-miss, stolen kept, atomic rewrite)" to { missingFollowsPlatform() },
+        "stock: missing-pending (kept, promoted when missing, dropped on sold or after 3 days, idempotent)" to { missingPending() },
         "ops: login pacing (<= 6/min), JWT exp decode" to { loginPacing() },
         "tasks: backlog, target, top-up, assignees, completion shares, carried" to { taskDay() },
         "traffic9: HISTORY_ONLY=people writes exactly the three people files + MANIFEST" to { traffic9() },

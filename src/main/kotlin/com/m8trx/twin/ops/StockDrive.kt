@@ -3,6 +3,8 @@ package com.m8trx.twin.ops
 import com.m8trx.twin.connect.RestockMoves
 import com.m8trx.twin.connect.http.ConnectHttp
 import com.m8trx.twin.connect.http.ConnectResponse
+import com.m8trx.twin.connect.model.bearer.ItemDetail
+import com.m8trx.twin.storeops.ExistenceCheck
 import org.slf4j.LoggerFactory
 import java.time.format.DateTimeFormatter
 
@@ -26,10 +28,18 @@ import java.time.format.DateTimeFormatter
  * local Oct 15 is the morning of Oct 16 KST) · `M8TRX_STOCK_PULL_GAP_MS` (60).
  *
  * Ledger `.twin-state/stock/stock-<yyyymmdd>-<seed>.sent` (`countId,slug,k,closed`): a closed count is never re-sent.
- * After a live close: the `missing` EPCs go to `stock/missing-epcs.txt` (the twin's stock model drops them) and the
+ * After a live close: the close's `missing` EPCs that the PLATFORM reports `missing` ([MissingFollow], items/details) go to
+ * `stock/missing-epcs.txt` (the twin's stock model drops them); each live run first takes off that file what the platform holds
+ * `in_stock` again (never a stolen unit). The
  * over units' new rack goes to `moves/placements.csv` (the restock step then sees them where the platform has them).
  */
-class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = ConnectHttp()) {
+class StockDrive(
+    private val cfg: OpsConfig,
+    private val http: ConnectHttp = ConnectHttp(),
+    /** The `POST /inventory/items/details` reader (live runs only; built on first use so a dry run needs no bearer). */
+    details: () -> (List<String>) -> List<ItemDetail>? = { ExistenceCheck.liveDetails() },
+) {
+    private val follow: MissingFollow by lazy { MissingFollow(details(), cfg.stateDir) }
     private val log = LoggerFactory.getLogger(StockDrive::class.java)
     private val ops = OpsClient(cfg.apiBase, cfg.hasuraUrl, cfg::requirePassword, http, cfg.stateDir)
 
@@ -62,6 +72,29 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
         var held = 0
         var err = 0
         val shapes = ArrayList<String>()
+        if (cfg.live) {
+            // the missing list follows the platform: first take off it what the platform holds in stock again (never the twin's thefts)
+            val r = try {
+                follow.reconcile()
+            } catch (e: Exception) {
+                log.error("missing reconcile failed: {}", e.message)
+                null
+            }
+            if (r == null) {
+                log.warn("missing reconcile: items/details read failed — the missing list is left as it is")
+            } else {
+                log.info(
+                    "missing reconcile: {} on the list · {} back in stock on the platform and taken off · {} stolen kept · " +
+                        "{} sold (left) · {} other · {} request(s)",
+                    r.checked,
+                    r.removed,
+                    r.keptStolen,
+                    r.sold,
+                    r.other,
+                    r.requests,
+                )
+            }
+        }
         for (slug in cfg.stores) {
             val store = cfg.keys.store(slug)
             cfg.pastRefusal(slug)?.let {
@@ -134,7 +167,20 @@ class StockDrive(private val cfg: OpsConfig, private val http: ConnectHttp = Con
                         null -> {
                             closed++
                             StoreStock.appendLines(ledgerFile, listOf("${p.countId},$slug,${p.k},closed"))
-                            StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), p.missing.map { it.epc })
+                            val split = follow.closeMissing(p.missing.map { it.epc })
+                            if (split == null) {
+                                log.error("    items/details read failed — this close's {} missing unit(s) NOT booked", p.missing.size)
+                                err++
+                            } else {
+                                log.info(
+                                    "    missing split: {} listed · {} platform-missing (booked) · {} platform-other (kept pending, re-read each run)",
+                                    split.listed,
+                                    split.platformMissing.size,
+                                    split.platformOther,
+                                )
+                                StoreStock.appendLines(StoreStock.missingFile(cfg.stateDir), split.platformMissing)
+                                follow.addPending(split.pending)
+                            }
                             val placements = cfg.stateDir.resolve("moves").resolve("placements.csv")
                             p.over.forEach { RestockMoves.appendPlacements(placements, listOf(it.epc), it.toFixture, cfg.date) }
                         }
