@@ -246,8 +246,12 @@ fun main() {
             apiBase = "$base/api/v2", hasuraUrl = "$base/graphql", chainDir = chain, stateDir = state, date = date, seed = 20261016L,
             live = true, allowFuture = true, allowPast = true, stores = stores, password = "stub-password", now = now,
         )
-        val stock = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon"))).run { false }
-        val again = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon"))).run { false }
+        // the missing-follows-platform read is injected (the live one is a Connect bearer call, not the stub's JWT surface): every unit "missing"
+        val allMissing = {
+            { c: List<String> -> c.map { com.m8trx.twin.connect.model.bearer.ItemDetail(it, "i-$it", state = "missing") } }
+        }
+        val stock = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon")), details = allMissing).run { false }
+        val again = StockDrive(cfg(today, listOf("dec-us-denver", "dec-fr-lyon")), details = allMissing).run { false }
         val fix = (12..17).map { FixtureMoveDrive(cfg(LocalDate.of(2026, 10, it), listOf("dec-us-denver", "dec-fr-lyon"))).run() }
         val tasks = TaskDrive(cfg(today, listOf("dec-us-denver"))).run()
         val tasks2 = TaskDrive(cfg(today, listOf("dec-us-denver"))).run()
