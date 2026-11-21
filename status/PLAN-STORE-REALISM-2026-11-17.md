@@ -1354,3 +1354,38 @@ Order on B/W's read of the code: a pushed plan never supersedes another, and an 
 - Next: all nine stores daily, sent as the day happens (scheduling below); past days only after this (Bob's rule, now met).
 
 **Webhook keys (B/W confirmed, a rule tightened in #532):** every twin webhook post uses `M8TRX_TWIN_WEBHOOK_KEY` (twin-po-sim-2, bound to twin-pos, `webhook:write`). The service keys never go on a webhook post.
+
+### 12.16 [twin] Stock and ledger put right with the server lane — 2026-11-21 (Bob: "100% accurate"; schedule run by B/W on Bob's delegation)
+
+**What was wrong (found 07:00–08:10 KST).** The sales stream sold only each store's June seed list (`epcs.csv`), never the 10-12
+chain receive (32,230 units) or Denver's 11-19 reset receive. Bordeaux, Busan and Marseille went silent (11-03 / 11-03 / 11-10) with
+1,500–1,850 units still on their shelves; every store's day plan dropped most lines (Denver 6–12 sales a day). Nothing restocked
+the nine stores after 10-12 (they held 30–40 % of their 10-12 level). Back-room units sold first. The twin's ledger and the platform
+differed on 23,403 units. ⚠ I first reported "0 units left" from the seed list alone (wrong; see memory `feedback-stock-figures-check-platform`).
+
+**Fixed and live (PRs #43–#55, all reviewed, merged, on the box):**
+- #43 stream sells from everything on hand (seed + received, current fixture from placements); today's starved plan was set aside
+  (nothing sent from it) and re-planned: 2,400 sales on 11-21, 0 dropped.
+- #54 floor-only: a sale takes only a sales-floor unit; frozen plans swap a back-room unit for a same-EAN floor unit or drop it
+  (`<runId>.swaps.csv`). B/W read: all 48 sale lines of the 12:00 pass on a floor fixture.
+- #44/#46/#47/#48/#49/#53 reconcile sender + pace: moves by a rolling ITEM budget (150/min beside receives, 200 alone; platform
+  applies ~240/min), halt on a 10 s answer, on a move pending 60 s, refused or warning (results route by `eventKey`, services #535).
+- #50 the stock step books a unit missing only when the platform reads it missing (`notYetHeard`/first_silence is NOT missing);
+  pending list 3 days; un-miss on platform in_stock; stolen units kept.
+- #51 targeted counts; #45 reset back-room cover days (`M8TRX_RESET_BACKROOM_COVER_DAYS=7`, `_CASE_PACK=1`); #52 daily pre-open
+  delivery (order to target, NEAREST case, receive → rack put-away → floor top-up, every move confirmed) — built, not scheduled yet;
+  #55 people backfill (dry; batch routes on since 12:57; waits on Bob's go, pilot Seoul 10-05).
+
+**Ledger reconciled unit for unit with the platform** (B/W full lists): 10 platform-sold (07-02 stress test) into the sold log;
+295 + 6 off the missing list; 94 + 6 theft units moved from the sold log to `stock/stolen-epcs.txt` (+ missing); 37 + 2 unrecorded
+off the sold log; 432 sales the platform had refused (unit counted missing first) re-sent at their original times after #535, all
+confirmed; 6,898 location moves; 2 rounds of targeted counts closed 92 stolen units as missing. **Remaining differences: stolen 2
+(Busan FB-01 / GA-01: the fixture holds no other stock), Denver 15,037 + Busan 2,042 back-room units without a rack (put-aways
+queued after Lille), nothing else.**
+
+**Restocks (target = floor to period plan + 7 days back-room cover in singles; B/W ruling):** Busan done 11:22 (6,426 received,
+1,466 move batches, post-check 0/4,244, plan swap 11:25/11:28, all 1,286 targets compliant but 3); Marseille done 13:10 (7,829,
+1,423, 0/5,146, plan swap 13:14/13:16, 1,418/1,418 compliant). Bordeaux running from 13:17. Then Lille, Lyon, SF, NYC, Paris,
+Seoul, one at a time, windows :08–:57 between sales passes, 3 receive lanes. Plan swap = new plan first, then the old one's end
+(`/opt/m8trx/twin-ops/plan-swap.sh`). Box scripts: `reset-prep.sh`, `reset-store-7d.sh`, `reset-directives-7d.sh`, `stolen-count.sh`,
+`recon-send.sh`, `recon/results.py`.
