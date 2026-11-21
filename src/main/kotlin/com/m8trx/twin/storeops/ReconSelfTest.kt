@@ -1,5 +1,6 @@
 package com.m8trx.twin.storeops
 
+import com.m8trx.twin.connect.PriceBook
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.SpatialIdentityResponse
 import java.nio.file.Files
@@ -56,6 +57,9 @@ fun main() {
         row("A6", "Gondola R1 Front U1", "Gondola R1 Front U1"),
         row("S1", "", "", cls = "c", ts = "sold", ps = "in_stock"),
         row("S2", "", "", cls = "c", ts = "sold", ps = "sold"),
+        row("S3", "", "", cls = "c", ts = "sold", ps = "missing"),
+        row("S4", "", "", cls = "e", ts = "sold", ps = "missing"),
+        row("S5", "", "", cls = "c", ts = "in_stock", ps = "missing"),
     )
     check(
         Recon.select(Recon.Kind.MOVES, mixed).map {
@@ -65,6 +69,13 @@ fun main() {
     )
     check(Recon.select(Recon.Kind.RACKS, mixed).map { it.epc } == listOf("A3"), { "racks picks BACKROOM:<rack> -> BACKROOM:(none) only" })
     check(Recon.select(Recon.Kind.SALES, mixed).map { it.epc } == listOf("S1"), { "sales picks class c sold/in_stock" })
+    check(Recon.select(Recon.Kind.SALES, mixed, from = Recon.SalesFrom.MISSING).map { it.epc } == listOf("S3"), {
+        "sales from missing picks class c, twin sold, platform missing only"
+    })
+    check(Recon.SalesFrom.parse(null) == Recon.SalesFrom.IN_STOCK && Recon.SalesFrom.parse("missing") == Recon.SalesFrom.MISSING, {
+        "sales_from parses, default in_stock"
+    })
+    check(runCatching { Recon.SalesFrom.parse("sold") }.isFailure, { "an unknown sales_from is refused" })
     check(Recon.select(Recon.Kind.MOVES, mixed, setOf("dec-other")).isEmpty(), { "site filter applies" })
     val csv = OUT.resolve("diff.csv")
     Files.writeString(
@@ -164,6 +175,21 @@ fun main() {
     check(timed.planned.single().item.payload.path("occurred_at").asText() == "2026-10-15T17:03:08.754Z" && timed.unsourced.isEmpty(), {
         "an operator time sources an unsourced unit"
     })
+
+    println("[sales priced] a resend is priced as the original (store list / last price change) and split one part per price")
+    val book = PriceBook(
+        mapOf(("dec-x" to "EA") to PriceBook.Price(1000, "USD"), ("dec-x" to "EB") to PriceBook.Price(2500, "USD")),
+        emptyList(),
+    )
+    val pr = ReconPrices.of(mapOf("U1" to "EA", "U2" to "EB", "U3" to "EA"), book)
+    val pidx = ReconSaleIndex.of(mapOf("U1" to listOf(rc), "U2" to listOf(rc), "U3" to listOf(rc)))
+    val pp = Recon.planSales(listOf("U1", "U2", "U3", "U9").map { row(it, "dec-x", "", cls = "c", ts = "sold") }, pidx, prices = pr)
+    check(pp.planned.size == 2 && pp.unsourced.map { it.epc } == listOf("U9"), { "two price parts, U9 unsourced: ${pp.planned.size}" })
+    val p10 = pp.planned.first { it.item.epcs == listOf("U1", "U3") }.item.payload
+    val p25 = pp.planned.first { it.item.epcs == listOf("U2") }.item.payload
+    check(p10.path("price_minor").asLong() == 1000L && p10.path("currency").asText() == "USD" && p10.path("epc_list").size() == 2, { "$p10" })
+    check(p25.path("price_minor").asLong() == 2500L && p25.path("occurred_at").asText() == rc.occurredAt, { "$p25" })
+    check(pp.planned.map { it.item.extId }.distinct().size == 2, { "each part has its own resend id" })
 
     println("[plan file] frozen plan round-trips")
     val pf = OUT.resolve("plan.jsonl")

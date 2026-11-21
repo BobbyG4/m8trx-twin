@@ -24,7 +24,7 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.ReconSend")
  * skipped when `M8TRX_RECON_IDENTITY_DIR` holds saved `<slug>.json` answers). LIVE only with `M8TRX_RECON_LIVE=true` AND
  * `M8TRX_RECON_CONFIRM=<the sites of the run, csv>` (equal to `M8TRX_RECON_SITES`).
  *
- * Env: `M8TRX_RECON_DIFF` (the differences CSV; never copied into the repo) - `M8TRX_RECON_KIND` sales|moves|racks - `M8TRX_RECON_SITES` (csv; live
+ * Env: `M8TRX_RECON_DIFF` (the differences CSV; never copied into the repo) - `M8TRX_RECON_KIND` sales|moves|racks - `M8TRX_RECON_SALES_FROM` in_stock (default)|missing (sales: the platform's state of the unit) - `M8TRX_RECON_PRICED` (sales; default true for `missing`: price each unit as the original sale did, from `M8TRX_RECON_RECEIVED` + `M8TRX_RECON_PRICING_MEMORY`) - `M8TRX_RECON_SITES` (csv; live
  * requires it, dry defaults to every site in the file) - `M8TRX_RECON_STREAM_DIR` (`.twin-state/stream`; READ-ONLY) - `M8TRX_RECON_ALARM_DIR`
  * (sibling `alarm`) - `M8TRX_RECON_SALE_TIMES` (optional `epc,occurred_at` for units with no original sale) - `M8TRX_RECON_SKIP_UNSOURCED`
  * (live sales: send the sourced ones, leave the rest) - `M8TRX_RECON_OUT` (`out/recon`) - `M8TRX_RECON_HOLD` (`/opt/m8trx/twin-ops/recon-HOLD`) -
@@ -146,8 +146,35 @@ object ReconSendMain {
         val stateDir = Path.of(env("M8TRX_RECON_STATE_DIR") ?: ".twin-state")
         val hold = Path.of(env("M8TRX_RECON_HOLD") ?: "/opt/m8trx/twin-ops/recon-HOLD")
 
-        val hash = Recon.planHash(diff, kind, sites)
-        val rows = Recon.select(kind, Recon.readDiff(diff), sites)
+        val from = try {
+            Recon.SalesFrom.parse(env("M8TRX_RECON_SALES_FROM"))
+        } catch (e: IllegalArgumentException) {
+            log.error("REFUSING: {}", e.message)
+            return 3
+        }
+        val priced = env("M8TRX_RECON_PRICED")?.toBoolean() ?: (from == Recon.SalesFrom.MISSING)
+        // the default (in_stock, unpriced) keeps its old hash, so an existing frozen plan stays valid
+        val hash = Recon.planHash(
+            diff,
+            kind,
+            sites,
+            if (kind ==
+                Recon.Kind.SALES
+            ) {
+                (
+                    if (from ==
+                        Recon.SalesFrom.IN_STOCK
+                    ) {
+                        ""
+                    } else {
+                        "|from=${from.platformState}"
+                    }
+                    ) + (if (priced) "|priced" else "")
+            } else {
+                ""
+            },
+        )
+        val rows = Recon.select(kind, Recon.readDiff(diff), sites, from)
         log.info(
             "reconcileSend {} {}: {} rows selected{}",
             kind,
@@ -163,7 +190,22 @@ object ReconSendMain {
         if (kind == Recon.Kind.SALES) {
             val streamDir = Path.of(env("M8TRX_RECON_STREAM_DIR") ?: stateDir.resolve("stream").toString())
             val alarmDir = env("M8TRX_RECON_ALARM_DIR")?.let(Path::of) ?: streamDir.resolveSibling("alarm")
-            val sp = Recon.planSales(rows, ReconSaleIndex.load(streamDir, alarmDir), Recon.readTimes(env("M8TRX_RECON_SALE_TIMES")?.let(Path::of)))
+            val prices = if (priced) {
+                ReconPrices.load(
+                    chainDir,
+                    rows.map { it.site }.distinct(),
+                    env("M8TRX_RECON_RECEIVED")?.let(Path::of) ?: stateDir.resolve("receive/received-stock.csv"),
+                    env("M8TRX_RECON_PRICING_MEMORY")?.let(Path::of) ?: stateDir.resolve("pricing-sent.csv"),
+                )
+            } else {
+                null
+            }
+            val sp = Recon.planSales(
+                rows,
+                ReconSaleIndex.load(streamDir, alarmDir),
+                Recon.readTimes(env("M8TRX_RECON_SALE_TIMES")?.let(Path::of)),
+                prices,
+            )
             planned += sp.planned
             sp.causes.forEach { (c, n) -> extra += "cause $c: $n unit(s) - ${c.text}" }
             if (sp.unsourced.isNotEmpty()) {

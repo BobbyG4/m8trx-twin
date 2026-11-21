@@ -46,6 +46,22 @@ object Recon {
         }
     }
 
+    /** Which platform state a SALES run targets: `in_stock` (the default) or `missing` (the platform holds the unit as missing). */
+    enum class SalesFrom(val platformState: String) {
+        IN_STOCK("in_stock"),
+        MISSING("missing"),
+        ;
+
+        companion object {
+            fun parse(s: String?): SalesFrom = if (s.isNullOrBlank()) {
+                IN_STOCK
+            } else {
+                entries.firstOrNull { it.platformState == s.trim().lowercase() }
+                    ?: throw IllegalArgumentException("M8TRX_RECON_SALES_FROM must be in_stock or missing, got '$s'")
+            }
+        }
+    }
+
     data class Row(
         val epc: String,
         val site: String,
@@ -75,10 +91,10 @@ object Recon {
     }
 
     /** The rows a [kind] acts on (before site filtering is applied by the caller's [sites]; empty [sites] = all). */
-    fun select(kind: Kind, rows: List<Row>, sites: Set<String> = emptySet()): List<Row> = rows.filter { r ->
+    fun select(kind: Kind, rows: List<Row>, sites: Set<String> = emptySet(), from: SalesFrom = SalesFrom.IN_STOCK): List<Row> = rows.filter { r ->
         (sites.isEmpty() || r.site in sites) &&
             when (kind) {
-                Kind.SALES -> r.cls == "c" && r.twinState == "sold" && r.platformState == "in_stock"
+                Kind.SALES -> r.cls == "c" && r.twinState == "sold" && r.platformState == from.platformState
 
                 Kind.MOVES -> r.cls == "e" && r.twinLocation.isNotBlank() && r.twinLocation != NONE_LOCATION &&
                     r.platformLocation != NONE_LOCATION && r.platformLocation != r.twinLocation
@@ -202,7 +218,7 @@ object Recon {
      * the ONLY way an alarm/no-record unit gets a time. Units of one original receipt go back as ONE event (`epc` or `epc_list`) under `<orig>-r1`,
      * carrying only the EPCs that did not land and the receipt's own `occurred_at`; a unit with no source is listed in [SalePlan.unsourced].
      */
-    fun planSales(rows: List<Row>, index: ReconSaleIndex, times: Map<String, String> = emptyMap()): SalePlan {
+    fun planSales(rows: List<Row>, index: ReconSaleIndex, times: Map<String, String> = emptyMap(), prices: ReconPrices? = null): SalePlan {
         val causes = java.util.EnumMap<Cause, Int>(Cause::class.java)
         val unsourced = ArrayList<Unsourced>()
         val byReceipt = java.util.TreeMap<String, MutableList<Row>>()
@@ -227,15 +243,22 @@ object Recon {
         }
         val out = ArrayList<Planned>()
         var seq = 0
-        fun item(id: String, at: String, epcs: List<String>, slug: String): Planned {
-            val ev = if (epcs.size == 1) SaleEvent.byEpc(id, at, epcs.single()) else SaleEvent.byEpcList(id, at, epcs)
+        fun item(id: String, at: String, epcs: List<String>, slug: String, price: ReconPrices.Price?): Planned {
+            val base = if (epcs.size == 1) SaleEvent.byEpc(id, at, epcs.single()) else SaleEvent.byEpcList(id, at, epcs)
+            val ev = if (price == null) base else base.priced(price.minor, price.currency)
             return Planned(slug, SendItem(seq++, 0, 2, "sale", id, ConnectMappers.snake.valueToTree(ev), epcs), "", null, at)
         }
-        byReceipt.forEach { (sid, rs) ->
-            out +=
-                item(resendId(sid, rs.map { it.epc }), receiptAt.getValue(sid), rs.map { it.epc }.sorted(), receiptStore.getValue(sid))
+
+        /** The units split one part per price (first-appearance order; unpriced units are one part), each under its own id. */
+        fun parts(slug: String, at: String, epcs: List<String>, id: (List<String>) -> String) {
+            val groups = LinkedHashMap<ReconPrices.Price?, MutableList<String>>()
+            epcs.forEach { groups.getOrPut(prices?.priceOf(slug, it, at)) { ArrayList() } += it }
+            groups.forEach { (price, es) -> out += item(id(es), at, es, slug, price) }
         }
-        single.forEach { (r, at) -> out += item(derivedSaleId(r.site, listOf(r.epc)), at, listOf(r.epc), r.site) }
+        byReceipt.forEach { (sid, rs) ->
+            parts(receiptStore.getValue(sid), receiptAt.getValue(sid), rs.map { it.epc }.sorted()) { resendId(sid, it) }
+        }
+        single.forEach { (r, at) -> parts(r.site, at, listOf(r.epc)) { derivedSaleId(r.site, it) } }
         return SalePlan(
             out.sortedWith(compareBy({ it.site }, { it.item.extId })).mapIndexed { i, p ->
                 Planned(p.site, SendItem(i, 0, 2, "sale", p.item.extId, p.item.payload, p.item.epcs), p.destName, p.destCode, p.occurredAt)
@@ -259,10 +282,10 @@ object Recon {
     // ── frozen plan ──────────────────────────────────────────────────────────
 
     /** SHA-256 over the differences file's bytes, the kind and the sorted sites: what a frozen plan was built from. */
-    fun planHash(diff: Path, kind: Kind, sites: Set<String>): String {
+    fun planHash(diff: Path, kind: Kind, sites: Set<String>, extra: String = ""): String {
         val md = java.security.MessageDigest.getInstance("SHA-256")
         md.update(Files.readAllBytes(diff))
-        md.update("|${kind.name}|${sites.sorted().joinToString(",")}".toByteArray())
+        md.update("|${kind.name}|${sites.sorted().joinToString(",")}$extra".toByteArray())
         return md.digest().joinToString("") { "%02x".format(it) }
     }
 
