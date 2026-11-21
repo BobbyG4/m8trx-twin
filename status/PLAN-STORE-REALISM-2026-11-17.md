@@ -1437,3 +1437,12 @@ hour-after gate clean (no second source, nothing under Denver). The stand fix (#
 only) goes live at the 08:58 KST restart (Bob: before Busan opens). Layout defect for Bob: every floor's checkout block is reached
 only through two 400 mm gaps; proposal CO-01 west end +600 mm and last PE north end −600 mm (all ten floors; Busan below-0.3 m
 share 17.3 % → 10.2 %). :4223 JetStream: `area.>`, `alarm.>`, `scan.>`, 24 h max age, no byte cap, 0.52 GB; `m8trx.>` not stored.
+
+**Busan's first live daily delivery** (#52, Bob: "then we go to the daily normal delivery times for all these"), 2026-11-22.
+08:15 KST refused before sending anything: the rack lookup (`/spatial/identity`) read with `M8TRX_TWIN_BEARER`, which answers
+403 SITE_ACCESS_DENIED for Busan, so BR-04 had no zone id. `ops/daily-delivery.sh` now reads with the service key, as the
+reset's box script does (#60). Re-run 08:17:17–08:21:00: receive `dly-dec-kr-busan-20261122-r-81eae59146` 6 tags (6 created)
+into BR-04 (a1a37f9e-…), 24 move batches / 36 units booked (1 put-away of 6 to BR-04, 23 top-ups of 30 units to the floor),
+0 unconfirmed. Plan: on hand 8,700 of target 8,057, floor 30 short; steady state about 187 units / 32 lines / 10.5 min a day.
+Owner back to hourly at 08:21. Keys: `out/delivery/dec-kr-busan/delivery-2026-11-22/{sent-ledger,answers,verified}.tsv` on
+the box; line sent to B/W. Next: 08:00-local timers for every store (sudo, Bob), NYC and Paris after their rebuilds.
