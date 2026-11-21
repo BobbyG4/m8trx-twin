@@ -741,3 +741,16 @@ tasks.register<Sync>("storeOpsDist") {
     from(configurations.named("runtimeClasspath"))
     into(System.getenv("M8TRX_STORE_OPS_DIST") ?: layout.buildDirectory.dir("store-ops-dist").get().asFile.path)
 }
+
+// The live floor map's people from the store-day model (the walking model + the xovis-only feed). Offline: dry mode only, no connection.
+storeOpsTask(
+    "liveFloorSelfTest",
+    "com.m8trx.twin.livefloor.LiveFloorSelfTestKt",
+    "Offline: the live floor walking model for all ten stores (>= 0.3 m from fixtures, 0.25 m at the face, speeds, no jumps), walker ids = the REST trackingIds, gender mix, staff, determinism, and the dry-mode xovis-only feed for dec-kr-busan. No network.",
+)
+tasks.named("offlineSelfTest") { dependsOn("liveFloorSelfTest") }
+storeOpsTask(
+    "liveFloorDiagnose",
+    "com.m8trx.twin.livefloor.LiveFloorDiagnosisKt",
+    "Offline, read only: where each store's floor is cut off from the entrance at the 0.3 m rule (raw and with runs joined), the pinch that links each cut-off part, and the smallest clearance connecting every fixture's best stand and the checkout.",
+)
