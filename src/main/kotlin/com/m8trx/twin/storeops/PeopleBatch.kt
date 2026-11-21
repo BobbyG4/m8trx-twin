@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.storeday.PeopleRest
+import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -115,6 +116,11 @@ class PeopleBatchRunner(
 ) {
     enum class End { DONE, HOLD, HALTED }
 
+    companion object {
+        const val REQUESTS_FILE = "batch-requests.tsv"
+        private val reqLog = LoggerFactory.getLogger("com.m8trx.twin.storeops.PeopleBatchRunner")
+    }
+
     val events = ArrayList<String>()
     var haltReason: String? = null
         private set
@@ -138,6 +144,26 @@ class PeopleBatchRunner(
         }
     }
 
+    /** One greppable line per HTTP request, after its answer, so the server lane can match it to the front-door log. Wall times come from [clock]. */
+    private fun requestLine(b: PeopleBatch.Batch, seq: Int, sent: Long, answered: Long, status: String) {
+        val s = Instant.ofEpochMilli(sent)
+        val a = Instant.ofEpochMilli(answered)
+        val took = answered - sent
+        reqLog.info(
+            "BATCH-REQ sent={} answered={} took_ms={} status={} kind={} day={} items={} seq={}",
+            s, a, took, status, b.kind, b.day, b.lines.size, seq,
+        )
+        dir?.let {
+            Files.createDirectories(it)
+            Files.writeString(
+                it.resolve(REQUESTS_FILE),
+                listOf(s, a, took, status, b.kind, b.day, b.lines.size, seq).joinToString("\t") + "\n",
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND,
+            )
+        }
+    }
+
     private fun halt(s: String): End {
         haltReason = s
         event("HALT $s")
@@ -157,11 +183,14 @@ class PeopleBatchRunner(
                 t0 = clock()
                 startedAt += t0
                 requests++
+                var failure: String? = null
                 val a = try {
                     transport.call("POST", b.path, text)
                 } catch (e: IOException) {
+                    failure = "error:${e.javaClass.simpleName}"
                     null
                 }
+                requestLine(b, requests, t0, clock(), a?.status?.toString() ?: failure ?: "error")
                 val retry = a == null || a.status == 429 || a.status >= 500
                 if (a != null && a.status in 200..299) {
                     answer = a
