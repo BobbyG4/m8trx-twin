@@ -693,6 +693,17 @@ storeOpsTask(
     "Offline (fake transport, simulated clock): live people-by-REST refusals, window rule, begin-before-impression, resume, cap, retry decisions.",
 )
 tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestLiveSelfTest") }
+storeOpsTask(
+    "storeDayPeopleRestBackfill",
+    "com.m8trx.twin.storeops.PeopleRestBackfillMainKt",
+    "People-by-REST BACKFILL for the nine non-Denver stores, 2026-10-05 to the first live day (11-20 gap-only: sessions in no live sent-ledger). DRY by default (per-day table + summary, sends nothing). LIVE only with M8TRX_PEOPLE_BACKFILL_LIVE=true AND M8TRX_PEOPLE_BACKFILL_CONFIRM=<one slug> AND M8TRX_TWIN_PEOPLE_BEARER. Env: _STORES, _FROM, _LEDGER_DIR, _CAP_PER_MIN (60), _REPORT (csv).",
+)
+storeOpsTask(
+    "storeDayPeopleRestBackfillSelfTest",
+    "com.m8trx.twin.storeops.PeopleRestBackfillSelfTestKt",
+    "Offline: backfill date range, first-live-day gap (no session counted twice), partial sessions, ledger reading, LIVE gate.",
+)
+tasks.named("offlineSelfTest") { dependsOn("storeDayPeopleRestBackfillSelfTest") }
 
 storeOpsTask(
     "reconcileSend",
