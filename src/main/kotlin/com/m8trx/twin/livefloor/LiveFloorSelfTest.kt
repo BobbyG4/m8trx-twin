@@ -69,6 +69,7 @@ private class Agg {
     var walkN = 0L
     var walkMinClr = Double.MAX_VALUE
     var walkBelow300 = 0L
+    var insideSamples = 0L
     var stepMinClr = Double.MAX_VALUE
     var standN = 0L
     var standMin = Double.MAX_VALUE
@@ -99,6 +100,7 @@ private fun measure(d: DayWalk): Agg {
         val win = ArrayDeque<FloorSample>()
         for (s in w.samples()) {
             a.samples++
+            if (g.fixtureClearance(s.x, s.y) == 0.0) a.insideSamples++
             while (segI < w.segs.size - 1 && w.segs[segI].t1 <= s.tMs) segI++
             val seg = w.segs[segI]
             when (s.state) {
@@ -201,6 +203,33 @@ private class Row(val slug: String) {
 private val rows = LinkedHashMap<String, Row>()
 
 private fun row(s: String) = rows.getOrPut(s) { Row(s) }
+
+/** Every stand of a store: outside every footprint, inside the floor, 200 mm or more from its own fixture, and on the floor side of a perimeter fixture. */
+private fun standGeometry(slug: String, g: AisleGraph) {
+    val byCode = g.floor.fixtures.associateBy { it.code }
+    var n = 0
+    for ((code, list) in g.stands) {
+        val f = byCode.getValue(code)
+        for (st in list) {
+            n++
+            val insideAny = g.floor.fixtures.firstOrNull { g.distanceTo(it, st.x, st.y) == 0.0 }
+            ok(insideAny == null) { "$slug: a stand of $code at (${st.x.toInt()},${st.y.toInt()}) is inside ${insideAny?.code}" }
+            ok(st.x > 0 && st.x < g.floor.widthMm && st.y > 0 && st.y < g.floor.depthMm) { "$slug: a stand of $code is outside the floor" }
+            val own = g.distanceTo(f, st.x, st.y)
+            ok(own >= 200.0) { "$slug: a stand of $code is ${f1(own)} mm from its own footprint (< 200)" }
+            val cat = g.floor.category[code]
+            // the person faces the fixture, so a stand on the east side of a west-perimeter fixture faces west (fx < 0)
+            ok(cat != "perimeter_west" || st.fx < -0.5) { "$slug: a stand of the west perimeter fixture $code is on its wall side" }
+            ok(cat != "perimeter_east" || st.fx > 0.5) { "$slug: a stand of the east perimeter fixture $code is on its wall side" }
+        }
+    }
+    println(
+        "      %-20s %d stands checked (outside footprints, in the floor, >= 200 mm from own fixture, perimeter on floor side)".format(
+            slug,
+            n,
+        ),
+    )
+}
 
 private fun walkingModel() {
     println("      store                 customers  staff stops  stand(mm)        other-clr  face-bad  jump  seg-speed(m/s)  win-min")
@@ -305,6 +334,8 @@ private fun walkingModel() {
         }
         ok(r.checkout >= 99.9) { "$s: only ${f1(r.checkout)}% of purchasers passed a checkout counter" }
         ok(r.enclosedPct <= 2.0) { "$s: ${f1(r.enclosedPct)}% of stops have no stand" }
+        ok(a.insideSamples == 0L) { "$s: ${a.insideSamples} samples lie inside a fixture footprint" }
+        standGeometry(s, g)
         ok(a.walkN > 1000 && a.standN > 100) { "$s: too few samples (walk ${a.walkN}, stand ${a.standN})" }
         ok(a.walkMinClr >= g.hardMm - 1.5) { "$s: a walking sample is ${f1(a.walkMinClr)} mm from a fixture (hard floor ${g.hardMm})" }
         ok(a.stepMinClr >= 95.0) { "$s: a step-in/out sample is ${f1(a.stepMinClr)} mm from a fixture" }
