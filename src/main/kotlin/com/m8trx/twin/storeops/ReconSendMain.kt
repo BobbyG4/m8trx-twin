@@ -334,18 +334,32 @@ object ReconSendMain {
             val n = (shown[site] ?: 0) + 1
             shown[site] = n
             if (n <= 3 || !WebhookAnswer.isPlain(body)) log.info("webhook answer {} #{} {}: {}", site, n, item.extId, body)
+            // every answer's eventKey, for the results route (services #535): extId, site, eventKey, receivedAt
+            val key = runCatching { com.fasterxml.jackson.databind.ObjectMapper().readTree(body) }.getOrNull()
+            Files.writeString(
+                out.resolve("answers.tsv"),
+                "${item.extId}\t$site\t${key?.path("eventKey")?.asText("").orEmpty()}\t${key?.path("receivedAt")?.asText("").orEmpty()}\n",
+                java.nio.file.StandardOpenOption.CREATE,
+                java.nio.file.StandardOpenOption.APPEND,
+            )
         }
+        // M8TRX_RECON_SALE_SPACING_MS: sales go one unit an event, so the server lane allows 60 a minute (1000 ms); never faster
+        val saleSpacing = maxOf(1_000L, System.getenv("M8TRX_RECON_SALE_SPACING_MS")?.toLongOrNull() ?: Recon.SPACING_MS)
+        // M8TRX_RECON_LIMIT: send at most this many items in this run (a pilot), the rest stay due for the next run
+        var budget = System.getenv("M8TRX_RECON_LIMIT")?.toIntOrNull() ?: Int.MAX_VALUE
         val sender = PlacementSender(liveSender, destCodes, stateDir.resolve("moves/placements.csv"), LocalDate.now())
         val policy = RetryPolicy()
         for (slug in liveOrder) {
-            val items = liveBySite.getValue(slug).map { it.item }
+            if (budget <= 0) break
+            val items = liveBySite.getValue(slug).map { it.item }.filter { !ledger.isSent(it.extId) }.take(budget)
+            budget -= items.size
             val pump = Pump(
                 items,
                 sender,
                 policy,
                 ledger,
                 OrderingGuard(items.flatMap { it.epcs }),
-                spacingMs = mapOf("move" to Recon.SPACING_MS, "sale" to Recon.SPACING_MS),
+                spacingMs = mapOf("move" to Recon.SPACING_MS, "sale" to saleSpacing),
                 healthEveryMs = 30_000,
                 hold = { Files.exists(hold) },
                 onEvent = { log.warn("{}", it) },
