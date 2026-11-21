@@ -186,7 +186,7 @@ object LiveResults {
 /** The results route over HTTP (kept here with the other network code; see [ResultsRoute] for the parsing). */
 object LiveResultsFetcher {
     /** Live fetcher from the environment (`M8TRX_CONNECT_WEBHOOK_BASE`, `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG`, `M8TRX_TWIN_WEBHOOK_KEY`). Null = unreadable. */
-    fun create(config: ConnectConfig = ConnectConfig.fromEnv(), onError: (String) -> Unit = {}): (List<String>) -> List<ResultEntry>? {
+    fun create(config: ConnectConfig = ConnectConfig.fromEnv(), onError: (String) -> Unit = {}): (List<String>) -> List<MoveResultEntry>? {
         val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
         val base = "${config.webhookBase}/${config.requireTenantId()}/${config.requireIntegrationSlug()}/results"
         val key = config.requireWebhookApiKey()

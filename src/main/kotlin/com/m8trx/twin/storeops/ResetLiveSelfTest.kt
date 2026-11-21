@@ -934,21 +934,21 @@ private fun budgetRateSwitch() {
     check(ResetGate.paceRefusals(25, 500, 200, 150).isEmpty()) { "with the budget in use the 3.5 s spacing refusal does not apply" }
 }
 
-private fun ok(key: String) = ResultEntry(key, "ok", 0, """{"idempotency_key":"$key","outcome":"ok"}""")
+private fun ok(key: String) = MoveResultEntry(key, "ok", 0, """{"idempotency_key":"$key","outcome":"ok"}""")
 
 private fun resultsWatch() {
-    val pendingFor = { keys: List<String> -> keys.map { ResultEntry(it, "pending", 0, "") } }
+    val pendingFor = { keys: List<String> -> keys.map { MoveResultEntry(it, "pending", 0, "") } }
     val w1 = MoveResultsWatch(pendingFor, everyMs = 10, pendingLimitMs = 60_000)
     w1.beforeSend("m1", 0)
     w1.answered("m1", """{"eventKey":"k1"}""", 100)
     check(w1.check(30_000) == null && w1.outstanding() == 1) { "pending 30 s after the post is fine" }
     check(w1.check(59_000) == null) { "59 s still fine" }
     check(w1.check(70_000)?.contains("still pending") == true) { "pending over 60 s halts" }
-    val w2 = MoveResultsWatch({ k -> k.map { ResultEntry(it, "ok", 2, "r") } }, everyMs = 10)
+    val w2 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "ok", 2, "r") } }, everyMs = 10)
     w2.answered("m", """{"eventKey":"k"}""", 0)
     check(w2.check(100)?.contains("refused 2") == true) { "refused > 0 halts" }
     for (o in listOf("warning", "failed")) {
-        val w = MoveResultsWatch({ k -> k.map { ResultEntry(it, o, 0, "r") } }, everyMs = 10)
+        val w = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, o, 0, "r") } }, everyMs = 10)
         w.answered("m", """{"eventKey":"k"}""", 0)
         check(w.check(100)?.contains(o) == true) { "$o halts" }
     }
@@ -968,7 +968,7 @@ private fun resultsWatch() {
     check(w5.check(1_000_000) == null && w5.outstanding() == 1) { "an unreadable results route never halts by itself" }
     // a chunk whose read failed is skipped, never "not listed"; only answers halt
     var fail = true
-    val w7 = MoveResultsWatch({ k -> if (fail) null else k.map { ResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 10)
+    val w7 = MoveResultsWatch({ k -> if (fail) null else k.map { MoveResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 10)
     w7.answered("m", """{"eventKey":"k"}""", 0)
     for (i in 1..6) check(w7.check(1_000_000L * i) == null) { "a failed read never halts" }
     fail = false
@@ -1019,13 +1019,13 @@ private fun resultsHalts() {
     }
     // pending forever: 9 items a minute makes the 4th batch wait, and the pending ones age past 60 s
     val c2 = VirtualClock(0)
-    val w2 = MoveResultsWatch({ k -> k.map { ResultEntry(it, "pending", 0, "") } }, everyMs = 10, pendingLimitMs = 60_000)
+    val w2 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "pending", 0, "") } }, everyMs = 10, pendingLimitMs = 60_000)
     val s2 = Schedule()
     val r2 = run(s2, withWatch(FakeSender(s2, c2), w2, c2), c2, 1, perMin = 9, perMinWithReceive = 9, moveWatch = w2)
     check(r2.end == ResetLiveRunner.End.HALTED && r2.haltReason!!.contains("still pending")) { "pending halts: ${r2.end} ${r2.haltReason}" }
     // refused
     val c3 = VirtualClock(0)
-    val w3 = MoveResultsWatch({ k -> k.map { ResultEntry(it, "ok", 1, "r") } }, everyMs = 10)
+    val w3 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "ok", 1, "r") } }, everyMs = 10)
     val s3 = Schedule()
     val led3 = SentLedger(null)
     val r3 = run(s3, withWatch(FakeSender(s3, c3), w3, c3), c3, 1, ledger = led3, perMin = 200, perMinWithReceive = 150, moveWatch = w3)

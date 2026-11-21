@@ -72,7 +72,7 @@ class ItemBudget(private val perMin: () -> Int, private val windowMs: Long = 60_
 }
 
 /** One entry of the results route: `{idempotency_key, outcome, result:{type:"move", moved, skipped, superseded, refused, refused_items}}`. */
-data class ResultEntry(val key: String, val outcome: String, val refused: Int, val raw: String) {
+data class MoveResultEntry(val key: String, val outcome: String, val refused: Int, val raw: String) {
     val pending: Boolean get() = outcome.equals("pending", ignoreCase = true)
     val bad: Boolean get() = outcome.equals("warning", ignoreCase = true) || outcome.equals("failed", ignoreCase = true)
 }
@@ -82,11 +82,11 @@ object ResultsRoute {
     const val MAX_KEYS = 40
     private val mapper = ObjectMapper()
 
-    fun parse(body: String): List<ResultEntry> {
+    fun parse(body: String): List<MoveResultEntry> {
         val results = mapper.readTree(body).path("results")
         return results.map { e ->
             val res = e.path("result")
-            ResultEntry(e.path("idempotency_key").asText(""), e.path("outcome").asText(""), res.path("refused").asInt(0), e.toString().take(400))
+            MoveResultEntry(e.path("idempotency_key").asText(""), e.path("outcome").asText(""), res.path("refused").asInt(0), e.toString().take(400))
         }
     }
 
@@ -108,7 +108,7 @@ object ResultsRoute {
  * answer: the last row of an extId wins. (Recon writes its own answers.tsv and passes null.)
  */
 class MoveResultsWatch(
-    private val fetch: (List<String>) -> List<ResultEntry>?,
+    private val fetch: (List<String>) -> List<MoveResultEntry>?,
     private val answersFile: Path? = null,
     private val everyMs: Long = 30_000,
     private val pendingLimitMs: Long = pendingLimitFromEnv(),
@@ -164,7 +164,7 @@ class MoveResultsWatch(
     fun check(now: Long, force: Boolean = false): String? {
         if (unconfirmed.isEmpty() || (!force && now - lastCheckAt < everyMs)) return null
         lastCheckAt = now
-        val seen = HashMap<String, ResultEntry>()
+        val seen = HashMap<String, MoveResultEntry>()
         val readKeys = HashSet<String>()
         for (chunk in unconfirmed.keys.toList().chunked(ResultsRoute.MAX_KEYS)) {
             val got = fetch(chunk)

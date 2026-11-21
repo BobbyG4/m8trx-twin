@@ -355,10 +355,10 @@ fun main() {
         "no 60 s window holds more than the budget: $sentAt"
     })
     check(ItemBudget.refusals("x", 241).size == 1 && ItemBudget.refusals("x", 240).isEmpty(), { "a budget above 240 is refused" })
-    val wr = MoveResultsWatch({ k -> k.map { ResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 60_000)
+    val wr = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 60_000)
     wr.answered("m", """{"eventKey":"k"}""", 0)
     check(wr.check(61_000)?.contains("pending") == true, { "recon: pending over 60 s halts" })
-    val wf = MoveResultsWatch({ k -> k.map { ResultEntry(it, "ok", 3, "r") } }, everyMs = 1)
+    val wf = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "ok", 3, "r") } }, everyMs = 1)
     wf.answered("m", """{"eventKey":"k"}""", 0)
     check(wf.check(10)?.contains("refused 3") == true, { "recon: refused halts" })
 
