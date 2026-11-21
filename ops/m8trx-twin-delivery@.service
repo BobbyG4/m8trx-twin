@@ -11,5 +11,5 @@ EnvironmentFile=/opt/m8trx/twin/.env
 Environment=JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 Environment=LIVE=1 OWN=1
 ExecStart=/opt/m8trx/twin/ops/daily-delivery.sh %i
-RuntimeMaxSec=3h
+TimeoutStartSec=3h
 Nice=10
