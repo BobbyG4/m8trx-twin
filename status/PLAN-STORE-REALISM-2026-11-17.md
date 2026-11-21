@@ -1420,7 +1420,7 @@ store's owner to `storeday` (no hourly sales): only prep an OPEN store right bef
 | Seoul | 51,860 / 260,114 | 1,162 / 5,774 | 53,022 / 265,888 | 3,593 | equal / rolled 17:44 |
 | Busan | 20,538 / 114,976 | 454 / 2,576 | 20,992 / 117,552 | 1,630 | equal / rolled 18:11 |
 | Paris | 67,556 / 491,193 | 1,569 / 11,239 | 69,125 / 502,432 | 6,331 | equal / rolled 11-22 03:59 |
-| Lille | 30,523 / 169,916 | 872 / 5,047 | 31,395 / 174,963 | 2,367 | pending (other seat) |
+| Lille | 30,523 / 169,916 | 872 / 5,047 | 31,395 / 174,963 | 2,367 | equal / rolled 11-22 05:00 |
 | Lyon | running from 04:55 | | | 2,207 | |
 
 Then Bordeaux, Marseille, NYC, SF. Pace 120/min, 60/min while a restock receives or moves (B/W rule; #56). Per-request timing
