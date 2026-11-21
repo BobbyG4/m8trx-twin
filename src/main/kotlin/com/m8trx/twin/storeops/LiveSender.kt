@@ -160,3 +160,19 @@ class LiveSender private constructor(
         }
     }
 }
+
+/** The delivery's one real read, kept in this file with the other network code: `GET .../results`, header `X-API-Key` = the webhook key. */
+object LiveResults {
+    fun reader(config: ConnectConfig = ConnectConfig.fromEnv(), http: ConnectHttp = ConnectHttp(requestTimeout = java.time.Duration.ofSeconds(30))) =
+        ResultsReader { keys ->
+            require(keys.size <= ResultsReader.MAX_KEYS) { "the results route takes at most ${ResultsReader.MAX_KEYS} keys, got ${keys.size}" }
+            try {
+                when (val r = http.send("GET", ResultsReader.url(config, keys), mapOf("X-API-Key" to config.requireWebhookApiKey()))) {
+                    is ConnectResponse.Ok -> ResultEntry.parse(r.rawBody)
+                    is ConnectResponse.Err -> null
+                }
+            } catch (e: IOException) {
+                null
+            }
+        }
+}

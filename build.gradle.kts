@@ -706,6 +706,22 @@ storeOpsTask(
 )
 tasks.named("offlineSelfTest") { dependsOn("reconcileSelfTest") }
 
+storeOpsTask(
+    "dailyDelivery",
+    "com.m8trx.twin.storeops.DailyDeliveryMainKt",
+    "Daily delivery (replaces what each store sold, then put-away and top-up). DRY by default (order, units, requests, put-away and top-up batches, minutes, first bodies, steady-state size; sends nothing). LIVE only with M8TRX_DELIVERY_LIVE=true AND M8TRX_DELIVERY_CONFIRM=<sites csv>; refuses after the store's opening unless M8TRX_DELIVERY_ALLOW_OPEN=true. Moves verified through the results route. Env: M8TRX_DELIVERY_SITES, _DATE, _OUT, M8TRX_STREAM_SOLD_LOG. Run under the shared lock. Run-card: ops/INSTALL.md.",
+).configure {
+    // the back room holds 7 days of cover in single units (the reset's setting) unless the caller says otherwise
+    environment("M8TRX_RESET_BACKROOM_COVER_DAYS", System.getenv("M8TRX_RESET_BACKROOM_COVER_DAYS") ?: "7")
+    environment("M8TRX_RESET_BACKROOM_CASE_PACK", System.getenv("M8TRX_RESET_BACKROOM_CASE_PACK") ?: "1")
+}
+storeOpsTask(
+    "dailyDeliverySelfTest",
+    "com.m8trx.twin.storeops.DailyDeliverySelfTestKt",
+    "Offline: order = target - on hand rounded to cases, no EPC collision, put-away by to_zone_id, top-up never past plan or the back room's stock, results-route booking only on confirmed moved, dry sends nothing.",
+)
+tasks.named("offlineSelfTest") { dependsOn("dailyDeliverySelfTest") }
+
 // The store-ops service's classpath, copied like liveDist so the hourly pass's build never rewrites a jar under a running JVM.
 tasks.register<Sync>("storeOpsDist") {
     group = "distribution"

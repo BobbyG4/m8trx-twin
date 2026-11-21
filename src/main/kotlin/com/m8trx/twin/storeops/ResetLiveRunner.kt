@@ -37,7 +37,7 @@ class ResetLiveRunner(
     private val sender: OpsSender,
     private val policy: RetryPolicy,
     private val ledger: SentLedger,
-    private val books: ResetBooks?,
+    private val books: RunBooks?,
     private val params: ResetLiveParams,
     private val hold: () -> Boolean,
     private val clock: ResetClock = SystemResetClock,
