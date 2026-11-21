@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # daily-delivery.sh — one store's pre-opening delivery (./gradlew dailyDelivery), run under the shared twin lock.
-# NOT INSTALLED ANYWHERE: a drafted box script (see ops/INSTALL.md "Daily delivery"). Nothing here touches cron or systemd.
+# The systemd units that run it are drafted in ops/ (m8trx-twin-delivery@.service + one timer per store) and are installed only by an
+# admin, per ops/INSTALL.md "Daily delivery". This script itself never touches cron or systemd.
 #
 #   daily-delivery.sh <slug>            DRY (prints the plan, sends nothing)
 #   LIVE=1 daily-delivery.sh <slug>     LIVE (needs the owner file to list <slug> as storeday, and the keys in the environment)
+#   LIVE=1 OWN=1 daily-delivery.sh <slug>  LIVE, and the script itself flips <slug> hourly -> storeday inside the lock and ALWAYS back to
+#                                       hourly afterwards. Refuses (exit 3) unless the owner file lists <slug>,hourly at start.
 #
 # The store-local date is taken in the store's own zone. Start it by the pre-open time of the store:
 #   Korea   (dec-kr-seoul, dec-kr-busan)                      08:00 KST
@@ -43,4 +46,39 @@ fi
 cd "$TWIN" || exit 3
 mkdir -p "$OPS/log"
 # the same lock as the reset and the hourly pass: the hourly pass skips while this holds it
-exec flock "$OPS/lock" ./gradlew dailyDelivery -q >>"$OPS/log/daily-delivery-$SLUG.log" 2>&1
+LOG="$OPS/log/daily-delivery-$SLUG.log"
+if [[ "${OWN:-0}" != "1" || "${LIVE:-0}" != "1" ]]; then
+  exec flock "$OPS/lock" ./gradlew dailyDelivery -q >>"$LOG" 2>&1
+fi
+
+# OWN=1 (LIVE only): take the owner flip inside the same lock. Never takes a store from a reset (storeday at start -> refuse).
+OWNER="$OPS/store-ops-owner.csv"
+log() { echo "[$(date -u +%FT%TZ)] daily-delivery OWN $SLUG: $*" >>"$LOG"; }
+set_owner() { # <from> <to>: rewrite only this slug's line, via temp file + mv
+  sed "s/^$SLUG,$1\$/$SLUG,$2/" "$OWNER" >"$OWNER.tmp.$$" && cat "$OWNER.tmp.$$" >"$OWNER"; local r=$?
+  rm -f "$OWNER.tmp.$$"; return $r
+}
+exec 9>"$OPS/lock"
+flock 9
+if ! grep -qx "$SLUG,hourly" "$OWNER" 2>/dev/null; then
+  log "REFUSED: $OWNER has no '$SLUG,hourly' line (a reset owns it, or it is missing); not flipping"
+  echo "OWN refused: $OWNER has no '$SLUG,hourly' line" >&2
+  exit 3
+fi
+FLIPPED=0
+restore() {
+  local rc=$?
+  trap - EXIT
+  if [[ "$FLIPPED" == "1" ]]; then
+    if set_owner storeday hourly; then log "flipped storeday -> hourly (exit $rc)"; else log "FAILED to flip back to hourly; fix $OWNER by hand"; fi
+  fi
+  exit "$rc"
+}
+trap restore EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT HUP
+set_owner hourly storeday || { log "could not flip to storeday"; exit 3; }
+FLIPPED=1
+log "flipped hourly -> storeday"
+./gradlew dailyDelivery -q >>"$LOG" 2>&1 9>&-
+exit $?

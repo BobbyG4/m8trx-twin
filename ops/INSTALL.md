@@ -295,7 +295,7 @@ The caps add up to the key's twin cap of 300 a minute. Stores open 10:00 to 21:0
 - A halted run (exit 1) is not restarted. Rerun the same group the same day to resume from its sent-ledger.
 - Backfill of past days is still refused by the sender. It is allowed by Bob's rule now that the live test has passed, but not built yet.
 
-## Daily delivery (`./gradlew dailyDelivery`, drafted 2026-11-21, NOT installed)
+## Daily delivery (`./gradlew dailyDelivery`, drafted 2026-11-21; units drafted in `ops/`, installed only by an admin)
 
 Every store-local morning before opening: order = (period plan floor + 7-day back-room cover) minus what the ledger holds, rounded to the nearest case of 6 (shortfall 1-2 orders nothing, 3-8 one case; bikes singles); receive into the stockroom (50 tags a request); put each received unit on its EAN's back-room rack by `inventory_movement` (`to_zone_id`); then top up the floor cells below plan from the back room, most short first. The gradle task defaults `M8TRX_RESET_BACKROOM_COVER_DAYS=7` and `M8TRX_RESET_BACKROOM_CASE_PACK=1`.
 
@@ -303,3 +303,22 @@ Every store-local morning before opening: order = (period plan floor + 7-day bac
 - **Live:** `M8TRX_DELIVERY_LIVE=true M8TRX_DELIVERY_CONFIRM=<the same sites csv>`. Refuses (exit 3) without the keys, for a store the owner file does not list `storeday`, after the store's opening on that date (`M8TRX_DELIVERY_ALLOW_OPEN=true` overrides), over 25 units a batch, or faster than one batch every 7.5 s. Stop file `$M8TRX_OPS_DIR/delivery-HOLD` (exit 6). The plan freezes on the first live send (`live-started.json`); a re-run resumes it.
 - **Verification:** every move's `eventKey` goes to `answers.tsv` before the sent-ledger marks it; `GET .../results?idempotency_key=...` (40 keys a request, `X-API-Key`) confirms it; `placements.csv` gets a line only for a batch whose result says every unit moved. A refused unit, a `warning` or `failed` outcome, or a send answered after 10 s halts the store (exit 1). Receives book only the counted tags, as the reset does. Needs services #535 deployed.
 - **Lock:** `ops/daily-delivery.sh <slug>` runs it under `flock /opt/m8trx/twin-ops/lock`, as the reset does (the hourly pass skips while it holds it). One store at a time, so 200 items a minute is the total. Pre-open starts: Korea 08:00 KST, France 08:00 Europe/Paris, US 08:00 local; a steady day is 10 to 35 minutes.
+
+### Install the delivery timers (admin, sudo; nothing here installs itself)
+
+Units: `ops/m8trx-twin-delivery@.service` (template, `%i` = store slug; runs `LIVE=1 OWN=1 ops/daily-delivery.sh %i`, `TimeoutStartSec=3h`) and one `ops/m8trx-twin-delivery-<slug>.timer` per store. Eight stores: dec-kr-busan, dec-kr-seoul (Asia/Seoul); dec-fr-bordeaux, dec-fr-lille, dec-fr-lyon, dec-fr-marseille (Europe/Paris); dec-us-denver (America/Denver); dec-us-sf (America/Los_Angeles). **dec-us-nyc (America/New_York) and dec-fr-paris are deliberately NOT included yet**: their rebuilds are pending. They get timers (same pattern) after the rebuilds.
+
+```
+cd /opt/m8trx/twin/ops
+sudo cp m8trx-twin-delivery@.service m8trx-twin-delivery-*.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+for s in dec-kr-busan dec-kr-seoul dec-fr-bordeaux dec-fr-lille dec-fr-lyon dec-fr-marseille dec-us-denver dec-us-sf; do
+  sudo systemctl enable --now m8trx-twin-delivery-$s.timer
+done
+systemctl list-timers 'm8trx-twin-delivery-*'
+```
+
+- **`OWN=1`:** inside the shared lock the script flips the store's line in `$M8TRX_OPS_DIR/store-ops-owner.csv` `hourly` -> `storeday`, runs the task, and flips back to `hourly` on every exit (failure and TERM/INT/HUP included), logging both flips to `log/daily-delivery-<slug>.log`. It refuses (exit 3) if the file has no `<slug>,hourly` line at start (a reset owns the store, or it is already storeday): it never takes a store from a reset. No manual `sed` needed on the timer path.
+- **Why 08:00:30:** every store's 08:00 local is on a UTC hour, when the hourly pass (`flock -n`, skips if held) starts. Thirty seconds later the hourly pass has the lock and the delivery's blocking `flock` waits for it (a pass runs 9-20 min), instead of the hourly pass being skipped. `Persistent=false`: a missed morning (box down) is not replayed later in the day.
+- **Stop file:** `touch $M8TRX_OPS_DIR/delivery-HOLD` makes the next run refuse (exit 6); remove it to resume. A run already sending is not interrupted.
+- **Disable:** one store `sudo systemctl disable --now m8trx-twin-delivery-<slug>.timer`; all `sudo systemctl disable --now 'm8trx-twin-delivery-*.timer'`. Stop a running delivery with `sudo systemctl stop m8trx-twin-delivery@<slug>.service` (the owner line is flipped back by the trap).
