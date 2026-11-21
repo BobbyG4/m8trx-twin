@@ -320,7 +320,10 @@ private fun batchSection() {
     val rs = PeopleBatchRunner(bs.take(3), slow, PeopleLedger(null), 60, { t2 }, { t2 += it }, { false }, null)
     rs.run()
     check(rs.startedAt.zipWithNext().all { (a, b) -> b - a >= 20_000 }) { "a 10 s batch must be followed by a longer wait: ${rs.startedAt}" }
-    check(runCatching { PeopleBatchRunner(bs, FakeBatchTransport(), PeopleLedger(null), 61, clock, sleeper, { false }, null) }.isFailure) {
-        "cap over 60 accepted"
+    check(runCatching { PeopleBatchRunner(bs, FakeBatchTransport(), PeopleLedger(null), 121, clock, sleeper, { false }, null) }.isFailure) {
+        "cap 121 accepted"
+    }
+    check(runCatching { PeopleBatchRunner(bs, FakeBatchTransport(), PeopleLedger(null), 120, clock, sleeper, { false }, null) }.isSuccess) {
+        "cap 120 refused"
     }
 }

@@ -23,13 +23,13 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.PeopleRestBac
  *
  * Env: `_STORES` (comma subset; default all nine) · `_FROM` (2026-10-05) · `_FIRST_LIVE` (2026-11-20; that day is gap-only) ·
  * `_LEDGER_DIR` (a directory holding the live `sent-ledger.tsv` files at any depth; default `out/people-rest-live-ledgers`) · `_CAP_PER_MIN`
- * (default 60, max 600) · `_OUT` (out/people-rest-backfill; the run is in `<out>/<slug>/`) · `_HOLD_FILE` (`$M8TRX_OPS_DIR/people-HOLD`) ·
+ * (default 60; max 600 in single mode, 120 in batch mode) · `_OUT` (out/people-rest-backfill; the run is in `<out>/<slug>/`) · `_HOLD_FILE` (`$M8TRX_OPS_DIR/people-HOLD`) ·
  * `M8TRX_PEOPLE_REST_BASE_URL` · `_DATES=<from>..<to>` (required when LIVE) · `_MODE=single|batch`.
  *
  * LIVE rules: `_FIRST_LIVE` cannot be overridden (the first live day is 2026-11-20 for all nine); for 11-20 every selected store needs live-ledger
  * lines (all ledger dirs under `_LEDGER_DIR`, including the old group dirs kr/fr and people-rest/live) and no gap session may begin in the future;
  * a run refuses when the other mode's ledger exists in the same out dir. CONCURRENCY: a backfill runs beside the live people runs on the same key
- * (the server lane agreed): its own requests stay at or under 60 a minute and strictly one at a time, and the live runs keep their own caps.
+ * (the server lane agreed): its own requests stay at or under the cap (60 a minute by default; batch mode up to 120) and strictly one at a time, and the live runs keep their own caps.
  * Exit: 0 done, 1 halted, 3 refused, 6 HOLD.
  */
 object PeopleRestBackfillMain {
@@ -67,9 +67,9 @@ object PeopleRestBackfillMain {
         if (refusals.isNotEmpty()) return refuse(refusals)
         PeoplePace.gapMs(cap)
         if (mode == "batch" &&
-            cap > PeopleBatch.DEFAULT_CAP_PER_MIN
+            cap > PeopleBatch.MAX_CAP_PER_MIN
         ) {
-            return refuse(listOf("batch mode is at most ${PeopleBatch.DEFAULT_CAP_PER_MIN} requests a minute"))
+            return refuse(listOf("batch mode is at most ${PeopleBatch.MAX_CAP_PER_MIN} requests a minute"))
         }
 
         val chainDir = Path.of("reference/data/chain")
