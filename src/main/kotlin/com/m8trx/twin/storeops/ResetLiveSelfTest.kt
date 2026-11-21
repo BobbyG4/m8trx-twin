@@ -137,21 +137,24 @@ private class FakeSender(private val sched: Schedule, private val clock: Virtual
     }
 }
 
-private fun params(lanes: Int, midnight: Long, statusEveryMs: Long = Long.MAX_VALUE / 4) = ResetLiveParams(
-    receiveLanes = lanes,
-    moveSpacingMs = 10,
-    directiveSpacingMs = 10,
-    healthPollMs = 10,
-    idlePollMs = 5,
-    midnightMs = midnight,
-    progressEveryMs = 1,
-    retryDelayMs = 5,
-    statusEveryMs = statusEveryMs,
-)
+private fun params(lanes: Int, midnight: Long, statusEveryMs: Long = Long.MAX_VALUE / 4, perMin: Int = 0, perMinWithReceive: Int = perMin) =
+    ResetLiveParams(
+        moveItemsPerMin = perMin,
+        moveItemsPerMinWithReceive = perMinWithReceive,
+        receiveLanes = lanes,
+        moveSpacingMs = 10,
+        directiveSpacingMs = 10,
+        healthPollMs = 10,
+        idlePollMs = 5,
+        midnightMs = midnight,
+        progressEveryMs = 1,
+        retryDelayMs = 5,
+        statusEveryMs = statusEveryMs,
+    )
 
 private fun run(
     sched: Schedule,
-    sender: FakeSender,
+    sender: OpsSender,
     clock: VirtualClock,
     lanes: Int,
     ledger: SentLedger = SentLedger(null),
@@ -162,9 +165,12 @@ private fun run(
     lanesNow: (() -> Int)? = null,
     onEvent: (String) -> Unit = {},
     statusEveryMs: Long = Long.MAX_VALUE / 4,
+    perMin: Int = 0,
+    perMinWithReceive: Int = perMin,
+    moveWatch: MoveResultsWatch? = null,
 ): ResetLiveRunner.Result = ResetLiveRunner(
-    sched.items, sender, policy, ledger, books, params(lanes, midnight, statusEveryMs), hold, clock, onEvent = onEvent,
-    lanesNow = lanesNow ?: { lanes },
+    sched.items, sender, policy, ledger, books, params(lanes, midnight, statusEveryMs, perMin, perMinWithReceive), hold, clock, onEvent = onEvent,
+    lanesNow = lanesNow ?: { lanes }, moveWatch = moveWatch,
 ).run()
 
 fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
@@ -188,6 +194,11 @@ fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
     "reset live: box ledger appended in the other steps' formats (received-stock.csv, placements.csv), never rewritten" to ::liveBooks,
     "reset live: receive answer parsing, back-room zone map, old-directive converter, spot count rule, distinct move bodies, no live client" to
         ::liveParts,
+    "move budget: rolling 60 s item window, mixed batch sizes reach the limit and never exceed it, an oversize batch is not split" to ::budgetMath,
+    "move budget: the rate follows whether a receive is due or in flight (150 beside receives, 200 alone); 240 is the ceiling" to ::budgetRateSwitch,
+    "move results: pending over 60 s halts, refused halts, warning/failed halts, confirmed entries are counted; answers file rows before and after" to
+        ::resultsWatch,
+    "move results: the reset halts (resumable) on a pending move, a refused move and a move answered slower than 10 s" to ::resultsHalts,
 )
 
 private fun liveDependency() {
@@ -868,4 +879,164 @@ private fun liveParts() {
         listOf("A", "B"),
     )
     check(many.stop) { "5 of 200 is 2.5 %, more than 2 %: ${many.summary()}" }
+}
+
+private fun budgetMath() {
+    for (limit in listOf(150, 200)) {
+        val b = ItemBudget(limit)
+        val sizes = listOf(25, 10, 25, 17, 3, 25, 25, 8, 25, 12)
+        var t = 0L
+        val log = ArrayList<Pair<Long, Int>>()
+        var i = 0
+        while (t < 600_000) {
+            val n = sizes[i++ % sizes.size]
+            t += b.waitMsFor(n, t)
+            check(b.waitMsFor(n, t) == 0L) { "after the wait the batch may go" }
+            b.record(n, t)
+            log += t to n
+            val inWindow = log.filter { it.first > t - 60_000 }.sumOf { it.second }
+            check(inWindow <= limit) { "limit $limit: $inWindow items in the 60 s ending at $t" }
+        }
+        val total = log.filter { it.first <= 540_000 }.sumOf { it.second }
+        check(total >= limit * 9 * 0.9) { "limit $limit: only $total items in 9 minutes (should be near ${limit * 9})" }
+    }
+    val b = ItemBudget(10)
+    check(b.waitMsFor(25, 0) == 0L) { "an oversize batch goes when the window is empty" }
+    b.record(25, 0)
+    check(b.waitMsFor(1, 1_000) == 59_000L && b.waitMsFor(25, 1_000) == 59_000L) { "then everything waits for it to leave the window" }
+    check(b.waitMsFor(5, 60_000) == 0L) { "the window is (now-60 s, now]" }
+    var rate = 100
+    val v = ItemBudget({ rate })
+    v.record(90, 0)
+    check(v.waitMsFor(20, 10_000) == 50_000L) { "over the limit waits" }
+    rate = 200
+    check(v.waitMsFor(20, 10_000) == 0L) { "a raised limit is read on the next call" }
+}
+
+private fun budgetRateSwitch() {
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c, receiveMs = 30)
+    val events = Collections.synchronizedList(ArrayList<String>())
+    val r = run(sched, s, c, 1, midnight = 0, perMin = 200, perMinWithReceive = 150, onEvent = { events += it })
+    check(r.end == ResetLiveRunner.End.DONE && s.violations.isEmpty()) { "done ${r.end} ${r.haltReason}" }
+    check(
+        events.any {
+            it.contains("move budget changed: 150 -> 200")
+        },
+    ) { "the rate switches 150 -> 200 once no receive is left: ${events.filter { "budget" in it }}" }
+    check(ResetGate.paceRefusals(25, 0, 200, 150).isEmpty()) { "200 / 150 with no floor is accepted" }
+    check(ResetGate.paceRefusals(25, 0, 241, 150).size == 1 && ResetGate.paceRefusals(25, 0, 200, 241).size == 1) { "above 240 refused" }
+    check(ResetGate.paceRefusals(25, 0, 0, 150).isNotEmpty()) { "a zero budget is refused" }
+    check(ResetGate.paceRefusals(25, 3_750).isEmpty() && ResetGate.paceRefusals(25, 3_000).size == 1) {
+        "without a budget the old 3.5 s refusal stands"
+    }
+    check(ResetGate.paceRefusals(25, 500, 200, 150).isEmpty()) { "with the budget in use the 3.5 s spacing refusal does not apply" }
+}
+
+private fun ok(key: String) = MoveResultEntry(key, "ok", 0, """{"idempotency_key":"$key","outcome":"ok"}""")
+
+private fun resultsWatch() {
+    val pendingFor = { keys: List<String> -> keys.map { MoveResultEntry(it, "pending", 0, "") } }
+    val w1 = MoveResultsWatch(pendingFor, everyMs = 10, pendingLimitMs = 60_000)
+    w1.beforeSend("m1", 0)
+    w1.answered("m1", """{"eventKey":"k1"}""", 100)
+    check(w1.check(30_000) == null && w1.outstanding() == 1) { "pending 30 s after the post is fine" }
+    check(w1.check(59_000) == null) { "59 s still fine" }
+    check(w1.check(70_000)?.contains("still pending") == true) { "pending over 60 s halts" }
+    val w2 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "ok", 2, "r") } }, everyMs = 10)
+    w2.answered("m", """{"eventKey":"k"}""", 0)
+    check(w2.check(100)?.contains("refused 2") == true) { "refused > 0 halts" }
+    for (o in listOf("warning", "failed")) {
+        val w = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, o, 0, "r") } }, everyMs = 10)
+        w.answered("m", """{"eventKey":"k"}""", 0)
+        check(w.check(100)?.contains(o) == true) { "$o halts" }
+    }
+    val w3 = MoveResultsWatch({ k -> k.map { ok(it) } }, everyMs = 1_000)
+    for (i in 0 until 95) w3.answered("m$i", """{"eventKey":"k$i"}""", 0)
+    check(w3.check(10) == null && w3.confirmed == 95 && w3.outstanding() == 0) { "confirmed entries are counted and dropped: ${w3.confirmed}" }
+    val chunks = ArrayList<Int>()
+    val w4 = MoveResultsWatch({ k ->
+        chunks += k.size
+        k.map { ok(it) }
+    }, everyMs = 1)
+    for (i in 0 until 95) w4.answered("m$i", """{"eventKey":"k$i"}""", 0)
+    w4.check(10)
+    check(chunks.all { it <= 40 } && chunks.sum() == 95) { "at most 40 keys a request: $chunks" }
+    val w5 = MoveResultsWatch({ null }, everyMs = 1, pendingLimitMs = 10)
+    w5.answered("m", """{"eventKey":"k"}""", 0)
+    check(w5.check(1_000_000) == null && w5.outstanding() == 1) { "an unreadable results route never halts by itself" }
+    // a chunk whose read failed is skipped, never "not listed"; only answers halt
+    var fail = true
+    val w7 = MoveResultsWatch({ k -> if (fail) null else k.map { MoveResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 10)
+    w7.answered("m", """{"eventKey":"k"}""", 0)
+    for (i in 1..6) check(w7.check(1_000_000L * i) == null) { "a failed read never halts" }
+    fail = false
+    check(w7.check(10_000_000)?.contains("still pending") == true) { "after a good read the pending event halts" }
+    val w8 = MoveResultsWatch({ k -> if ("k0" in k) null else k.map { ok(it) } }, everyMs = 1, pendingLimitMs = 10)
+    for (i in 0 until 45) w8.answered("m$i", """{"eventKey":"k$i"}""", 0)
+    check(w8.check(1_000_000) == null && w8.confirmed == 5 && w8.outstanding() == 40) { "only the failed chunk stays unconfirmed: ${w8.confirmed}" }
+    val f = RT.resolve("move-answers.tsv")
+    Files.createDirectories(RT)
+    Files.deleteIfExists(f)
+    val w6 = MoveResultsWatch({ k -> k.map { ok(it) } }, f, everyMs = 1)
+    w6.beforeSend("mv-1", 5)
+    val before = Files.readAllLines(f)
+    w6.answered("mv-1", """{"eventKey":"EK1"}""", 9)
+    val after = Files.readAllLines(f)
+    check(before.size == 1 && before[0].startsWith("mv-1\t\t") && after.size == 2 && after[1].startsWith("mv-1\tEK1\t")) {
+        "a row with an empty key before the post, the key after: $after"
+    }
+    check(
+        ResultsRoute.parse(
+            """{"results":[{"idempotency_key":"a","outcome":"pending"},{"idempotency_key":"b","outcome":"ok","result":{"type":"move","moved":3,"refused":1,"refused_items":["x"]}}]}""",
+        )
+            .let { it[0].pending && it[1].refused == 1 && it[1].key == "b" },
+    ) { "results body parsed" }
+}
+
+private fun withWatch(inner: OpsSender, watch: MoveResultsWatch, c: VirtualClock, moveTakesMs: Long = 0) = object : OpsSender {
+    override fun health() = inner.health()
+
+    override fun send(item: SendItem): Outcome {
+        val o = inner.send(item)
+        if (item.kind == "move") {
+            c.t.addAndGet(moveTakesMs)
+            if (o == Outcome.Accepted) watch.answered(item.extId, """{"eventKey":"k-${item.extId}"}""", c.now())
+        }
+        return o
+    }
+}
+
+private fun resultsHalts() {
+    // all confirmed: the run finishes and every move is counted
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val w = MoveResultsWatch({ k -> k.map { ok(it) } }, everyMs = 10)
+    val r = run(sched, withWatch(FakeSender(sched, c), w, c), c, 1, perMin = 200, perMinWithReceive = 150, moveWatch = w)
+    check(r.end == ResetLiveRunner.End.DONE && w.confirmed == 10 && w.outstanding() == 0) {
+        "confirmed run: ${r.end} ${r.haltReason} confirmed=${w.confirmed}"
+    }
+    // pending forever: 9 items a minute makes the 4th batch wait, and the pending ones age past 60 s
+    val c2 = VirtualClock(0)
+    val w2 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "pending", 0, "") } }, everyMs = 10, pendingLimitMs = 60_000)
+    val s2 = Schedule()
+    val r2 = run(s2, withWatch(FakeSender(s2, c2), w2, c2), c2, 1, perMin = 9, perMinWithReceive = 9, moveWatch = w2)
+    check(r2.end == ResetLiveRunner.End.HALTED && r2.haltReason!!.contains("still pending")) { "pending halts: ${r2.end} ${r2.haltReason}" }
+    // refused
+    val c3 = VirtualClock(0)
+    val w3 = MoveResultsWatch({ k -> k.map { MoveResultEntry(it, "ok", 1, "r") } }, everyMs = 10)
+    val s3 = Schedule()
+    val led3 = SentLedger(null)
+    val r3 = run(s3, withWatch(FakeSender(s3, c3), w3, c3), c3, 1, ledger = led3, perMin = 200, perMinWithReceive = 150, moveWatch = w3)
+    check(r3.end == ResetLiveRunner.End.HALTED && r3.haltReason!!.contains("refused")) { "refused halts: ${r3.end} ${r3.haltReason}" }
+    check(led3.size < 10 + 6 + 2) { "the run stopped early (resumable), ledger ${led3.size}" }
+    // slow answer
+    val c4 = VirtualClock(0)
+    val w4 = MoveResultsWatch({ k -> k.map { ok(it) } }, everyMs = 10)
+    val s4 = Schedule()
+    val r4 = run(s4, withWatch(FakeSender(s4, c4), w4, c4, moveTakesMs = 11_000), c4, 1, perMin = 200, perMinWithReceive = 150, moveWatch = w4)
+    check(r4.end == ResetLiveRunner.End.HALTED && r4.haltReason!!.contains("answered after")) {
+        "a move answered after 11 s halts: ${r4.end} ${r4.haltReason}"
+    }
 }

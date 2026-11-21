@@ -245,6 +245,8 @@ class Pump(
     private val healthPollMs: Long = 5_000,
     private val hold: () -> Boolean = { false },
     private val onEvent: (String) -> Unit = {},
+    /** Moves also go under this item budget (items per rolling minute), on top of any [spacingMs] floor. */
+    private val moveBudget: ItemBudget? = null,
 ) {
     enum class State { IDLE, WAITING, HOLD, HALTED }
 
@@ -274,6 +276,13 @@ class Pump(
                     return State.WAITING
                 }
             }
+            if (item.kind == "move" && moveBudget != null) {
+                val wait = moveBudget.waitMsFor(item.epcs.size, now)
+                if (wait > 0) {
+                    queue.delayUntil(now + wait)
+                    return State.WAITING
+                }
+            }
             if (needHealth || (healthEveryMs >= 0 && now - lastHealthOkAt >= healthEveryMs)) {
                 healthChecks++
                 val (status, body) = sender.health()
@@ -295,6 +304,7 @@ class Pump(
                 Decision.Done -> {
                     ledger.markSent(item)
                     queue.ack()
+                    if (item.kind == "move") moveBudget?.record(item.epcs.size, now)
                     lastSentAt[item.kind] = now
                     attempt = 1
                 }
