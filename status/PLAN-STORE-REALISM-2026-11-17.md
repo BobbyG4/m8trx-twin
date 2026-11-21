@@ -1455,3 +1455,7 @@ catch up at 09:00). Dry runs 08:2x KST: Seoul 0 to do; Bordeaux 11, Lille 22, Ly
 NYC 1,044 and Paris 980 min (first heal) — their timers come after their rebuilds. While a restock runs, `delivery-HOLD` is in
 place, so deliveries in that span exit 6 and the next day's order covers the gap. Stop all: `touch $OPS/delivery-HOLD`; remove
 one: `sudo systemctl disable --now m8trx-twin-delivery-<slug>.timer`.
+
+**Live-plane restart for the stand fix (#59)** 2026-11-22 08:58:12–08:58:18 KST (Bob: before Busan opens): stopped 08:58:12,
+started 08:58:18; both interlocks `edge-twin-denver`; Denver plan 11-21 SAT publishing; Busan 11-22 PUBLISHES via edge-twin-denver,
+589 customers planned, 2 staff. Denver gap about 6 s.
