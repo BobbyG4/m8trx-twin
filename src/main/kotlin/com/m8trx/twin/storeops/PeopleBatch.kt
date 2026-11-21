@@ -22,6 +22,7 @@ object PeopleBatch {
     const val IMPRESSIONS_BATCH = "/api/v2/visionai/impressions:batch"
     const val MAX = 100
     const val DEFAULT_CAP_PER_MIN = 60
+    const val MAX_CAP_PER_MIN = 120
 
     /** One request: [lines] of one [kind] (person_begin | person_impression | person_close) of one store-day. */
     class Batch(val day: String, val kind: String, val lines: List<PeopleRest.Line>) {
@@ -124,7 +125,7 @@ class PeopleBatchRunner(
     val startedAt = ArrayList<Long>()
 
     init {
-        require(capPerMin in 1..PeopleBatch.DEFAULT_CAP_PER_MIN) { "batch cap is 1..${PeopleBatch.DEFAULT_CAP_PER_MIN} requests a minute" }
+        require(capPerMin in 1..PeopleBatch.MAX_CAP_PER_MIN) { "batch cap is 1..${PeopleBatch.MAX_CAP_PER_MIN} requests a minute" }
     }
 
     private fun event(s: String) {
@@ -188,7 +189,7 @@ class PeopleBatchRunner(
             if (v.problem != null) return halt("${b.day} ${b.kind}: ${v.problem}")
             val took = clock() - t0
             val gap = 60_000L / capPerMin
-            // 60 requests a minute at most, and when a batch is slow the next one waits as long again
+            // at most MAX_CAP_PER_MIN requests a minute, and when a batch is slow the next one waits as long again
             val wait = maxOf(gap - took, 0L) + if (took > slowMs) took else 0L
             if (wait > 0) sleeper(wait)
         }
