@@ -306,7 +306,7 @@ Every store-local morning before opening: order = (period plan floor + 7-day bac
 
 ### Install the delivery timers (admin, sudo; nothing here installs itself)
 
-Units: `ops/m8trx-twin-delivery@.service` (template, `%i` = store slug; runs `LIVE=1 OWN=1 ops/daily-delivery.sh %i`, `RuntimeMaxSec=3h`) and one `ops/m8trx-twin-delivery-<slug>.timer` per store. Eight stores: dec-kr-busan, dec-kr-seoul (Asia/Seoul); dec-fr-bordeaux, dec-fr-lille, dec-fr-lyon, dec-fr-marseille (Europe/Paris); dec-us-denver (America/Denver); dec-us-sf (America/Los_Angeles). **dec-us-nyc (America/New_York) and dec-fr-paris are deliberately NOT included yet**: their rebuilds are pending. They get timers (same pattern) after the rebuilds.
+Units: `ops/m8trx-twin-delivery@.service` (template, `%i` = store slug; runs `LIVE=1 OWN=1 ops/daily-delivery.sh %i`, `TimeoutStartSec=3h`) and one `ops/m8trx-twin-delivery-<slug>.timer` per store. Eight stores: dec-kr-busan, dec-kr-seoul (Asia/Seoul); dec-fr-bordeaux, dec-fr-lille, dec-fr-lyon, dec-fr-marseille (Europe/Paris); dec-us-denver (America/Denver); dec-us-sf (America/Los_Angeles). **dec-us-nyc (America/New_York) and dec-fr-paris are deliberately NOT included yet**: their rebuilds are pending. They get timers (same pattern) after the rebuilds.
 
 ```
 cd /opt/m8trx/twin/ops
