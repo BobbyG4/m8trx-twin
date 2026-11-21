@@ -1403,7 +1403,7 @@ Read-backs and rollups moved to a session on the twin's seat (B/W handover: `sta
 | Lille | 11-21 16:19 | 12,137 | 2,807 / 2,807 | 0 / 4,153 | 16:51:21 / 16:53:31 | 2,760 / 2,760 targets; old plan ended 17:00 |
 | Lyon | 11-21 18:51 | 12,752 | 2,812 / 2,812 | 0 / 5,207 | 21:34:30 / 21:36:39 | 2,768 / 2,807 (58 units = sales between restock and swap); old plan ended 22:00 |
 | SF | 11-22 00:26 | 22,384 | 4,403 / 4,403 | 0 / 5,596 | 03:32:25 / 03:34:38 | 5,263 / 5,264 (1 unit sold since) |
-| Seoul | running since 11-22 03:50 | 18,615 | 3,416 | | | |
+| Seoul | 11-22 06:30 | 18,615 | 3,416 / 3,416 | 0 / 5,275 | 06:35:06 / 06:37:17 | pending |
 
 Next: NYC when it closes (~11:00 KST; 25,610 receives, 5,097 batches), then Paris (night, its time). Then the rack pass for every
 store's back-room cover (platform shows it room-level, no fixture: Busan, Lille 2,986, Lyon 3,051, SF 4,905, Denver, ...).
