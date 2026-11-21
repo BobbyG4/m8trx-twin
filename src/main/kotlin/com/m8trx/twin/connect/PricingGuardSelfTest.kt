@@ -151,7 +151,7 @@ internal fun datedPricingGuard() {
         val days = (0L until 38L).map { LocalDate.of(2026, 10, 1).plusDays(it) }
         val plans = days.map { d ->
             val open = d.atTime(1, 0).toInstant(ZoneOffset.UTC)
-            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
+            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
         }
         for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard", "USD")) {
             val p = op.body as? PricingUpdate ?: continue
@@ -451,7 +451,7 @@ internal fun eurBaseGuard() {
         val days = (0L until 38L).map { LocalDate.of(2026, 10, 1).plusDays(it) }
         val plans = days.map { d ->
             val open = d.atTime(1, 0).toInstant(ZoneOffset.UTC)
-            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
+            DatedStream.StorePlan(store, d, false, emptyList(), 0, 0, 0, 0, 0, 0.0, open, open.plusSeconds(11 * 3600))
         }
         for (op in DatedStream.plannedOps(plans, emptyList(), GUARD_CHAIN, RecentDay.HISTORY_SEED, "guard", "EUR")) {
             val p = op.body as? PricingUpdate ?: continue
