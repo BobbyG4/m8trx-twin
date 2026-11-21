@@ -134,4 +134,16 @@ object PeopleBackfill {
         }
         return out
     }
+
+    /** The history load ends at 2026-10-05T00:00Z: no begin may be earlier than this or than the store's local 2026-10-05 00:00. */
+    val HISTORY_END_UTC: java.time.Instant = java.time.Instant.parse("2026-10-05T00:00:00Z")
+
+    fun beginFloorMs(zone: java.time.ZoneId, from: LocalDate): Long =
+        maxOf(from.atStartOfDay(zone).toInstant().toEpochMilli(), HISTORY_END_UTC.toEpochMilli())
+
+    /** Begins earlier than [floorMs]. */
+    fun beforeFloor(lines: List<PeopleRest.Line>, floorMs: Long): List<PeopleRest.Line> = lines.filter {
+        it.kind == "person_begin" &&
+            it.dueMs < floorMs
+    }
 }

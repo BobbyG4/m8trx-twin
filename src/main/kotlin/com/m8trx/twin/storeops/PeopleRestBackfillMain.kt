@@ -85,7 +85,15 @@ object PeopleRestBackfillMain {
             }
         }
         report(rows, firstLive, cap)
-        val bad = checkIdentity(rows, sentIds)
+        val bad = checkIdentity(rows, sentIds).toMutableList()
+        stores.forEach { slug ->
+            val floor = PeopleBackfill.beginFloorMs(keys.store(slug).zone, from)
+            val ls = rows.filter { it.slug == slug }.flatMap { it.lines }
+            val earliest = ls.filter { it.kind == "person_begin" }.minOfOrNull { it.dueMs }
+            println("earliest begin $slug: ${earliest?.let { java.time.Instant.ofEpochMilli(it) }} (floor ${java.time.Instant.ofEpochMilli(floor)})")
+            val early = PeopleBackfill.beforeFloor(ls, floor)
+            if (early.isNotEmpty()) bad += "$slug: ${early.size} begins before the floor ${java.time.Instant.ofEpochMilli(floor)}"
+        }
         if (bad.isNotEmpty()) return refuse(bad.take(20))
         env("M8TRX_PEOPLE_BACKFILL_REPORT")?.let { writeCsv(Path.of(it), rows) }
         if (!live) {

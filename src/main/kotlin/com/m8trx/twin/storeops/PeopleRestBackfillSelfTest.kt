@@ -98,6 +98,16 @@ fun main() {
     check(PeopleBackfill.problems(day + session(1, 0)).isNotEmpty()) { "a repeated trackingId must be a problem" }
     check(PeopleBackfill.problems(day.filter { it.kind != "person_close" }).isNotEmpty()) { "a visit without a close must be a problem" }
 
+    println("  begin floor")
+    val seoul = java.time.ZoneId.of("Asia/Seoul")
+    val nyc = java.time.ZoneId.of("America/New_York")
+    val from = PeopleBackfill.DEFAULT_FROM
+    check(PeopleBackfill.beginFloorMs(seoul, from) == java.time.Instant.parse("2026-10-05T00:00:00Z").toEpochMilli()) { "Seoul floor" }
+    check(PeopleBackfill.beginFloorMs(nyc, from) == java.time.Instant.parse("2026-10-05T04:00:00Z").toEpochMilli()) { "NYC floor" }
+    val f = PeopleBackfill.beginFloorMs(seoul, from)
+    check(PeopleBackfill.beforeFloor(listOf(session(1, 0)[0]), f + 5000).size == 1) { "a begin before the floor must be flagged" }
+    check(PeopleBackfill.beforeFloor(listOf(session(1, 0)[0]), 0).isEmpty()) { "a begin after the floor is fine" }
+
     println("  gate")
     val s = "dec-us-nyc"
     check(PeopleBackfill.refusals(false, PeopleRest.STORES, null, false).isEmpty()) { "dry must go with nothing set" }
