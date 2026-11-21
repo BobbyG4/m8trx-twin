@@ -254,7 +254,11 @@ object ReconSendMain {
         // ── report ──
         val bySite = planned.groupBy { it.site }
         val order = Recon.siteOrder(bySite.mapValues { it.value.size })
-        log.info("plan ({}; {} ms between sends = 8 a minute, at most 200 items; one store at a time, smallest first):", kind, Recon.SPACING_MS)
+        log.info(
+            "plan ({}; moves under an item budget of 200 a minute, sales {} ms apart; one store at a time, smallest first):",
+            kind,
+            Recon.SPACING_MS,
+        )
         order.forEach { s ->
             val items = bySite.getValue(s)
             log.info(
@@ -329,7 +333,21 @@ object ReconSendMain {
         val siteOf = frozen.associate { it.item.extId to it.site }
         val shown = HashMap<String, Int>()
         val liveSender = LiveSender.createForRecon(true)
+        // moves: 200 items a minute (M8TRX_RECON_MOVE_ITEMS_PER_MIN, max 240, rolling 60 s), every event confirmed on the results route
+        val moveItemsPerMin = System.getenv("M8TRX_RECON_MOVE_ITEMS_PER_MIN")?.let { it.toIntOrNull() ?: 0 } ?: ItemBudget.DEFAULT_ALONE
+        val budgetRefusals = ItemBudget.refusals("M8TRX_RECON_MOVE_ITEMS_PER_MIN", moveItemsPerMin)
+        if (budgetRefusals.isNotEmpty()) {
+            budgetRefusals.forEach { log.error("REFUSING: {}", it) }
+            return 3
+        }
+        val moveBudget = ItemBudget(moveItemsPerMin)
+        val watch = if (kind == Recon.Kind.SALES) {
+            null
+        } else {
+            MoveResultsWatch(LiveResultsFetcher.create(onError = { log.warn("{}", it) }), onEvent = { log.info("{}", it) })
+        }
         liveSender.onAnswer = { item, body ->
+            if (item.kind == "move") watch?.answered(item.extId, body, System.currentTimeMillis())
             val site = siteOf[item.extId] ?: "?"
             val n = (shown[site] ?: 0) + 1
             shown[site] = n
@@ -359,10 +377,11 @@ object ReconSendMain {
                 policy,
                 ledger,
                 OrderingGuard(items.flatMap { it.epcs }),
-                spacingMs = mapOf("move" to Recon.SPACING_MS, "sale" to saleSpacing),
+                spacingMs = mapOf("sale" to saleSpacing),
                 healthEveryMs = 30_000,
                 hold = { Files.exists(hold) },
                 onEvent = { log.warn("{}", it) },
+                moveBudget = moveBudget,
             )
             log.info("{}: {} item(s) to send, {} already in the ledger", slug, pump.queue.size, pump.skippedByLedger)
             while (true) {
@@ -381,13 +400,24 @@ object ReconSendMain {
 
                     Pump.State.WAITING -> Thread.sleep(250)
                 }
+                watch?.check(System.currentTimeMillis())?.let {
+                    log.error("HALTED at {}: results route: {}; tell the server lane, re-run resumes", slug, it)
+                    return 1
+                }
                 sender.slow?.let {
                     log.error("HALTED at {}: slow answer, {} - the server's queue is full; tell the server lane, re-run resumes", slug, it)
                     return 1
                 }
             }
+            while (watch != null && watch.outstanding() > 0) {
+                watch.check(System.currentTimeMillis(), force = true)?.let {
+                    log.error("HALTED at {}: results route: {}; tell the server lane, re-run resumes", slug, it)
+                    return 1
+                }
+                if (watch.outstanding() > 0) Thread.sleep(5_000)
+            }
             log.info("{}: done ({} delivered this run; verify by the re-run comparison against the platform)", slug, pump.queue.acked)
-            if (liveOrder.last() != slug) Thread.sleep(Recon.SPACING_MS)
+            if (liveOrder.last() != slug && kind == Recon.Kind.SALES) Thread.sleep(Recon.SPACING_MS)
         }
         log.info("reconcileSend {} done; {} placement line(s) appended", kind, sender.appended)
         return 0

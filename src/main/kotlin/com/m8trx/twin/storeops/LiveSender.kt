@@ -11,8 +11,14 @@ import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.connect.model.bearer.ItemReceiveRequest
 import com.m8trx.twin.connect.model.bearer.ItemReceiveResult
 import java.io.IOException
+import java.net.URI
+import java.net.URLEncoder
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 
 /**
  * The ONLY class here that talks to a server. It is not built by any dry-run path: the constructor is private and [create] refuses
@@ -175,4 +181,35 @@ object LiveResults {
                 null
             }
         }
+}
+
+/** The results route over HTTP (kept here with the other network code; see [ResultsRoute] for the parsing). */
+object LiveResultsFetcher {
+    /** Live fetcher from the environment (`M8TRX_CONNECT_WEBHOOK_BASE`, `M8TRX_TENANT_ID`, `M8TRX_CONNECT_INTEGRATION_SLUG`, `M8TRX_TWIN_WEBHOOK_KEY`). Null = unreadable. */
+    fun create(config: ConnectConfig = ConnectConfig.fromEnv(), onError: (String) -> Unit = {}): (List<String>) -> List<ResultEntry>? {
+        val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
+        val base = "${config.webhookBase}/${config.requireTenantId()}/${config.requireIntegrationSlug()}/results"
+        val key = config.requireWebhookApiKey()
+        return { keys ->
+            try {
+                val query = keys.joinToString("&") { "idempotency_key=" + URLEncoder.encode(it, Charsets.UTF_8) }
+                val req = HttpRequest.newBuilder().uri(
+                    URI.create("$base?$query"),
+                ).header("X-API-Key", key).timeout(Duration.ofSeconds(30)).GET().build()
+                val resp = http.send(req, HttpResponse.BodyHandlers.ofString())
+                if (resp.statusCode() in 200..299) {
+                    ResultsRoute.parse(resp.body())
+                } else {
+                    onError("results route answered ${resp.statusCode()}")
+                    null
+                }
+            } catch (e: IOException) {
+                onError("results route unreachable: ${e.message}")
+                null
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                null
+            }
+        }
+    }
 }

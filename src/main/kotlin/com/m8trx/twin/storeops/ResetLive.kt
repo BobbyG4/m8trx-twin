@@ -42,7 +42,7 @@ object SystemResetClock : ResetClock {
 class ResetLiveParams(
     /** 1..4 concurrent receive requests ([ResetGate.MAX_LANES]). */
     val receiveLanes: Int,
-    /** The move lane's pace: one batch per this long (A16: 2 s). */
+    /** The move lane's pace: one batch per this long (A16: 2 s). With [moveItemsPerMin] > 0 it is only a FLOOR between batches (0 = none). */
     val moveSpacingMs: Long,
     /** Between the old-directive end(s) and the new plan. */
     val directiveSpacingMs: Long,
@@ -53,6 +53,14 @@ class ResetLiveParams(
     /** The store's local midnight of the reset day: the gated items (old end, new plan) do not go before it. */
     val midnightMs: Long,
     val progressEveryMs: Long = 5_000,
+    /**
+     * Move pace as an item budget (rolling 60 s), 0 = off (fixed [moveSpacingMs] between batches). [moveItemsPerMinWithReceive] applies while any
+     * receive is still due, retrying or in flight; [moveItemsPerMin] once none is. The platform applies about 240 items a minute.
+     */
+    val moveItemsPerMin: Int = 0,
+    val moveItemsPerMinWithReceive: Int = moveItemsPerMin,
+    /** A move answered slower than this halts the run (the platform's queue is full and it is making the sender wait). */
+    val slowAnswerMs: Long = 10_000,
     /**
      * `M8TRX_RESET_HOLD_DIRECTIVES=true`: the directive steps (old end, new plan) are NOT sent; the run ends after receives and moves.
      * 2026-11-19 (server lane): the webhook route refuses bodies over 256 KiB and a second delivery under one id REPLACES the targets, so
@@ -153,11 +161,13 @@ object ResetGate {
         Path.of(env("M8TRX_RESET_HOLD_FILE") ?: "${env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"}/reset-HOLD")
 
     /** A live run refuses a move chunk over 25 or a move spacing under 3.5 s (the server answers a move batch before it processes it). */
-    fun paceRefusals(moveChunk: Int, moveSpacingMs: Long): List<String> = buildList {
+    fun paceRefusals(moveChunk: Int, moveSpacingMs: Long, moveItemsPerMin: Int = 0, moveItemsPerMinWithReceive: Int = 0): List<String> = buildList {
         if (moveChunk > 25) add("a live move batch carries at most 25 tags, got $moveChunk (M8TRX_RESET_MOVE_CHUNK)")
-        if (moveSpacingMs <
-            3_500
-        ) {
+        if (moveItemsPerMin > 0 || moveItemsPerMinWithReceive > 0) {
+            // the item budget is the guard: refuse one above what the platform applies (a floor between batches is no longer checked)
+            addAll(ItemBudget.refusals("M8TRX_RESET_MOVE_ITEMS_PER_MIN", moveItemsPerMin))
+            addAll(ItemBudget.refusals("M8TRX_RESET_MOVE_ITEMS_PER_MIN_WITH_RECEIVE", moveItemsPerMinWithReceive))
+        } else if (moveSpacingMs < 3_500) {
             add("a live move batch goes no faster than every 3.5 s, got ${moveSpacingMs / 1000.0} s (M8TRX_RESET_MOVE_EVERY_S)")
         }
     }

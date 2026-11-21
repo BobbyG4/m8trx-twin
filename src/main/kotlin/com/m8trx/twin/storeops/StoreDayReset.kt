@@ -60,7 +60,7 @@ import kotlin.system.exitProcess
  * Env: `M8TRX_RESET_SITE` (dec-us-denver) · `M8TRX_RESET_DATE` (the first live store-day; default store-local today) ·
  * `M8TRX_RESET_OUT` (out/reset) · `M8TRX_RESET_OLD_DIRECTIVES` (the store's old directive export) · `M8TRX_STREAM_SOLD_LOG` (.twin-state/sold-epcs.txt, as the other ops steps; its parent is the state
  * dir) · `M8TRX_CHAIN_DIR` · pace (A16): `M8TRX_RESET_RECEIVE_EST_S` (50: one 50-EPC request, measured 1.0 s an EPC) ·
- * `M8TRX_RESET_RECEIVE_CHUNK` (50) · `M8TRX_RESET_MOVE_EVERY_S` (3.75) · `M8TRX_RESET_MOVE_CHUNK` (25) · `M8TRX_RESET_RECEIVE_LANES` (1, max 4) ·
+ * `M8TRX_RESET_RECEIVE_CHUNK` (50) · `M8TRX_RESET_MOVE_EVERY_S` (3.75; schedule pace, and in a live run only a floor between batches when set) · `M8TRX_RESET_MOVE_ITEMS_PER_MIN_WITH_RECEIVE` (150) · `M8TRX_RESET_MOVE_ITEMS_PER_MIN` (200; both max 240) · `M8TRX_RESET_MOVE_CHUNK` (25) · `M8TRX_RESET_RECEIVE_LANES` (1, max 4) ·
  * live: `M8TRX_RESET_LIVE` (false) · `M8TRX_RESET_CONFIRM` (= slug) · `M8TRX_RESET_MOVE_ALL` (true) · `M8TRX_STORE_OPS_OWNER_FILE` /
  * `M8TRX_OPS_DIR` (/opt/m8trx/twin-ops) · `M8TRX_RESET_HOLD_FILE` ($OPS/reset-HOLD, never the shared $OPS/HOLD) · `M8TRX_TWIN_SERVICE_BEARER` · `M8TRX_TWIN_BEARER` (read key,
  * for the one `/spatial/identity` read) · the webhook env of [LiveSender].
@@ -80,6 +80,11 @@ data class ResetPacing(
     /** Movement batches stay small: each unit is written one at a time, about 9 statements a unit (A15). */
     val moveChunk: Int = 25,
     val directiveGapMs: Long = 60_000,
+    /** `M8TRX_RESET_MOVE_EVERY_S` was set explicitly: the live move lane keeps it as a floor between batches (the schedule's nominal pace is unchanged). */
+    val moveEveryExplicit: Boolean = false,
+    /** Live move pace in items per rolling minute: [moveItemsPerMinWithReceive] while a receive is due or in flight, else [moveItemsPerMin]. */
+    val moveItemsPerMin: Int = ItemBudget.DEFAULT_ALONE,
+    val moveItemsPerMinWithReceive: Int = ItemBudget.DEFAULT_WITH_RECEIVE,
 ) {
     init {
         require(receiveChunk in 1..200) { "a receive request carries at most 200 EPCs, got $receiveChunk" }
@@ -594,6 +599,11 @@ fun main() {
     val pacing = ResetPacing(
         receiveEstMs = env("M8TRX_RESET_RECEIVE_EST_S")?.let { (it.toDouble() * 1000).toLong() } ?: d.receiveEstMs,
         moveEveryMs = env("M8TRX_RESET_MOVE_EVERY_S")?.let { (it.toDouble() * 1000).toLong() } ?: d.moveEveryMs,
+        moveEveryExplicit = env("M8TRX_RESET_MOVE_EVERY_S") != null,
+        moveItemsPerMin = env("M8TRX_RESET_MOVE_ITEMS_PER_MIN")?.let { it.toIntOrNull() ?: 0 } ?: d.moveItemsPerMin,
+        moveItemsPerMinWithReceive = env("M8TRX_RESET_MOVE_ITEMS_PER_MIN_WITH_RECEIVE")?.let {
+            it.toIntOrNull() ?: 0
+        } ?: d.moveItemsPerMinWithReceive,
         receiveChunk = env("M8TRX_RESET_RECEIVE_CHUNK")?.toInt() ?: d.receiveChunk,
         moveChunk = env("M8TRX_RESET_MOVE_CHUNK")?.toInt() ?: d.moveChunk,
         moveAll = env("M8TRX_RESET_MOVE_ALL")?.toBooleanStrictOrNull() ?: d.moveAll,

@@ -332,6 +332,36 @@ fun main() {
         "E0002 differs and is appended; E0001 and unknown units are not: ${Files.readAllLines(pl)}"
     })
 
+    println("[budget] moves go under 200 items a minute (rolling 60 s), never more; the results guard halts on pending and refused")
+    val dryB = DryRunSender()
+    val clockB = SimClock(0)
+    val pumpB = Pump(
+        plan.planned.map { it.item },
+        dryB,
+        RetryPolicy(),
+        SentLedger(null),
+        OrderingGuard(plan.planned.flatMap { it.item.epcs }),
+        moveBudget = ItemBudget(8),
+    )
+    val sentAt = ArrayList<Pair<Long, Int>>()
+    var seen = 0
+    while (pumpB.pump(clockB.nowMs) != Pump.State.IDLE) {
+        while (seen < dryB.sent.size) sentAt += clockB.nowMs to dryB.sent[seen++].epcs.size
+        clockB.advance(250)
+    }
+    while (seen < dryB.sent.size) sentAt += clockB.nowMs to dryB.sent[seen++].epcs.size
+    check(sentAt.size == plan.planned.size, { "every batch sent once under the budget" })
+    check(sentAt.all { (t, _) -> sentAt.filter { it.first in (t - 59_999)..t }.sumOf { it.second } <= 8 || sentAt.count { it.first == t } == 1 }, {
+        "no 60 s window holds more than the budget: $sentAt"
+    })
+    check(ItemBudget.refusals("x", 241).size == 1 && ItemBudget.refusals("x", 240).isEmpty(), { "a budget above 240 is refused" })
+    val wr = MoveResultsWatch({ k -> k.map { ResultEntry(it, "pending", 0, "") } }, everyMs = 1, pendingLimitMs = 60_000)
+    wr.answered("m", """{"eventKey":"k"}""", 0)
+    check(wr.check(61_000)?.contains("pending") == true, { "recon: pending over 60 s halts" })
+    val wf = MoveResultsWatch({ k -> k.map { ResultEntry(it, "ok", 3, "r") } }, everyMs = 1)
+    wf.answered("m", """{"eventKey":"k"}""", 0)
+    check(wf.check(10)?.contains("refused 3") == true, { "recon: refused halts" })
+
     if (failures > 0) {
         println("reconcileSelfTest: $failures FAILED")
         exitProcess(1)

@@ -27,7 +27,7 @@ object ResetLiveMain {
         val ownerFile = Path.of(env("M8TRX_STORE_OPS_OWNER_FILE") ?: "$ops/store-ops-owner.csv")
         // the reset's OWN hold file: $OPS/HOLD is shared with the hourly pass and the live plane (which ENDS on it), never used here
         val holdFile = ResetGate.holdFile(::env)
-        val paceRefusals = ResetGate.paceRefusals(pacing.moveChunk, pacing.moveSpacingMs)
+        val paceRefusals = ResetGate.paceRefusals(pacing.moveChunk, pacing.moveSpacingMs, pacing.moveItemsPerMin, pacing.moveItemsPerMinWithReceive)
         if (paceRefusals.isNotEmpty()) {
             paceRefusals.forEach { log.error("REFUSING: {}", it) }
             return 3
@@ -116,7 +116,8 @@ object ResetLiveMain {
             Files.writeString(
                 out.resolve("report.md"),
                 "\n## LIVE RUN (started ${Instant.now()})\n" +
-                    "- receive lanes: ${pacing.receiveLanes}; move pace ${pacing.moveSpacingMs / 1000.0} s a batch; every move by to_zone_id, " +
+                    "- receive lanes: ${pacing.receiveLanes}; move pace ${pacing.moveItemsPerMinWithReceive} items/min beside receives, " +
+                    "${pacing.moveItemsPerMin} alone; every move by to_zone_id, " +
                     "floor zone ids cross-checked against /spatial/identity, racks resolved from it\n" +
                     "- PRE-check (gating): $spotNote\n" +
                     "- the directive steps go after every move (store local midnight of $forDate: ${forDate.atStartOfDay(
@@ -146,7 +147,9 @@ object ResetLiveMain {
         val zoneId = StoreDayReset.zoneOf(slug)
         val params = ResetLiveParams(
             receiveLanes = pacing.receiveLanes,
-            moveSpacingMs = pacing.moveSpacingMs,
+            moveSpacingMs = if (pacing.moveEveryExplicit) pacing.moveSpacingMs else 0,
+            moveItemsPerMin = pacing.moveItemsPerMin,
+            moveItemsPerMinWithReceive = pacing.moveItemsPerMinWithReceive,
             directiveSpacingMs = 2_000,
             healthPollMs = 5_000,
             idlePollMs = 1_000,
@@ -176,9 +179,13 @@ object ResetLiveMain {
                 return v.summary()
             }
         }
+        // every move's eventKey goes to move-answers.tsv and is confirmed on the results route (halt on pending > 60 s, warning/failed, refused)
+        val moveWatch = MoveResultsWatch(LiveResultsFetcher.create(onError = ::event), out.resolve("move-answers.tsv"), onEvent = ::event)
+        val liveSender = LiveSender.create(true, slug, chainDir, stateDir, zones)
+        liveSender.onAnswer = { item, body -> if (item.kind == "move") moveWatch.answered(item.extId, body, System.currentTimeMillis()) }
         val result = ResetLiveRunner(
             items,
-            LiveSender.create(true, slug, chainDir, stateDir, zones),
+            liveSender,
             RetryPolicy(),
             SentLedger(ResetLivePlan.sentLedgerFile(out)),
             ResetBooks(stateDir, slug, forDate, zoneCode) { ean -> model.homeRack[ean] ?: rackDefault },
@@ -189,6 +196,7 @@ object ResetLiveMain {
             onProgress = { p -> ResetLivePlan.writeAtomic(out.resolve("progress.json"), ResetLivePlan.progressJson(p)) },
             lanesNow = LanesSource(Path.of(ops).resolve("reset-lanes"), pacing.receiveLanes)::current,
             postMovesCheck = post,
+            moveWatch = moveWatch,
         ).run()
         event(
             "LIVE RUN end: ${result.end} accepted=${result.accepted} skipped=${result.skippedByLedger} alerts=${result.alerts.size} " +

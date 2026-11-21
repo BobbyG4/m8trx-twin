@@ -46,6 +46,8 @@ class ResetLiveRunner(
     private val lanesNow: () -> Int = { params.receiveLanes },
     /** Run once, after every receive and move is accepted and [PostMovesCheck.waitMs] after the last move, before the directive steps. Report only. */
     private val postMovesCheck: PostMovesCheck? = null,
+    /** Move events posted by this run, confirmed on the results route; a halt reason from it stops the run (resumable). */
+    private val moveWatch: MoveResultsWatch? = null,
 ) {
     enum class End { DONE, HOLD, HALTED }
 
@@ -62,6 +64,26 @@ class ResetLiveRunner(
     private class Retry(val item: SendItem, val root: SendItem, val depth: Int, val notBeforeMs: Long)
 
     private val lock = Any()
+
+    /** The move lane's item budget (null = the fixed [ResetLiveParams.moveSpacingMs] pace). Its rate follows whether a receive is still to come. */
+    private var lastRate = -1
+    private val moveBudget: ItemBudget? = if (params.moveItemsPerMin > 0) {
+        ItemBudget({
+            val r = synchronized(lock) { receiveWorkLeft() }
+            val rate = if (r) params.moveItemsPerMinWithReceive else params.moveItemsPerMin
+            if (rate != lastRate) {
+                if (lastRate !=
+                    -1
+                ) {
+                    event("move budget changed: $lastRate -> $rate items/min (${if (r) "a receive is due or in flight" else "no receive left"})")
+                }
+                lastRate = rate
+            }
+            rate
+        })
+    } else {
+        null
+    }
     private val receivesAll = items.filter { it.kind == "receive" }
     private val movesAll = items.filter { it.kind == "move" }
     private val tail = items.filter { it.kind != "receive" && it.kind != "move" }
@@ -272,20 +294,52 @@ class ResetLiveRunner(
                     }
                 }
             }
-            if (done) return
+            if (done) {
+                drainMoveWatch()
+                return
+            }
             if (deadlock) {
                 if (!checkStop()) halt("${moves.size} move batch(es) wait for tags that are neither queued nor in flight (schedule inconsistent)")
                 return
             }
             if (item == null) {
                 nap(params.idlePollMs)
+                if (watchHalts()) return
                 continue
             }
-            val gap = last + params.moveSpacingMs - clock.now()
-            if (gap > 0) nap(gap)
-            if (checkStop()) return
+            // the item budget (rolling 60 s) decides; M8TRX_RESET_MOVE_EVERY_S, when set, is a floor between batches
+            while (true) {
+                val now = clock.now()
+                val wait = maxOf(last + params.moveSpacingMs - now, moveBudget?.waitMsFor(item.epcs.size, now) ?: 0L)
+                if (wait <= 0) break
+                nap(minOf(wait, 5_000L))
+                if (checkStop() || watchHalts()) return
+            }
+            if (checkStop() || watchHalts()) return
+            moveWatch?.beforeSend(item.extId, clock.now())
             if (!deliver(item)) return
             last = clock.now()
+            moveBudget?.record(item.epcs.size, last)
+        }
+    }
+
+    /** Runs the results check; true (and the run is halted) when it says stop. */
+    private fun watchHalts(): Boolean {
+        val reason = moveWatch?.check(clock.now()) ?: return false
+        halt(reason)
+        return true
+    }
+
+    /** After the last move: wait until every move event is confirmed on the results route (or the check halts). */
+    private fun drainMoveWatch() {
+        val w = moveWatch ?: return
+        while (!checkStop() && w.outstanding() > 0) {
+            val reason = w.check(clock.now(), force = true)
+            if (reason != null) {
+                halt(reason)
+                return
+            }
+            if (w.outstanding() > 0) nap(5_000)
         }
     }
 
@@ -337,10 +391,15 @@ class ResetLiveRunner(
         while (true) {
             if (checkStop()) return false
             if (!healthReady(item, attempt)) continue
+            val sendT0 = clock.now()
             val outcome = sender.send(item)
+            val tookMs = clock.now() - sendT0
             when (val d = policy.decide(outcome, attempt)) {
                 Decision.Done -> {
                     accept(item)
+                    if (item.kind == "move" && tookMs > params.slowAnswerMs) {
+                        halt("${item.extId}: the move was answered after $tookMs ms (limit ${params.slowAnswerMs} ms): the platform's queue is full")
+                    }
                     return true
                 }
 
