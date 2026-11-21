@@ -98,7 +98,7 @@ class MissingFollow(
         val all = (epcs + pending.map { it.first }).distinct()
         if (all.isEmpty()) return Reconcile(0, 0, 0, 0, 0, 0)
         val st = states(all) ?: return null
-        val stolen = StoreStock.readLines(stolenFile()).map { it.uppercase() }.toSet()
+        val stolen = StoreStock.readEpcs(stolenFile())
         val drop = HashSet<String>()
         var keptStolen = 0
         var sold = 0

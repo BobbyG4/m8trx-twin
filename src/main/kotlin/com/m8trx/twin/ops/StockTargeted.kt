@@ -171,6 +171,48 @@ object StockTargeted {
         return StockCounts.CountPlan(countId, store.slug, date, 0, false, pulls, emptyList(), emptyList()) to empty
     }
 
+    /** The key a round is matched on: the store and its fixture codes (sorted), i.e. "the same target string" for that store. */
+    fun targetKey(slug: String, codes: List<String>): String = "$slug:${codes.sorted().joinToString(",")}"
+
+    /** The last round for a target: when it closed, and the notYetHeard units it left that are NOT on the stolen list. */
+    data class Prior(val closedAt: Instant, val nonStolen: List<String>)
+
+    data class Gate(val refusal: String?, val earliestNow: Instant?)
+
+    /**
+     * Round ordering + the non-stolen guard. A round may start only when its first pull ([plan] start, stated relative to [now])
+     * is after the previous round's close: `now - total pull span - margin > prior.closedAt`; [Gate.earliestNow] is the first
+     * `now` that satisfies it. And a previous round that left notYetHeard units which are not stolen ones blocks the next round
+     * until [acceptNonStolen] (`M8TRX_STOCK_TARGET_ACCEPT_NONSTOLEN=true`).
+     */
+    fun gate(prior: Prior?, planStart: Instant, now: Instant, acceptNonStolen: Boolean): Gate {
+        if (prior == null) return Gate(null, null)
+        val earliest = prior.closedAt.plusSeconds(java.time.Duration.between(planStart, now).seconds + 1)
+        val why = when {
+            !planStart.isAfter(prior.closedAt) ->
+                "round ordering: the previous round closed ${prior.closedAt}; this round's pulls would start $planStart. Earliest allowed start: $earliest"
+
+            prior.nonStolen.isNotEmpty() && !acceptNonStolen ->
+                "the previous round left ${prior.nonStolen.size} notYetHeard unit(s) that are NOT stolen: ${prior.nonStolen}. " +
+                    "Set M8TRX_STOCK_TARGET_ACCEPT_NONSTOLEN=true to run the next round anyway"
+
+            else -> null
+        }
+        return Gate(why, earliest)
+    }
+
+    /** The latest closed round of [key] among `targeted-*.json` in [stockDir] (entries carry targetKey, endState, closedAt, notYetHeardUnits). */
+    fun loadPrior(stockDir: Path, key: String): Prior? {
+        if (!Files.isDirectory(stockDir)) return null
+        val m = ObjectMapper()
+        val best = Files.list(stockDir).use { s -> s.filter { it.fileName.toString().matches(Regex("targeted-.*\\.json")) }.toList() }
+            .flatMap { f -> runCatching { m.readTree(Files.readString(f)).toList() }.getOrDefault(emptyList()) }
+            .filter { it.path("targetKey").asText() == key && it.path("endState").asText().startsWith("closed") && it.hasNonNull("closedAt") }
+            .maxByOrNull { Instant.parse(it.path("closedAt").asText()) } ?: return null
+        val nonStolen = best.path("notYetHeardUnits").filter { !it.path("stolen").asBoolean(true) }.map { it.path("epc").asText() }
+        return Prior(Instant.parse(best.path("closedAt").asText()), nonStolen)
+    }
+
     /** Pull seconds per fixture, as the plan states them (the self-test asserts each stays above the plateau). */
     fun pullSeconds(p: StockCounts.CountPlan): Map<String, Long> =
         p.pulls.associate { it.code to (it.endedAt.epochSecond - it.startedAt.epochSecond) }

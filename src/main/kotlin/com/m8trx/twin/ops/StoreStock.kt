@@ -39,7 +39,7 @@ class StoreStock(val slug: String, val byFixture: Map<String, List<String>>) {
         fun fromPlatform(store: com.m8trx.twin.history.ChainKeys.Store, located: List<Located>, gone: Set<String>): StoreStock {
             val codeOf = store.zones.associate { it.zoneId to it.code }
             val by = located.asSequence()
-                .filter { it.epc !in gone }
+                .filter { it.epc.uppercase() !in gone }
                 .distinctBy { it.epc }
                 .groupBy({ codeOf[it.zoneId] ?: "BR-${it.zoneId.take(8)}" }, { it.epc })
                 .mapValues { (_, v) -> v.sorted() }
@@ -53,15 +53,18 @@ class StoreStock(val slug: String, val byFixture: Map<String, List<String>>) {
             val rows = DatedStream.loadEpcRows(chainDir.resolve("stores/$slug/epcs.csv")) +
                 ReceiveStock.stockRows(ReceiveStock.readStock(ReceiveStock.stockFile(stateDir.resolve("receive"))), slug)
             val placements = RestockMoves.readPlacements(stateDir.resolve("moves").resolve("placements.csv"))
-            val gone = readLines(stateDir.resolve("sold-epcs.txt")) + readLines(missingFile(stateDir))
+            val gone = readEpcs(stateDir.resolve("sold-epcs.txt")) + readEpcs(missingFile(stateDir))
             val by = rows.asSequence()
                 .distinctBy { it.epc }
-                .filter { it.epc !in gone }
+                .filter { it.epc.uppercase() !in gone }
                 .groupBy({ placements[it.epc] ?: it.fixture }, { it.epc })
                 .mapValues { (_, v) -> v.sorted() }
                 .toSortedMap()
             return StoreStock(slug, by)
         }
+
+        /** An EPC list file (missing / stolen / sold) read UPPER-CASED, so a hand-edited lower-case line still matches the platform's EPCs. */
+        fun readEpcs(file: Path): Set<String> = readLines(file).map { it.uppercase() }.toSet()
 
         fun readLines(file: Path): Set<String> =
             if (Files.exists(file)) Files.readAllLines(file).map { it.trim() }.filter { it.isNotEmpty() }.toSet() else emptySet()

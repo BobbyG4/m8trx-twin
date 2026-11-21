@@ -49,6 +49,44 @@ internal fun stockTargeted(chain: Path, keys: ChainKeys) {
     val bare = StoreStock(denver.slug, mapOf("BR-x" to listOf("B1")))
     check(StockTargeted.plan(denver, now, listOf(fx.code), bare, stolen).first == null) { "empty fixture planned" }
 
+    // round ordering: round 2's pulls must all start after round 1's close; the earliest allowed now is printed
+    val closed1 = Instant.parse("2026-11-21T03:05:00Z")
+    val key = StockTargeted.targetKey(denver.slug, listOf(fx.code, "A"))
+    check(key == StockTargeted.targetKey(denver.slug, listOf("A", fx.code))) { "target key depends on order" }
+    val span = java.time.Duration.between(plan.startedAt, now) // the plan's total pull span + margin
+    val early = StockTargeted.gate(StockTargeted.Prior(closed1, emptyList()), plan.startedAt, now, false)
+    check(early.refusal != null && early.refusal.contains("round ordering")) { "round 2 not refused before round 1 closed" }
+    check(early.earliestNow == closed1.plusSeconds(span.seconds + 1)) { "earliest allowed start: ${early.earliestNow}" }
+    val onTime = early.earliestNow!!
+    val p2 = StockTargeted.plan(denver, onTime, listOf(fx.code), stock, stolen).first!!
+    check(
+        p2.startedAt.isAfter(closed1) && StockTargeted.gate(StockTargeted.Prior(closed1, emptyList()), p2.startedAt, onTime, false).refusal == null,
+    ) {
+        "round 2 refused at the earliest allowed start"
+    }
+    check(StockTargeted.gate(null, plan.startedAt, now, false).refusal == null) { "round 1 gated" }
+
+    // guard: a non-stolen notYetHeard unit blocks round 2 until accepted; prior read back from targeted-*.json (latest closed round wins)
+    val dir = java.nio.file.Files.createTempDirectory("targeted-prior")
+    java.nio.file.Files.writeString(
+        dir.resolve("targeted-20261121T030500.json"),
+        """[{"targetKey":"$key","endState":"closed","closedAt":"2026-11-21T03:05:00Z","notYetHeardUnits":""" +
+            """[{"epc":"A1","stolen":true},{"epc":"N9","stolen":false}]},""" +
+            """{"targetKey":"$key","endState":"closed_empty","closedAt":"2026-11-21T02:00:00Z","notYetHeardUnits":[]},""" +
+            """{"targetKey":"other","endState":"closed","closedAt":"2026-11-21T04:00:00Z"},""" +
+            """{"targetKey":"$key","endState":"open_failed","closedAt":null}]""",
+    )
+    val prior = StockTargeted.loadPrior(dir, key)
+    check(prior != null && prior.closedAt == closed1 && prior.nonStolen == listOf("N9")) { "prior: $prior" }
+    check(StockTargeted.loadPrior(dir, "nope") == null) { "prior for another target" }
+    val later = closed1.plusSeconds(3600)
+    val blocked = StockTargeted.gate(prior, later.minusSeconds(span.seconds), later, false)
+    check(blocked.refusal != null && blocked.refusal.contains("N9") && blocked.refusal.contains("ACCEPT_NONSTOLEN")) { "non-stolen not blocked" }
+    check(StockTargeted.gate(prior, later.minusSeconds(span.seconds), later, true).refusal == null) { "accept flag ignored" }
+    check(StockTargeted.gate(StockTargeted.Prior(closed1, emptyList()), later.minusSeconds(span.seconds), later, false).refusal == null) {
+        "stolen-only blocked"
+    }
+
     // result reading: totals + notYetHeard entries
     val body = """{"reconciled":true,"totals":{"under":2,"misplaced":1},""" +
         """"summary":{"notYetHeard":[{"itemId":"i1","zoneId":"z1","reason":"first_silence"},{"itemId":"i2","zoneId":"z1","reason":"first_silence"}]}}"""
