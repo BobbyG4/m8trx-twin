@@ -108,6 +108,8 @@ fun main() {
     check(PeopleBackfill.beforeFloor(listOf(session(1, 0)[0]), f + 5000).size == 1) { "a begin before the floor must be flagged" }
     check(PeopleBackfill.beforeFloor(listOf(session(1, 0)[0]), 0).isEmpty()) { "a begin after the floor is fine" }
 
+    batchSection()
+
     println("  gate")
     val s = "dec-us-nyc"
     check(PeopleBackfill.refusals(false, PeopleRest.STORES, null, false).isEmpty()) { "dry must go with nothing set" }
@@ -122,4 +124,171 @@ fun main() {
 
     println(if (failures == 0) "PASS" else "FAILED: $failures")
     exitProcess(if (failures == 0) 0 else 1)
+}
+
+/** A plan line with a real body: [n] visits on [stamp] with [imps] impressions each. */
+private fun visits(stamp: String, n: Int, imps: Int): List<PeopleRest.Line> = (1..n).flatMap { v ->
+    val base = "ppl-dec-kr-seoul-$stamp-$v"
+    val uuid = PeopleRest.sessionUuid(base)
+    val begin = ConnectMappers.camel.createObjectNode().also {
+        it.put("id", uuid)
+        it.put("trackingId", base)
+        it.put("entryTime", "2026-10-05T01:00:00Z")
+    }
+    val out = ArrayList<PeopleRest.Line>()
+    out += PeopleRest.Line(v * 10L, PeopleRest.RANK_BEGIN, 0, "person_begin", "$base-b", "POST", PeopleRest.SESSIONS_PATH, null, begin, "s$v")
+    for (i in 1..imps) {
+        val body = ConnectMappers.camel.createObjectNode().also {
+            it.put("trackingId", base).put("zoneId", "z$i").put("firstLook", "2026-10-05T01:01:00Z")
+        }
+        out +=
+            PeopleRest.Line(
+                v * 10L + i, PeopleRest.RANK_IMPRESSION, i, "person_impression", "$base-i$i", "POST",
+                PeopleRest.IMPRESSIONS_PATH, "$base-b", body, "s$v",
+            )
+    }
+    val close = ConnectMappers.camel.createObjectNode().also { it.put("exitTime", "2026-10-05T01:20:00Z") }
+    out += PeopleRest.Line(
+        v * 10L + 9, PeopleRest.RANK_CLOSE, 99, "person_close", "$base-c", "PATCH", "${PeopleRest.SESSIONS_PATH}/$uuid", "$base-b", close, "s$v",
+    )
+    out
+}
+
+private class FakeBatchTransport(var failAt: Int = -1, var failIndex: Int = 3, var dedupe: Boolean = false) : PeopleTransport {
+    val calls = ArrayList<Pair<String, com.fasterxml.jackson.databind.JsonNode>>()
+    var inFlight = 0
+    var overlapped = false
+    var wrongCount = false
+
+    override fun health(): Pair<Int, String?> = 200 to null
+
+    override fun call(method: String, path: String, body: String): PeopleAnswer {
+        inFlight++
+        if (inFlight > 1) overlapped = true
+        val arr = ConnectMappers.camel.readTree(body)
+        calls += path to arr
+        val callNo = calls.size - 1
+        val results = arr.mapIndexed { i, _ ->
+            val bad = callNo == failAt && i == failIndex
+            "{\"index\":$i,\"status\":${if (bad) {
+                422
+            } else if (dedupe) {
+                200
+            } else {
+                201
+            }}${if (dedupe) ",\"deduplicated\":true" else ""}}"
+        }
+        val failed = results.count { it.contains("422") }
+        val count = if (wrongCount) arr.size() - 1 else arr.size()
+        inFlight--
+        return PeopleAnswer(
+            200,
+            "{\"count\":$count,\"succeeded\":${arr.size() - failed},\"deduplicated\":0,\"failed\":$failed,\"results\":[${results.joinToString(
+                ",",
+            )}]}",
+            null,
+        )
+    }
+}
+
+private fun batchSection() {
+    println("  batch mode")
+    val day1 = visits("20261005", 120, 2)
+    val day2 = visits("20261006", 5, 1)
+    val all = day1 + day2
+    val bs = PeopleBatch.batches(all)
+    check(bs.all { it.lines.size in 1..100 } && bs.all { PeopleBatch.body(it).size() <= 100 }) { "a batch has more than 100 items or is empty" }
+    // day 1: 120 begins = 2, 240 imps = 3, 120 closes = 2; day 2: 1 + 1 + 1
+    check(bs.size == 7 + 3) { "batch count ${bs.size}, expected 10" }
+    val phases = bs.map { it.day to it.kind }.distinct()
+    check(
+        phases == listOf(
+            "20261005" to "person_begin",
+            "20261005" to "person_impression",
+            "20261005" to "person_close",
+            "20261006" to "person_begin",
+            "20261006" to "person_impression",
+            "20261006" to "person_close",
+        ),
+    ) { "phase order wrong: $phases" }
+    check(bs.take(2).map { it.lines.size } == listOf(100, 20)) { "chunking of 120 begins wrong" }
+    check(PeopleBatch.batches(all, size = 7).all { it.lines.size <= 7 }) { "size 7 not honored" }
+    check(runCatching { PeopleBatch.batches(all, size = 101) }.isFailure) { "size 101 accepted" }
+    val first = PeopleRest.sessionUuid("ppl-dec-kr-seoul-20261005-1")
+    val b0 = PeopleBatch.body(bs[0])
+    check(b0.isArray && b0[0].path("op").asText() == "begin" && b0[0].path("id").asText() == first) { "begin body shape: ${b0[0]}" }
+    check(b0[0].has("trackingId") && b0[0].has("entryTime")) { "begin lost its single-route fields" }
+    val imp = PeopleBatch.body(bs.first { it.kind == "person_impression" })
+    check(imp.isArray && !imp[0].has("op") && imp[0].has("zoneId")) { "impression must be the single body" }
+    val cl = PeopleBatch.body(bs.first { it.kind == "person_close" })
+    check(cl[0].path("op").asText() == "close" && cl[0].path("id").asText() == first && cl[0].path("exitTime").asText() == "2026-10-05T01:20:00Z") {
+        "close body shape: ${cl[0]}"
+    }
+
+    var now = 0L
+    val clock = { now }
+    val sleeper = { ms: Long -> now += ms }
+    val led = OUT.resolve("batch-ledger.tsv")
+    Files.createDirectories(OUT)
+    Files.deleteIfExists(led)
+    val t = FakeBatchTransport()
+    val r = PeopleBatchRunner(bs, t, PeopleLedger(led), 60, clock, sleeper, { false }, null)
+    check(r.run() == PeopleBatchRunner.End.DONE) { "a clean run did not finish: ${r.haltReason}" }
+    check(t.calls.size == 10 && !t.overlapped) { "calls ${t.calls.size}, overlapped ${t.overlapped}" }
+    check(t.calls.map { it.first } == bs.map { it.path }) { "wire order differs from the plan" }
+    check(r.startedAt.zipWithNext().all { (a, b) -> b - a >= 1000 }) { "requests closer than 1 s apart (over 60 a minute)" }
+    check(PeopleLedger(led).size == all.size) { "ledger has ${PeopleLedger(led).size} items, expected ${all.size}" }
+
+    // a failed item (call 1 = the 20 remaining begins, index 3 = visit 104) halts, ledgers only the confirmed items, and a resume sends the rest once
+    Files.deleteIfExists(led)
+    val f = FakeBatchTransport(failAt = 1, failIndex = 3)
+    val rf = PeopleBatchRunner(bs, f, PeopleLedger(led), 60, clock, sleeper, { false }, null)
+    check(rf.run() == PeopleBatchRunner.End.HALTED && rf.haltReason!!.contains("ppl-dec-kr-seoul-20261005-104-b")) {
+        "a failed item must halt and name the entry: ${rf.haltReason}"
+    }
+    check(f.calls.size == 2) { "nothing may be sent after a failed item, got ${f.calls.size} calls" }
+    check(PeopleLedger(led).size == 100 + 19) { "ledger after the halt ${PeopleLedger(led).size}, expected 119" }
+    val ledger2 = PeopleLedger(led)
+    val resumed = PeopleBatch.batches(all, ledger2::isSent)
+    check(resumed.sumOf { it.lines.size } == all.size - 119) { "resume plans ${resumed.sumOf { it.lines.size }} items" }
+    check(resumed.none { b -> b.lines.any { ledger2.isSent(it.id) } }) { "resume would resend a confirmed item" }
+    check(PeopleBatchRunner(resumed, FakeBatchTransport(), ledger2, 60, clock, sleeper, { false }, null).run() == PeopleBatchRunner.End.DONE) {
+        "resume failed"
+    }
+    check(PeopleLedger(led).size == all.size) { "after the resume the ledger has ${PeopleLedger(led).size}" }
+
+    Files.deleteIfExists(led)
+    val w = FakeBatchTransport().also { it.wrongCount = true }
+    check(PeopleBatchRunner(bs, w, PeopleLedger(led), 60, clock, sleeper, { false }, null).run() == PeopleBatchRunner.End.HALTED) {
+        "count mismatch must halt"
+    }
+    Files.deleteIfExists(led)
+    check(
+        PeopleBatchRunner(bs, FakeBatchTransport(dedupe = true), PeopleLedger(led), 60, clock, sleeper, { false }, null).run() ==
+            PeopleBatchRunner.End.DONE,
+    ) {
+        "dedup must succeed"
+    }
+    var t2 = 0L
+    val slow = object : PeopleTransport {
+        override fun health() = 200 to null
+
+        override fun call(method: String, path: String, body: String): PeopleAnswer {
+            t2 += 10_000
+            val n = ConnectMappers.camel.readTree(body).size()
+            return PeopleAnswer(
+                200,
+                "{\"count\":$n,\"failed\":0,\"results\":[${(0 until n).joinToString(",") {
+                    "{\"index\":$it,\"status\":201}"
+                }}]}",
+                null,
+            )
+        }
+    }
+    val rs = PeopleBatchRunner(bs.take(3), slow, PeopleLedger(null), 60, { t2 }, { t2 += it }, { false }, null)
+    rs.run()
+    check(rs.startedAt.zipWithNext().all { (a, b) -> b - a >= 20_000 }) { "a 10 s batch must be followed by a longer wait: ${rs.startedAt}" }
+    check(runCatching { PeopleBatchRunner(bs, FakeBatchTransport(), PeopleLedger(null), 61, clock, sleeper, { false }, null) }.isFailure) {
+        "cap over 60 accepted"
+    }
 }

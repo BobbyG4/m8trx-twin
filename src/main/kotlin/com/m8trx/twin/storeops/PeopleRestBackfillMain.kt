@@ -35,22 +35,38 @@ object PeopleRestBackfillMain {
     fun run(): Int {
         val live = env(PeopleBackfill.LIVE_ENV)?.toBoolean() == true
         val stores = env("M8TRX_PEOPLE_BACKFILL_STORES")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: PeopleRest.STORES
-        val from = env("M8TRX_PEOPLE_BACKFILL_FROM")?.let(LocalDate::parse) ?: PeopleBackfill.DEFAULT_FROM
+        val range = env("M8TRX_PEOPLE_BACKFILL_DATES")?.split("..")
+        if (range != null &&
+            range.size != 2
+        ) {
+            return refuse(listOf("M8TRX_PEOPLE_BACKFILL_DATES must be <from>..<to>, got ${env("M8TRX_PEOPLE_BACKFILL_DATES")}"))
+        }
+        val from = range?.get(0)?.let(LocalDate::parse) ?: env("M8TRX_PEOPLE_BACKFILL_FROM")?.let(LocalDate::parse) ?: PeopleBackfill.DEFAULT_FROM
+        val mode = env("M8TRX_PEOPLE_BACKFILL_MODE") ?: "single"
+        if (mode != "single" && mode != "batch") return refuse(listOf("M8TRX_PEOPLE_BACKFILL_MODE must be batch or single, got $mode"))
         val firstLive = env("M8TRX_PEOPLE_BACKFILL_FIRST_LIVE")?.let(LocalDate::parse) ?: PeopleBackfill.FIRST_LIVE_DAY
-        val cap = env("M8TRX_PEOPLE_BACKFILL_CAP_PER_MIN")?.toInt() ?: PeopleBackfill.DEFAULT_CAP_PER_MIN
+        val cap = env("M8TRX_PEOPLE_BACKFILL_CAP_PER_MIN")?.toInt()
+            ?: if (mode == "batch") PeopleBatch.DEFAULT_CAP_PER_MIN else PeopleBackfill.DEFAULT_CAP_PER_MIN
         val out = Path.of(env("M8TRX_PEOPLE_BACKFILL_OUT") ?: "out/people-rest-backfill")
         val ledgerDir = Path.of(env("M8TRX_PEOPLE_BACKFILL_LEDGER_DIR") ?: "out/people-rest-live-ledgers")
         val bearer = env(PeopleLiveGate.BEARER_ENV)
         val refusals = PeopleBackfill.refusals(live, stores, env(PeopleBackfill.CONFIRM_ENV), bearer != null)
         if (refusals.isNotEmpty()) return refuse(refusals)
         PeoplePace.gapMs(cap)
+        if (mode == "batch" &&
+            cap > PeopleBatch.DEFAULT_CAP_PER_MIN
+        ) {
+            return refuse(listOf("batch mode is at most ${PeopleBatch.DEFAULT_CAP_PER_MIN} requests a minute"))
+        }
 
         val chainDir = Path.of("reference/data/chain")
         val keys = ChainKeys.load(chainDir.resolve(ChainKeys.DEFAULT_PATH.fileName))
         val siteIds = DatedStream.readSiteIds(chainDir.resolve("site_ids.csv"))
         val sentIds = PeopleBackfill.sentIds(ledgerDir)
         val sentKeys = PeopleBackfill.sessionKeys(sentIds)
-        val dates = PeopleBackfill.dates(from, firstLive)
+        val to = range?.get(1)?.let(LocalDate::parse) ?: firstLive
+        if (to.isAfter(firstLive)) return refuse(listOf("TO $to is after the first live day $firstLive"))
+        val dates = PeopleBackfill.dates(from, to)
         if (firstLive in dates && sentIds.isEmpty()) {
             return refuse(listOf("no live sent-ledger lines under $ledgerDir: the gap of $firstLive cannot be computed (it would be the whole day)"))
         }
@@ -85,6 +101,19 @@ object PeopleRestBackfillMain {
             }
         }
         report(rows, firstLive, cap)
+        if (mode == "batch") {
+            val bs = PeopleBatch.batches(rows.flatMap { it.lines })
+            println(
+                "batch mode: ${stores.joinToString(",")} ${dates.first()}..${dates.last()}: ${PeopleBackfill.begins(
+                    rows.flatMap {
+                        it.lines
+                    },
+                )} visits, " +
+                    "${PeopleBackfill.count(rows.flatMap { it.lines }, "person_impression")} impressions, ${bs.size} batch requests " +
+                    "(begins ${bs.count { it.kind == "person_begin" }}, impressions ${bs.count { it.kind == "person_impression" }}, " +
+                    "closes ${bs.count { it.kind == "person_close" }}); at $cap/min = %.1f minutes".format(bs.size / cap.toDouble()),
+            )
+        }
         val bad = checkIdentity(rows, sentIds).toMutableList()
         stores.forEach { slug ->
             val floor = PeopleBackfill.beginFloorMs(keys.store(slug).zone, from)
@@ -102,6 +131,10 @@ object PeopleRestBackfillMain {
         }
         val slug = stores.single()
         val dir = out.resolve(slug)
+        if (mode == "batch") {
+            val lines = rows.filter { it.slug == slug }.flatMap { it.lines }
+            return runBatch(slug, lines, dir, out, cap, bearer!!)
+        }
         val items = PeopleLivePlan.merge(listOf(slug to rows.filter { it.slug == slug }.flatMap { it.lines }))
         val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
         val hold = Path.of(env("M8TRX_PEOPLE_BACKFILL_HOLD_FILE") ?: "$ops/people-HOLD")
@@ -136,6 +169,43 @@ object PeopleRestBackfillMain {
                     PeopleLiveRunner.End.DONE -> 0
                     PeopleLiveRunner.End.HOLD -> 6
                     PeopleLiveRunner.End.HALTED -> 1
+                }
+            }
+        }
+    }
+
+    private fun runBatch(slug: String, lines: List<PeopleRest.Line>, dir: Path, out: Path, cap: Int, bearer: String): Int {
+        val ops = env("M8TRX_OPS_DIR") ?: "/opt/m8trx/twin-ops"
+        val hold = Path.of(env("M8TRX_PEOPLE_BACKFILL_HOLD_FILE") ?: "$ops/people-HOLD")
+        if (Files.exists(hold)) {
+            log.error("REFUSING: HOLD is set ({}): nothing is sent until it is removed", hold)
+            return 6
+        }
+        Files.createDirectories(dir)
+        FileChannel.open(out.resolve("backfill.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
+            val lock = ch.tryLock() ?: return refuse(listOf("another backfill run holds ${out.resolve("backfill.lock")}"))
+            lock.use {
+                val ledger = PeopleLedger(dir.resolve("batch-sent-ledger.tsv"))
+                val batches = PeopleBatch.batches(lines, ledger::isSent)
+                val transport = PeopleRestHttp.create(true, env("M8TRX_PEOPLE_REST_BASE_URL") ?: PeopleRestHttp.DEFAULT_BASE, bearer)
+                val runner = PeopleBatchRunner(
+                    batches,
+                    transport,
+                    ledger,
+                    cap,
+                    System::currentTimeMillis,
+                    { Thread.sleep(it) },
+                    { Files.exists(hold) },
+                    dir,
+                )
+                val end = runner.run()
+                println(
+                    "people-rest backfill (batch) $slug: $end ${runner.haltReason.orEmpty()} requests=${runner.requests} items=${runner.itemsSent}",
+                )
+                return when (end) {
+                    PeopleBatchRunner.End.DONE -> 0
+                    PeopleBatchRunner.End.HOLD -> 6
+                    PeopleBatchRunner.End.HALTED -> 1
                 }
             }
         }
