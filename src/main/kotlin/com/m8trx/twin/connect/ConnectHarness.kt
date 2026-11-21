@@ -717,7 +717,8 @@ private fun datedSaleOccurredAt() {
     val epcs = plan.sales.flatMap { it.epcs }
     check(epcs.toSet().size == epcs.size) { "each EPC sells once" }
     check(plan.droppedLines == 0) { "no basket line dropped on a stocked store: ${plan.droppedLines}" }
-    check(plan.fromBackOfHouse > 0) { "back-of-house stock goes first" }
+    val brEpcs = DatedStream.loadEpcRows(CHAIN.resolve("stores/dec-us-denver/epcs.csv")).filter { it.backOfHouse }.map { it.epc }.toSet()
+    check(brEpcs.isNotEmpty() && epcs.none { it in brEpcs }) { "a sale never takes a back-room unit" }
     check(plan.sales.map { it.saleId }.toSet().size == plan.sales.size) { "external_sale_id unique per sale" }
     check(json.contains("\"external_sale_id\"") && !json.contains("externalSaleId")) { "webhook plane stays snake_case: $json" }
     val again = DatedStream.allocate(
@@ -737,11 +738,10 @@ private fun datedSaleOccurredAt() {
     )
     check(excluded.sales.flatMap { it.epcs }.none { it in epcs.take(50).toSet() }) { "a sold/reserved EPC never sells again" }
     log.info(
-        "[recent] dated sale: {} txn / {} units on {} (BOH {}, substituted {}), first occurred_at {} ✓",
+        "[recent] dated sale: {} txn / {} units on {} (floor only, substituted {}), first occurred_at {} ✓",
         plan.sales.size,
         plan.units,
         date,
-        plan.fromBackOfHouse,
         plan.substitutedLines,
         first.at,
     )
@@ -1017,9 +1017,13 @@ private fun datedStreamSellsOnHand() {
 
         // zero seed left: every seed unit is in the sold-log, the stream sells from received
         val soldSeed = seed.map { it.epc }.toSet()
-        val plan = DatedStream.allocate(day, held, soldSeed, "selftest", cat)
-        val sold = plan.sales.flatMap { it.epcs }
         val recSet = received.map { it.epc }.toSet()
+        // only the 5 moved units are on the floor: a store whose floor is empty sells those and nothing from the back room
+        val floorOnly = DatedStream.allocate(day, held, soldSeed, "selftest", cat)
+        check(floorOnly.sales.flatMap { it.epcs }.all { it in moved }) { "floor guard: back-room (BR-09) units never sell" }
+        val floorHeld = held.map { if (it.epc in recSet) it.copy(fixture = "FLOOR-MOVED") else it }
+        val plan = DatedStream.allocate(day, floorHeld, soldSeed, "selftest", cat)
+        val sold = plan.sales.flatMap { it.epcs }
         check(sold.isNotEmpty() && plan.droppedLines == 0) {
             "a store with no seed left still sells: ${sold.size} units, ${plan.droppedLines} dropped"
         }
@@ -1028,15 +1032,13 @@ private fun datedStreamSellsOnHand() {
 
         // sold-log + missing units from the received set are excluded too
         val gone = sold.take(40).toSet()
-        val plan2 = DatedStream.allocate(day, held, soldSeed + gone, "selftest", cat)
+        val plan2 = DatedStream.allocate(day, floorHeld, soldSeed + gone, "selftest", cat)
         check(plan2.sales.flatMap { it.epcs }.none { it in gone }) { "sold/missing received units never sell again" }
 
         // back-of-house follows the CURRENT fixture: all received units moved to the floor = none sold from the back
-        val floor = held.map { if (it.epc in recSet) it.copy(fixture = "FLOOR-MOVED") else it }
-        check(DatedStream.allocate(day, floor, soldSeed, "selftest", cat).fromBackOfHouse == 0) { "BOH follows the current fixture" }
-        check(plan.units - plan.fromBackOfHouse <= moved.size && plan.fromBackOfHouse > 0) {
-            "received units in BR-09 count as back-of-house; only the ${moved.size} moved ones are floor"
-        }
+        check(plan.units > moved.size) { "BOH follows the current fixture: once moved to the floor the received units sell" }
+        check(floorOnly.units <= moved.size) { "received units in BR-09 are back-of-house; only the ${moved.size} moved ones are floor" }
+        floorGuardSwap()
 
         // a unit counted missing after the plan froze never goes on the wire: unsoldParts(priorSold + missing)
         val frozen = plan.sales.map { DatedStream.PricedPart(it, it.saleId, it.epcs, null, null, null) }
@@ -1053,7 +1055,7 @@ private fun datedStreamSellsOnHand() {
         check(ReceiveStock.readStock(badFile).map { it.epc } == listOf("E1", "E3")) { "a bad-date row is skipped, not fatal" }
 
         // freeze: deterministic, and the plan file round-trips unchanged
-        check(DatedStream.allocate(day, held, soldSeed, "selftest", cat).sales == plan.sales) { "allocation must be deterministic" }
+        check(DatedStream.allocate(day, floorHeld, soldSeed, "selftest", cat).sales == plan.sales) { "allocation must be deterministic" }
         val pf = dir.resolve("stream/plan.csv")
         java.nio.file.Files.createDirectories(pf.parent)
         DatedStream.writePlan(pf, plan.sales)
@@ -1062,4 +1064,63 @@ private fun datedStreamSellsOnHand() {
         dir.toFile().deleteRecursively()
     }
     log.info("[recent] dated stream sells on-hand: seed ∪ received, current fixtures, sold-log/missing excluded, plan frozen ✓")
+}
+
+/** The send-time floor guard on a frozen plan: BR unit -> floor unit of the same EAN, DROPPED when none, idempotent, no reuse. */
+private fun floorGuardSwap() {
+    fun r(e: String, ean: String, f: String) = DatedStream.EpcRow(e, ean, f, "I$ean")
+    val st = "s1"
+    val stock = mapOf(
+        st to listOf(
+            r("B1", "A", "BR-01"), r("B2", "A", "BR-01"), r("B3", "B", "BR-01"), r("B4", "A", "BR-01"),
+            r("F1", "A", "F-01"), r("F2", "A", "F-01"), r("F3", "A", "F-02"), r("F9", "A", "F-02"), r("G1", "C", "F-03"),
+        ),
+    )
+    val t = java.time.Instant.parse("2026-11-21T01:00:00Z")
+    val frozen = listOf(
+        DatedStream.PlannedSale("S1", st, t, listOf("B1", "G1")),
+        DatedStream.PlannedSale("S2", st, t, listOf("B2", "B3")),
+        DatedStream.PlannedSale("S3", st, t.plusSeconds(99_999), listOf("B4")), // not yet due: left alone
+        DatedStream.PlannedSale("S4", st, t, listOf("F1")),
+    )
+    val blocked = setOf("F9") // reserved elsewhere
+    val g = DatedStream.guardFloor(frozen, emptyList(), stock, emptySet(), blocked) { it.at == t }
+    val byId = g.sales.associateBy { it.saleId }
+    check(byId.getValue("S1").epcs == listOf("F2", "G1")) {
+        "BR unit swapped for a floor unit of the same EAN (F1 is in the plan, F9 reserved): ${byId["S1"]}"
+    }
+    check(byId.getValue("S2").epcs == listOf("F3")) {
+        "second swap takes the next unit, the EAN-B unit has no floor unit and is dropped: ${byId["S2"]}"
+    }
+    check(g.fresh.single { it.orig == "B3" }.new == DatedStream.DROPPED) { "no floor unit of the EAN = DROPPED" }
+    check(byId.getValue("S3").epcs == listOf("B4")) { "a part not yet due is not swapped" }
+    check(g.sales.flatMap { it.epcs }.let { it.size == it.toSet().size }) { "no EPC is used twice" }
+    check(g.sales.flatMap { it.epcs }.none { it == "F9" }) { "a reserved unit is never swapped in" }
+    // rerun from the persisted swaps: identical outcome, nothing new chosen
+    val dir = java.nio.file.Files.createTempDirectory("swaps-selftest")
+    try {
+        val f = dir.resolve("run.swaps.csv")
+        DatedStream.appendSwaps(f, g.fresh)
+        val again = DatedStream.guardFloor(frozen, DatedStream.readSwaps(f), stock, emptySet(), blocked) { it.at == t }
+        check(again.sales == g.sales && again.fresh.isEmpty()) { "swaps.csv makes a re-run send the same EPCs" }
+        // the swapped-in units are reserved for a later pass: a second plan cannot take them
+        val other = DatedStream.guardFloor(
+            listOf(DatedStream.PlannedSale("T1", st, t, listOf("B4"))),
+            emptyList(),
+            stock,
+            emptySet(),
+            blocked + DatedStream.readSwaps(f).map { it.new }.filter { it != DatedStream.DROPPED },
+        ) { true }
+        check(other.fresh.single().new == "F1") { "units swapped in elsewhere (F2, F3) are reserved, the free F1 is taken: ${other.fresh}" }
+    } finally {
+        dir.toFile().deleteRecursively()
+    }
+    // sold / missing units are not swapped, and a fresh allocation over the same stock never picks a BR unit
+    val soldGuard = DatedStream.guardFloor(frozen, emptyList(), stock, setOf("B1"), blocked) { it.at == t }
+    check(
+        soldGuard.sales.first {
+            it.saleId == "S1"
+        }.epcs == listOf("B1", "G1") && soldGuard.fresh.none { it.orig == "B1" },
+    ) { "sold unit left alone" }
+    log.info("[recent] floor guard: BR unit swapped for same-EAN floor unit, dropped when none, idempotent via swaps.csv, never reused ✓")
 }

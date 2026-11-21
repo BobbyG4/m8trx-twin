@@ -57,7 +57,12 @@ import kotlin.random.Random
  * events — the warm-up) · `M8TRX_STREAM_SOLD_LOG` · `M8TRX_RUN_ID` (default `twin-day-<yyyymmdd>-<seed>`) ·
  * `M8TRX_CHAIN_DIR` · the on-hand sources, each defaulting beside the sold-log's directory `<state>`:
  * `M8TRX_STREAM_RECEIVED` (`<state>/receive/received-stock.csv`; a missing file = seed only) ·
- * `M8TRX_STREAM_PLACEMENTS` (`<state>/moves/placements.csv`) · `M8TRX_STREAM_MISSING` (`<state>/stock/missing-epcs.txt`).
+ * `M8TRX_STREAM_PLACEMENTS` (`<state>/moves/placements.csv`) · `M8TRX_STREAM_MISSING` (`<state>/stock/missing-epcs.txt`) ·
+ * `M8TRX_STREAM_REUSE_PLAN` (false; a DRY run reads the persisted plan too, to report what the floor guard would swap).
+ *
+ * **Floor only (server lane, 2026-11-21).** A sale takes a unit on a sales-floor fixture; `BR-*` stock never sells until a
+ * move has put it on the floor. [allocate] excludes it; a FROZEN plan that still holds a back-room unit is repaired at send
+ * time by [guardFloor]: the unit is swapped for a floor unit of the same EAN (or dropped), persisted in `<runId>.swaps.csv`.
  */
 object DatedStream {
     private val log = LoggerFactory.getLogger("com.m8trx.twin.connect.DatedStream")
@@ -76,7 +81,6 @@ object DatedStream {
         val units: Int,
         val droppedLines: Int,
         val substitutedLines: Int,
-        val fromBackOfHouse: Int,
         val unitsLeft: Int,
         val visits: Int,
         val revenueUsd: Double,
@@ -174,8 +178,9 @@ object DatedStream {
     }
 
     /**
-     * Allocate the day's baskets to real units. Pure and deterministic: queues per EAN, back-of-house first,
-     * then the floor, each in EPC order; [exclude] (sold or reserved) never sells.
+     * Allocate the day's baskets to real units. Pure and deterministic: queues per EAN of SALES-FLOOR units only, in EPC
+     * order; a back-of-house unit (`BR-*` by its current fixture) is never for sale until a move has put it on the floor,
+     * and [exclude] (sold or reserved) never sells.
      *
      * The basket sampler concentrates on SKUs near the target line price, and a store holds 1–10 units of
      * each, so a busy day exhausts its favorites by mid-afternoon — 45 % of Denver's lines on 2026-10-10. A
@@ -191,7 +196,8 @@ object DatedStream {
         catalog: Map<String, Pair<String, Double>> = emptyMap(),
     ): StorePlan {
         val queues = rows.asSequence().filter { it.epc !in exclude }.distinctBy { it.epc }
-            .sortedWith(compareBy({ !it.backOfHouse }, { it.epc }))
+            .filter { !it.backOfHouse }
+            .sortedBy { it.epc }
             .groupBy { it.ean }
             .mapValues { (_, rs) -> ArrayDeque(rs) }
         // department → EANs with stock, price-sorted (ties by EAN) — the substitute pool
@@ -206,7 +212,6 @@ object DatedStream {
         }
         var dropped = 0
         var substituted = 0
-        var boh = 0
         var units = 0
         val sales = ArrayList<PlannedSale>(day.txns.size)
         day.txns.forEachIndexed { i, t ->
@@ -219,11 +224,7 @@ object DatedStream {
                         if (r != null) substituted++
                     }
                 }
-                if (r == null) {
-                    dropped++
-                } else if (r.backOfHouse) {
-                    boh++
-                }
+                if (r == null) dropped++
                 r?.epc
             }
             if (epcs.isNotEmpty()) {
@@ -239,7 +240,6 @@ object DatedStream {
             units = units,
             droppedLines = dropped,
             substitutedLines = substituted,
-            fromBackOfHouse = boh,
             unitsLeft = queues.values.sumOf { it.size },
             visits = day.visits,
             revenueUsd = day.cents / 100.0,
@@ -298,6 +298,76 @@ object DatedStream {
                 source = units.mapNotNull { it.second?.source }.minByOrNull { it.ordinal },
             )
         }
+    }
+
+    data class Swap(val orig: String, val new: String, val saleId: String)
+
+    const val DROPPED = "DROPPED"
+
+    internal data class Guarded(val sales: List<PlannedSale>, val fresh: List<Swap>)
+
+    /** `<runId>.swaps.csv` (orig_epc,new_epc|DROPPED,sale_id) → orig → new; a missing file is no swaps. */
+    internal fun readSwaps(file: Path): List<Swap> = if (!Files.exists(file)) {
+        emptyList()
+    } else {
+        Files.readAllLines(file).drop(1).filter { it.isNotBlank() }.map { l -> l.split(",").let { Swap(it[0], it[1], it[2]) } }
+    }
+
+    internal fun appendSwaps(file: Path, swaps: List<Swap>) {
+        if (swaps.isEmpty()) return
+        if (!Files.exists(file)) Files.write(file, listOf("orig_epc,new_epc,sale_id"))
+        Files.write(file, swaps.map { "${it.orig},${it.new},${it.saleId}" }, StandardOpenOption.APPEND)
+    }
+
+    /** Apply recorded swaps: the new unit takes the old one's place, DROPPED removes it; a sale left empty goes. */
+    internal fun applySwaps(sales: List<PlannedSale>, swaps: Map<String, String>): List<PlannedSale> = sales.mapNotNull { s ->
+        val e = s.epcs.mapNotNull { epc -> swaps[epc]?.let { n -> n.takeIf { it != DROPPED } } ?: epc.takeIf { it !in swaps } }
+        if (e.isEmpty()) null else s.copy(epcs = e)
+    }
+
+    /**
+     * The send-time floor guard for a FROZEN plan. First applies [existing] swaps, then for every sale for which [isDue]
+     * holds, any unit whose CURRENT fixture in [stock] is back-of-house (and that is not already [sold]) is swapped for a
+     * floor unit of the same EAN at the same store that is not sold, not [reservedElsewhere], not in this plan (before or
+     * after swaps) and not already used; none left = DROPPED. Pure and deterministic (candidates in EPC order).
+     */
+    internal fun guardFloor(
+        frozen: List<PlannedSale>,
+        existing: List<Swap>,
+        stock: Map<String, List<EpcRow>>,
+        sold: Set<String>,
+        reservedElsewhere: Set<String>,
+        isDue: (PlannedSale) -> Boolean,
+    ): Guarded {
+        val applied = applySwaps(frozen, existing.associate { it.orig to it.new })
+        val used = HashSet<String>().apply {
+            frozen.forEach { addAll(it.epcs) }
+            existing.forEach { if (it.new != DROPPED) add(it.new) }
+        }
+        val rowByEpc = stock.values.flatten().associateBy { it.epc }
+        val queues = HashMap<Pair<String, String>, ArrayDeque<String>>()
+        fun next(store: String, ean: String): String? = queues.getOrPut(store to ean) {
+            ArrayDeque(
+                stock[store].orEmpty().asSequence().filter { it.ean == ean && !it.backOfHouse }.map { it.epc }
+                    .filter { it !in sold && it !in reservedElsewhere && it !in used }.sorted().toList(),
+            )
+        }.removeFirstOrNull()?.also { used += it }
+        val fresh = ArrayList<Swap>()
+        val out = applied.mapNotNull { s ->
+            if (!isDue(s)) return@mapNotNull s
+            val e = s.epcs.mapNotNull { epc ->
+                val r = rowByEpc[epc]
+                if (r == null || !r.backOfHouse || epc in sold) {
+                    epc
+                } else {
+                    val n = next(s.store, r.ean)
+                    fresh += Swap(epc, n ?: DROPPED, s.saleId)
+                    n
+                }
+            }
+            if (e.isEmpty()) null else s.copy(epcs = e)
+        }
+        return Guarded(out, fresh)
     }
 
     /** [parts] without the units already sold (the sold-log); a part left with no unit is dropped. */
@@ -377,11 +447,13 @@ object DatedStream {
             sources.missing,
             missing.size,
         )
-        val reused = live && Files.exists(planFile)
+        val reusePlanDry = System.getenv("M8TRX_STREAM_REUSE_PLAN")?.toBooleanStrictOrNull() ?: false
+        val reused = (live || reusePlanDry) && Files.exists(planFile)
+        val swapsFile = stateDir.resolve("$runId.swaps.csv")
         val plans: List<StorePlan> = stores.map { slug ->
             val day = recent.run(slug, date)
             if (day == null) {
-                StorePlan(slug, date, true, emptyList(), 0, 0, 0, 0, 0, 0, 0.0, null, null)
+                StorePlan(slug, date, true, emptyList(), 0, 0, 0, 0, 0, 0.0, null, null)
             } else {
                 allocate(
                     day,
@@ -392,7 +464,35 @@ object DatedStream {
                 )
             }
         }
-        val sales: List<PlannedSale> = if (reused) readPlan(planFile).filter { it.store in stores } else plans.flatMap { it.sales }
+        val allocated: List<PlannedSale> = if (reused) readPlan(planFile).filter { it.store in stores } else plans.flatMap { it.sales }
+        val now = Instant.now()
+        val existingSwaps = readSwaps(swapsFile)
+        // The floor guard: a frozen plan may still hold back-room units; a fresh allocation never does.
+        val guarded = guardFloor(
+            allocated,
+            existingSwaps,
+            stock,
+            priorSold + missing,
+            reservedElsewhere,
+        ) { allowFuture || !it.at.isAfter(now) }
+        val sales: List<PlannedSale> = guarded.sales
+        val storeOf = allocated.associate { it.saleId to it.store }
+        (
+            existingSwaps.map {
+                it to false
+            } + guarded.fresh.map { it to true }
+            ).groupBy { storeOf[it.first.saleId] ?: "?" }.toSortedMap().forEach { (st, l) ->
+            log.info(
+                "  FLOOR GUARD {}: back-room units swapped {} · dropped {} (this run: swapped {} · dropped {})",
+                st,
+                l.count { it.first.new != DROPPED },
+                l.count { it.first.new == DROPPED },
+                l.count { it.second && it.first.new != DROPPED },
+                l.count { it.second && it.first.new == DROPPED },
+            )
+        }
+        val emptied = allocated.count { a -> sales.none { it.saleId == a.saleId } }
+        if (emptied > 0) log.info("  FLOOR GUARD: {} sale(s) left with no floor unit — skipped", emptied)
         if (reused) log.info("reusing the persisted plan {} ({} sales) — the allocation is frozen at first live run", planFile, sales.size)
 
         plans.forEach { p ->
@@ -400,11 +500,10 @@ object DatedStream {
                 log.info("  {} CLOSED on {} (story holiday) — nothing to stream", p.store, p.date)
             } else {
                 log.info(
-                    "  {} txn={} units={} (BOH {}) substituted={} dropped={} visits={} revenue≈\${} hours {}..{} · units left {} → runway {} days",
+                    "  {} txn={} units={} (floor only) substituted={} dropped={} visits={} revenue≈\${} hours {}..{} · units left {} → runway {} days",
                     p.store,
                     p.sales.size,
                     p.units,
-                    p.fromBackOfHouse,
                     p.substitutedLines,
                     p.droppedLines,
                     p.visits,
@@ -445,7 +544,6 @@ object DatedStream {
         val items: List<Item> = (parts.map { SaleItem(it) } + ops).sortedBy { it.at }
         val sent = if (Files.exists(sentFile)) Files.readAllLines(sentFile).map { it.trim() }.toSet() else emptySet()
         fun isSent(it: Item) = alreadySent(it.id, (it as? SaleItem)?.part?.sale?.saleId, sent)
-        val now = Instant.now()
         val due = items.filter { !isSent(it) && (allowFuture || !it.at.isAfter(now)) }
         val future = items.count { !isSent(it) && !allowFuture && it.at.isAfter(now) }
         val toSend = if (limit != null) due.take(limit) else due
@@ -469,7 +567,8 @@ object DatedStream {
         }
 
         Files.createDirectories(stateDir)
-        if (!reused) writePlan(planFile, sales)
+        if (!reused) writePlan(planFile, allocated)
+        appendSwaps(swapsFile, guarded.fresh)
         val config = ConnectConfig.fromEnv()
         val driver = InboundPushDriver(WebhookClient(config), ConnectClient(config))
         var ok = 0
@@ -621,9 +720,13 @@ object DatedStream {
     /** EPCs held by OTHER dates' persisted plans — reserved even before they are sent, so two dates never share a unit. */
     private fun reservedByOtherPlans(stateDir: Path, own: Path): Set<String> {
         if (!Files.isDirectory(stateDir)) return emptySet()
-        return Files.list(stateDir).use { s ->
-            s.filter { it.fileName.toString().endsWith(".plan.csv") && it != own }.toList()
-        }.flatMap { readPlan(it).flatMap { p -> p.epcs } }.toSet()
+        val ownSwaps = own.resolveSibling(own.fileName.toString().removeSuffix(".plan.csv") + ".swaps.csv")
+        val files = Files.list(stateDir).use { it.toList() }
+        val plans = files.filter { it.fileName.toString().endsWith(".plan.csv") && it != own }.flatMap { readPlan(it).flatMap { p -> p.epcs } }
+        // an EPC swapped in for a back-room unit is spoken for between the choice and the send (once sent it is in the sold-log)
+        val swapped = files.filter { it.fileName.toString().endsWith(".swaps.csv") && it != ownSwaps }
+            .flatMap { readSwaps(it) }.map { it.new }.filter { it != DROPPED }
+        return (plans + swapped).toSet()
     }
 
     internal fun writePlan(file: Path, sales: List<PlannedSale>) {
