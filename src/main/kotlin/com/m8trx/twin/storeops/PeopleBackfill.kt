@@ -73,7 +73,14 @@ object PeopleBackfill {
         if (date == firstLive) gap(day, sentKeys) else day
 
     /** Every reason the run is refused (empty = go). Live takes exactly one store, named by [confirm]. */
-    fun refusals(live: Boolean, stores: List<String>, confirm: String?, bearerPresent: Boolean): List<String> {
+    fun refusals(
+        live: Boolean,
+        stores: List<String>,
+        confirm: String?,
+        bearerPresent: Boolean,
+        firstLiveOverridden: Boolean = false,
+        datesGiven: Boolean = true,
+    ): List<String> {
         val out = ArrayList<String>()
         if (stores.isEmpty()) out += "no stores selected"
         stores.forEach { s ->
@@ -93,6 +100,11 @@ object PeopleBackfill {
                 out += "$CONFIRM_ENV ($confirm) does not match the store of the run (${stores.joinToString(",")})"
             }
             if (!bearerPresent) out += "${PeopleLiveGate.BEARER_ENV} is not set (the service key, scope vision_ai:ingest)"
+            if (firstLiveOverridden) {
+                out +=
+                    "M8TRX_PEOPLE_BACKFILL_FIRST_LIVE cannot be overridden on a live run: the first live day is $FIRST_LIVE_DAY"
+            }
+            if (!datesGiven) out += "a LIVE backfill requires M8TRX_PEOPLE_BACKFILL_DATES=<from>..<to> (no default range is ever sent)"
         }
         return out
     }
@@ -146,4 +158,37 @@ object PeopleBackfill {
         it.kind == "person_begin" &&
             it.dueMs < floorMs
     }
+
+    /** How many ids of [slug]'s [date] are in the live ledgers ([ids] is every id found under the ledger dir, of every group and store dir). */
+    fun ledgerLines(ids: Set<String>, slug: String, date: LocalDate): Int {
+        val prefix = "ppl-$slug-${PeopleRest.stamp(date)}-"
+        return ids.count { it.startsWith(prefix) }
+    }
+
+    /**
+     * Why the first live day of [slug] may not be sent (empty = ok): the store has no live ledger line for the day (the gap would be the whole day,
+     * or the ledgers were not fetched), or [futureBegins] gap sessions begin after now (the live run is still going to send them).
+     */
+    fun gapRefusals(slug: String, date: LocalDate, ledgerLines: Int, futureBegins: Int): List<String> {
+        val out = ArrayList<String>()
+        if (ledgerLines ==
+            0
+        ) {
+            out +=
+                "$slug $date: no live ledger line for this store and day (check every ledger dir, incl. the old group dirs kr/fr and people-rest/live)"
+        }
+        if (futureBegins >
+            0
+        ) {
+            out += "$slug $date: $futureBegins gap sessions begin in the future; the live run will send them. Wait until the live run has ended"
+        }
+        return out
+    }
+
+    const val SINGLE_LEDGER = "sent-ledger.tsv"
+    const val BATCH_LEDGER = "batch-sent-ledger.tsv"
+
+    /** The ledger of the OTHER mode in [dir] when it exists: a live run must not switch mode midway (the two never see each other's ledger). */
+    fun otherModeLedger(dir: Path, mode: String): Path? =
+        dir.resolve(if (mode == "batch") SINGLE_LEDGER else BATCH_LEDGER).takeIf { Files.exists(it) }
 }

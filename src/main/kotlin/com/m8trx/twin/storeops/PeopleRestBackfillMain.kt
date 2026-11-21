@@ -24,7 +24,13 @@ private val log = LoggerFactory.getLogger("com.m8trx.twin.storeops.PeopleRestBac
  * Env: `_STORES` (comma subset; default all nine) · `_FROM` (2026-10-05) · `_FIRST_LIVE` (2026-11-20; that day is gap-only) ·
  * `_LEDGER_DIR` (a directory holding the live `sent-ledger.tsv` files at any depth; default `out/people-rest-live-ledgers`) · `_CAP_PER_MIN`
  * (default 60, max 600) · `_OUT` (out/people-rest-backfill; the run is in `<out>/<slug>/`) · `_HOLD_FILE` (`$M8TRX_OPS_DIR/people-HOLD`) ·
- * `M8TRX_PEOPLE_REST_BASE_URL`. Exit: 0 done, 1 halted, 3 refused, 6 HOLD.
+ * `M8TRX_PEOPLE_REST_BASE_URL` · `_DATES=<from>..<to>` (required when LIVE) · `_MODE=single|batch`.
+ *
+ * LIVE rules: `_FIRST_LIVE` cannot be overridden (the first live day is 2026-11-20 for all nine); for 11-20 every selected store needs live-ledger
+ * lines (all ledger dirs under `_LEDGER_DIR`, including the old group dirs kr/fr and people-rest/live) and no gap session may begin in the future;
+ * a run refuses when the other mode's ledger exists in the same out dir. CONCURRENCY: a backfill runs beside the live people runs on the same key
+ * (the server lane agreed): its own requests stay at or under 60 a minute and strictly one at a time, and the live runs keep their own caps.
+ * Exit: 0 done, 1 halted, 3 refused, 6 HOLD.
  */
 object PeopleRestBackfillMain {
     private fun env(k: String) = System.getenv(k)?.takeIf { it.isNotBlank() }
@@ -50,7 +56,14 @@ object PeopleRestBackfillMain {
         val out = Path.of(env("M8TRX_PEOPLE_BACKFILL_OUT") ?: "out/people-rest-backfill")
         val ledgerDir = Path.of(env("M8TRX_PEOPLE_BACKFILL_LEDGER_DIR") ?: "out/people-rest-live-ledgers")
         val bearer = env(PeopleLiveGate.BEARER_ENV)
-        val refusals = PeopleBackfill.refusals(live, stores, env(PeopleBackfill.CONFIRM_ENV), bearer != null)
+        val refusals = PeopleBackfill.refusals(
+            live,
+            stores,
+            env(PeopleBackfill.CONFIRM_ENV),
+            bearer != null,
+            firstLiveOverridden = env("M8TRX_PEOPLE_BACKFILL_FIRST_LIVE") != null,
+            datesGiven = range != null,
+        )
         if (refusals.isNotEmpty()) return refuse(refusals)
         PeoplePace.gapMs(cap)
         if (mode == "batch" &&
@@ -101,6 +114,19 @@ object PeopleRestBackfillMain {
             }
         }
         report(rows, firstLive, cap)
+        val gapProblems = ArrayList<String>()
+        if (firstLive in dates) {
+            val now = System.currentTimeMillis()
+            stores.forEach { slug ->
+                val n = PeopleBackfill.ledgerLines(sentIds, slug, firstLive)
+                val gapLines = rows.filter { it.slug == slug && it.date == firstLive }.flatMap { it.lines }
+                val future = gapLines.count { it.kind == "person_begin" && it.dueMs > now }
+                println("live ledger lines $slug $firstLive: $n; gap sessions beginning in the future: $future")
+                gapProblems += PeopleBackfill.gapRefusals(slug, firstLive, n, future)
+            }
+            if (live && gapProblems.isNotEmpty()) return refuse(gapProblems)
+            gapProblems.forEach { println("WARNING (a live run would refuse): $it") }
+        }
         if (mode == "batch") {
             val bs = PeopleBatch.batches(rows.flatMap { it.lines })
             println(
@@ -131,6 +157,11 @@ object PeopleRestBackfillMain {
         }
         val slug = stores.single()
         val dir = out.resolve(slug)
+        PeopleBackfill.otherModeLedger(dir, mode)?.let {
+            return refuse(
+                listOf("$it exists: this out dir was run in the other mode; use another M8TRX_PEOPLE_BACKFILL_OUT or finish it in that mode"),
+            )
+        }
         if (mode == "batch") {
             val lines = rows.filter { it.slug == slug }.flatMap { it.lines }
             return runBatch(slug, lines, dir, out, cap, bearer!!)

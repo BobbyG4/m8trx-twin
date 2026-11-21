@@ -110,6 +110,38 @@ fun main() {
 
     batchSection()
 
+    println("  live guards: ledger per store, first-live override, dates, mode switch")
+    run {
+        val live = PeopleBackfill.FIRST_LIVE_DAY
+        val ids =
+            setOf("ppl-dec-kr-seoul-20261120-1-b", "ppl-dec-kr-seoul-20261120-1-c", "ppl-dec-kr-seoul-20261119-9-b", "ppl-dec-kr-busan-20261120-5-b")
+        check(PeopleBackfill.ledgerLines(ids, "dec-kr-seoul", live) == 2) { "ledger lines of Seoul on 11-20 must be 2" }
+        check(PeopleBackfill.ledgerLines(ids, "dec-us-nyc", live) == 0) { "NYC has no ledger line" }
+        check(PeopleBackfill.gapRefusals("dec-us-nyc", live, 0, 0).isNotEmpty()) { "a store without ledger lines must be refused" }
+        check(PeopleBackfill.gapRefusals("dec-kr-seoul", live, 2, 3).isNotEmpty()) { "future gap sessions must be refused" }
+        check(PeopleBackfill.gapRefusals("dec-kr-seoul", live, 2, 0).isEmpty()) { "ledger lines and no future session must go" }
+        val nyc = "dec-us-nyc"
+        check(PeopleBackfill.refusals(true, listOf(nyc), nyc, true, firstLiveOverridden = true).isNotEmpty()) {
+            "live with FIRST_LIVE set must refuse"
+        }
+        check(PeopleBackfill.refusals(false, listOf(nyc), null, false, firstLiveOverridden = true).isEmpty()) { "dry may override FIRST_LIVE" }
+        check(PeopleBackfill.refusals(true, listOf(nyc), nyc, true, datesGiven = false).isNotEmpty()) { "live without DATES must refuse" }
+        check(PeopleBackfill.refusals(true, listOf(nyc), nyc, true, datesGiven = true).isEmpty()) { "live with DATES must go" }
+        val md = OUT.resolve("mode")
+        Files.createDirectories(md)
+        Files.deleteIfExists(md.resolve(PeopleBackfill.SINGLE_LEDGER))
+        Files.deleteIfExists(md.resolve(PeopleBackfill.BATCH_LEDGER))
+        check(PeopleBackfill.otherModeLedger(md, "batch") == null && PeopleBackfill.otherModeLedger(md, "single") == null) {
+            "empty dir has no other mode"
+        }
+        Files.writeString(md.resolve(PeopleBackfill.SINGLE_LEDGER), "x\n")
+        check(PeopleBackfill.otherModeLedger(md, "batch") != null) { "batch must see the single ledger" }
+        check(PeopleBackfill.otherModeLedger(md, "single") == null) { "single must not trip on its own ledger" }
+        Files.deleteIfExists(md.resolve(PeopleBackfill.SINGLE_LEDGER))
+        Files.writeString(md.resolve(PeopleBackfill.BATCH_LEDGER), "x\n")
+        check(PeopleBackfill.otherModeLedger(md, "single") != null) { "single must see the batch ledger" }
+    }
+
     println("  gate")
     val s = "dec-us-nyc"
     check(PeopleBackfill.refusals(false, PeopleRest.STORES, null, false).isEmpty()) { "dry must go with nothing set" }
