@@ -96,20 +96,26 @@ class ResetProgress(
  *    back room), which [com.m8trx.twin.ops.StoreStock.load] reads as overriding the unit's fixture.
  * After the run, StoreStock.load(chain, state, slug) therefore equals the plan's post-reset placement of every unit.
  */
+fun interface RunBooks {
+    fun record(item: SendItem)
+}
+
 class ResetBooks(
     private val stateDir: Path,
     private val slug: String,
     private val date: LocalDate,
     /** Zone id to fixture code (the keys export's floor zones), to book a `to_zone_id` move at its fixture code. */
     private val zoneCode: Map<String, String> = emptyMap(),
+    /** The receive EPC ledger's name prefix: `receive-reset` for the reset, `receive-delivery` for the daily delivery (never a name the hourly plan reads). */
+    ledgerPrefix: String = "receive-reset",
     private val rackOf: (String) -> String,
-) {
+) : RunBooks {
     private val stockFile = ReceiveStock.stockFile(stateDir.resolve("receive"))
-    private val epcLedger = stateDir.resolve("receive/receive-reset-${date.toString().replace("-", "")}.sent")
+    private val epcLedger = stateDir.resolve("receive/$ledgerPrefix-${date.toString().replace("-", "")}.sent")
     private val placementsFile = stateDir.resolve("moves/placements.csv")
     private val known = HashSet(ReceiveStock.readStock(stockFile).map { it.epc })
 
-    fun record(item: SendItem) {
+    override fun record(item: SendItem) {
         when (item.kind) {
             "receive" -> {
                 val rows = item.epcs.filter { known.add(it) }.map {

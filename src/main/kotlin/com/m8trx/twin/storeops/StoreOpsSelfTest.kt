@@ -507,8 +507,8 @@ private fun noNetwork() {
     check(
         callers.map {
             Path.of(it).fileName.toString()
-        } == listOf("ResetLiveMain.kt"),
-    ) { "LiveSender.create is called only by the live reset entry, got $callers" }
+        }.toSet() == setOf("ResetLiveMain.kt", "DailyDeliveryMain.kt"),
+    ) { "LiveSender.create is called only by the live reset and live delivery entries, got $callers" }
     // and the storeops package imports no http/nats class except LiveSender
     val offenders = Files.list(Path.of("src/main/kotlin/com/m8trx/twin/storeops")).use { s ->
         s.filter { it.toString().endsWith(".kt") && !it.endsWith("LiveSender.kt") && !it.endsWith("StoreOpsSelfTest.kt") }
