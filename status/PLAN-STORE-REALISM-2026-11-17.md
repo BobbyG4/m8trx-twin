@@ -1422,7 +1422,7 @@ store's owner to `storeday` (no hourly sales): only prep an OPEN store right bef
 | Paris | 67,556 / 491,193 | 1,569 / 11,239 | 69,125 / 502,432 | 6,331 | equal / rolled 11-22 03:59 |
 | Lille | 30,523 / 169,916 | 872 / 5,047 | 31,395 / 174,963 | 2,367 | equal / rolled 11-22 05:00 |
 | Lyon | 29,087 / 157,011 | 818 / 4,461 | 29,905 / 161,472 | 2,207 | equal / rolled 11-22 05:56 |
-| Bordeaux | 16,679 / 84,786 | 445 / 2,230 | 17,124 / 87,016 | 1,246 | pending |
+| Bordeaux | 16,679 / 84,786 | 445 / 2,230 | 17,124 / 87,016 | 1,246 | equal / rolled 11-22 06:22 |
 | Marseille | running from 06:21 | | | 1,094 | |
 
 Then Bordeaux, Marseille, NYC, SF. Pace 120/min, 60/min while a restock receives or moves (B/W rule; #56). Per-request timing
