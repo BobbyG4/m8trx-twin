@@ -4,6 +4,7 @@ import com.m8trx.twin.connect.model.ConnectMappers
 import com.m8trx.twin.storeday.PeopleRest
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Instant
 import java.time.LocalDate
 import kotlin.system.exitProcess
 
@@ -270,6 +271,20 @@ private fun batchSection() {
     check(t.calls.map { it.first } == bs.map { it.path }) { "wire order differs from the plan" }
     check(r.startedAt.zipWithNext().all { (a, b) -> b - a >= 1000 }) { "requests closer than 1 s apart (over 60 a minute)" }
     check(PeopleLedger(led).size == all.size) { "ledger has ${PeopleLedger(led).size} items, expected ${all.size}" }
+
+    // one BATCH-REQ line per request in batch-requests.tsv, sent <= answered, append-only
+    val reqDir = OUT.resolve("batch-req")
+    Files.createDirectories(reqDir)
+    val reqFile = reqDir.resolve(PeopleBatchRunner.REQUESTS_FILE)
+    Files.deleteIfExists(reqFile)
+    val tq = FakeBatchTransport()
+    val rq = PeopleBatchRunner(bs, tq, PeopleLedger(null), 60, clock, sleeper, { false }, reqDir)
+    check(rq.run() == PeopleBatchRunner.End.DONE) { "request-log run did not finish: ${rq.haltReason}" }
+    val rows = Files.readAllLines(reqFile).map { it.split('\t') }
+    check(rows.size == tq.calls.size && rows.size == rq.requests) { "BATCH-REQ rows ${rows.size}, requests ${tq.calls.size}" }
+    check(rows.all { it.size == 8 && Instant.parse(it[0]) <= Instant.parse(it[1]) }) { "BATCH-REQ needs 8 fields and sent <= answered: $rows" }
+    check(rows.map { it[7].toInt() } == (1..rows.size).toList() && rows.map { it[4] } == bs.map { it.kind }) { "BATCH-REQ seq or kind wrong" }
+    check(rows.all { it[3] == "200" }) { "BATCH-REQ status wrong: ${rows.map { it[3] }}" }
 
     // a failed item (call 1 = the 20 remaining begins, index 3 = visit 104) halts, ledgers only the confirmed items, and a resume sends the rest once
     Files.deleteIfExists(led)
