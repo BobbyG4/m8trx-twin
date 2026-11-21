@@ -100,4 +100,38 @@ object PeopleBackfill {
     fun begins(ls: List<PeopleRest.Line>) = ls.count { it.kind == "person_begin" }
 
     fun count(ls: List<PeopleRest.Line>, kind: String) = ls.count { it.kind == kind }
+
+    const val BATCH_SIZE = 100
+
+    /** Requests if the batch routes took [size] items each (sizing only; the strict per-visit order is NOT kept across batches). */
+    fun batchedRequests(ls: List<PeopleRest.Line>, size: Int = BATCH_SIZE): Int =
+        listOf("person_begin", "person_impression", "person_close").sumOf { (count(ls, it) + size - 1) / size }
+
+    /**
+     * Every ordering or identity problem of a plan, empty = none: a trackingId or derived UUID used twice; an impression whose firstLook is
+     * before its begin or whose lastDwell is after its close (the sender would put it after the close); a close before its begin.
+     */
+    fun problems(lines: List<PeopleRest.Line>): List<String> {
+        val out = ArrayList<String>()
+        val tids = lines.filter { it.kind == "person_begin" }.map { PeopleWindow.sessionKey(it.id) }
+        if (tids.toSet().size != tids.size) out += "a trackingId is used by two visits"
+        val uuids = tids.map { PeopleRest.sessionUuid(it) }
+        if (uuids.toSet().size != uuids.size) out += "two trackingIds derive the same UUID"
+        lines.groupBy { PeopleWindow.sessionKey(it.id) }.forEach { (k, ls) ->
+            val b = ls.firstOrNull { it.kind == "person_begin" }
+            val c = ls.firstOrNull { it.kind == "person_close" }
+            if (b == null || c == null) {
+                out += "$k: begin or close missing"
+            } else {
+                if (c.dueMs < b.dueMs) out += "$k: close before begin"
+                ls.filter { it.kind == "person_impression" }.forEach { i ->
+                    val first =
+                        i.body.path("firstLook").asText().takeIf { it.isNotBlank() }?.let { java.time.Instant.parse(it).toEpochMilli() } ?: b.dueMs
+                    if (first < b.dueMs) out += "${i.id}: firstLook before the begin"
+                    if (i.dueMs > c.dueMs) out += "${i.id}: ends after the close (would be sent after it)"
+                }
+            }
+        }
+        return out
+    }
 }

@@ -88,6 +88,16 @@ fun main() {
     check(PeopleBackfill.sessionKeys(ids) == setOf("ppl-x-20261120-1", "ppl-x-20261120-2")) { "session keys wrong" }
     check(PeopleBackfill.sentIds(OUT.resolve("nope")).isEmpty()) { "missing dir must be empty" }
 
+    println("  batch sizing and plan problems")
+    check(PeopleBackfill.batchedRequests(day, 100) == 3) { "6 visits fit one batch per route: ${PeopleBackfill.batchedRequests(day, 100)}" }
+    check(PeopleBackfill.batchedRequests(day, 2) == 3 + 3 + 3 || PeopleBackfill.batchedRequests(day, 2) > 3) {
+        "small batches must need more requests"
+    }
+    check(PeopleBackfill.batchedRequests(emptyList()) == 0) { "an empty plan needs no request" }
+    check(PeopleBackfill.problems(day).isEmpty()) { "the fixture plan has problems: ${PeopleBackfill.problems(day)}" }
+    check(PeopleBackfill.problems(day + session(1, 0)).isNotEmpty()) { "a repeated trackingId must be a problem" }
+    check(PeopleBackfill.problems(day.filter { it.kind != "person_close" }).isNotEmpty()) { "a visit without a close must be a problem" }
+
     println("  gate")
     val s = "dec-us-nyc"
     check(PeopleBackfill.refusals(false, PeopleRest.STORES, null, false).isEmpty()) { "dry must go with nothing set" }

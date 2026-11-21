@@ -85,6 +85,8 @@ object PeopleRestBackfillMain {
             }
         }
         report(rows, firstLive, cap)
+        val bad = checkIdentity(rows, sentIds)
+        if (bad.isNotEmpty()) return refuse(bad.take(20))
         env("M8TRX_PEOPLE_BACKFILL_REPORT")?.let { writeCsv(Path.of(it), rows) }
         if (!live) {
             println("DRY: ${PeopleBackfill.LIVE_ENV} is not true; nothing was sent, no client was built, no plan file was written.")
@@ -100,8 +102,13 @@ object PeopleRestBackfillMain {
             return 6
         }
         Files.createDirectories(dir)
-        FileChannel.open(dir.resolve("lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
-            val lock = ch.tryLock() ?: return refuse(listOf("another backfill run holds ${dir.resolve("lock")}"))
+        Files.createDirectories(out)
+        FileChannel.open(out.resolve("backfill.lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE).use { ch ->
+            val lock =
+                ch.tryLock()
+                    ?: return refuse(
+                        listOf("another backfill run holds ${out.resolve("backfill.lock")} (one backfill request at a time, across stores)"),
+                    )
             lock.use {
                 PeopleLivePlan.write(dir.resolve("plan.jsonl"), items)
                 val transport = PeopleRestHttp.create(true, env("M8TRX_PEOPLE_REST_BASE_URL") ?: PeopleRestHttp.DEFAULT_BASE, bearer!!)
@@ -143,6 +150,21 @@ object PeopleRestBackfillMain {
         Files.writeString(file, sb.toString())
     }
 
+    /** Ids and order across all days and stores, plus against the live ledgers (the planned lines must not be in them). */
+    private fun checkIdentity(rows: List<DayRow>, sentIds: Set<String>): List<String> {
+        val out = ArrayList<String>()
+        val allBegins = rows.flatMap { r -> r.lines.filter { it.kind == "person_begin" }.map { PeopleWindow.sessionKey(it.id) } }
+        val uuids = allBegins.map { PeopleRest.sessionUuid(it) }.toSet().size
+        println("identity: ${allBegins.size} visits, ${allBegins.toSet().size} distinct trackingIds, $uuids distinct UUIDs")
+        if (allBegins.toSet().size != allBegins.size) out += "a trackingId repeats across days or stores"
+        val clash = rows.flatMap { it.lines }.count { it.id in sentIds }
+        println("identity: planned lines already in a live ledger: $clash")
+        if (clash > 0) out += "$clash planned lines are already in a live ledger (would be counted twice)"
+        rows.forEach { r -> PeopleBackfill.problems(r.lines).forEach { out += "${r.slug} ${r.date}: $it" } }
+        println("order: ${if (out.isEmpty()) "every visit is begin <= impressions <= close" else "${out.size} problems"}")
+        return out
+    }
+
     private fun report(rows: List<DayRow>, firstLive: LocalDate, cap: Int) {
         println("people-rest BACKFILL plan (store-local days, full day 00:00-23:59; $firstLive gap-only)")
         println("%-16s %-10s %-9s %-4s %7s %12s %7s %7s".format("store", "date", "weekday", "mode", "visits", "impressions", "closes", "partial"))
@@ -171,6 +193,24 @@ object PeopleRestBackfillMain {
             all += ev
             println("%-16s %6d %12.1f %12.1f %9d".format(s, rs.size, wd.average(), we.average(), ev))
         }
+        println("--- requests per site (2 per visit + 1 per impression; batched = sizing at ${PeopleBackfill.BATCH_SIZE} items per request) ---")
+        println("%-16s %8s %12s %10s %10s".format("store", "visits", "impressions", "requests", "batched"))
+        var tv = 0
+        var ti = 0
+        var tr = 0
+        var tb = 0
+        rows.groupBy { it.slug }.forEach { (s, rs) ->
+            val ls = rs.flatMap { it.lines }
+            val v = PeopleBackfill.begins(ls)
+            val i = PeopleBackfill.count(ls, "person_impression")
+            val b = rs.sumOf { PeopleBackfill.batchedRequests(it.lines) }
+            tv += v
+            ti += i
+            tr += ls.size
+            tb += b
+            println("%-16s %8d %12d %10d %10d".format(s, v, i, ls.size, b))
+        }
+        println("%-16s %8d %12d %10d %10d  (batched: per store-day)".format("all", tv, ti, tr, tb))
         println("total events: $all; at $cap/min = %.1f hours".format(all / cap / 60.0))
     }
 }
