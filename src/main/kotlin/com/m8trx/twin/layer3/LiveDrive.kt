@@ -437,13 +437,28 @@ object LiveDrive {
         return "%dh%02dm%02ds".format(s / 3600, (s % 3600) / 60, s % 60)
     }
 
+    /**
+     * The generator sites: [all] (or the explicit `M8TRX_LIVE_SITES` list) without the livefloor stores. A store named in BOTH explicit lists is a
+     * refusal; when `M8TRX_LIVE_SITES` is unset (every store) the floor stores are simply taken out of it.
+     */
+    fun generatorSites(all: List<String>, explicit: List<String>?, floor: List<String>): List<String> {
+        val both = explicit.orEmpty().filter { it in floor }
+        require(both.isEmpty()) { "$both is in both M8TRX_LIVE_SITES (generator) and M8TRX_LIVE_FLOOR_STORES (livefloor); a store takes one source" }
+        return all.filter { it !in floor }
+    }
+
     // ── entry ───────────────────────────────────────────────────────────────────────────────────────────────────────
 
     fun main() {
         val keys = ChainKeys.load(Path.of(System.getenv("M8TRX_CHAIN_DIR") ?: "reference/data/chain").resolve(ChainKeys.DEFAULT_PATH.fileName))
         // a bad setting (speed, scale above the cap, shift, sites) is a refusal, not a crash: exit 3, which the unit never restarts
+        val floorStores = com.m8trx.twin.livefloor.LiveFloorDrive.stores()
         val s = try {
-            Settings.fromEnv(keys)
+            val all = Settings.fromEnv(keys)
+            val explicit = System.getenv("M8TRX_LIVE_SITES")?.split(",")?.map {
+                it.trim()
+            }?.filter { it.isNotEmpty() }?.takeIf { it != listOf("all") }
+            all.copy(sites = generatorSites(all.sites, explicit, floorStores))
         } catch (e: IllegalArgumentException) {
             log.error("REFUSING: {}", e.message)
             exitProcess(3)
@@ -451,7 +466,33 @@ object LiveDrive {
             log.error("REFUSING: {}", e.message)
             exitProcess(3)
         }
+        // every floor setting that needs no connection is checked HERE, before either path starts: a bad one refuses the whole start (exit 3),
+        // so Denver never starts beside a floor config that would later have to kill it
+        val floorProblems = com.m8trx.twin.livefloor.LiveFloorDrive.validate(s, keys)
+        if (floorProblems.isNotEmpty()) {
+            floorProblems.forEach { log.error("REFUSING: {}", it) }
+            exitProcess(3)
+        }
+        if (floorStores.isNotEmpty() && s.live && s.holdFile != null && Files.exists(s.holdFile)) {
+            log.error("REFUSING: HOLD is set ({}) — the box publishes nothing until resume", s.holdFile)
+            exitProcess(6)
+        }
         val siteIds = DatedStream.readSiteIds(s.chainDir.resolve("site_ids.csv"))
+        // M8TRX_LIVE_FLOOR_STORES: those stores get the walking model on the xovis-only subjects, in a thread beside the generator sites below,
+        // which run exactly as they always did (the sites list already excludes the floor stores)
+        val floor = floorStores.takeIf { it.isNotEmpty() }?.let { st ->
+            // a daemon: if the generator's main thread dies the process exits exactly as it always did; a normal end joins it below; SIGTERM
+            // runs the floor's own shutdown hook, which evicts everyone still on the floor
+            Thread({
+                com.m8trx.twin.livefloor.LiveFloorDrive.run(s, keys, siteIds)
+            }, "live-floor").also { it.isDaemon = true }.also { it.start() }.also { _ -> log.info("livefloor stores: {}", st) }
+        }
+        if (s.sites.isNotEmpty()) generate(s, keys, siteIds)
+        floor?.join()
+    }
+
+    /** The generator sites, exactly as before the floor feed existed. */
+    private fun generate(s: Settings, keys: ChainKeys, siteIds: Map<String, String>) {
         val now = System.currentTimeMillis()
         val saved = loadState(s, now)
         log.info("═══ LiveDrive ═══ {} live={}", s.describe(), s.live)

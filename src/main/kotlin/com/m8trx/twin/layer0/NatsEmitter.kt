@@ -43,7 +43,7 @@ class NatsEmitter(private val config: TwinConfig, private val mapper: ObjectMapp
         val bytes = mapper.writeValueAsBytes(envelope)
 
         val legacy = "area.${config.spaceIdNoHyphens}.$eventType"
-        val modern = "m8trx.${config.tenantId}.${config.siteId}.$domain.$eventType"
+        val modern = modernSubject(config.tenantId, config.siteId, domain, eventType)
 
         conn.publish(legacy, bytes)
         conn.publish(modern, bytes)
@@ -54,7 +54,23 @@ class NatsEmitter(private val config: TwinConfig, private val mapper: ObjectMapp
     fun close() {
         conn.close()
     }
+
+    companion object {
+        /** The one place the `m8trx.<tenant>.<site>.<domain>.<type>` subject is built. */
+        fun modernSubject(tenantId: String, siteId: String, domain: String, eventType: String): String = "m8trx.$tenantId.$siteId.$domain.$eventType"
+
+        /** The xovis-domain subject of [eventType] (`objLocation` / `objEviction`): the domain comes from the same table [publish] uses. */
+        fun xovisSubject(tenantId: String, siteId: String, eventType: String): String =
+            modernSubject(tenantId, siteId, natsDomain(eventType), eventType)
+
+        /** The envelope bytes exactly as [publish] puts them on the wire. */
+        fun <T : Any> envelopeBytes(mapper: ObjectMapper, areaId: String?, eventType: String, ts: Long, id: String, body: T): ByteArray =
+            mapper.writeValueAsBytes(NatsEnvelope(type = eventType, ts = ts, id = id, areaId = areaId, body = body))
+    }
 }
+
+/** The domain tag of an event type (`objLocation` -> `xovis`), as [NatsEmitter.publish] callers pass it. */
+fun natsDomain(eventType: String): String = domain(eventType)
 
 /** Domain tag per AreaEventPublisher.eventDomain() */
 private fun domain(eventType: String): String = when (eventType) {
