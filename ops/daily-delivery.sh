@@ -30,6 +30,11 @@ export M8TRX_DELIVERY_SITES="$SLUG"
 export M8TRX_DELIVERY_DATE="$DATE"
 export M8TRX_RESET_BACKROOM_COVER_DAYS="${M8TRX_RESET_BACKROOM_COVER_DAYS:-7}"
 export M8TRX_RESET_BACKROOM_CASE_PACK="${M8TRX_RESET_BACKROOM_CASE_PACK:-1}"
+# The rack lookup (/spatial/identity) reads with M8TRX_TWIN_BEARER, and that key is not scoped to every store (Busan answered 403
+# SITE_ACCESS_DENIED on 2026-11-22), no BR-nn zone resolves, and the run refuses. Read with the service key, as the reset's box script does.
+if [[ -n "${M8TRX_TWIN_SERVICE_BEARER:-}" ]]; then
+  export M8TRX_TWIN_BEARER="$M8TRX_TWIN_SERVICE_BEARER"
+fi
 if [[ "${LIVE:-0}" == "1" ]]; then
   export M8TRX_DELIVERY_LIVE=true
   export M8TRX_DELIVERY_CONFIRM="$SLUG"
