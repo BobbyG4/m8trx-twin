@@ -1,0 +1,10 @@
+[Unit]
+Description=m8trx-twin daily delivery timer for dec-kr-seoul (08:00:30 Asia/Seoul, just after the hourly pass takes the lock)
+
+[Timer]
+OnCalendar=*-*-* 08:00:30 Asia/Seoul
+Unit=m8trx-twin-delivery@dec-kr-seoul.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

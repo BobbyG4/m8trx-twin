@@ -1,0 +1,10 @@
+[Unit]
+Description=m8trx-twin daily delivery timer for dec-fr-lyon (08:00:30 Europe/Paris, just after the hourly pass takes the lock)
+
+[Timer]
+OnCalendar=*-*-* 08:00:30 Europe/Paris
+Unit=m8trx-twin-delivery@dec-fr-lyon.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=m8trx-twin daily delivery timer for dec-us-sf (08:00:30 America/Los_Angeles, just after the hourly pass takes the lock)
+
+[Timer]
+OnCalendar=*-*-* 08:00:30 America/Los_Angeles
+Unit=m8trx-twin-delivery@dec-us-sf.service
+Persistent=false
+
+[Install]
+WantedBy=timers.target
