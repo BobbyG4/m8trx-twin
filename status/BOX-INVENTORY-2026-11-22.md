@@ -74,3 +74,9 @@ Rows 8 and 9 are the only items outside systemd that are steady feeds. The clean
 - Drop-in `m8trx-twin-people@{kr,us-east,us-west,fr}.service.d/hold-is-success.conf`: `SuccessExitStatus=6` (a hold is not a failure; fr included for the same reason, not yet exercised; the running `@fr` is unaffected).
 - Stale `people-backfill/backfill.lock` deleted.
 - Not done, waits until after 23:59 KST: the hold-file change (who/why in `people-HOLD`) to the runner, because two hand-started copies still run the script.
+
+## 7. Done 2026-11-23 00:03 KST: the hold records who/when/why
+
+- New `$OPS/people-hold.sh "<reason>" [who]` writes `people-HOLD` as `who / when (UTC + KST) / why` (refuses if one exists); `--release "<why>"` removes it and appends a line to `people-HOLD.history`.
+- `people-daily.sh` (installed by atomic mv; running copies keep the old file; backup `people-daily.sh.bak-20261123`): header names the helper, and a run that ends with a hold present logs its text to `log/people-hold.log`.
+- The runners still only test that the file exists, so a bare `touch` still stops the feeds; it just records nothing. Not done: the Kotlin runner printing the hold text itself (would need a PR). The exit code stays handled by the `SuccessExitStatus=6` drop-ins.
