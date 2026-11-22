@@ -1460,3 +1460,10 @@ one: `sudo systemctl disable --now m8trx-twin-delivery-<slug>.timer`.
 **Live-plane restart for the stand fix (#59)** 2026-11-22 08:58:12–08:58:18 KST (Bob: before Busan opens): stopped 08:58:12,
 started 08:58:18; both interlocks `edge-twin-denver`; Denver plan 11-21 SAT publishing; Busan 11-22 PUBLISHES via edge-twin-denver,
 589 customers planned, 2 staff. Denver gap about 6 s.
+
+**New York's restock (rebuild), 2026-11-22 (box lane; Bob's delegation).** Prepped 11-21; NYC closed 21:00 New York (11:00 KST); `delivery-HOLD` set 11:04, owner `storeday`, probe passed 11:04
+(`rst-dec-us-nyc-20261121-r-f40a406a78`, 50 of 50). Box controller `reset-nyc-7d`, four windows: 11:08–11:57, 12:08–12:57, 13:08–13:57, 14:08–14:25:31 KST,
+0 alerts, no halt. Result: 523 of 523 receive requests (26,149 units), 5,081 of 5,081 move batches. **Post-check:** `results.py` on all 5,081 move keys
+(`move-answers.tsv`): 5,081 `processed`, none refused, none pending. **Plan swap** (`plan-swap.sh`): new plan `PLNW-dec-us-nyc-20261116` sent 14:31:44 KST, then the old plan's
+end (`PLN-dec-us-nyc-20261012`) 14:33:59 KST, ahead of the platform's :45 expiry job; owner set back to `hourly` by the script (checked); `delivery-HOLD` removed. Not yet
+read by the Platform lead: plan compliance and the platform's stock figure for NYC. The NYC delivery timer needs Bob's sudo word (copy of a delivery timer, `America/New_York`, Mon–Sat).
