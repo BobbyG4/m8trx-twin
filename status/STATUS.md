@@ -1,6 +1,15 @@
 # Project Status — M8TRX Twin
 
+**Last Updated:** 2026-11-22 10:30 KST — Session 20 closed on the Mac; the lane continues on the GPU box (`twin-box`).
+
 ---
+
+## ⚠ NEXT SESSION PRIORITIES (updated **2026-11-22** — **Session 20 CLOSED on the Mac; the lane is the GPU box session `twin-box`**)
+
+**Entry point:** `status/active/twin/HANDOVER-BOX-2026-11-22.md` (standing rules, what runs, NYC step by step, week plan), then `status/PLAN-STORE-REALISM-2026-11-17.md` § 12.17. Goal (Bob): finish CORE-REQ-009 this week and run without the Mac.
+1. NYC rebuild (from 11-22 11:05 KST) → verify → plan swap → timer. 2. Paris the same in the Paris night. 3. NYC + SF people history; rollups via the Platform lead with Bob's login. 4. Rack pass + a full comparison the twin runs itself. 5. Failure alert, nightly drift check, scheduled stolen counts, plan renewal. 6. Hands-off Thu–Fri; Friday sign-off.
+**Blocked on core (not filed yet):** a per-site read of every unit's state and fixture for the drift check — file a TWIN-REQ if fixture paging does not cover it. **Platform findings passed on:** people batches slow with history; plan end leaves restock tasks open; late rollups need a login.
+The older `NEXT SESSION PRIORITIES` (2026-08-05) below is historical.
 
 ## ▶ PROGRESS on PLAN-STORE-REALISM (2026-11-17, Session 20)
 
@@ -35,7 +44,7 @@
   30k units). **⛔ BLOCKER (core gap F-9): a received item gets no product and no location.** First step, on Bob's word: a
   one-unit probe on Denver (receive 1 → read back → move → sell). If F-9 holds, deliveries via receive (Phase 2's
   replenishment, ask C) wait for the core fix.
-- **Phase 3 designed, not started** — `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
+- **Phase 3 designed, not started** — `status/active/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`: the Denver reset night (~30k units
   received + ~6.4k move batches, paced over hours, announced) needs Bob's go and a scheduled night.
 - **D3 ✅** (#36) — twin estimates: per-city hours (French Sundays closed), location factors, 60/30-min lead at 450 m²; 28-day volume vs Denver NYC 1.65, Paris 1.39, SF 1.09, Seoul 1.04 … Marseille 0.23 (`reference/data/STORE-PROFILES-ESTIMATES.md`).
 - **Waiting on Bob:**
@@ -101,7 +110,7 @@ infra/core — the twin does not touch `.29`).
 
 ---
 
-## ⚠ NEXT SESSION PRIORITIES (updated **2026-08-05** — **Session 19 CLOSED** · ★ **SOLVER TEST-SPACE MATRIX DELIVERED AS A FILE** · the spatial write path proven absent → **TWIN-REQ-006 FILED** · zero rows touched on mother)
+## NEXT SESSION PRIORITIES — historical (updated **2026-08-05** — **Session 19 CLOSED** · ★ **SOLVER TEST-SPACE MATRIX DELIVERED AS A FILE** · the spatial write path proven absent → **TWIN-REQ-006 FILED** · zero rows touched on mother)
 
 > **PICK UP HERE (Session 20).** Read first: `status/session-notes/2026-08-05-session-19-solver-matrix-and-the-spatial-write-wall.md` — its *don't-repeat* record is **§6 FAILED APPROACHES** (`build_layout.py` assumed reusable and is not · `qlmanage` hung · a coarse ASCII raster's own false alarm · nearly under-filing the finding).
 >

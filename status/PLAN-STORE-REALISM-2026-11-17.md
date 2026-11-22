@@ -577,7 +577,7 @@ around: Timescale compression after 90 days, `delete_guard` on custody and compl
     `m8trx-twin/ops/box/` with the other box ops files. Its copy in `m8trx-shared/scripts/twin-ops/` is superseded (the twin
     lane does not write to the shared vault). Whoever next touches that folder can delete it or leave a pointer.
 
-*Round 3 (twin, 2026-11-17 evening — before Phase 3's Denver reset night; brief `status/briefs/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`).*
+*Round 3 (twin, 2026-11-17 evening — before Phase 3's Denver reset night; brief `status/active/BRIEF-PHASE3-DENVER-LIVE-2026-11-17.md`).*
 
 14. **The old curated directives.** Each store has an `api_push` directive from June/October (Denver: 28 targets, ref
     `PLN-dec-us-denver-<date>`, active, no stop date). From the reset day the twin issues weekly period plans
