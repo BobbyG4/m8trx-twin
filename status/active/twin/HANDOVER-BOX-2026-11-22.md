@@ -63,6 +63,10 @@ timer file, `America/New_York` / `Europe/Paris` Mon–Sat; install needs Bob's s
 
 - **NYC people backfill**, cap 120/min, detached on the box (`people-backfill-site.sh dec-us-nyc 120`). Batch 4,642 of 7,368 at 10:06 KST;
   each request is answered in about 3.9 s, so it runs about 7.5 batches a minute (the cap is not reached): expected end about 16:00 KST.
+  **The platform slows as the store's history grows** (not the box: load ~1, health 0.5 s): median answer 0.6 s for the first 600
+  batches, 1.6 s at ~1,800, 2.4 s at ~3,000, 3.3 s at ~4,200, 3.7 s at ~4,600. Over 3 s the runner waits as long again (PeopleBatch
+  `slowMs`), which halves the pace. Leave the back-off on. Expect the same at SF. Put it in the vault § D for the Platform lead and tell
+  Bob: it looks like per-request work proportional to the site's stored history.
   When it ends (`=== end` in `$OPS/log/people-backfill-dec-us-nyc.log`): summary with `$OPS/bin/bf-run.sh`'s tail lines; count the 11-20
   live-fed part (the sent-ledger has 17,866 lines for 20261120) and write the B/W result line (visits, impressions, time zone
   America/New_York) into the vault handover § D for the rollup. **While NYC's restock receives or moves, the backfill pace is 60**
