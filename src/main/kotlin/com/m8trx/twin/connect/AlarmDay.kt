@@ -87,7 +87,10 @@ object AlarmDay {
         log.info("═══ alarm day ═══ date={} seed={} stores={} script={} source={} live={}", date, seed, stores.size, script, source, live)
 
         // units the dated sale stream has sold or reserved are not on the floor to be stolen
-        val excluded = readPriorSold(soldLog) + reservedEpcs(state.resolve("stream"))
+        // (and units an earlier alarm took: they sit on the stolen list, not in the sold log)
+        val stolenFile = state.resolve("stock/stolen-epcs.txt")
+        val missingFile = state.resolve("stock/missing-epcs.txt")
+        val excluded = readPriorSold(soldLog) + reservedEpcs(state.resolve("stream")) + readPriorSold(stolenFile)
         val planned: List<PlannedAlarm> = if (live && Files.exists(planFile)) {
             readPlan(planFile).also { log.info("reusing the persisted alarm plan {} ({} alarms)", planFile, it.size) }
         } else {
@@ -151,7 +154,10 @@ object AlarmDay {
                 is ConnectResponse.Ok -> {
                     ok++
                     Files.writeString(sentFile, "${a.id}\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND)
-                    appendSold(soldLog, a.epc) // a stolen unit is gone from the floor — never sell it later
+                    // a stolen unit is gone from the floor, but it was never SOLD: the stolen + missing lists keep it out of
+                    // the sale stream and the stock figure (the sold log would count it as a sale and skew stock by one)
+                    appendSold(stolenFile, a.epc)
+                    appendSold(missingFile, a.epc)
                 }
 
                 is ConnectResponse.Err -> {
