@@ -1425,6 +1425,7 @@ store's owner to `storeday` (no hourly sales): only prep an OPEN store right bef
 | Bordeaux | 16,679 / 84,786 | 445 / 2,230 | 17,124 / 87,016 | 1,246 | equal / rolled 11-22 06:22 |
 | Marseille | 14,280 / 75,112 | 388 / 1,975 | 14,668 / 77,087 | 1,094 | equal / rolled 11-22 06:43 |
 | NYC (America/New_York) | 79,330 / 571,121 | 1,950 / 13,966 | 81,280 / 585,087 | 7,368 (all 200) | ended 11-22 10:49 KST; B/W read / rollup pending (Bob's login) |
+| SF (America/Los_Angeles) | 49,740 / 263,265 | 1,188 / 6,116 | 50,928 / 269,381 | 3,703 (all 200) | ended 11-22 12:40 KST at cap 60, median 0.47 s per batch, no slowdown; B/W read / rollup pending |
 
 Then Bordeaux, Marseille, NYC, SF. Pace 120/min, 60/min while a restock receives or moves (B/W rule; #56). Per-request timing
 (#58): `people-backfill/<slug>/batch-requests.tsv`. Lille: median 1.17 s, p99 2.96 s, max 6.31 s, 23 over 3 s (during Seoul's moves),
