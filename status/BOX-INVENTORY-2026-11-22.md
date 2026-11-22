@@ -66,3 +66,11 @@ Rows 8 and 9 are the only items outside systemd that are steady feeds. The clean
 - no `people-daily.sh`, backfill or restock process outside a unit, except while a restock is deliberately running (`box-windows.sh`)
 - flags: none present except while a hold is wanted (`delivery-HOLD` only during a restock)
 - the tmux `twin` session carrying this lane
+
+## 6. Done 2026-11-22 ~15:05 KST (Bob: "go", after the proposals above)
+
+- `m8trx-twin-delivery-dec-us-nyc.timer` installed and enabled (08:00:30 America/New_York, Mon–Sat); first run Mon 2026-11-23 13:00:30 UTC = 22:00 KST.
+- `reset-failed` on `@kr`, `@us-east`, `@us-west`: `systemctl --failed` now empty.
+- Drop-in `m8trx-twin-people@{kr,us-east,us-west,fr}.service.d/hold-is-success.conf`: `SuccessExitStatus=6` (a hold is not a failure; fr included for the same reason, not yet exercised; the running `@fr` is unaffected).
+- Stale `people-backfill/backfill.lock` deleted.
+- Not done, waits until after 23:59 KST: the hold-file change (who/why in `people-HOLD`) to the runner, because two hand-started copies still run the script.
