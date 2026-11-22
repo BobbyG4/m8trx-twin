@@ -97,6 +97,15 @@ Then **Paris** the same way during the Paris night. Paris has **no dry run yet**
 (stockroom `4cb22b03-13e5-5235-8ec7-fe68bb1bb83c`; `cs-PLN-dec-fr-paris-20261012.json` saved) only right before its run (prep sets the
 owner to storeday). Check the owner file has a `dec-fr-paris,` line.
 
+## 6a. Bob's office walks: the floor-in-use flag (agreed with the Android/ARLS lane 2026-11-22)
+
+The ARLS serve on this box answers the phone's lock queries live; a lock walk (~70 min, today or tomorrow) measures it, so no heavy twin job
+may run during one. The Android/ARLS lane does `touch /opt/m8trx/twin-ops/FLOOR-IN-USE` before a walk and removes it after.
+`box-windows.sh` honours it (no window opens; a running one ends at the next batch, exactly as at :57); backup `box-windows.sh.bak-20261122`.
+While it exists, start no restock, prep, probe, backfill or build by hand; the hourly pass, people feeds, live plane and deliveries keep
+running (all CPU-light, no GPU). Measured 10:10 KST: the twin uses no GPU (only the serve, 3.6 GB); ~8 GB RAM resident across 4 people
+feeds, the NYC backfill and the live plane; hourly pass ~8 min CPU per pass (about one core of 12 while it runs).
+
 ## 7. The week plan (Bob: finish this week)
 
 | Day | Rebuilds and history | Running on its own |
