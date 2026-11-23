@@ -80,3 +80,7 @@ Rows 8 and 9 are the only items outside systemd that are steady feeds. The clean
 - New `$OPS/people-hold.sh "<reason>" [who]` writes `people-HOLD` as `who / when (UTC + KST) / why` (refuses if one exists); `--release "<why>"` removes it and appends a line to `people-HOLD.history`.
 - `people-daily.sh` (installed by atomic mv; running copies keep the old file; backup `people-daily.sh.bak-20261123`): header names the helper, and a run that ends with a hold present logs its text to `log/people-hold.log`.
 - The runners still only test that the file exists, so a bare `touch` still stops the feeds; it just records nothing. Not done: the Kotlin runner printing the hold text itself (would need a PR). The exit code stays handled by the `SuccessExitStatus=6` drop-ins.
+
+## 8. Done 2026-11-23 ~12:35 KST: Paris delivery timer (Bob: "Go on the timer")
+
+`m8trx-twin-delivery-dec-fr-paris.timer` installed and enabled (copy of the NYC timer; `Mon..Sat 08:00:30 Europe/Paris`, `Persistent=false`, runs `m8trx-twin-delivery@dec-fr-paris.service` → `ops/daily-delivery.sh`, which supports `dec-fr-*`). First run Mon 2026-11-23 07:00:30 UTC = 16:00:30 KST. Delivery timers now: 10 (Busan, Seoul, Bordeaux, Lille, Lyon, Marseille, Denver, SF, NYC, Paris).
