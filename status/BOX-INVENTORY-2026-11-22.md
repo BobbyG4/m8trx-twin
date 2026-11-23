@@ -84,3 +84,11 @@ Rows 8 and 9 are the only items outside systemd that are steady feeds. The clean
 ## 8. Done 2026-11-23 ~12:35 KST: Paris delivery timer (Bob: "Go on the timer")
 
 `m8trx-twin-delivery-dec-fr-paris.timer` installed and enabled (copy of the NYC timer; `Mon..Sat 08:00:30 Europe/Paris`, `Persistent=false`, runs `m8trx-twin-delivery@dec-fr-paris.service` → `ops/daily-delivery.sh`, which supports `dec-fr-*`). First run Mon 2026-11-23 07:00:30 UTC = 16:00:30 KST. Delivery timers now: 10 (Busan, Seoul, Bordeaux, Lille, Lyon, Marseille, Denver, SF, NYC, Paris).
+
+## 9. Done 2026-11-24 06:17 KST: French delivery timers staggered (Bob: "stagger the French timers")
+
+**Why:** on 11-23 all five French timers fired at 08:00:30 Paris and queued on `$OPS/lock`. Lille ran first and halted at 08:38 Paris (platform connection-pool defect, `item_not_found` on a unit that existed; the platform confirms it); Bordeaux and Lyon then ran clean; Marseille and Paris started at 09:57 Paris, past the 09:30 pre-open guard, and refused. Lille's rest-of-day delivery could not be re-run after opening (the guard refused it at 22:11 Paris; no override used).
+
+**Now (Europe/Paris, Mon–Sat):** Paris 05:00:30, Lille 06:00:30, Lyon 07:00:30, Bordeaux 08:00:30 (unchanged), Marseille 08:40:30. Each steady-state run is 10–35 min, so the slots are 60 min apart (Marseille starts about 5 min after Bordeaux's longest). Backups of the four changed timers: `$OPS/timer-backups-20261124/`. First run Tue 11-24 04:00:30 UTC (Paris) = 13:00:30 KST.
+Still failed in `systemctl` (not cleared): `@dec-fr-lille`, `@dec-fr-marseille`, `@dec-fr-paris`.
+**Twin-side gap (not built):** `DailyDelivery` halts on an `item_not_found` refusal; it should retry that unit once as a new move id.
