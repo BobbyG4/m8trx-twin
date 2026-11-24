@@ -76,6 +76,10 @@ class ResetLiveParams(
     val retryDelayMs: Long = 30_000,
     /** The status line (in flight, tags, move batches, health latency, ETA) is logged this often. */
     val statusEveryMs: Long = 60_000,
+    /** The health gate not ready for this long without a break (a 502, a refused connection, a restart) halts the run; shorter waits are waited out. */
+    val healthWaitCapMs: Long = 600_000,
+    /** A move answered slower than [slowAnswerMs] within this long of the last health or send trouble is the server coming back, not a full queue. */
+    val troubleGraceMs: Long = 120_000,
 ) {
     init {
         require(receiveLanes in 1..ResetGate.MAX_LANES) { "M8TRX_RESET_RECEIVE_LANES must be 1..${ResetGate.MAX_LANES}, got $receiveLanes" }

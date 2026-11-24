@@ -100,7 +100,11 @@ private class FakeSender(private val sched: Schedule, private val clock: Virtual
     var onReceiveStart: (Int) -> Unit = {}
     private val inFlight = AtomicInteger()
 
-    override fun health(): Pair<Int, String?> = 200 to "{\"status\":\"ok\"}"
+    /** The health answer for the n-th poll (1-based); the default is always ready. A test sets it to model a restart. */
+    var healthScript: (Int) -> Pair<Int, String?> = { 200 to "{\"status\":\"ok\"}" }
+    private val healthPolls = AtomicInteger()
+
+    override fun health(): Pair<Int, String?> = healthScript(healthPolls.incrementAndGet())
 
     override fun send(item: SendItem): Outcome {
         sends.incrementAndGet()
@@ -137,20 +141,27 @@ private class FakeSender(private val sched: Schedule, private val clock: Virtual
     }
 }
 
-private fun params(lanes: Int, midnight: Long, statusEveryMs: Long = Long.MAX_VALUE / 4, perMin: Int = 0, perMinWithReceive: Int = perMin) =
-    ResetLiveParams(
-        moveItemsPerMin = perMin,
-        moveItemsPerMinWithReceive = perMinWithReceive,
-        receiveLanes = lanes,
-        moveSpacingMs = 10,
-        directiveSpacingMs = 10,
-        healthPollMs = 10,
-        idlePollMs = 5,
-        midnightMs = midnight,
-        progressEveryMs = 1,
-        retryDelayMs = 5,
-        statusEveryMs = statusEveryMs,
-    )
+private fun params(
+    lanes: Int,
+    midnight: Long,
+    statusEveryMs: Long = Long.MAX_VALUE / 4,
+    perMin: Int = 0,
+    perMinWithReceive: Int = perMin,
+    healthWaitCapMs: Long = 600_000,
+) = ResetLiveParams(
+    healthWaitCapMs = healthWaitCapMs,
+    moveItemsPerMin = perMin,
+    moveItemsPerMinWithReceive = perMinWithReceive,
+    receiveLanes = lanes,
+    moveSpacingMs = 10,
+    directiveSpacingMs = 10,
+    healthPollMs = 10,
+    idlePollMs = 5,
+    midnightMs = midnight,
+    progressEveryMs = 1,
+    retryDelayMs = 5,
+    statusEveryMs = statusEveryMs,
+)
 
 private fun run(
     sched: Schedule,
@@ -168,8 +179,10 @@ private fun run(
     perMin: Int = 0,
     perMinWithReceive: Int = perMin,
     moveWatch: MoveResultsWatch? = null,
+    healthWaitCapMs: Long = 600_000,
 ): ResetLiveRunner.Result = ResetLiveRunner(
-    sched.items, sender, policy, ledger, books, params(lanes, midnight, statusEveryMs, perMin, perMinWithReceive), hold, clock, onEvent = onEvent,
+    sched.items, sender, policy, ledger, books, params(lanes, midnight, statusEveryMs, perMin, perMinWithReceive, healthWaitCapMs), hold, clock,
+    onEvent = onEvent,
     lanesNow = lanesNow ?: { lanes }, moveWatch = moveWatch,
 ).run()
 
@@ -199,6 +212,9 @@ fun resetLiveTests(): List<Pair<String, () -> Unit>> = listOf(
     "move results: pending over 60 s halts, refused halts, warning/failed halts, confirmed entries are counted; answers file rows before and after" to
         ::resultsWatch,
     "move results: the reset halts (resumable) on a pending move, a refused move and a move answered slower than 10 s" to ::resultsHalts,
+    "reset live: a health outage (502, refused) is waited out and the run finishes from the ledger; past the cap it halts; a 4xx still halts" to
+        ::liveWaitsOutRestart,
+    "reset live: a move answered slowly just after an outage does not halt; the same answer in normal running still does" to ::liveSlowAfterOutage,
 )
 
 private fun liveDependency() {
@@ -1039,4 +1055,64 @@ private fun resultsHalts() {
     check(r4.end == ResetLiveRunner.End.HALTED && r4.haltReason!!.contains("answered after")) {
         "a move answered after 11 s halts: ${r4.end} ${r4.haltReason}"
     }
+}
+
+private fun liveWaitsOutRestart() {
+    // 50 polls of 502 (500 virtual ms) with a 1 s cap: waited out, every item sent exactly once, run done
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val s = FakeSender(sched, c)
+    s.healthScript = { n -> if (n <= 50) 502 to null else 200 to "{\"status\":\"ok\"}" }
+    val r = run(sched, s, c, 1, healthWaitCapMs = 1_000)
+    check(r.end == ResetLiveRunner.End.DONE) { "a 500 ms outage is waited out: ${r.end} ${r.haltReason}" }
+    check(s.order.toSet() == sched.items.map { it.extId }.toSet() && s.sends.get() == sched.items.size) { "nothing sent twice or skipped" }
+    // refused connection (no answer at all) is the same
+    val c1 = VirtualClock(0)
+    val s1 = FakeSender(sched, c1)
+    s1.healthScript = { n -> if (n <= 50) 0 to null else 200 to "{\"status\":\"ok\"}" }
+    check(run(sched, s1, c1, 2, healthWaitCapMs = 1_000).end == ResetLiveRunner.End.DONE) { "a refused connection is waited out" }
+    // sends answered 502 across the outage are retried, ledger intact
+    val c2 = VirtualClock(0)
+    val s2 = FakeSender(sched, c2)
+    s2.script = { it, n -> if (it.extId == sched.items[0].extId && n <= 3) Outcome.Http(502) else null }
+    s2.healthScript = { n -> if (n in 2..30) 502 to null else 200 to "{\"status\":\"ok\"}" }
+    val r2 = run(sched, s2, c2, 1, healthWaitCapMs = 60_000)
+    check(r2.end == ResetLiveRunner.End.DONE && s2.violations.isEmpty()) { "502s on a send then health back: ${r2.end} ${r2.haltReason}" }
+    // an outage past the cap halts, resumable (items left unsent, nothing marked)
+    val c3 = VirtualClock(0)
+    val s3 = FakeSender(sched, c3)
+    s3.healthScript = { 502 to null }
+    val led3 = SentLedger(null)
+    val r3 = run(sched, s3, c3, 1, led3, healthWaitCapMs = 1_000)
+    check(r3.end == ResetLiveRunner.End.HALTED && r3.haltReason!!.contains("health not ready for") && led3.size == 0) {
+        "past the cap it halts: ${r3.end} ${r3.haltReason}"
+    }
+    // a 4xx with a reason still halts at once, outage or not
+    val c4 = VirtualClock(0)
+    val s4 = FakeSender(sched, c4)
+    s4.script = { it, _ -> if (it.extId == sched.items[0].extId) Outcome.Http(400) else null }
+    check(run(sched, s4, c4, 1, healthWaitCapMs = 1_000).end == ResetLiveRunner.End.HALTED) { "a 400 still halts" }
+}
+
+private fun liveSlowAfterOutage() {
+    // the first move answers after 11 s, right after a health outage: not a full queue
+    val sched = Schedule()
+    val c = VirtualClock(0)
+    val inner = FakeSender(sched, c)
+    inner.healthScript = { n -> if (n <= 5) 502 to null else 200 to "{\"status\":\"ok\"}" }
+    var slowOnce = true
+    val sender = object : OpsSender {
+        override fun health() = inner.health()
+
+        override fun send(item: SendItem): Outcome {
+            val o = inner.send(item)
+            if (item.kind == "move" && slowOnce) {
+                slowOnce = false
+                c.t.addAndGet(11_000)
+            }
+            return o
+        }
+    }
+    val r = run(sched, sender, c, 1)
+    check(r.end == ResetLiveRunner.End.DONE) { "a slow answer just after an outage does not halt: ${r.end} ${r.haltReason}" }
 }

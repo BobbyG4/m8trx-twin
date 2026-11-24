@@ -268,6 +268,29 @@ private fun senderAndBooks() {
     s.send(item("move", "m1", "E1"))
     check(rowsAtSend == 1) { "the answers row exists before the post ($rowsAtSend)" }
     check(s.slow != null) { "an answer after 11 s halts the site" }
+    // a restart: health 502, a move that hangs 11 s and fails, then a slow answer just after - none of it is a full queue; far later it is
+    var down = true
+    var takes = 11_000L
+    var out: Outcome = Outcome.Unreachable("reset")
+    val flaky = object : OpsSender {
+        override fun health() = if (down) 502 to null else 200 to "{\"status\":\"ok\"}"
+
+        override fun send(item: SendItem): Outcome {
+            clock += takes
+            return out
+        }
+    }
+    val s2 = DeliverySender(flaky, DENVER, dir.resolve("answers2.tsv"), clockMs = { clock })
+    s2.health()
+    s2.send(item("move", "m5", "E5"))
+    check(s2.slow == null) { "a move that hung 11 s and failed is not a full queue: ${s2.slow}" }
+    down = false
+    out = Outcome.Accepted
+    s2.send(item("move", "m6", "E6"))
+    check(s2.slow == null) { "a slow answer within 2 minutes of the outage is the server coming back: ${s2.slow}" }
+    clock += 300_000
+    s2.send(item("move", "m7", "E7"))
+    check(s2.slow != null) { "a slow answer long after any trouble still halts" }
     s.appendAnswer("m1", "abc", "2026-11-22T00:00:00Z")
     check(DeliverySender.readKeys(answers)["m1"] == "abc") { "the later row fills the key" }
     check(EventKey.of("""{"accepted":true,"eventKey":"ff00","receivedAt":"t"}""") == ("ff00" to "t")) { "eventKey parsed from the 200" }

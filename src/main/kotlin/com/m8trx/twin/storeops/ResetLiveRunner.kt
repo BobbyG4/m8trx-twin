@@ -367,6 +367,12 @@ class ResetLiveRunner(
         }
     }
 
+    /** When the health gate first said not ready in the current unbroken stretch (0 = ready). Shared by the lanes. */
+    private val healthDownSince = java.util.concurrent.atomic.AtomicLong(0)
+
+    /** The last time health was not ready or a send failed: a slow answer soon after it is the server coming back. */
+    private val lastTroubleAt = java.util.concurrent.atomic.AtomicLong(Long.MIN_VALUE / 2)
+
     private fun healthReady(item: SendItem, attempt: Int): Boolean {
         val maxAge = if (item.kind == "move") params.moveHealthEveryMs else 0L
         val due = attempt > 1 || maxAge == 0L || clock.now() - (healthOkAt[item.kind] ?: Long.MIN_VALUE / 2) >= maxAge
@@ -377,10 +383,20 @@ class ResetLiveRunner(
         lastHealthMs = tookMs
         synchronized(lock) { healthChecks++ }
         if (!Health.isReady(status, body) || tookMs > params.healthMaxMs) {
+            val now = clock.now()
+            lastTroubleAt.set(now)
+            val since = healthDownSince.updateAndGet { if (it == 0L) now else it }
+            if (now - since > params.healthWaitCapMs) {
+                halt(
+                    "health not ready for ${(now - since) / 1000} s (cap ${params.healthWaitCapMs / 1000} s, last answer $status): ${item.extId} stays due",
+                )
+                return false
+            }
             event("health not ready ($status, $tookMs ms): waiting, ${item.extId} stays due")
             nap(params.healthPollMs)
             return false
         }
+        healthDownSince.set(0)
         healthOkAt[item.kind] = clock.now()
         return true
     }
@@ -397,13 +413,14 @@ class ResetLiveRunner(
             when (val d = policy.decide(outcome, attempt)) {
                 Decision.Done -> {
                     accept(item)
-                    if (item.kind == "move" && tookMs > params.slowAnswerMs) {
+                    if (item.kind == "move" && tookMs > params.slowAnswerMs && clock.now() - lastTroubleAt.get() >= params.troubleGraceMs) {
                         halt("${item.extId}: the move was answered after $tookMs ms (limit ${params.slowAnswerMs} ms): the platform's queue is full")
                     }
                     return true
                 }
 
                 is Decision.Wait -> {
+                    lastTroubleAt.set(clock.now())
                     waitAfterFailure(item, d, attempt)
                     attempt++
                 }

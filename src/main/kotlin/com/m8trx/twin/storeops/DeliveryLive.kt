@@ -200,6 +200,8 @@ class DeliverySender(
     private val limiter: RollingItemLimiter? = null,
     /** True while a receive lane is still running: the cap is then [RollingItemLimiter.WITH_RECEIVES], else [RollingItemLimiter.ALONE]. */
     private val receivesRunning: () -> Boolean = { false },
+    /** A move answered slowly within this long of a failed health check or send is the server coming back from a restart, not a full queue. */
+    private val troubleGraceMs: Long = 120_000,
 ) : OpsSender {
     @Volatile
     var slow: String? = null
@@ -212,18 +214,29 @@ class DeliverySender(
         Files.writeString(answersFile, "$extId\t$site\t$key\t$receivedAt\n", StandardOpenOption.CREATE, StandardOpenOption.APPEND)
     }
 
-    override fun health() = inner.health()
+    /** The last health answer that was not ready, or send that was not accepted: a slow answer within [troubleGraceMs] of it is a server coming back. */
+    @Volatile
+    private var troubleAt = Long.MIN_VALUE / 2
+
+    override fun health(): Pair<Int, String?> {
+        val h = inner.health()
+        if (!Health.isReady(h.first, h.second)) troubleAt = clockMs()
+        return h
+    }
 
     override fun dropToken() = inner.dropToken()
 
     override fun send(item: SendItem): Outcome {
-        if (item.kind != "move") return inner.send(item)
+        if (item.kind != "move") return inner.send(item).also { if (it != Outcome.Accepted) troubleAt = clockMs() }
         limiter?.acquire(item.epcs.size, if (receivesRunning()) RollingItemLimiter.WITH_RECEIVES else RollingItemLimiter.ALONE)
         appendAnswer(item.extId, "", "")
         val t0 = clockMs()
         val o = inner.send(item)
         val ms = clockMs() - t0
-        if (ms > slowMs && slow == null) slow = "${item.extId} answered after $ms ms (limit $slowMs ms)"
+        if (o != Outcome.Accepted) troubleAt = clockMs()
+        if (ms > slowMs && slow == null && o == Outcome.Accepted && t0 - troubleAt >= troubleGraceMs) {
+            slow = "${item.extId} answered after $ms ms (limit $slowMs ms)"
+        }
         return o
     }
 
