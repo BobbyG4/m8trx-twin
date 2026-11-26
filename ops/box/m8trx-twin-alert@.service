@@ -1,0 +1,8 @@
+[Unit]
+Description=m8trx-twin failure alert for %i (one Slack line)
+
+[Service]
+Type=oneshot
+User=m8trx
+ExecStart=/opt/m8trx/twin-ops/twin-alert.sh %i
+Nice=10
