@@ -8,7 +8,7 @@
 
 **Entry point:** `status/active/twin/HANDOVER-BOX-2026-11-22.md` (standing rules, what runs, NYC step by step, week plan), then `status/PLAN-STORE-REALISM-2026-11-17.md` § 12.17. Goal (Bob): finish CORE-REQ-009 this week and run without the Mac.
 1. NYC rebuild (from 11-22 11:05 KST) → verify → plan swap → timer. 2. Paris the same in the Paris night. 3. NYC + SF people history; rollups via the Platform lead with Bob's login. 4. Rack pass + a full comparison the twin runs itself. 5. Failure alert, nightly drift check, scheduled stolen counts, plan renewal. 6. Hands-off Thu–Fri; Friday sign-off.
-**Blocked on core (not filed yet):** a per-site read of every unit's state and fixture for the drift check — file a TWIN-REQ if fixture paging does not cover it. **Platform findings passed on:** people batches slow with history; plan end leaves restock tasks open; late rollups need a login.
+**Blocked on core (not filed yet):** a per-site read of every unit's state and fixture for the drift check — file a TWIN-REQ if fixture paging does not cover it. **Rulings 2026-11-27 (plan § 12.18):** shortened-PE plan targets wait for the Mon 11-30 weekly plan; Denver's 11-23 to 11-26 people gap and Busan's live-floor gap stay unfilled. **Platform findings passed on:** people batches slow with history; plan end leaves restock tasks open; late rollups need a login.
 The older `NEXT SESSION PRIORITIES` (2026-08-05) below is historical.
 
 ## ▶ PROGRESS on PLAN-STORE-REALISM (2026-11-17, Session 20)
