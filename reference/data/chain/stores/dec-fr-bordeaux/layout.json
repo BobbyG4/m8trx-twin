@@ -583,14 +583,14 @@
           "in_area_zone": "D-03",
           "fixture_category": "perimeter_east",
           "geometry_type": "polygon",
-          "geometry": "POLYGON Z ((10200 8733 0, 10300 8733 0, 10300 11299 0, 10200 11299 0, 10200 8733 0))",
+          "geometry": "POLYGON Z ((10200 8733 0, 10300 8733 0, 10300 10699 0, 10200 10699 0, 10200 8733 0))",
           "properties": {},
-          "area_sqm": 0.3,
+          "area_sqm": 0.2,
           "rect_mm": {
             "x1": 10200,
             "y1": 8733,
             "x2": 10300,
-            "y2": 11299
+            "y2": 10699
           },
           "department": "general"
         },
@@ -818,11 +818,11 @@
           "in_area_zone": "Z-02",
           "fixture_category": "checkout",
           "geometry_type": "polygon",
-          "geometry": "POLYGON Z ((10700 1000 0, 14150 1000 0, 14150 3800 0, 10700 3800 0, 10700 1000 0))",
+          "geometry": "POLYGON Z ((11300 1000 0, 14150 1000 0, 14150 3800 0, 11300 3800 0, 11300 1000 0))",
           "properties": {},
-          "area_sqm": 9.7,
+          "area_sqm": 8.0,
           "rect_mm": {
-            "x1": 10700,
+            "x1": 11300,
             "y1": 1000,
             "x2": 14150,
             "y2": 3800
