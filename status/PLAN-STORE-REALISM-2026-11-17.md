@@ -1469,3 +1469,20 @@ end (`PLN-dec-us-nyc-20261012`) 14:33:59 KST, ahead of the platform's :45 expiry
 read by the Platform lead: plan compliance and the platform's stock figure for NYC. The NYC delivery timer needs Bob's sudo word (copy of a delivery timer, `America/New_York`, Mon–Sat).
 
 **Paris restock result (2026-11-23).** 11-23 07:47:24 KST. Started 04:30 KST after the Paris 11-22 people feed ended (its last visitor left 04:26 KST). Probe `rst-dec-fr-paris-20261121-r-e9c73d821d` 04:29 KST. Four windows (04:30-04:57, 05:08-05:57, 06:08-06:57, 07:08-07:47), 0 alerts, no halt: 508 of 508 receive requests (25,360 units) and 4,795 of 4,795 move batches. Post-check: the run's spot count read 0 of 4,801 sampled ledger units disagreeing with the platform; `results.py` read all 4,795 move keys back `processed`, none refused or pending. Plan swap (`plan-swap.sh`): new plan `PLNW-dec-fr-paris-20261116` sent 07:52:32 KST, old plan `PLN-dec-fr-paris-20261012` end sent 07:54:45 KST (before the :45 expiry job at 08:45). Owner back to `hourly` (script-checked), `delivery-HOLD` removed. Not yet read by the Platform lead: plan compliance and the platform's stock figure for Paris. The Paris delivery timer needs Bob's sudo word (`Europe/Paris`, Mon-Sat 08:00:30). **Realism finding (Paris 11-22 people plan):** visit `ppl-dec-fr-paris-20261122-1924` entered 18:45 Paris and its close was due 20:26 Paris, 86 minutes after the 19:00 Sunday close; the platform's last Sunday visit before was 18:59. Not traced.
+
+### 12.18 [rulings] Plan targets on the shortened PE fixtures, and two people gaps left unfilled — 2026-11-27 (Bob, via the Backend/Web session)
+
+Bob's rulings, 2026-11-27 ("Go with your recommendations on the targets and the gap"). Closed; not reopened without Bob.
+
+1. **Plan targets on the ten shortened PE fixtures stay as they are until the next weekly plan.** The checkout-gap correction was applied on the platform 2026-11-27 07:12 KST
+   (CO-01 x1 +600 mm and the last PE y2 −600 mm on each of the ten sites; fixture ids unchanged; record `status/migrations/data/2026-11-27-checkout-gap/README.md` in the vault).
+   The last PE lost 22 to 43 % of its wall length (Busan PE-03 1400 → 800 mm), so its stock-plan units now exceed what the wall holds on paper. The next weekly plan
+   (Mon 2026-11-30, store-local) re-sizes those targets to the new lengths. **No separate plan swap and no restock for it.** The layout files follow on branch `fix/checkout-gap-layout`
+   (geometry commit `c3bbb32`; Denver's model rebuild is a separate commit, `d9f150a`, droppable).
+2. **Two gaps stay unfilled: no replay, no backfill, no dry run of either option.**
+   - **Denver people:** none from 2026-11-23 19:35 to 2026-11-26 14:55 local (Denver time). The live plane stopped on the HOLD for #540 on 2026-11-24 11:35:34 KST and was restarted
+     2026-11-27 06:56 KST (Bob's go).
+   - **Busan live floor:** none from 2026-11-24 11:35 KST to 2026-11-27 06:56 KST (the same stop and restart; the floor feed shares the live plane's JVM).
+   - Busan's people by REST (the kr feed) were not affected. The live plane cannot backdate (wire time is the clock at send), so a catch-up would have needed the day replay or a REST backfill. Neither is planned.
+3. **Cause and guard:** the live plane was released from the hold but not restarted. Since 2026-11-27 08:00 KST `m8trx-twin-live-check.timer` posts to Slack when it is down 30 min with no HOLD, or HOLD is still set after 6 h
+   (branch `feat/failure-alert-slack`, `e6b2725`).
