@@ -1,0 +1,8 @@
+[Unit]
+Description=m8trx-twin live plane check (Slack when the Denver live plane or the Busan floor feed is down)
+
+[Service]
+Type=oneshot
+User=m8trx
+ExecStart=/opt/m8trx/twin-ops/twin-live-check.sh
+Nice=10
