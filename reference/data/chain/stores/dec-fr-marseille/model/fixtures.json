@@ -572,14 +572,14 @@
           "level": 1,
           "form": "bin",
           "goods": "bin",
-          "width_mm": 3450,
-          "facings": 10,
+          "width_mm": 2850,
+          "facings": 8,
           "units_per_facing": 20,
-          "capacity_units": 200,
+          "capacity_units": 160,
           "display_level": "stoop"
         }
       ],
-      "capacity_units": 200,
+      "capacity_units": 160,
       "role": "stock"
     },
     "CO-02": {
@@ -1594,64 +1594,64 @@
           "level": 1,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "top"
         },
         {
           "level": 2,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "eye"
         },
         {
           "level": 3,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "eye"
         },
         {
           "level": 4,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "reach"
         },
         {
           "level": 5,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "reach"
         },
         {
           "level": 6,
           "form": "shelf",
           "goods": "shoe",
-          "width_mm": 2234,
-          "facings": 13,
+          "width_mm": 1634,
+          "facings": 9,
           "units_per_facing": 3,
-          "capacity_units": 39,
+          "capacity_units": 27,
           "display_level": "stoop"
         }
       ],
-      "capacity_units": 234,
+      "capacity_units": 162,
       "role": "stock"
     },
     "PI-01": {

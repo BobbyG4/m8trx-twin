@@ -644,14 +644,14 @@
           "level": 1,
           "form": "bin",
           "goods": "bin",
-          "width_mm": 3200,
-          "facings": 9,
+          "width_mm": 2800,
+          "facings": 8,
           "units_per_facing": 20,
-          "capacity_units": 180,
+          "capacity_units": 160,
           "display_level": "stoop"
         }
       ],
-      "capacity_units": 180,
+      "capacity_units": 160,
       "role": "stock"
     },
     "CO-02": {
@@ -1472,24 +1472,24 @@
           "level": 1,
           "form": "rail",
           "goods": "hang",
-          "width_mm": 1400,
-          "facings": 35,
+          "width_mm": 800,
+          "facings": 20,
           "units_per_facing": 2,
-          "capacity_units": 70,
+          "capacity_units": 40,
           "display_level": "eye"
         },
         {
           "level": 2,
           "form": "rail",
           "goods": "hang",
-          "width_mm": 1400,
-          "facings": 35,
+          "width_mm": 800,
+          "facings": 20,
           "units_per_facing": 2,
-          "capacity_units": 70,
+          "capacity_units": 40,
           "display_level": "reach"
         }
       ],
-      "capacity_units": 140,
+      "capacity_units": 80,
       "role": "stock"
     },
     "PI-01": {
