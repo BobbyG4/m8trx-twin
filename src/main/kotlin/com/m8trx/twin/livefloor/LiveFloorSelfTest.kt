@@ -770,7 +770,14 @@ private fun guards() {
     ok(LiveFloorDrive.urlProblem("nats://a:4222,nats://b:4223") != null) { "a server list must be refused" }
     ok(LiveFloorDrive.urlProblem("nats://a:4223,nats://b:4223") != null) { "even a list of twin servers must be refused (exactly one)" }
     ok(LiveFloorDrive.urlProblem("nats://h:4223/") == null) { "nats://h:4223/ must be accepted" }
-    ok(LiveFloorDrive.urlProblem("nats://h:5000") != null) { "a port other than 4223 must be refused" }
+    ok(LiveFloorDrive.urlProblem("nats://h:5000") != null) { "a port that is not a twin edge's must be refused" }
+    ok(LiveFloorDrive.urlProblem("nats://192.168.55.29:4224") == null) { "the Busan twin edge port must be accepted" }
+    ok(LiveFloorDrive.urlProblem("nats://h:4222") != null) { "production stays refused beside the twin edge ports" }
+    ok(LiveFloorDrive.edgeNameProblem("nats://h:4224", "edge-twin-busan") == null) { "Busan's port with Busan's name is fine" }
+    ok(LiveFloorDrive.edgeNameProblem("nats://h:4223", "edge-twin-denver") == null) { "Denver's port with Denver's name is fine" }
+    ok(LiveFloorDrive.edgeNameProblem("nats://h:4224", "edge-twin-denver") != null) { "Busan's port with Denver's name must be refused" }
+    ok(LiveFloorDrive.edgeNameProblem("nats://h:4223", "edge-twin-busan") != null) { "Denver's port with Busan's name must be refused" }
+    ok(LiveFloorDrive.EDGE_BY_PORT[4224] == "edge-twin-busan" && LiveFloorDrive.EDGE_BY_PORT[4223] == "edge-twin-denver") { "each twin port maps to its edge's server_name" }
     ok(LiveFloorDrive.urlProblem("nats://192.168.55.29:4223") == null) { "the twin edge port must be accepted" }
     ok(PeopleSource.parse(null, null) == PeopleSource.Generator) { "the default people source must stay the generator" }
     ok(runCatching { PeopleSource.parse("livefloor", null) }.isFailure) { "livefloor is a store list now, not a people source value" }

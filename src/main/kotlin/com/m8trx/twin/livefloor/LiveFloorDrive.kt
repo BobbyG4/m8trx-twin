@@ -47,11 +47,14 @@ object LiveFloorDrive {
     /** The stores that get the livefloor feed; empty (the default) means the feature is off. */
     fun stores(): List<String> = (env(ENV_STORES) ?: "").split(",").map { it.trim() }.filter { it.isNotEmpty() }
 
-    /** The one port the twin edge's broker listens on. */
+    /** The port the Denver twin edge's broker listens on. */
     const val TWIN_PORT = 4223
 
+    /** Each twin edge's broker port and the `server_name` it must answer with (one edge container per site; Busan's is on :4224). */
+    val EDGE_BY_PORT: Map<Int, String> = mapOf(TWIN_PORT to DEFAULT_SERVER_NAME, 4224 to "edge-twin-busan")
+
     /**
-     * Null when [url] may be used: exactly one server, with an explicit port that is the twin edge's [TWIN_PORT]. A list is refused, a missing
+     * Null when [url] may be used: exactly one server, with an explicit port that is a twin edge's ([EDGE_BY_PORT]). A list is refused, a missing
      * port is refused (jnats would default to 4222, the production office edge) and so is 4222 itself.
      */
     fun urlProblem(url: String): String? {
@@ -62,9 +65,16 @@ object LiveFloorDrive {
             uri.host == null -> "'${parts[0]}' has no host"
             uri.port == -1 -> "'${parts[0]}' has no port (jnats would default to $EXPECTED_PRODUCTION_PORT, the production office edge)"
             uri.port == EXPECTED_PRODUCTION_PORT -> "port $EXPECTED_PRODUCTION_PORT is edge-itx-office, production hardware - refused"
-            uri.port != TWIN_PORT -> "port ${uri.port} is not the twin edge's $TWIN_PORT"
+            uri.port !in EDGE_BY_PORT -> "port ${uri.port} is not a twin edge's (${EDGE_BY_PORT.keys.sorted()})"
             else -> null
         }
+    }
+
+    /** Null when [url] (already accepted by [urlProblem]) is the port of the edge named [serverName]; a port and a name of two edges never mix. */
+    fun edgeNameProblem(url: String, serverName: String): String? {
+        if (urlProblem(url) != null) return null
+        val port = java.net.URI(url.trim()).port
+        return if (EDGE_BY_PORT[port] == serverName) null else "port $port is the edge '${EDGE_BY_PORT[port]}', but $ENV_SERVER_NAME is '$serverName'"
     }
 
     /**
@@ -84,6 +94,7 @@ object LiveFloorDrive {
             val url = env(ENV_URL)
             if (url == null && s.live) out += "$ENV_URL is required for a live run (e.g. nats://192.168.55.29:4223), there is no default"
             if (url != null) urlProblem(url)?.let { out += "$ENV_URL: $it" }
+            if (url != null) edgeNameProblem(url, env(ENV_SERVER_NAME) ?: DEFAULT_SERVER_NAME)?.let { out += "$ENV_URL: $it" }
         }
         return out
     }
@@ -190,7 +201,7 @@ object LiveFloorDrive {
             return
         }
         val now = System.currentTimeMillis()
-        // Broker only: no edge binding. The url was validated before start (one server, :4223); the broker proves its identity here.
+        // Broker only: no edge binding. The url was validated before start (one server, a twin edge's port); the broker proves its identity here.
         val url = env(ENV_URL) ?: error("$ENV_URL is not set")
         val expected = env(ENV_SERVER_NAME) ?: DEFAULT_SERVER_NAME
         val probe = Nats.connect(url)
