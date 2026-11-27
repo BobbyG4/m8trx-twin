@@ -4,9 +4,9 @@
   "period_end" : "2026-11-09",
   "external_directive_id" : "PLNW-dec-us-denver-20261102",
   "previous_directive_id" : "PLNW-dec-us-denver-20261026",
-  "lines" : 6365,
-  "total_required" : 26863,
+  "lines" : 6356,
+  "total_required" : 26818,
   "lines_changed" : 0,
-  "plan_digest" : "51380abe21ce19f5",
+  "plan_digest" : "9ccfaf71f3e3f16a",
   "changes" : [ ]
 }

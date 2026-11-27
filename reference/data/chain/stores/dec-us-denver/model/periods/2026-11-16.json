@@ -4,10 +4,10 @@
   "period_end" : "2026-11-23",
   "external_directive_id" : "PLNW-dec-us-denver-20261116",
   "previous_directive_id" : "PLNW-dec-us-denver-20261109",
-  "lines" : 6365,
-  "total_required" : 26867,
+  "lines" : 6356,
+  "total_required" : 26822,
   "lines_changed" : 19,
-  "plan_digest" : "1259f1c436881da9",
+  "plan_digest" : "aaa9c6aa339c2a1c",
   "changes" : [ {
     "kind" : "facings",
     "department" : "climb",
@@ -82,14 +82,14 @@
     "kind" : "facings",
     "department" : "hike_camp",
     "fixture" : "PE-01",
-    "ean" : "3608439404931",
-    "from" : "2",
-    "to" : "3"
+    "ean" : "3608439553196",
+    "from" : "1",
+    "to" : "2"
   }, {
     "kind" : "facings",
     "department" : "hike_camp",
     "fixture" : "PE-01",
-    "ean" : "3608439404900",
+    "ean" : "3608439553219",
     "from" : "2",
     "to" : "1"
   }, {

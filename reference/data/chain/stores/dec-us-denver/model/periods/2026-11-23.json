@@ -4,10 +4,10 @@
   "period_end" : "2026-11-30",
   "external_directive_id" : "PLNW-dec-us-denver-20261123",
   "previous_directive_id" : "PLNW-dec-us-denver-20261116",
-  "lines" : 6365,
-  "total_required" : 26869,
-  "lines_changed" : 18,
-  "plan_digest" : "e96025aba3886313",
+  "lines" : 6356,
+  "total_required" : 26823,
+  "lines_changed" : 16,
+  "plan_digest" : "682df04efa4a5b84",
   "changes" : [ {
     "kind" : "facings",
     "department" : "climb",
@@ -68,7 +68,7 @@
     "kind" : "facings",
     "department" : "hike_camp",
     "fixture" : "GF-R6-U4",
-    "ean" : "3608439326530",
+    "ean" : "3608439283390",
     "from" : "1",
     "to" : "3"
   }, {
@@ -88,50 +88,36 @@
   }, {
     "kind" : "swap",
     "department" : "hike_camp",
-    "fixture" : "ACC-02",
-    "ean" : "3608439298493",
-    "from" : "ACC-02",
-    "to" : "ACC-01"
+    "fixture" : "GB-R1-U6",
+    "ean" : "3608439486692",
+    "from" : "GB-R1-U6",
+    "to" : "GB-R1-U5"
   }, {
     "kind" : "swap",
     "department" : "hike_camp",
-    "fixture" : "ACC-01",
-    "ean" : "3583787146897",
-    "from" : "ACC-01",
-    "to" : "ACC-02"
-  }, {
-    "kind" : "swap",
-    "department" : "running",
-    "fixture" : "GF-R5-U2",
-    "ean" : "3608390369904",
-    "from" : "GF-R5-U2",
-    "to" : "GB-R5-U2"
-  }, {
-    "kind" : "swap",
-    "department" : "running",
-    "fixture" : "GB-R5-U2",
-    "ean" : "3608390495849",
-    "from" : "GB-R5-U2",
-    "to" : "GF-R5-U2"
+    "fixture" : "GB-R1-U5",
+    "ean" : "3608439486722",
+    "from" : "GB-R1-U5",
+    "to" : "GB-R1-U6"
   }, {
     "kind" : "facings",
     "department" : "snow",
-    "fixture" : "GB-R3-U2",
-    "ean" : "3608449805216",
-    "from" : "2",
-    "to" : "4"
+    "fixture" : "PE-04",
+    "ean" : "3608390346141",
+    "from" : "1",
+    "to" : "3"
   }, {
     "kind" : "facings",
     "department" : "snow",
-    "fixture" : "GB-R3-U2",
-    "ean" : "3608449805193",
+    "fixture" : "PE-04",
+    "ean" : "3583784272414",
     "from" : "2",
     "to" : "1"
   }, {
     "kind" : "facings",
     "department" : "snow",
-    "fixture" : "GB-R3-U2",
-    "ean" : "3608449805209",
+    "fixture" : "PE-04",
+    "ean" : "3608390346127",
     "from" : "2",
     "to" : "1"
   } ]
