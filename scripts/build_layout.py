@@ -41,6 +41,7 @@ W_JITTER = {"flagship": [-2000, -1000, 0, 1500, 2500], "large": [-2000, -1000, 0
             "medium": [-1500, -1000, 0, 1000, 1500]}
 D_JITTER = {"flagship": [-2000, 0, 1500, 2500, 3500], "large": [-2000, -1000, 0, 1500, 2000],
             "medium": [-1500, -500, 0, 1000, 1500]}
+CHECKOUT_GAP_MM = 600      # 2026-11-27 floor correction (applied on the platform the same day): CO-01 x1 +600, last PE y2 -600
 GOND_DEPTH = 1200            # double-sided gondola: front 600 (south) + back 600 (north)
 MIN_AISLE = 700
 UNIT_W = 2000               # gondola unit width
@@ -301,6 +302,8 @@ def generate(store):
                                         ("PE", "East", "perimeter_east", sales_x2 - WALL_D, sales_x2)):
         for x1, y1, x2, y2, r, c in fill(sx1, hall_y1, sx2, hall_y2, 1, pbays):
             di = dept_by_y((y1 + y2) / 2)
+            if side == "PE" and r == pbays - 1:
+                y2 -= CHECKOUT_GAP_MM     # last east bay: north end shortened so the gap to the footwear bench seat is ~1000 mm
             pf = fixture(f"{side}-{r+1:02d}", f"{label} Wall Bay {r+1}", x1, y1, x2, y2, dept_code[di], role)
             pf["department"] = dept_keys[di]
             fx.append(pf)
@@ -328,6 +331,8 @@ def generate(store):
     n_co = {"flagship": 4, "large": 3, "medium": 2}[tier]
     cz = z["Z-02"]
     for x1, y1, x2, y2, r, c in fill(cz["x1"], cz["y1"] + 800, cz["x2"], cz["y2"], n_co, 1):
+        if c == 0:
+            x1 += CHECKOUT_GAP_MM         # CO-01 west end shortened so the gap to PE-01 is ~1000 mm (people walk through)
         fx.append(fixture(f"CO-{c+1:02d}", f"Checkout Counter {c+1}", x1, y1, x2, y2, "Z-02", "checkout"))
     fx.append(fixture("CO-IR", "Impulse Fixture", cz["x1"] + 150, cz["y1"] + 150, cz["x2"] - 150, cz["y1"] + 650, "Z-02", "impulse_rack"))
 
